@@ -1,0 +1,25 @@
+# Rust build artifacts
+target/
+
+# Python environments
+.venv/
+venv/
+env/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+wheels/
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db

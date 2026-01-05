@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=1.6,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "pale-ale-core"
+version = "0.3.0"
+description = "Pale Ale Core (Rust): deterministic Spin(3) rotor distance kernels"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Aoi Kawasaki" }]
+license = { text = "Proprietary" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Operating System :: OS Independent",
+  "License :: Other/Proprietary License",
+]
+
+[project.urls]
+Homepage = "https://github.com/Udonburo/pale-ale"
+
+[tool.maturin]
+module-name = "pale_ale_core"
+features = ["pyo3/extension-module", "pyo3/abi3-py310"]
