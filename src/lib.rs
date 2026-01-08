@@ -4,10 +4,11 @@ use pyo3::prelude::*;
 use std::f64::consts::PI;
 
 const ROOT_DIM: usize = 8;
+const BIV_DIM: usize = ROOT_DIM * (ROOT_DIM - 1) / 2;
+const ROTOR_DIM: usize = 1 + BIV_DIM;
+const EPS_NORM: f64 = 1e-12;
+const EPS_BIV: f64 = 1e-12;
 const SEMANTIC_EPS: f64 = 1e-9;
-const BLOCK_EPS: f64 = 1e-12;
-const BIVECTOR_DIM: usize = ROOT_DIM * (ROOT_DIM - 1) / 2;
-const BIVECTOR_EPS: f64 = 1e-12;
 
 static E8_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
     let mut roots = Vec::with_capacity(240);
@@ -85,8 +86,21 @@ fn norm8(a: &[f64; ROOT_DIM]) -> f64 {
     dot8(a, a).sqrt()
 }
 
-fn wedge8(u: &[f64; ROOT_DIM], v: &[f64; ROOT_DIM]) -> [f64; BIVECTOR_DIM] {
-    let mut res = [0.0; BIVECTOR_DIM];
+fn normalize8(x: &[f64; ROOT_DIM]) -> Option<[f64; ROOT_DIM]> {
+    let n = norm8(x);
+    if n < EPS_NORM {
+        return None;
+    }
+    let inv = 1.0 / n;
+    let mut out = [0.0; ROOT_DIM];
+    for i in 0..ROOT_DIM {
+        out[i] = x[i] * inv;
+    }
+    Some(out)
+}
+
+fn wedge8(u: &[f64; ROOT_DIM], v: &[f64; ROOT_DIM]) -> [f64; BIV_DIM] {
+    let mut res = [0.0; BIV_DIM];
     let mut k = 0;
     for i in 0..ROOT_DIM {
         for j in (i + 1)..ROOT_DIM {
@@ -98,58 +112,94 @@ fn wedge8(u: &[f64; ROOT_DIM], v: &[f64; ROOT_DIM]) -> [f64; BIVECTOR_DIM] {
 }
 
 #[inline]
-fn bivector_dot(a: &[f64; BIVECTOR_DIM], b: &[f64; BIVECTOR_DIM]) -> f64 {
+fn biv_dot(a: &[f64; BIV_DIM], b: &[f64; BIV_DIM]) -> f64 {
     let mut sum = 0.0;
-    for i in 0..BIVECTOR_DIM {
+    for i in 0..BIV_DIM {
         sum += a[i] * b[i];
     }
     sum
 }
 
 #[inline]
-fn bivector_norm(a: &[f64; BIVECTOR_DIM]) -> f64 {
-    bivector_dot(a, a).sqrt()
+fn biv_norm(a: &[f64; BIV_DIM]) -> f64 {
+    biv_dot(a, a).sqrt()
 }
 
-fn bivector_normalize(
-    a: &[f64; BIVECTOR_DIM],
-    eps: f64,
-) -> Option<[f64; BIVECTOR_DIM]> {
-    let n = bivector_norm(a);
+fn biv_normalize(a: &[f64; BIV_DIM], eps: f64) -> Option<[f64; BIV_DIM]> {
+    let n = biv_norm(a);
     if n < eps {
         return None;
     }
     let inv = 1.0 / n;
-    let mut out = [0.0; BIVECTOR_DIM];
-    for i in 0..BIVECTOR_DIM {
+    let mut out = [0.0; BIV_DIM];
+    for i in 0..BIV_DIM {
         out[i] = a[i] * inv;
     }
     Some(out)
 }
 
-fn bivector_angle_dist(a: &[f64; BIVECTOR_DIM], b: &[f64; BIVECTOR_DIM]) -> f64 {
-    let dot = clamp(bivector_dot(a, b), -1.0, 1.0);
+fn biv_angle_dist(a: &[f64; BIV_DIM], b: &[f64; BIV_DIM]) -> f64 {
+    let dot = clamp(biv_dot(a, b), -1.0, 1.0);
     let wedge_sq = 1.0 - dot * dot;
     let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
     let theta = wedge_norm.atan2(dot);
     theta / PI
 }
 
-fn normalize_block(slice: &[f64]) -> Option<[f64; ROOT_DIM]> {
-    if slice.len() != ROOT_DIM {
-        return None;
+#[inline]
+fn dot29(a: &[f64; ROTOR_DIM], b: &[f64; ROTOR_DIM]) -> f64 {
+    let mut sum = 0.0;
+    for i in 0..ROTOR_DIM {
+        sum += a[i] * b[i];
     }
-    let mut v = [0.0; ROOT_DIM];
-    v.copy_from_slice(slice);
-    let n = norm8(&v);
-    if n < BLOCK_EPS {
-        return None;
-    }
+    sum
+}
+
+#[inline]
+fn norm29(a: &[f64; ROTOR_DIM]) -> f64 {
+    dot29(a, a).sqrt()
+}
+
+fn normalize29(a: &[f64; ROTOR_DIM]) -> [f64; ROTOR_DIM] {
+    let n = norm29(a).max(EPS_NORM);
     let inv = 1.0 / n;
-    for x in v.iter_mut() {
-        *x *= inv;
+    let mut out = [0.0; ROTOR_DIM];
+    for i in 0..ROTOR_DIM {
+        out[i] = a[i] * inv;
     }
-    Some(v)
+    out
+}
+
+fn to_rotor29(u: &[f64; ROOT_DIM], v: &[f64; ROOT_DIM]) -> [f64; ROTOR_DIM] {
+    let c = clamp(dot8(u, v), -1.0, 1.0);
+    let b = wedge8(u, v);
+    if biv_norm(&b) < EPS_BIV {
+        let mut out = [0.0; ROTOR_DIM];
+        out[0] = 1.0;
+        return out;
+    }
+
+    let mut out = [0.0; ROTOR_DIM];
+    out[0] = c;
+    for i in 0..BIV_DIM {
+        out[i + 1] = b[i];
+    }
+    let n = norm29(&out).max(EPS_NORM);
+    let inv = 1.0 / n;
+    for i in 0..ROTOR_DIM {
+        out[i] *= inv;
+    }
+    out
+}
+
+fn rotor_dist_29(a: &[f64; ROTOR_DIM], b: &[f64; ROTOR_DIM]) -> f64 {
+    let a_n = normalize29(a);
+    let b_n = normalize29(b);
+    let dot = clamp(dot29(&a_n, &b_n), -1.0, 1.0);
+    let wedge_sq = 1.0 - dot * dot;
+    let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
+    let theta = wedge_norm.atan2(dot);
+    theta / PI
 }
 
 fn snap_e8(a: &[f64; ROOT_DIM]) -> [f64; ROOT_DIM] {
@@ -171,6 +221,78 @@ fn rotor_distance(a: &[f64; ROOT_DIM], b: &[f64; ROOT_DIM]) -> f64 {
     let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
     let theta = wedge_norm.atan2(dot);
     theta / PI
+}
+
+fn hct_distance(
+    u_blocks: &[Option<[f64; ROOT_DIM]>],
+    v_blocks: &[Option<[f64; ROOT_DIM]>],
+) -> f64 {
+    let blocks = u_blocks.len().min(v_blocks.len());
+    if blocks < 2 {
+        return 0.0;
+    }
+
+    let mut cont_sum = 0.0;
+    let mut cont_count = 0usize;
+    let mut root_sum = 0.0;
+    let mut root_count = 0usize;
+
+    let mut prev_cont: Option<f64> = None;
+    let mut prev_root: Option<f64> = None;
+
+    for j in 0..(blocks - 1) {
+        let (Some(u_j), Some(u_j1)) = (u_blocks[j], u_blocks[j + 1]) else {
+            prev_cont = None;
+            prev_root = None;
+            continue;
+        };
+        let (Some(v_j), Some(v_j1)) = (v_blocks[j], v_blocks[j + 1]) else {
+            prev_cont = None;
+            prev_root = None;
+            continue;
+        };
+
+        let qu = to_rotor29(&u_j, &u_j1);
+        let qv = to_rotor29(&v_j, &v_j1);
+        let m_cont = rotor_dist_29(&qu, &qv);
+
+        let ru_j = snap_e8(&u_j);
+        let ru_j1 = snap_e8(&u_j1);
+        let rv_j = snap_e8(&v_j);
+        let rv_j1 = snap_e8(&v_j1);
+        let qu_root = to_rotor29(&ru_j, &ru_j1);
+        let qv_root = to_rotor29(&rv_j, &rv_j1);
+        let m_root = rotor_dist_29(&qu_root, &qv_root);
+
+        if let Some(prev) = prev_cont {
+            cont_sum += (m_cont - prev).abs();
+            cont_count += 1;
+        }
+        if let Some(prev) = prev_root {
+            root_sum += (m_root - prev).abs();
+            root_count += 1;
+        }
+
+        prev_cont = Some(m_cont);
+        prev_root = Some(m_root);
+    }
+
+    let d_cont = if cont_count > 0 {
+        cont_sum / cont_count as f64
+    } else {
+        0.0
+    };
+    let d_root = if root_count > 0 {
+        root_sum / root_count as f64
+    } else {
+        0.0
+    };
+
+    if cont_count == 0 && root_count == 0 {
+        0.0
+    } else {
+        0.6 * d_cont + 0.4 * d_root
+    }
 }
 
 #[pyfunction]
@@ -204,8 +326,12 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
     let mut v_blocks = Vec::with_capacity(blocks);
     for block in 0..blocks {
         let start = block * ROOT_DIM;
-        u_blocks.push(normalize_block(&u[start..start + ROOT_DIM]));
-        v_blocks.push(normalize_block(&v[start..start + ROOT_DIM]));
+        let mut u_block = [0.0; ROOT_DIM];
+        let mut v_block = [0.0; ROOT_DIM];
+        u_block.copy_from_slice(&u[start..start + ROOT_DIM]);
+        v_block.copy_from_slice(&v[start..start + ROOT_DIM]);
+        u_blocks.push(normalize8(&u_block));
+        v_blocks.push(normalize8(&v_block));
     }
 
     let mut intra_sum = 0.0;
@@ -247,12 +373,12 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
             let bu = wedge8(&a_j, &a_j1);
             let bv = wedge8(&b_j, &b_j1);
             let d_cont = match (
-                bivector_normalize(&bu, BIVECTOR_EPS),
-                bivector_normalize(&bv, BIVECTOR_EPS),
+                biv_normalize(&bu, EPS_BIV),
+                biv_normalize(&bv, EPS_BIV),
             ) {
                 (None, None) => 0.0,
                 (None, Some(_)) | (Some(_), None) => 1.0,
-                (Some(bu_n), Some(bv_n)) => bivector_angle_dist(&bu_n, &bv_n),
+                (Some(bu_n), Some(bv_n)) => biv_angle_dist(&bu_n, &bv_n),
             };
 
             let ru_j = snap_e8(&a_j);
@@ -262,12 +388,12 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
             let bru = wedge8(&ru_j, &ru_j1);
             let brv = wedge8(&rv_j, &rv_j1);
             let d_root = match (
-                bivector_normalize(&bru, BIVECTOR_EPS),
-                bivector_normalize(&brv, BIVECTOR_EPS),
+                biv_normalize(&bru, EPS_BIV),
+                biv_normalize(&brv, EPS_BIV),
             ) {
                 (None, None) => 0.0,
                 (None, Some(_)) | (Some(_), None) => 1.0,
-                (Some(bru_n), Some(brv_n)) => bivector_angle_dist(&bru_n, &brv_n),
+                (Some(bru_n), Some(brv_n)) => biv_angle_dist(&bru_n, &brv_n),
             };
 
             let d_inter = 0.4 * d_root + 0.6 * d_cont;
@@ -282,7 +408,8 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
         0.0
     };
 
-    let d_struct = 0.6 * d_intra + 0.4 * d_inter;
+    let d_hct = hct_distance(&u_blocks, &v_blocks);
+    let d_struct = 0.5 * d_intra + 0.3 * d_inter + 0.2 * d_hct;
     let d = (1.0 - alpha_weight) * semantic_dist + alpha_weight * d_struct;
     Ok(clamp(d, 0.0, 1.0))
 }
@@ -296,6 +423,18 @@ fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn blocks_from_vec(v: &[f64]) -> Vec<Option<[f64; ROOT_DIM]>> {
+        let blocks = v.len() / ROOT_DIM;
+        let mut out = Vec::with_capacity(blocks);
+        for block in 0..blocks {
+            let start = block * ROOT_DIM;
+            let mut raw = [0.0; ROOT_DIM];
+            raw.copy_from_slice(&v[start..start + ROOT_DIM]);
+            out.push(normalize8(&raw));
+        }
+        out
+    }
 
     #[test]
     fn symmetry() {
@@ -362,5 +501,61 @@ mod tests {
 
         let d = spin3_distance(u, u_shift, Some(1.0)).unwrap();
         assert!(d > 0.15);
+    }
+
+    #[test]
+    fn test_hct_smooth_vs_leap() {
+        let blocks = 12;
+        let mut u = Vec::with_capacity(blocks * ROOT_DIM);
+        for block in 0..blocks {
+            let phase = block as f64 * 0.18;
+            for i in 0..ROOT_DIM {
+                let t = phase + i as f64 * 0.31;
+                let val = t.sin() + 0.35 * (t * 0.7).cos();
+                u.push(val);
+            }
+        }
+
+        let mut v = u.clone();
+        let kink_block = 6;
+        let start = kink_block * ROOT_DIM;
+        for i in 0..ROOT_DIM {
+            v[start + i] = -v[start + i];
+        }
+
+        let u_blocks = blocks_from_vec(&u);
+        let v_blocks = blocks_from_vec(&v);
+        let d_same = hct_distance(&u_blocks, &u_blocks);
+        let d_kink = hct_distance(&u_blocks, &v_blocks);
+
+        assert!(d_same <= 1e-12);
+        assert!(d_kink > 0.05);
+    }
+
+    #[test]
+    fn test_hct_shuffle_sensitivity() {
+        let blocks = 16;
+        let mut u = Vec::with_capacity(blocks * ROOT_DIM);
+        for block in 0..blocks {
+            let base = block as f64 * 0.12;
+            for i in 0..ROOT_DIM {
+                let t = base + i as f64 * 0.27;
+                let val = t.sin() + 0.2 * (t * 0.9).cos();
+                u.push(val);
+            }
+        }
+
+        let mut u_rot = vec![0.0; u.len()];
+        for block in 0..blocks {
+            let src = block * ROOT_DIM;
+            let dst = ((block + 1) % blocks) * ROOT_DIM;
+            u_rot[dst..dst + ROOT_DIM].copy_from_slice(&u[src..src + ROOT_DIM]);
+        }
+
+        let u_blocks = blocks_from_vec(&u);
+        let v_blocks = blocks_from_vec(&u_rot);
+        let d_hct = hct_distance(&u_blocks, &v_blocks);
+
+        assert!(d_hct > 0.02);
     }
 }
