@@ -301,6 +301,8 @@ fn rotor_distance(a: &[f64; ROOT_DIM], b: &[f64; ROOT_DIM]) -> f64 {
 fn hct_distance_stats(
     u_blocks: &[Option<[f64; ROOT_DIM]>],
     v_blocks: &[Option<[f64; ROOT_DIM]>],
+    k: usize,
+    beta: f64,
 ) -> (f64, f64, f64, usize) {
     let blocks = u_blocks.len().min(v_blocks.len());
     if blocks < 2 {
@@ -331,10 +333,10 @@ fn hct_distance_stats(
         let qv = to_rotor29(&v_j, &v_j1);
         let m_cont = rotor_dist_29(&qu, &qv);
 
-        let ru_j = snap_soft(&u_j, SNAP_SOFT_K, SNAP_SOFT_BETA);
-        let ru_j1 = snap_soft(&u_j1, SNAP_SOFT_K, SNAP_SOFT_BETA);
-        let rv_j = snap_soft(&v_j, SNAP_SOFT_K, SNAP_SOFT_BETA);
-        let rv_j1 = snap_soft(&v_j1, SNAP_SOFT_K, SNAP_SOFT_BETA);
+        let ru_j = snap_soft(&u_j, k, beta);
+        let ru_j1 = snap_soft(&u_j1, k, beta);
+        let rv_j = snap_soft(&v_j, k, beta);
+        let rv_j1 = snap_soft(&v_j1, k, beta);
         let qu_root = to_rotor29(&ru_j, &ru_j1);
         let qv_root = to_rotor29(&rv_j, &rv_j1);
         let m_root = rotor_dist_29(&qu_root, &qv_root);
@@ -376,10 +378,10 @@ fn hct_distance(
     u_blocks: &[Option<[f64; ROOT_DIM]>],
     v_blocks: &[Option<[f64; ROOT_DIM]>],
 ) -> f64 {
-    hct_distance_stats(u_blocks, v_blocks).0
+    hct_distance_stats(u_blocks, v_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA).0
 }
 
-fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> {
+fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<ComponentStats, String> {
     if u.len() != v.len() {
         return Err("u and v must have the same length".to_string());
     }
@@ -455,7 +457,7 @@ fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> 
             anchor_u_sum += u_anchor_val;
             anchor_u_count += 1;
             u_anchor = Some(u_anchor_val);
-            r_u_soft_opt = Some(snap_soft(&u_block, SNAP_SOFT_K, SNAP_SOFT_BETA));
+            r_u_soft_opt = Some(snap_soft(&u_block, k, beta));
         }
 
         if let Some(v_block) = v_opt {
@@ -464,7 +466,7 @@ fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> 
             anchor_v_sum += v_anchor_val;
             anchor_v_count += 1;
             v_anchor = Some(v_anchor_val);
-            r_v_soft_opt = Some(snap_soft(&v_block, SNAP_SOFT_K, SNAP_SOFT_BETA));
+            r_v_soft_opt = Some(snap_soft(&v_block, k, beta));
         }
 
         let (Some(u_block), Some(v_block), Some(r_u), Some(r_v), Some(u_anchor), Some(v_anchor)) = (
@@ -546,10 +548,10 @@ fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> 
                 (Some(bu_n), Some(bv_n)) => biv_angle_dist(&bu_n, &bv_n),
             };
 
-            let ru_j = snap_soft(&a_j, SNAP_SOFT_K, SNAP_SOFT_BETA);
-            let ru_j1 = snap_soft(&a_j1, SNAP_SOFT_K, SNAP_SOFT_BETA);
-            let rv_j = snap_soft(&b_j, SNAP_SOFT_K, SNAP_SOFT_BETA);
-            let rv_j1 = snap_soft(&b_j1, SNAP_SOFT_K, SNAP_SOFT_BETA);
+            let ru_j = snap_soft(&a_j, k, beta);
+            let ru_j1 = snap_soft(&a_j1, k, beta);
+            let rv_j = snap_soft(&b_j, k, beta);
+            let rv_j1 = snap_soft(&b_j1, k, beta);
             let bru = wedge8(&ru_j, &ru_j1);
             let brv = wedge8(&rv_j, &rv_j1);
             let d_root = match (
@@ -586,7 +588,8 @@ fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> 
         0.0
     };
 
-    let (d_hct, hct_root, hct_cont, valid_triplets) = hct_distance_stats(&u_blocks, &v_blocks);
+    let (d_hct, hct_root, hct_cont, valid_triplets) =
+        hct_distance_stats(&u_blocks, &v_blocks, k, beta);
 
     Ok(ComponentStats {
         d_sem,
@@ -611,7 +614,8 @@ fn calculate_components(u: &[f64], v: &[f64]) -> Result<ComponentStats, String> 
 
 #[pyfunction]
 fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64> {
-    let stats = calculate_components(&u, &v).map_err(PyValueError::new_err)?;
+    let stats = calculate_components(&u, &v, SNAP_SOFT_K, SNAP_SOFT_BETA)
+        .map_err(PyValueError::new_err)?;
     if u.is_empty() {
         return Ok(0.0);
     }
@@ -623,26 +627,13 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
 }
 
 #[cfg(feature = "inspect")]
-#[pyfunction]
-fn spin3_inspect(
-    py: Python<'_>,
-    u: Vec<f64>,
-    v: Vec<f64>,
-    alpha: Option<f64>,
-) -> PyResult<Bound<'_, PyDict>> {
-    let stats = calculate_components(&u, &v).map_err(PyValueError::new_err)?;
-    let alpha_weight = resolve_alpha(alpha);
-    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
-    let total = if u.is_empty() {
-        0.0
-    } else {
-        clamp(
-            (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct,
-            0.0,
-            1.0,
-        )
-    };
-
+fn build_inspect_dict<'py>(
+    py: Python<'py>,
+    stats: &ComponentStats,
+    alpha_weight: f64,
+    d_struct: f64,
+    total: f64,
+) -> PyResult<Bound<'py, PyDict>> {
     let dict = PyDict::new_bound(py);
     dict.set_item("semantic", stats.d_sem)?;
     dict.set_item("intra", stats.d_intra)?;
@@ -667,11 +658,72 @@ fn spin3_inspect(
     Ok(dict)
 }
 
+#[cfg(feature = "inspect")]
+#[pyfunction]
+fn spin3_inspect(
+    py: Python<'_>,
+    u: Vec<f64>,
+    v: Vec<f64>,
+    alpha: Option<f64>,
+) -> PyResult<Bound<'_, PyDict>> {
+    let stats = calculate_components(&u, &v, SNAP_SOFT_K, SNAP_SOFT_BETA)
+        .map_err(PyValueError::new_err)?;
+    let alpha_weight = resolve_alpha(alpha);
+    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
+    let total = if u.is_empty() {
+        0.0
+    } else {
+        clamp(
+            (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct,
+            0.0,
+            1.0,
+        )
+    };
+
+    build_inspect_dict(py, &stats, alpha_weight, d_struct, total)
+}
+
+#[cfg(feature = "inspect")]
+#[pyfunction]
+fn spin3_inspect_dev(
+    py: Python<'_>,
+    u: Vec<f64>,
+    v: Vec<f64>,
+    k: usize,
+    beta: f64,
+    alpha: Option<f64>,
+) -> PyResult<PyObject> {
+    let k = k.clamp(1, 240);
+    if !beta.is_finite() || beta <= 0.0 {
+        return Err(PyValueError::new_err(
+            "beta must be a positive finite number",
+        ));
+    }
+
+    let stats = calculate_components(&u, &v, k, beta).map_err(PyValueError::new_err)?;
+    let alpha_weight = resolve_alpha(alpha);
+    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
+    let total = if u.is_empty() {
+        0.0
+    } else {
+        clamp(
+            (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct,
+            0.0,
+            1.0,
+        )
+    };
+
+    let dict = build_inspect_dict(py, &stats, alpha_weight, d_struct, total)?;
+    Ok(dict.into_py(py))
+}
+
 #[pymodule]
 fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spin3_distance, m)?)?;
     #[cfg(feature = "inspect")]
     m.add_function(wrap_pyfunction!(spin3_inspect, m)?)?;
+    #[cfg(feature = "inspect")]
+    m.add_function(wrap_pyfunction!(spin3_inspect_dev, m)?)?;
     Ok(())
 }
 
