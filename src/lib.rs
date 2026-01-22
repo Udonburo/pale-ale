@@ -374,6 +374,7 @@ fn hct_distance_stats(
     (d_hct, d_root, d_cont, cont_count)
 }
 
+#[allow(dead_code)]
 fn hct_distance(
     u_blocks: &[Option<[f64; ROOT_DIM]>],
     v_blocks: &[Option<[f64; ROOT_DIM]>],
@@ -612,10 +613,20 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
     })
 }
 
-#[pyfunction]
-fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64> {
-    let stats = calculate_components(&u, &v, SNAP_SOFT_K, SNAP_SOFT_BETA)
-        .map_err(PyValueError::new_err)?;
+/// Pure Rust API: computes the structural distance between two vectors.
+///
+/// Returns a score in [0.0, 1.0] where 0.0 is identical and 1.0 is maximally different.
+///
+/// # Arguments
+///
+/// * `u` - First vector (length must be multiple of 8)
+/// * `v` - Second vector (length must be multiple of 8)
+/// * `alpha` - Mixing factor [0.0, 1.0].
+///     * `Some(0.0)` -> pure semantic distance (approx 1 - cosine)
+///     * `Some(1.0)` -> pure structural distance
+///     * `None` -> defaults to 0.15
+pub fn spin3_distance(u: &[f64], v: &[f64], alpha: Option<f64>) -> Result<f64, String> {
+    let stats = calculate_components(u, v, SNAP_SOFT_K, SNAP_SOFT_BETA)?;
     if u.is_empty() {
         return Ok(0.0);
     }
@@ -624,6 +635,13 @@ fn spin3_distance(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64>
     let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
     let d = (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct;
     Ok(clamp(d, 0.0, 1.0))
+}
+
+/// Python API wrapper for spin3_distance
+#[pyfunction]
+#[pyo3(name = "spin3_distance")]
+fn spin3_distance_py(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64> {
+    spin3_distance(&u, &v, alpha).map_err(PyValueError::new_err)
 }
 
 #[cfg(feature = "inspect")]
@@ -719,7 +737,7 @@ fn spin3_inspect_dev(
 
 #[pymodule]
 fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(spin3_distance, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_distance_py, m)?)?;
     #[cfg(feature = "inspect")]
     m.add_function(wrap_pyfunction!(spin3_inspect, m)?)?;
     #[cfg(feature = "inspect")]
@@ -747,8 +765,9 @@ mod tests {
     fn symmetry() {
         let u: Vec<f64> = (0..16).map(|i| (i as f64 + 1.0).sin()).collect();
         let v: Vec<f64> = (0..16).map(|i| (i as f64 + 1.0).cos()).collect();
-        let d1 = spin3_distance(u.clone(), v.clone(), Some(0.25)).unwrap();
-        let d2 = spin3_distance(v, u, Some(0.25)).unwrap();
+        // Use pure Rust function
+        let d1 = spin3_distance(&u, &v, Some(0.25)).unwrap();
+        let d2 = spin3_distance(&v, &u, Some(0.25)).unwrap();
         assert!((d1 - d2).abs() < 1e-12);
     }
 
@@ -760,14 +779,14 @@ mod tests {
             u[i] = (i as f64).sin();
             v[i] = (i as f64).cos();
         }
-        let d = spin3_distance(u, v, Some(0.10)).unwrap();
+        let d = spin3_distance(&u, &v, Some(0.10)).unwrap();
         assert!(d >= 0.0 && d <= 1.0);
     }
 
     #[test]
     fn identical_vectors_near_zero() {
         let u = vec![1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        let d = spin3_distance(u.clone(), u, Some(0.5)).unwrap();
+        let d = spin3_distance(&u, &u, Some(0.5)).unwrap();
         assert!(d >= 0.0 && d <= 1.0);
         assert!(d.abs() < 1e-8);
     }
@@ -778,7 +797,7 @@ mod tests {
             0.2, -0.1, 0.3, -0.4, 0.5, -0.6, 0.7, -0.8, 0.1, 0.2, -0.3, 0.4, -0.5, 0.6,
             -0.7, 0.8,
         ];
-        let d = spin3_distance(u.clone(), u, Some(1.0)).unwrap();
+        let d = spin3_distance(&u, &u, Some(1.0)).unwrap();
         assert!(d < 1e-5);
     }
 
@@ -786,7 +805,7 @@ mod tests {
     fn opposite_vectors_near_one() {
         let u = vec![1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let v: Vec<f64> = u.iter().map(|x| -x).collect();
-        let d = spin3_distance(u, v, None).unwrap();
+        let d = spin3_distance(&u, &v, None).unwrap();
         assert!(d >= 0.90 && d <= 1.0);
     }
 
@@ -794,7 +813,7 @@ mod tests {
     fn invalid_length_errors() {
         let u = vec![0.1; 10];
         let v = vec![0.1; 10];
-        assert!(spin3_distance(u, v, None).is_err());
+        assert!(spin3_distance(&u, &v, None).is_err());
     }
 
     #[test]
@@ -816,7 +835,7 @@ mod tests {
             u_shift[dst..dst + ROOT_DIM].copy_from_slice(&u[src..src + ROOT_DIM]);
         }
 
-        let d = spin3_distance(u, u_shift, Some(1.0)).unwrap();
+        let d = spin3_distance(&u, &u_shift, Some(1.0)).unwrap();
         assert!(d > 0.15);
     }
 
