@@ -4,21 +4,24 @@ build-backend = "maturin"
 
 [project]
 name = "pale-ale-core"
-version = "0.3.0"
+version = "1.0.0"
 description = "Pale Ale Core (Rust): deterministic Spin(3) rotor distance kernels"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
 authors = [{ name = "Aoi Kawasaki" }]
-license = { text = "Apache-2.0" }
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Rust",
   "Operating System :: OS Independent",
-  "License :: OSI Approved :: Apache Software License",
+  "License :: OSI Approved :: Mozilla Public License 2.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/Udonburo/pale-ale"
+Homepage = "https://github.com/Udonburo/pale-ale-core"
+Repository = "https://github.com/Udonburo/pale-ale-core"
+Issues = "https://github.com/Udonburo/pale-ale-core/issues"
+Wrapper-CLI = "https://pypi.org/project/pale-ale/"
 
 [tool.maturin]
 module-name = "pale_ale_core"

@@ -1,11 +1,14 @@
+#[cfg(feature = "numpy-support")]
+use numpy::PyReadonlyArray1;
 use once_cell::sync::Lazy;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-#[cfg(feature = "inspect")]
 use pyo3::types::PyDict;
+use std::marker::PhantomData;
 use std::f64::consts::PI;
 
 const ROOT_DIM: usize = 8;
+const ROOT_COUNT: usize = 240;
 const BIV_DIM: usize = ROOT_DIM * (ROOT_DIM - 1) / 2;
 const ROTOR_DIM: usize = 1 + BIV_DIM;
 const EPS_NORM: f64 = 1e-12;
@@ -14,29 +17,78 @@ const SEMANTIC_EPS: f64 = 1e-9;
 const SNAP_SOFT_K: usize = 3;
 const SNAP_SOFT_BETA: f64 = 12.0;
 
-#[allow(dead_code)]
-struct ComponentStats {
-    d_sem: f64,
-    d_intra: f64,
-    d_inter: f64,
-    d_hct: f64,
-    intra_root: f64,
-    intra_cont: f64,
-    intra_snap: f64,
-    inter_root: f64,
-    inter_cont: f64,
-    hct_root: f64,
-    hct_cont: f64,
-    anchor_u_mean: f64,
-    anchor_v_mean: f64,
-    anchor_delta: f64,
-    valid_blocks: usize,
-    valid_pairs: usize,
-    valid_triplets: usize,
+struct SnapMeta {
+    soft: [f64; ROOT_DIM],
+    #[allow(dead_code)]
+    hard_idx: usize,
+    hard_dot: f64,
+}
+
+#[derive(Debug)]
+struct PrecomputedBlock {
+    soft: [f64; ROOT_DIM],
+    anchor: f64,
+}
+
+enum DataView<'a> {
+    Owned(Vec<f64>, PhantomData<&'a ()>),
+    #[cfg(feature = "numpy-support")]
+    Numpy(PyReadonlyArray1<'a, f64>),
+}
+
+impl<'a> DataView<'a> {
+    fn as_slice(&self) -> &[f64] {
+        match self {
+            DataView::Owned(v, _) => v.as_slice(),
+            #[cfg(feature = "numpy-support")]
+            DataView::Numpy(array) => array.as_slice().expect("numpy array should be contiguous"),
+        }
+    }
+}
+
+fn extract_view<'py>(obj: &Bound<'py, PyAny>) -> PyResult<DataView<'py>> {
+    #[cfg(feature = "numpy-support")]
+    {
+        if let Ok(array) = obj.extract::<PyReadonlyArray1<'py, f64>>() {
+            if array.as_slice().is_ok() {
+                return Ok(DataView::Numpy(array));
+            }
+        }
+    }
+
+    let owned = obj.extract::<Vec<f64>>()?;
+    Ok(DataView::Owned(owned, PhantomData))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Spin3Components {
+    pub d_intra: f64,
+    pub d_inter: f64,
+    pub d_hct: f64,
+    pub d_struct: f64,
+    pub intra_root: f64,
+    pub intra_cont: f64,
+    pub intra_snap: f64,
+    pub inter_root: f64,
+    pub inter_cont: f64,
+    pub hct_root: f64,
+    pub hct_cont: f64,
+    pub anchor_u_mean: f64,
+    pub anchor_v_mean: f64,
+    pub anchor_delta: f64,
+    pub valid_blocks: usize,
+    pub valid_pairs: usize,
+    pub valid_triplets: usize,
+}
+
+impl Spin3Components {
+    pub fn structural_distance(&self) -> f64 {
+        self.d_struct
+    }
 }
 
 static E8_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
-    let mut roots = Vec::with_capacity(240);
+    let mut roots = Vec::with_capacity(ROOT_COUNT);
     let inv_sqrt2 = 1.0 / (2.0_f64).sqrt();
     let signs = [-1.0, 1.0];
 
@@ -65,14 +117,14 @@ static E8_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
         }
 
         let mut v = [0.0; ROOT_DIM];
-        for bit in 0..ROOT_DIM {
+        for (bit, val) in v.iter_mut().enumerate() {
             let sign = if (mask >> bit) & 1 == 1 { -0.5 } else { 0.5 };
-            v[bit] = sign * inv_sqrt2;
+            *val = sign * inv_sqrt2;
         }
         roots.push(v);
     }
 
-    debug_assert_eq!(roots.len(), 240);
+    debug_assert_eq!(roots.len(), ROOT_COUNT);
     roots
 });
 
@@ -88,8 +140,33 @@ fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
 }
 
 #[inline]
+fn angle_dist_from_dot(dot: f64) -> f64 {
+    let d = clamp(dot, -1.0, 1.0);
+    let wedge = (1.0 - d * d).max(0.0).sqrt();
+    wedge.atan2(d) / PI
+}
+
+#[inline]
 fn resolve_alpha(alpha: Option<f64>) -> f64 {
     clamp(alpha.unwrap_or(0.15), 0.0, 1.0)
+}
+
+fn validate_alpha(alpha: Option<f64>) -> Result<(), String> {
+    if let Some(a) = alpha {
+        if !a.is_finite() {
+            return Err("alpha must be a finite number".to_string());
+        }
+    }
+    Ok(())
+}
+
+fn resolve_k_beta(k: Option<usize>, beta: Option<f64>) -> Result<(usize, f64), String> {
+    let k = k.unwrap_or(SNAP_SOFT_K).clamp(1, ROOT_COUNT);
+    let beta = beta.unwrap_or(SNAP_SOFT_BETA);
+    if !beta.is_finite() || beta <= 0.0 {
+        return Err("beta must be a positive finite number".to_string());
+    }
+    Ok((k, beta))
 }
 
 #[inline]
@@ -100,6 +177,21 @@ fn dot(a: &[f64], b: &[f64]) -> f64 {
 #[inline]
 fn norm(a: &[f64]) -> f64 {
     dot(a, a).sqrt()
+}
+
+fn semantic_distance(u: &[f64], v: &[f64]) -> f64 {
+    if u.is_empty() {
+        return 0.0;
+    }
+
+    let nu = norm(u);
+    let nv = norm(v);
+    if nu < SEMANTIC_EPS || nv < SEMANTIC_EPS {
+        1.0
+    } else {
+        let sim = clamp(dot(u, v) / (nu * nv), -1.0, 1.0);
+        0.5 * (1.0 - sim)
+    }
 }
 
 #[inline]
@@ -171,7 +263,11 @@ fn biv_normalize(a: &[f64; BIV_DIM], eps: f64) -> Option<[f64; BIV_DIM]> {
 fn biv_angle_dist(a: &[f64; BIV_DIM], b: &[f64; BIV_DIM]) -> f64 {
     let dot = clamp(biv_dot(a, b), -1.0, 1.0);
     let wedge_sq = 1.0 - dot * dot;
-    let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
+    let wedge_norm = if wedge_sq <= 0.0 {
+        0.0
+    } else {
+        wedge_sq.sqrt()
+    };
     let theta = wedge_norm.atan2(dot);
     theta / PI
 }
@@ -211,13 +307,11 @@ fn to_rotor29(u: &[f64; ROOT_DIM], v: &[f64; ROOT_DIM]) -> [f64; ROTOR_DIM] {
 
     let mut out = [0.0; ROTOR_DIM];
     out[0] = c;
-    for i in 0..BIV_DIM {
-        out[i + 1] = b[i];
-    }
+    out[1..].copy_from_slice(&b);
     let n = norm29(&out).max(EPS_NORM);
     let inv = 1.0 / n;
-    for i in 0..ROTOR_DIM {
-        out[i] *= inv;
+    for val in out.iter_mut() {
+        *val *= inv;
     }
     out
 }
@@ -227,11 +321,16 @@ fn rotor_dist_29(a: &[f64; ROTOR_DIM], b: &[f64; ROTOR_DIM]) -> f64 {
     let b_n = normalize29(b);
     let dot = clamp(dot29(&a_n, &b_n), -1.0, 1.0);
     let wedge_sq = 1.0 - dot * dot;
-    let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
+    let wedge_norm = if wedge_sq <= 0.0 {
+        0.0
+    } else {
+        wedge_sq.sqrt()
+    };
     let theta = wedge_norm.atan2(dot);
     theta / PI
 }
 
+#[allow(dead_code)]
 fn snap_e8(a: &[f64; ROOT_DIM]) -> [f64; ROOT_DIM] {
     let mut best = E8_ROOTS[0];
     let mut best_dot = dot8(a, &best);
@@ -245,55 +344,174 @@ fn snap_e8(a: &[f64; ROOT_DIM]) -> [f64; ROOT_DIM] {
     best
 }
 
-fn snap_soft(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> [f64; ROOT_DIM] {
-    let mut dots: Vec<(f64, usize)> = Vec::with_capacity(E8_ROOTS.len());
-    let mut best_idx = 0;
-    let mut best_dot = dot8(u_unit, &E8_ROOTS[0]);
-    dots.push((best_dot, 0));
-    for (idx, root) in E8_ROOTS.iter().enumerate().skip(1) {
+fn snap_soft_meta_dyn(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta {
+    let k = k.clamp(1, ROOT_COUNT);
+    let mut top_dots = [f64::NEG_INFINITY; ROOT_COUNT];
+    let mut top_idx = [usize::MAX; ROOT_COUNT];
+    let mut weights = [0.0; ROOT_COUNT];
+
+    for (idx, root) in E8_ROOTS.iter().enumerate() {
         let d = dot8(u_unit, root);
-        if d > best_dot {
-            best_dot = d;
-            best_idx = idx;
+
+        let mut insert_pos = None;
+        for i in 0..k {
+            let cur_dot = top_dots[i];
+            let cur_idx = top_idx[i];
+            if d > cur_dot || (d == cur_dot && idx < cur_idx) {
+                insert_pos = Some(i);
+                break;
+            }
         }
-        dots.push((d, idx));
+
+        if let Some(pos) = insert_pos {
+            for j in (pos + 1..k).rev() {
+                top_dots[j] = top_dots[j - 1];
+                top_idx[j] = top_idx[j - 1];
+            }
+            top_dots[pos] = d;
+            top_idx[pos] = idx;
+        }
     }
 
-    let k = k.max(1).min(dots.len());
-    dots.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    let top = &dots[..k];
-    let max_dot = top[0].0;
+    let hard_dot = top_dots[0];
+    let hard_idx = top_idx[0];
 
+    let mut soft = E8_ROOTS[hard_idx];
+    let max_dot = hard_dot;
     let mut weight_sum = 0.0;
-    let mut weights: Vec<f64> = Vec::with_capacity(k);
-    for (d, _) in top.iter() {
-        let w = (beta * (d - max_dot)).exp();
+    for i in 0..k {
+        let w = (beta * (top_dots[i] - max_dot)).exp();
+        weights[i] = w;
         weight_sum += w;
-        weights.push(w);
     }
 
     if weight_sum > 0.0 && weight_sum.is_finite() {
         let mut acc = [0.0; ROOT_DIM];
         let inv_sum = 1.0 / weight_sum;
-        for (w, (_, idx)) in weights.iter().zip(top.iter()) {
-            let root = E8_ROOTS[*idx];
-            let scaled = w * inv_sum;
-            for i in 0..ROOT_DIM {
-                acc[i] += scaled * root[i];
+        for i in 0..k {
+            let w = weights[i] * inv_sum;
+            let root = E8_ROOTS[top_idx[i]];
+            for j in 0..ROOT_DIM {
+                acc[j] += w * root[j];
             }
         }
         if let Some(normed) = normalize8(&acc) {
-            return normed;
+            soft = normed;
         }
     }
 
-    E8_ROOTS[best_idx]
+    SnapMeta {
+        soft,
+        hard_idx,
+        hard_dot,
+    }
+}
+
+fn snap_soft_meta_fixed<const K: usize>(u_unit: &[f64; ROOT_DIM], beta: f64) -> SnapMeta {
+    let mut top_dots = [f64::NEG_INFINITY; K];
+    let mut top_idx = [usize::MAX; K];
+
+    for (idx, root) in E8_ROOTS.iter().enumerate() {
+        let d = dot8(u_unit, root);
+
+        let mut insert_pos = None;
+        for i in 0..K {
+            let cur_dot = top_dots[i];
+            let cur_idx = top_idx[i];
+            if d > cur_dot || (d == cur_dot && idx < cur_idx) {
+                insert_pos = Some(i);
+                break;
+            }
+        }
+
+        if let Some(pos) = insert_pos {
+            for j in (pos + 1..K).rev() {
+                top_dots[j] = top_dots[j - 1];
+                top_idx[j] = top_idx[j - 1];
+            }
+            top_dots[pos] = d;
+            top_idx[pos] = idx;
+        }
+    }
+
+    let hard_dot = top_dots[0];
+    let hard_idx = top_idx[0];
+
+    let mut soft = E8_ROOTS[hard_idx];
+    let max_dot = hard_dot;
+    let mut weights = [0.0; K];
+    let mut weight_sum = 0.0;
+    for i in 0..K {
+        let w = (beta * (top_dots[i] - max_dot)).exp();
+        weights[i] = w;
+        weight_sum += w;
+    }
+
+    if weight_sum > 0.0 && weight_sum.is_finite() {
+        let mut acc = [0.0; ROOT_DIM];
+        let inv_sum = 1.0 / weight_sum;
+        for i in 0..K {
+            let w = weights[i] * inv_sum;
+            let root = E8_ROOTS[top_idx[i]];
+            for j in 0..ROOT_DIM {
+                acc[j] += w * root[j];
+            }
+        }
+        if let Some(normed) = normalize8(&acc) {
+            soft = normed;
+        }
+    }
+
+    SnapMeta {
+        soft,
+        hard_idx,
+        hard_dot,
+    }
+}
+
+fn snap_soft_meta(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta {
+    let k = k.clamp(1, ROOT_COUNT);
+    match k {
+        1 => snap_soft_meta_fixed::<1>(u_unit, beta),
+        2 => snap_soft_meta_fixed::<2>(u_unit, beta),
+        3 => snap_soft_meta_fixed::<3>(u_unit, beta),
+        _ => snap_soft_meta_dyn(u_unit, k, beta),
+    }
+}
+
+#[allow(dead_code)]
+fn snap_soft(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> [f64; ROOT_DIM] {
+    snap_soft_meta(u_unit, k, beta).soft
+}
+
+fn precompute_soft_and_anchor(
+    blocks: &[Option<[f64; ROOT_DIM]>],
+    k: usize,
+    beta: f64,
+) -> Vec<Option<PrecomputedBlock>> {
+    let mut precomputed = Vec::with_capacity(blocks.len());
+    for block in blocks.iter() {
+        if let Some(u_unit) = block {
+            let meta = snap_soft_meta(u_unit, k, beta);
+            precomputed.push(Some(PrecomputedBlock {
+                soft: meta.soft,
+                anchor: angle_dist_from_dot(meta.hard_dot),
+            }));
+        } else {
+            precomputed.push(None);
+        }
+    }
+    precomputed
 }
 
 fn rotor_distance(a: &[f64; ROOT_DIM], b: &[f64; ROOT_DIM]) -> f64 {
     let dot = clamp(dot8(a, b), -1.0, 1.0);
     let wedge_sq = 1.0 - dot * dot;
-    let wedge_norm = if wedge_sq <= 0.0 { 0.0 } else { wedge_sq.sqrt() };
+    let wedge_norm = if wedge_sq <= 0.0 {
+        0.0
+    } else {
+        wedge_sq.sqrt()
+    };
     let theta = wedge_norm.atan2(dot);
     theta / PI
 }
@@ -301,8 +519,8 @@ fn rotor_distance(a: &[f64; ROOT_DIM], b: &[f64; ROOT_DIM]) -> f64 {
 fn hct_distance_stats(
     u_blocks: &[Option<[f64; ROOT_DIM]>],
     v_blocks: &[Option<[f64; ROOT_DIM]>],
-    k: usize,
-    beta: f64,
+    u_pre: &[Option<PrecomputedBlock>],
+    v_pre: &[Option<PrecomputedBlock>],
 ) -> (f64, f64, f64, usize) {
     let blocks = u_blocks.len().min(v_blocks.len());
     if blocks < 2 {
@@ -318,27 +536,33 @@ fn hct_distance_stats(
     let mut prev_root: Option<f64> = None;
 
     for j in 0..(blocks - 1) {
-        let (Some(u_j), Some(u_j1)) = (u_blocks[j], u_blocks[j + 1]) else {
+        let (Some(u_j), Some(u_j1)) = (u_blocks[j].as_ref(), u_blocks[j + 1].as_ref()) else {
             prev_cont = None;
             prev_root = None;
             continue;
         };
-        let (Some(v_j), Some(v_j1)) = (v_blocks[j], v_blocks[j + 1]) else {
+        let (Some(v_j), Some(v_j1)) = (v_blocks[j].as_ref(), v_blocks[j + 1].as_ref()) else {
             prev_cont = None;
             prev_root = None;
             continue;
         };
 
-        let qu = to_rotor29(&u_j, &u_j1);
-        let qv = to_rotor29(&v_j, &v_j1);
+        let qu = to_rotor29(u_j, u_j1);
+        let qv = to_rotor29(v_j, v_j1);
         let m_cont = rotor_dist_29(&qu, &qv);
 
-        let ru_j = snap_soft(&u_j, k, beta);
-        let ru_j1 = snap_soft(&u_j1, k, beta);
-        let rv_j = snap_soft(&v_j, k, beta);
-        let rv_j1 = snap_soft(&v_j1, k, beta);
-        let qu_root = to_rotor29(&ru_j, &ru_j1);
-        let qv_root = to_rotor29(&rv_j, &rv_j1);
+        let (Some(ru_j), Some(ru_j1)) = (u_pre[j].as_ref(), u_pre[j + 1].as_ref()) else {
+            prev_cont = None;
+            prev_root = None;
+            continue;
+        };
+        let (Some(rv_j), Some(rv_j1)) = (v_pre[j].as_ref(), v_pre[j + 1].as_ref()) else {
+            prev_cont = None;
+            prev_root = None;
+            continue;
+        };
+        let qu_root = to_rotor29(&ru_j.soft, &ru_j1.soft);
+        let qv_root = to_rotor29(&rv_j.soft, &rv_j1.soft);
         let m_root = rotor_dist_29(&qu_root, &qv_root);
 
         if let Some(prev) = prev_cont {
@@ -375,24 +599,28 @@ fn hct_distance_stats(
 }
 
 #[allow(dead_code)]
-fn hct_distance(
-    u_blocks: &[Option<[f64; ROOT_DIM]>],
-    v_blocks: &[Option<[f64; ROOT_DIM]>],
-) -> f64 {
-    hct_distance_stats(u_blocks, v_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA).0
+fn hct_distance(u_blocks: &[Option<[f64; ROOT_DIM]>], v_blocks: &[Option<[f64; ROOT_DIM]>]) -> f64 {
+    let u_pre = precompute_soft_and_anchor(u_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA);
+    let v_pre = precompute_soft_and_anchor(v_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA);
+    hct_distance_stats(u_blocks, v_blocks, &u_pre, &v_pre).0
 }
 
-fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<ComponentStats, String> {
+fn calculate_components(
+    u: &[f64],
+    v: &[f64],
+    k: usize,
+    beta: f64,
+) -> Result<Spin3Components, String> {
     if u.len() != v.len() {
         return Err("u and v must have the same length".to_string());
     }
     let dim = u.len();
     if dim == 0 {
-        return Ok(ComponentStats {
-            d_sem: 0.0,
+        return Ok(Spin3Components {
             d_intra: 0.0,
             d_inter: 0.0,
             d_hct: 0.0,
+            d_struct: 0.0,
             intra_root: 0.0,
             intra_cont: 0.0,
             intra_snap: 0.0,
@@ -408,18 +636,10 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
             valid_triplets: 0,
         });
     }
+    #[allow(clippy::manual_is_multiple_of)]
     if dim % ROOT_DIM != 0 {
         return Err("vector length must be a multiple of 8".to_string());
     }
-
-    let nu = norm(u);
-    let nv = norm(v);
-    let d_sem = if nu < SEMANTIC_EPS || nv < SEMANTIC_EPS {
-        1.0
-    } else {
-        let sim = clamp(dot(u, v) / (nu * nv), -1.0, 1.0);
-        0.5 * (1.0 - sim)
-    };
 
     let blocks = dim / ROOT_DIM;
     let mut u_blocks = Vec::with_capacity(blocks);
@@ -428,11 +648,21 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
         let start = block * ROOT_DIM;
         let mut u_block = [0.0; ROOT_DIM];
         let mut v_block = [0.0; ROOT_DIM];
-        u_block.copy_from_slice(&u[start..start + ROOT_DIM]);
-        v_block.copy_from_slice(&v[start..start + ROOT_DIM]);
+        for i in 0..ROOT_DIM {
+            let u_val = u[start + i];
+            let v_val = v[start + i];
+            if !u_val.is_finite() || !v_val.is_finite() {
+                return Err("u and v must contain only finite f64 values".to_string());
+            }
+            u_block[i] = u_val;
+            v_block[i] = v_val;
+        }
         u_blocks.push(normalize8(&u_block));
         v_blocks.push(normalize8(&v_block));
     }
+
+    let u_pre = precompute_soft_and_anchor(&u_blocks, k, beta);
+    let v_pre = precompute_soft_and_anchor(&v_blocks, k, beta);
 
     let mut anchor_u_sum = 0.0;
     let mut anchor_u_count = 0usize;
@@ -444,47 +674,31 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
     let mut intra_snap_sum = 0.0;
     let mut intra_count = 0usize;
     for block in 0..blocks {
-        let u_opt = u_blocks[block];
-        let v_opt = v_blocks[block];
+        let u_opt = u_blocks[block].as_ref();
+        let v_opt = v_blocks[block].as_ref();
 
-        let mut r_u_soft_opt: Option<[f64; ROOT_DIM]> = None;
-        let mut r_v_soft_opt: Option<[f64; ROOT_DIM]> = None;
-        let mut u_anchor = None;
-        let mut v_anchor = None;
+        let u_pre_opt = u_pre[block].as_ref();
+        let v_pre_opt = v_pre[block].as_ref();
 
-        if let Some(u_block) = u_opt {
-            let r_u_hard = snap_e8(&u_block);
-            let u_anchor_val = rotor_distance(&u_block, &r_u_hard);
-            anchor_u_sum += u_anchor_val;
+        if let Some(pre) = u_pre_opt {
+            anchor_u_sum += pre.anchor;
             anchor_u_count += 1;
-            u_anchor = Some(u_anchor_val);
-            r_u_soft_opt = Some(snap_soft(&u_block, k, beta));
         }
 
-        if let Some(v_block) = v_opt {
-            let r_v_hard = snap_e8(&v_block);
-            let v_anchor_val = rotor_distance(&v_block, &r_v_hard);
-            anchor_v_sum += v_anchor_val;
+        if let Some(pre) = v_pre_opt {
+            anchor_v_sum += pre.anchor;
             anchor_v_count += 1;
-            v_anchor = Some(v_anchor_val);
-            r_v_soft_opt = Some(snap_soft(&v_block, k, beta));
         }
 
-        let (Some(u_block), Some(v_block), Some(r_u), Some(r_v), Some(u_anchor), Some(v_anchor)) = (
-            u_opt,
-            v_opt,
-            r_u_soft_opt,
-            r_v_soft_opt,
-            u_anchor,
-            v_anchor,
-        )
+        let (Some(u_block), Some(v_block), Some(u_pre_block), Some(v_pre_block)) =
+            (u_opt, v_opt, u_pre_opt, v_pre_opt)
         else {
             continue;
         };
 
-        let d_root = rotor_distance(&r_u, &r_v);
-        let d_cont = rotor_distance(&u_block, &v_block);
-        let d_snap = 0.5 * (u_anchor + v_anchor);
+        let d_root = rotor_distance(&u_pre_block.soft, &v_pre_block.soft);
+        let d_cont = rotor_distance(u_block, v_block);
+        let d_snap = 0.5 * (u_pre_block.anchor + v_pre_block.anchor);
 
         intra_root_sum += d_root;
         intra_cont_sum += d_cont;
@@ -531,34 +745,30 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
     let mut inter_count = 0usize;
     if blocks > 1 {
         for j in 0..(blocks - 1) {
-            let (Some(a_j), Some(a_j1)) = (u_blocks[j], u_blocks[j + 1]) else {
+            let (Some(a_j), Some(a_j1)) = (u_blocks[j].as_ref(), u_blocks[j + 1].as_ref()) else {
                 continue;
             };
-            let (Some(b_j), Some(b_j1)) = (v_blocks[j], v_blocks[j + 1]) else {
+            let (Some(b_j), Some(b_j1)) = (v_blocks[j].as_ref(), v_blocks[j + 1].as_ref()) else {
                 continue;
             };
 
-            let bu = wedge8(&a_j, &a_j1);
-            let bv = wedge8(&b_j, &b_j1);
-            let d_cont = match (
-                biv_normalize(&bu, EPS_BIV),
-                biv_normalize(&bv, EPS_BIV),
-            ) {
+            let bu = wedge8(a_j, a_j1);
+            let bv = wedge8(b_j, b_j1);
+            let d_cont = match (biv_normalize(&bu, EPS_BIV), biv_normalize(&bv, EPS_BIV)) {
                 (None, None) => 0.0,
                 (None, Some(_)) | (Some(_), None) => 1.0,
                 (Some(bu_n), Some(bv_n)) => biv_angle_dist(&bu_n, &bv_n),
             };
 
-            let ru_j = snap_soft(&a_j, k, beta);
-            let ru_j1 = snap_soft(&a_j1, k, beta);
-            let rv_j = snap_soft(&b_j, k, beta);
-            let rv_j1 = snap_soft(&b_j1, k, beta);
-            let bru = wedge8(&ru_j, &ru_j1);
-            let brv = wedge8(&rv_j, &rv_j1);
-            let d_root = match (
-                biv_normalize(&bru, EPS_BIV),
-                biv_normalize(&brv, EPS_BIV),
-            ) {
+            let (Some(ru_j), Some(ru_j1)) = (u_pre[j].as_ref(), u_pre[j + 1].as_ref()) else {
+                continue;
+            };
+            let (Some(rv_j), Some(rv_j1)) = (v_pre[j].as_ref(), v_pre[j + 1].as_ref()) else {
+                continue;
+            };
+            let bru = wedge8(&ru_j.soft, &ru_j1.soft);
+            let brv = wedge8(&rv_j.soft, &rv_j1.soft);
+            let d_root = match (biv_normalize(&bru, EPS_BIV), biv_normalize(&brv, EPS_BIV)) {
                 (None, None) => 0.0,
                 (None, Some(_)) | (Some(_), None) => 1.0,
                 (Some(bru_n), Some(brv_n)) => biv_angle_dist(&bru_n, &brv_n),
@@ -590,13 +800,14 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
     };
 
     let (d_hct, hct_root, hct_cont, valid_triplets) =
-        hct_distance_stats(&u_blocks, &v_blocks, k, beta);
+        hct_distance_stats(&u_blocks, &v_blocks, &u_pre, &v_pre);
+    let d_struct = 0.5 * d_intra + 0.3 * d_inter + 0.2 * d_hct;
 
-    Ok(ComponentStats {
-        d_sem,
+    Ok(Spin3Components {
         d_intra,
         d_inter,
         d_hct,
+        d_struct,
         intra_root,
         intra_cont,
         intra_snap,
@@ -613,7 +824,7 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
     })
 }
 
-/// Pure Rust API: computes the structural distance between two vectors.
+/// Pure Rust API: computes the mixed semantic/structural distance between two vectors.
 ///
 /// Returns a score in [0.0, 1.0] where 0.0 is identical and 1.0 is maximally different.
 ///
@@ -625,119 +836,235 @@ fn calculate_components(u: &[f64], v: &[f64], k: usize, beta: f64) -> Result<Com
 ///     * `Some(0.0)` -> pure semantic distance (approx 1 - cosine)
 ///     * `Some(1.0)` -> pure structural distance
 ///     * `None` -> defaults to 0.15
+///
+/// Prefer `spin3_struct` + Python-side semantic mixing for new integrations.
 pub fn spin3_distance(u: &[f64], v: &[f64], alpha: Option<f64>) -> Result<f64, String> {
-    let stats = calculate_components(u, v, SNAP_SOFT_K, SNAP_SOFT_BETA)?;
+    validate_alpha(alpha)?;
+    let components = calculate_components(u, v, SNAP_SOFT_K, SNAP_SOFT_BETA)?;
     if u.is_empty() {
         return Ok(0.0);
     }
 
     let alpha_weight = resolve_alpha(alpha);
-    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
-    let d = (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct;
+    let d_sem = semantic_distance(u, v);
+    let d_struct = components.d_struct;
+    let d = (1.0 - alpha_weight) * d_sem + alpha_weight * d_struct;
     Ok(clamp(d, 0.0, 1.0))
+}
+
+/// Pure Rust API: computes the structural-only distance between two vectors.
+pub fn spin3_struct(
+    u: &[f64],
+    v: &[f64],
+    k: Option<usize>,
+    beta: Option<f64>,
+) -> Result<f64, String> {
+    let (k, beta) = resolve_k_beta(k, beta)?;
+    let components = calculate_components(u, v, k, beta)?;
+    if u.is_empty() {
+        return Ok(0.0);
+    }
+
+    Ok(clamp(components.d_struct, 0.0, 1.0))
+}
+
+/// Pure Rust API: computes the structural-only distance between two vectors (default k/beta).
+pub fn spin3_struct_distance(u: &[f64], v: &[f64]) -> Result<f64, String> {
+    spin3_struct(u, v, None, None)
+}
+
+/// Pure Rust API: returns structural component breakdown (default k/beta).
+pub fn spin3_components(u: &[f64], v: &[f64]) -> Result<Spin3Components, String> {
+    spin3_components_with(u, v, None, None)
+}
+
+fn spin3_components_with(
+    u: &[f64],
+    v: &[f64],
+    k: Option<usize>,
+    beta: Option<f64>,
+) -> Result<Spin3Components, String> {
+    let (k, beta) = resolve_k_beta(k, beta)?;
+    calculate_components(u, v, k, beta)
 }
 
 /// Python API wrapper for spin3_distance
 #[pyfunction]
 #[pyo3(name = "spin3_distance")]
-fn spin3_distance_py(u: Vec<f64>, v: Vec<f64>, alpha: Option<f64>) -> PyResult<f64> {
-    spin3_distance(&u, &v, alpha).map_err(PyValueError::new_err)
+fn spin3_distance_py(
+    u: &Bound<'_, PyAny>,
+    v: &Bound<'_, PyAny>,
+    alpha: Option<f64>,
+) -> PyResult<f64> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    spin3_distance(u_view.as_slice(), v_view.as_slice(), alpha).map_err(PyValueError::new_err)
+}
+
+/// Python API wrapper for spin3_struct
+#[pyfunction]
+#[pyo3(name = "spin3_struct")]
+fn spin3_struct_py(
+    u: &Bound<'_, PyAny>,
+    v: &Bound<'_, PyAny>,
+    k: Option<usize>,
+    beta: Option<f64>,
+) -> PyResult<f64> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    spin3_struct(u_view.as_slice(), v_view.as_slice(), k, beta).map_err(PyValueError::new_err)
+}
+
+/// Python API wrapper for spin3_struct_distance (legacy alias)
+#[pyfunction]
+#[pyo3(name = "spin3_struct_distance")]
+fn spin3_struct_distance_py(u: &Bound<'_, PyAny>, v: &Bound<'_, PyAny>) -> PyResult<f64> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    spin3_struct(u_view.as_slice(), v_view.as_slice(), None, None).map_err(PyValueError::new_err)
+}
+
+/// Python API wrapper for spin3_components
+#[pyfunction]
+#[pyo3(name = "spin3_components")]
+fn spin3_components_py<'py>(
+    py: Python<'py>,
+    u: &Bound<'py, PyAny>,
+    v: &Bound<'py, PyAny>,
+    k: Option<usize>,
+    beta: Option<f64>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    let components = spin3_components_with(u_view.as_slice(), v_view.as_slice(), k, beta)
+        .map_err(PyValueError::new_err)?;
+    build_components_dict(py, &components)
+}
+
+fn build_components_dict<'py>(
+    py: Python<'py>,
+    components: &Spin3Components,
+) -> PyResult<Bound<'py, PyDict>> {
+    let dict = PyDict::new_bound(py);
+    dict.set_item("d_intra", components.d_intra)?;
+    dict.set_item("d_inter", components.d_inter)?;
+    dict.set_item("d_hct", components.d_hct)?;
+    dict.set_item("d_struct", components.d_struct)?;
+    dict.set_item("intra", components.d_intra)?;
+    dict.set_item("inter", components.d_inter)?;
+    dict.set_item("hct", components.d_hct)?;
+    dict.set_item("intra_root", components.intra_root)?;
+    dict.set_item("intra_cont", components.intra_cont)?;
+    dict.set_item("intra_snap", components.intra_snap)?;
+    dict.set_item("inter_root", components.inter_root)?;
+    dict.set_item("inter_cont", components.inter_cont)?;
+    dict.set_item("hct_root", components.hct_root)?;
+    dict.set_item("hct_cont", components.hct_cont)?;
+    dict.set_item("anchor_u_mean", components.anchor_u_mean)?;
+    dict.set_item("anchor_v_mean", components.anchor_v_mean)?;
+    dict.set_item("anchor_delta", components.anchor_delta)?;
+    dict.set_item("structural", components.d_struct)?;
+    dict.set_item("valid_blocks", components.valid_blocks)?;
+    dict.set_item("valid_pairs", components.valid_pairs)?;
+    dict.set_item("valid_triplets", components.valid_triplets)?;
+    Ok(dict)
 }
 
 #[cfg(feature = "inspect")]
 fn build_inspect_dict<'py>(
     py: Python<'py>,
-    stats: &ComponentStats,
+    components: &Spin3Components,
+    d_sem: f64,
     alpha_weight: f64,
     d_struct: f64,
     total: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let dict = PyDict::new_bound(py);
-    dict.set_item("semantic", stats.d_sem)?;
-    dict.set_item("intra", stats.d_intra)?;
-    dict.set_item("inter", stats.d_inter)?;
-    dict.set_item("hct", stats.d_hct)?;
-    dict.set_item("intra_root", stats.intra_root)?;
-    dict.set_item("intra_cont", stats.intra_cont)?;
-    dict.set_item("intra_snap", stats.intra_snap)?;
-    dict.set_item("inter_root", stats.inter_root)?;
-    dict.set_item("inter_cont", stats.inter_cont)?;
-    dict.set_item("hct_root", stats.hct_root)?;
-    dict.set_item("hct_cont", stats.hct_cont)?;
-    dict.set_item("anchor_u_mean", stats.anchor_u_mean)?;
-    dict.set_item("anchor_v_mean", stats.anchor_v_mean)?;
-    dict.set_item("anchor_delta", stats.anchor_delta)?;
-    dict.set_item("structural", d_struct)?;
+    let dict = build_components_dict(py, components)?;
+    dict.set_item("semantic", d_sem)?;
     dict.set_item("total", total)?;
     dict.set_item("alpha", alpha_weight)?;
-    dict.set_item("valid_blocks", stats.valid_blocks)?;
-    dict.set_item("valid_pairs", stats.valid_pairs)?;
-    dict.set_item("valid_triplets", stats.valid_triplets)?;
+    dict.set_item("d_struct", d_struct)?;
     Ok(dict)
 }
 
 #[cfg(feature = "inspect")]
 #[pyfunction]
-fn spin3_inspect(
-    py: Python<'_>,
-    u: Vec<f64>,
-    v: Vec<f64>,
+fn spin3_inspect<'py>(
+    py: Python<'py>,
+    u: &Bound<'py, PyAny>,
+    v: &Bound<'py, PyAny>,
     alpha: Option<f64>,
-) -> PyResult<Bound<'_, PyDict>> {
-    let stats = calculate_components(&u, &v, SNAP_SOFT_K, SNAP_SOFT_BETA)
-        .map_err(PyValueError::new_err)?;
+) -> PyResult<Bound<'py, PyDict>> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    validate_alpha(alpha).map_err(PyValueError::new_err)?;
+    let components = calculate_components(
+        u_view.as_slice(),
+        v_view.as_slice(),
+        SNAP_SOFT_K,
+        SNAP_SOFT_BETA,
+    )
+    .map_err(PyValueError::new_err)?;
     let alpha_weight = resolve_alpha(alpha);
-    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
-    let total = if u.is_empty() {
+    let d_sem = semantic_distance(u_view.as_slice(), v_view.as_slice());
+    let d_struct = components.structural_distance();
+    let total = if u_view.as_slice().is_empty() {
         0.0
     } else {
         clamp(
-            (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct,
+            (1.0 - alpha_weight) * d_sem + alpha_weight * d_struct,
             0.0,
             1.0,
         )
     };
 
-    build_inspect_dict(py, &stats, alpha_weight, d_struct, total)
+    build_inspect_dict(py, &components, d_sem, alpha_weight, d_struct, total)
 }
 
 #[cfg(feature = "inspect")]
 #[pyfunction]
-fn spin3_inspect_dev(
-    py: Python<'_>,
-    u: Vec<f64>,
-    v: Vec<f64>,
+fn spin3_inspect_dev<'py>(
+    py: Python<'py>,
+    u: &Bound<'py, PyAny>,
+    v: &Bound<'py, PyAny>,
     k: usize,
     beta: f64,
     alpha: Option<f64>,
-) -> PyResult<PyObject> {
-    let k = k.clamp(1, 240);
+) -> PyResult<Bound<'py, PyDict>> {
+    let k = k.clamp(1, ROOT_COUNT);
     if !beta.is_finite() || beta <= 0.0 {
         return Err(PyValueError::new_err(
             "beta must be a positive finite number",
         ));
     }
 
-    let stats = calculate_components(&u, &v, k, beta).map_err(PyValueError::new_err)?;
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    validate_alpha(alpha).map_err(PyValueError::new_err)?;
+    let components = calculate_components(u_view.as_slice(), v_view.as_slice(), k, beta)
+        .map_err(PyValueError::new_err)?;
     let alpha_weight = resolve_alpha(alpha);
-    let d_struct = 0.5 * stats.d_intra + 0.3 * stats.d_inter + 0.2 * stats.d_hct;
-    let total = if u.is_empty() {
+    let d_sem = semantic_distance(u_view.as_slice(), v_view.as_slice());
+    let d_struct = components.structural_distance();
+    let total = if u_view.as_slice().is_empty() {
         0.0
     } else {
         clamp(
-            (1.0 - alpha_weight) * stats.d_sem + alpha_weight * d_struct,
+            (1.0 - alpha_weight) * d_sem + alpha_weight * d_struct,
             0.0,
             1.0,
         )
     };
 
-    let dict = build_inspect_dict(py, &stats, alpha_weight, d_struct, total)?;
-    Ok(dict.into_py(py))
+    build_inspect_dict(py, &components, d_sem, alpha_weight, d_struct, total)
 }
 
 #[pymodule]
 fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spin3_distance_py, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_struct_py, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_struct_distance_py, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_components_py, m)?)?;
     #[cfg(feature = "inspect")]
     m.add_function(wrap_pyfunction!(spin3_inspect, m)?)?;
     #[cfg(feature = "inspect")]
@@ -748,6 +1075,15 @@ fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "numpy-support")]
+    use numpy::PyArray1;
+    use pyo3::types::PyList;
+    use pyo3::Python;
+
+    fn assert_unit_interval(value: f64) {
+        assert!(value.is_finite());
+        assert!((0.0..=1.0).contains(&value));
+    }
 
     fn blocks_from_vec(v: &[f64]) -> Vec<Option<[f64; ROOT_DIM]>> {
         let blocks = v.len() / ROOT_DIM;
@@ -772,6 +1108,119 @@ mod tests {
     }
 
     #[test]
+    fn struct_matches_alpha_one() {
+        let cases = vec![
+            (
+                (0..16)
+                    .map(|i| (i as f64 + 1.0).sin())
+                    .collect::<Vec<f64>>(),
+                (0..16)
+                    .map(|i| (i as f64 + 1.0).cos())
+                    .collect::<Vec<f64>>(),
+            ),
+            (
+                (0..24)
+                    .map(|i| ((i as f64) * 0.17).sin())
+                    .collect::<Vec<f64>>(),
+                (0..24)
+                    .map(|i| ((i as f64) * 0.13).cos())
+                    .collect::<Vec<f64>>(),
+            ),
+        ];
+
+        for (u, v) in cases {
+            let d_struct = spin3_struct(&u, &v, None, None).unwrap();
+            let d_mix = spin3_distance(&u, &v, Some(1.0)).unwrap();
+            assert!((d_struct - d_mix).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn components_symmetry() {
+        let u: Vec<f64> = (0..32).map(|i| ((i as f64) * 0.21).sin()).collect();
+        let v: Vec<f64> = (0..32).map(|i| ((i as f64) * 0.19).cos()).collect();
+        let a = spin3_components_with(&u, &v, None, None).unwrap();
+        let b = spin3_components_with(&v, &u, None, None).unwrap();
+
+        assert!((a.d_struct - b.d_struct).abs() < 1e-12);
+        assert!((a.d_intra - b.d_intra).abs() < 1e-12);
+        assert!((a.d_inter - b.d_inter).abs() < 1e-12);
+        assert!((a.d_hct - b.d_hct).abs() < 1e-12);
+        assert!((a.intra_root - b.intra_root).abs() < 1e-12);
+        assert!((a.intra_cont - b.intra_cont).abs() < 1e-12);
+        assert!((a.intra_snap - b.intra_snap).abs() < 1e-12);
+        assert!((a.inter_root - b.inter_root).abs() < 1e-12);
+        assert!((a.inter_cont - b.inter_cont).abs() < 1e-12);
+        assert!((a.hct_root - b.hct_root).abs() < 1e-12);
+        assert!((a.hct_cont - b.hct_cont).abs() < 1e-12);
+        assert!((a.anchor_u_mean - b.anchor_v_mean).abs() < 1e-12);
+        assert!((a.anchor_v_mean - b.anchor_u_mean).abs() < 1e-12);
+        assert!((a.anchor_delta - b.anchor_delta).abs() < 1e-12);
+    }
+
+    #[test]
+    fn component_bounds() {
+        let u: Vec<f64> = (0..16).map(|i| (i as f64 * 0.11).sin()).collect();
+        let v: Vec<f64> = (0..16).map(|i| (i as f64 * 0.09).cos()).collect();
+        let components = spin3_components_with(&u, &v, None, None).unwrap();
+
+        assert_unit_interval(components.d_intra);
+        assert_unit_interval(components.d_inter);
+        assert_unit_interval(components.d_hct);
+        assert_unit_interval(components.d_struct);
+        assert_unit_interval(components.intra_root);
+        assert_unit_interval(components.intra_cont);
+        assert_unit_interval(components.intra_snap);
+        assert_unit_interval(components.inter_root);
+        assert_unit_interval(components.inter_cont);
+        assert_unit_interval(components.hct_root);
+        assert_unit_interval(components.hct_cont);
+        assert_unit_interval(components.anchor_u_mean);
+        assert_unit_interval(components.anchor_v_mean);
+        assert_unit_interval(components.anchor_delta);
+    }
+
+    #[test]
+    fn anchor_from_dot_matches_snap_e8() {
+        let mut raw = [0.0; ROOT_DIM];
+        for (i, val) in raw.iter_mut().enumerate() {
+            *val = ((i as f64) * 0.37 + 0.11).sin();
+        }
+        let unit = normalize8(&raw).expect("normalize8 should succeed for test input");
+        let meta = snap_soft_meta(&unit, SNAP_SOFT_K, SNAP_SOFT_BETA);
+        let hard_dot = dot8(&unit, &E8_ROOTS[meta.hard_idx]);
+        assert!((hard_dot - meta.hard_dot).abs() < 1e-12);
+        let anchor_dot = angle_dist_from_dot(meta.hard_dot);
+        let anchor_snap = rotor_distance(&unit, &snap_e8(&unit));
+        assert!((anchor_dot - anchor_snap).abs() < 1e-12);
+    }
+
+    #[test]
+    fn snap_soft_meta_fixed_matches_dyn() {
+        let mut raw = [0.0; ROOT_DIM];
+        for (i, val) in raw.iter_mut().enumerate() {
+            *val = (i as f64 * 0.17 + 0.09).sin();
+        }
+        let unit = normalize8(&raw).expect("normalize8 should succeed for test input");
+        let beta = 7.25;
+        for k in [1_usize, 2, 3] {
+            let fixed = match k {
+                1 => snap_soft_meta_fixed::<1>(&unit, beta),
+                2 => snap_soft_meta_fixed::<2>(&unit, beta),
+                3 => snap_soft_meta_fixed::<3>(&unit, beta),
+                _ => unreachable!("k is restricted to 1..=3 in this test"),
+            };
+            let dyn_meta = snap_soft_meta_dyn(&unit, k, beta);
+
+            assert_eq!(fixed.hard_idx, dyn_meta.hard_idx);
+            assert!((fixed.hard_dot - dyn_meta.hard_dot).abs() < 1e-12);
+            for i in 0..ROOT_DIM {
+                assert!((fixed.soft[i] - dyn_meta.soft[i]).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
     fn bounds_in_unit_interval() {
         let mut u = vec![0.0; 16];
         let mut v = vec![0.0; 16];
@@ -780,22 +1229,21 @@ mod tests {
             v[i] = (i as f64).cos();
         }
         let d = spin3_distance(&u, &v, Some(0.10)).unwrap();
-        assert!(d >= 0.0 && d <= 1.0);
+        assert!((0.0..=1.0).contains(&d));
     }
 
     #[test]
     fn identical_vectors_near_zero() {
         let u = vec![1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let d = spin3_distance(&u, &u, Some(0.5)).unwrap();
-        assert!(d >= 0.0 && d <= 1.0);
+        assert!((0.0..=1.0).contains(&d));
         assert!(d.abs() < 1e-8);
     }
 
     #[test]
     fn test_identity_is_zero() {
         let u = vec![
-            0.2, -0.1, 0.3, -0.4, 0.5, -0.6, 0.7, -0.8, 0.1, 0.2, -0.3, 0.4, -0.5, 0.6,
-            -0.7, 0.8,
+            0.2, -0.1, 0.3, -0.4, 0.5, -0.6, 0.7, -0.8, 0.1, 0.2, -0.3, 0.4, -0.5, 0.6, -0.7, 0.8,
         ];
         let d = spin3_distance(&u, &u, Some(1.0)).unwrap();
         assert!(d < 1e-5);
@@ -806,7 +1254,7 @@ mod tests {
         let u = vec![1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let v: Vec<f64> = u.iter().map(|x| -x).collect();
         let d = spin3_distance(&u, &v, None).unwrap();
-        assert!(d >= 0.90 && d <= 1.0);
+        assert!((0.90..=1.0).contains(&d));
     }
 
     #[test]
@@ -814,6 +1262,60 @@ mod tests {
         let u = vec![0.1; 10];
         let v = vec![0.1; 10];
         assert!(spin3_distance(&u, &v, None).is_err());
+    }
+
+    #[test]
+    fn rejects_nonfinite_inputs() {
+        let base_u = vec![0.1; 8];
+        let base_v = vec![0.2; 8];
+
+        let mut u_nan = base_u.clone();
+        u_nan[0] = f64::NAN;
+        assert!(spin3_struct(&u_nan, &base_v, None, None).is_err());
+        assert!(spin3_distance(&u_nan, &base_v, None).is_err());
+
+        let mut v_nan = base_v.clone();
+        v_nan[0] = f64::NAN;
+        assert!(spin3_struct(&base_u, &v_nan, None, None).is_err());
+        assert!(spin3_distance(&base_u, &v_nan, None).is_err());
+
+        let mut u_inf = base_u.clone();
+        u_inf[0] = f64::INFINITY;
+        assert!(spin3_struct(&u_inf, &base_v, None, None).is_err());
+        assert!(spin3_distance(&u_inf, &base_v, None).is_err());
+
+        let mut v_inf = base_v.clone();
+        v_inf[0] = f64::NEG_INFINITY;
+        assert!(spin3_struct(&base_u, &v_inf, None, None).is_err());
+        assert!(spin3_distance(&base_u, &v_inf, None).is_err());
+    }
+
+    #[test]
+    fn rejects_nonfinite_alpha() {
+        let u = vec![0.1; 8];
+        let v = vec![0.2; 8];
+        assert!(spin3_distance(&u, &v, Some(f64::NAN)).is_err());
+        assert!(spin3_distance(&u, &v, Some(f64::INFINITY)).is_err());
+        assert!(spin3_distance(&u, &v, Some(f64::NEG_INFINITY)).is_err());
+    }
+
+    #[cfg(feature = "inspect")]
+    #[test]
+    fn rejects_nonfinite_alpha_in_inspect() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let u = PyList::new_bound(py, vec![1.0_f64; 8]);
+            let v = PyList::new_bound(py, vec![2.0_f64; 8]);
+            assert!(spin3_inspect(py, u.as_any(), v.as_any(), Some(f64::NAN)).is_err());
+            assert!(spin3_inspect(py, u.as_any(), v.as_any(), Some(f64::INFINITY)).is_err());
+            assert!(
+                spin3_inspect_dev(py, u.as_any(), v.as_any(), 3, 12.0, Some(f64::NAN)).is_err()
+            );
+            assert!(
+                spin3_inspect_dev(py, u.as_any(), v.as_any(), 3, 12.0, Some(f64::INFINITY))
+                    .is_err()
+            );
+        });
     }
 
     #[test]
@@ -893,5 +1395,35 @@ mod tests {
         let d_hct = hct_distance(&u_blocks, &v_blocks);
 
         assert!(d_hct > 0.02);
+    }
+
+    #[test]
+    fn extract_view_vec_fallback() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let list = PyList::new_bound(py, vec![1.0_f64, 2.0, 3.0]);
+            let view = extract_view(list.as_any()).unwrap();
+            match view {
+                DataView::Owned(values, _) => assert_eq!(values, vec![1.0, 2.0, 3.0]),
+                #[cfg(feature = "numpy-support")]
+                DataView::Numpy(_) => panic!("expected owned fallback for list input"),
+            }
+        });
+    }
+
+    #[cfg(feature = "numpy-support")]
+    #[test]
+    fn extract_view_numpy_borrow() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let array = PyArray1::from_vec_bound(py, vec![1.0_f64, 2.0, 3.0]);
+            let view = extract_view(array.as_any()).unwrap();
+            match view {
+                DataView::Numpy(array) => {
+                    assert_eq!(array.as_slice().unwrap(), &[1.0, 2.0, 3.0])
+                }
+                DataView::Owned(_, _) => panic!("expected numpy borrow"),
+            }
+        });
     }
 }

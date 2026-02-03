@@ -1,158 +1,126 @@
 # pale-ale-core
 
-[![PyO3](https://img.shields.io/badge/backend-PyO3-blue.svg)](https://pyo3.rs)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+Geometric auditing engine for LLM embeddings using E8 lattices and geometric algebra. This crate provides deterministic, structure-aware distance metrics that complement cosine similarity.
 
-> *Geometry-aware structural distance for embedding evaluation.*
+## Overview
 
-**Geometry-aware distance metrics for embedding pairs (Rust core for pale-ale).**
+`pale-ale-core` computes a structural distance between embedding vectors by:
 
-`pale-ale-core` provides a structural distance signal that is intentionally **not** the same thing as cosine similarity.
-The goal is to distinguish:
-* **Semantic proximity:** Topic-level similarity (what Cosine does).
-* **Structural integrity:** Order, flow, and logical consistency (what this crate adds).
+- Decomposing vectors into 8D blocks
+- Snapping blocks to the 240 roots of the E8 lattice
+- Comparing rotors/bivectors to measure flow and consistency
 
-This crate is the high-performance backend for the Python package **[pale-ale](https://github.com/Udonburo/pale-ale)**.
+The result is a stable, deterministic signal designed for auditing and analysis.
 
----
+Unlike cosine similarity (angle-only), this metric detects **block-wise structural drift and flow/topology breaks** that can be invisible in high-dimensional angle metrics.
 
-## ⚡ The Problem: Cosine Similarity is Structure-Blind
+## Features
 
-Standard cosine similarity measures the angle between two vectors:
+- Deterministic E8-based structural distance
+- Zero-copy Numpy integration for contiguous arrays
+- Zero-alloc hot path for k=1..3 and stack-only dyn path
+- NaN/Inf rejection for inputs and parameters
+- Optional `inspect` feature for detailed diagnostics
 
-$$\cos(u, v) = \frac{u \cdot v}{\|u\| \|v\|}$$
-
-For modern LLM embeddings, cosine often remains high even when the **structure** is broken. `pale-ale-core` adds a second axis: **structure-sensitive distance** computed over fixed-size blocks.
-
-| Pair | Cosine Similarity | Structural Distance | Typical outcome in pale-ale |
-| :--- | :--- | :--- | :--- |
-| "AI is great." vs "AI is great!" | High | Low | ✅ Robust (Surface change) |
-| "AI is great." vs "Great is AI." | High | **Higher** | 🚨 Order/Logic Distortion |
-| "The sky is blue." vs "The sky is green." | High | Varies | Semantic contradiction |
-
-> **⚠️ Note:** These examples are illustrative. Exact values depend on the embedding model and preprocessing. This crate produces geometric signals, not truth judgments. Diagnosis labels are produced by [pale-ale](https://github.com/Udonburo/pale-ale) (Python), not by this crate.
-
----
-
-## 📊 Return Value
-
-`spin3_distance` returns a **distance score in `[0.0, 1.0]`**:
-
-| Value | Meaning |
-|-------|---------|
-| `0.0` | Identical (no distance) |
-| `1.0` | Maximally different |
-
-The `alpha` parameter controls the semantic/structural mix:
-* `alpha = 0.0` → Pure semantic distance (≈ `0.5 * (1 - cosine)`)
-* `alpha = 1.0` → Pure structural distance (geometry-based)
-* `alpha = None` → Default: `0.15`
-
----
-
-## 🚀 Key Concepts (Implementation)
-
-### 1. Block Decomposition (8D)
-Embedding vectors are sliced into 8-dimensional blocks. This allows us to analyze local geometric properties rather than collapsing everything into a single scalar.
-
-### 2. E8 Root System as a Codebook
-We use the **240 roots of the E8 root system** as an optimal, high-symmetry reference codebook in 8D for blockwise "snapping":
-* **`snap_soft`:** A Boltzmann-weighted mixture (top-k, beta=12.0) to find the nearest structural "anchor" in 8D space.
-* **Why E8?** The E8 lattice provides an extremely dense sphere packing in 8 dimensions, making it an ideal "geometric ruler" for quantization-like stabilization.
-* *Clarification: We are not claiming embeddings naturally live on an E8 lattice. We use E8 roots as a reference basis.*
-
-### 3. Structure-Sensitive Metrics
-The structural score (`d_struct`) is a composite of:
-* **Intra-block:** Deformation within a block (continuous vs. snapped).
-* **Inter-block:** Change of bivector "flow" (rotors) between adjacent blocks.
-* **HCT (Holonomy-Curvature-Transport):** Higher-order consistency checks across the sequence.
-
----
-
-## 📦 Installation
+## Installation
 
 ### Python
 
-**Recommended for end users (CLI):** Install with CLI and full features:
+Use the wrapper package:
+
 ```bash
-pip install "pale-ale[spin]"
+pip install pale-ale
 ```
 
-**Core only:** Low-level distance API without CLI:
+`pale-ale` is the higher-level wrapper/CLI; `pale-ale-core` provides the Rust engine and Python bindings.
+
+Core-only (no CLI):
+
 ```bash
 pip install pale-ale-core
 ```
 
-> This installs only the `pale_ale_core` module (no `pale-ale` CLI).
-
-**Python usage (core only):**
-```python
-import pale_ale_core
-
-u = [0.1] * 8
-v = [0.2] * 8
-d = pale_ale_core.spin3_distance(u, v, None)  # None -> default alpha=0.15
-print(f"Distance: {d:.6f}")
-```
-
 ### Rust
-
-This crate is not yet published to crates.io. For now, use git dependency:
 
 ```toml
 [dependencies]
-pale-ale-core = { git = "https://github.com/Udonburo/pale-ale-core" }
+pale-ale-core = "1.0.0"
 ```
 
----
+## Usage (Python)
 
-## 🛠️ Usage (Rust)
+Directly using the core bindings. Note that `spin3_struct_distance` is the primary metric for structural auditing.
+
+```python
+import numpy as np
+import pale_ale_core
+
+# Must be float64, length % 8 == 0
+# Use ascontiguousarray to ensure zero-copy passing to Rust
+u = np.ascontiguousarray(np.random.rand(1536), dtype=np.float64)
+v = np.ascontiguousarray(u + 0.1, dtype=np.float64)
+
+# 1. Structural-only distance (0.0 .. 1.0) -> Recommended for auditing
+d_struct = pale_ale_core.spin3_struct_distance(u, v)
+
+# 2. Mixed distance (Semantic + Structural)
+# alpha is a linear mixing weight: (1-alpha)*semantic + alpha*structural
+d_mix = pale_ale_core.spin3_distance(u, v, alpha=0.15)
+
+# 3. Detailed Breakdown
+components = pale_ale_core.spin3_components(u, v)
+
+print(f"Structural Dist: {d_struct:.6f}")
+print(f"Intra-Block:     {components['intra']:.6f}")
+print(f"Topology (HCT):  {components['hct']:.6f}")
+```
+
+### Python API Reference
+
+| Function | Description |
+| --- | --- |
+| `spin3_struct_distance(u, v)` | Pure structural distance. `0` = identity, `1` = maximally different under this metric. |
+| `spin3_distance(u, v, alpha)` | Mixed distance. Blends a cosine-like semantic distance (normalized dot) with structural distance. |
+| `spin3_components(u, v)` | Returns a dictionary of detailed metrics (intra, inter, hct, anchors). |
+
+## Usage (Rust)
 
 ```rust
-use pale_ale_core::spin3_distance;
+use pale_ale_core::{spin3_components, spin3_struct_distance};
 
 fn main() {
-    // Input vectors must be a multiple of 8 dimensions (e.g. 768, 1024, 1536)
-    let u: Vec<f64> = vec![/* ... */];
-    let v: Vec<f64> = vec![/* ... */];
+    let u: Vec<f64> = vec![0.1; 8];
+    let v: Vec<f64> = vec![0.2; 8];
 
-    // alpha controls the mix:
-    // 0.0 = semantic-only (Cosine-like)
-    // 1.0 = structural-only (Geometry-based)
-    match spin3_distance(&u, &v, Some(0.5)) {
-        Ok(d) => println!("Geometric Distance: {:.6}", d),
-        Err(e) => eprintln!("Error: {}", e),
-    }
+    let d = spin3_struct_distance(&u, &v).unwrap();
+    let components = spin3_components(&u, &v).unwrap();
+
+    println!("d_struct = {:.6}", d);
+    println!("d_intra  = {:.6}", components.d_intra);
 }
 ```
 
----
+## Constraints
 
-## 🛡️ Developer: Audit Mode (feature: `inspect`)
+- Vector length must be a multiple of 8
+- Inputs must be `float64` / `f64`
+- Inputs must be finite (NaN/Inf are rejected)
+- `alpha` must be finite
 
-> **Note:** This is a source-build feature, not available in prebuilt PyPI wheels.
+## MSRV
 
-To see *why* a score is low, enable the `inspect` feature when building from source:
+- Rust 1.65+
 
-```bash
-maturin develop --release --features inspect
-```
+## Note on Numpy Contiguity
 
-This enables `spin3_inspect(...)` in Python, returning a dictionary of sub-components (`intra`, `inter`, `hct`, `semantic`, etc.). Useful for debugging and research.
+When using the Python bindings, contiguous Numpy arrays are borrowed zero-copy. Non-contiguous arrays (e.g., slices like `arr[::2]`) will fall back to an owned copy internally to ensure safety.
 
-> Rust developers can access the same internals directly via the source code.
+## Roadmap & Licensing Note
 
----
+The project is preparing a Technical Whitepaper detailing the geometric properties of E8 lattices for AI auditing.
 
-## ⚠️ Constraints
-
-* **Dimensions:** Input vectors must have length divisible by 8. If your model uses non-standard dimensions, please pad with zeros.
-* **Compute Cost:** E8 snapping evaluates 240 roots per block. This is computationally heavier than simple cosine similarity, by design.
-
----
+The current release is licensed under MPL-2.0 to preserve research integrity during the initial phase. The project is considering a future dual license (MIT / Apache-2.0) after the whitepaper publication to encourage wider adoption. No decision has been made yet.
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
-
-The Python wrapper [pale-ale](https://github.com/Udonburo/pale-ale) is also Apache-2.0 licensed.
+Licensed under the Mozilla Public License 2.0. See `LICENSE` for details.
