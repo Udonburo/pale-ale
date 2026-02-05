@@ -2,6 +2,7 @@ name: Rust CI
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -9,6 +10,7 @@ permissions:
 
 jobs:
   test:
+    # Default-features only is the authoritative path for Rust CLI builds.
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -30,3 +32,23 @@ jobs:
 
       - name: Rust test
         run: cargo test --workspace
+
+  python-feature:
+    # Optional insurance: python feature is validated only on Ubuntu.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Rust test (python feature)
+        run: cargo test -p pale-ale-core --features python
