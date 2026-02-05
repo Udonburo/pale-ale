@@ -4,10 +4,7 @@ use serde_json::Value;
 
 #[test]
 fn json_usage_error_when_missing_subcommand() {
-    let output = cargo_bin_cmd!("pale-ale")
-        .arg("--json")
-        .output()
-        .unwrap();
+    let output = cargo_bin_cmd!("pale-ale").arg("--json").output().unwrap();
 
     assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8(output.stdout).unwrap();

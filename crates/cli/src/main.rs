@@ -229,7 +229,9 @@ fn eval(offline: bool) -> Result<JsonEnvelope, AppError> {
             "model cache missing in offline mode".to_string(),
         ));
     }
-    Err(AppError::not_implemented("eval not implemented".to_string()))
+    Err(AppError::not_implemented(
+        "eval not implemented".to_string(),
+    ))
 }
 
 fn model_dir() -> PathBuf {
