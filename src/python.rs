@@ -7,10 +7,12 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::marker::PhantomData;
 
+use crate::{spin3_components_with, spin3_distance, spin3_struct, Spin3Components};
+
+#[cfg(feature = "python-inspect")]
 use crate::{
-    calculate_components, clamp, resolve_alpha, semantic_distance, spin3_components_with,
-    spin3_distance, spin3_struct, validate_alpha, Spin3Components, ROOT_COUNT, SNAP_SOFT_BETA,
-    SNAP_SOFT_K,
+    calculate_components, clamp, resolve_alpha, semantic_distance, validate_alpha, ROOT_COUNT,
+    SNAP_SOFT_BETA, SNAP_SOFT_K,
 };
 
 enum DataView<'a> {
