@@ -4,8 +4,8 @@ use once_cell::sync::Lazy;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use std::marker::PhantomData;
 use std::f64::consts::PI;
+use std::marker::PhantomData;
 
 const ROOT_DIM: usize = 8;
 const ROOT_COUNT: usize = 240;
