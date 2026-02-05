@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{error::ErrorKind, Parser, Subcommand};
 use pale_ale_diagnose::{
     default_measurement_config, default_policy_config, measurement_hash, policy_hash,
     AttestationLevel, AuditTrace, ConfigSource, HashesTrace, ModelTrace,
@@ -97,8 +97,11 @@ impl AppError {
     fn exit_code(&self) -> i32 {
         match self.kind {
             AppErrorKind::Usage => 1,
-            AppErrorKind::OfflineMode | AppErrorKind::ModelMissingOffline | AppErrorKind::Dependency => 2,
-            AppErrorKind::NotImplemented | AppErrorKind::Internal => 3,
+            AppErrorKind::OfflineMode
+            | AppErrorKind::ModelMissingOffline
+            | AppErrorKind::Dependency
+            | AppErrorKind::NotImplemented => 2,
+            AppErrorKind::Internal => 3,
         }
     }
 }
@@ -144,16 +147,22 @@ fn main() {
                 }
             }
         }
-        Err(err) => {
-            if wants_json {
-                let usage = AppError::usage(err.to_string());
-                let envelope = error_envelope(&usage);
-                print_json(&envelope);
-            } else {
-                let _ = err.print();
+        Err(err) => match err.kind() {
+            ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                print!("{err}");
+                std::process::exit(0);
             }
-            std::process::exit(1);
-        }
+            _ => {
+                if wants_json {
+                    let usage = AppError::usage(err.to_string());
+                    let envelope = error_envelope(&usage);
+                    print_json(&envelope);
+                } else {
+                    let _ = err.print();
+                }
+                std::process::exit(1);
+            }
+        },
     }
 }
 

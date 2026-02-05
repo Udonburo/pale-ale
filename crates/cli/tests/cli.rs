@@ -49,7 +49,7 @@ fn json_eval_not_implemented() {
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(3));
+    assert_eq!(output.status.code(), Some(2));
     let stdout = String::from_utf8(output.stdout).unwrap();
     let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
     assert_eq!(value["error"]["code"], "NOT_IMPLEMENTED");
@@ -63,4 +63,32 @@ fn non_json_usage_error() {
         .code(1)
         .stdout(predicates::str::is_empty())
         .stderr(contains("Usage"));
+}
+
+#[test]
+fn help_exits_zero() {
+    let output = cargo_bin_cmd!("pale-ale").arg("--help").output().unwrap();
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn version_exits_zero() {
+    let output = cargo_bin_cmd!("pale-ale")
+        .arg("--version")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn json_model_verify_not_implemented_exits_two() {
+    let output = cargo_bin_cmd!("pale-ale")
+        .args(["model", "verify", "--json"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["error"]["code"], "NOT_IMPLEMENTED");
 }
