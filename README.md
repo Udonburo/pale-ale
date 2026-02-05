@@ -20,7 +20,8 @@ Unlike cosine similarity (angle-only), this metric detects **block-wise structur
 - Zero-copy Numpy integration for contiguous arrays
 - Zero-alloc hot path for k=1..3 and stack-only dyn path
 - NaN/Inf rejection for inputs and parameters
-- Optional `inspect` feature for detailed diagnostics
+- Optional `python-inspect` feature for detailed diagnostics (the `inspect` feature is kept as a deprecated alias, documented here)
+- Python bindings are gated behind the `python` feature (default is pure Rust); `numpy-support` and `python-inspect` imply `python`.
 
 ## Installation
 
