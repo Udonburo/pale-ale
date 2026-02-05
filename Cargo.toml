@@ -39,4 +39,5 @@ panic = "abort"
 [workspace]
 members = [
   "crates/diagnose",
+  "crates/cli",
 ]

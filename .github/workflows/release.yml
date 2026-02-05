@@ -1,9 +1,6 @@
-name: Release to PyPI
+name: Release to PyPI (disabled)
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
 
 permissions:
@@ -13,6 +10,7 @@ permissions:
 jobs:
   build:
     name: Build wheels on ${{ matrix.os }}
+    if: false # publishing temporarily disabled during Rust CLI pivot
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -43,6 +41,7 @@ jobs:
 
   sdist:
     name: Build source distribution
+    if: false # publishing temporarily disabled during Rust CLI pivot
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +61,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
+    if: false # publishing temporarily disabled during Rust CLI pivot
     needs: [build, sdist]
     runs-on: ubuntu-latest
     environment: pypi
