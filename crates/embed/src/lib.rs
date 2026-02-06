@@ -1,5 +1,7 @@
+mod embedder;
 mod model;
 
+pub use embedder::Embedder;
 pub use model::{
     EmbedError, ModelManager, PrintHashesReport, StatusReport, VerifyDetail, VerifyFile,
     VerifyReport, VerifyState,
