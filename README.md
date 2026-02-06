@@ -22,6 +22,10 @@ Unlike cosine similarity (angle-only), this metric detects **block-wise structur
 - NaN/Inf rejection for inputs and parameters
 - Optional `python-inspect` feature for detailed diagnostics (the `inspect` feature is kept as a deprecated alias, documented here)
 - Python bindings are gated behind the `python` feature (default is pure Rust); `numpy-support` and `python-inspect` imply `python`.
+- Model files are cached under the OS cache directory; override with `PA_MEASURE_MODEL_DIR` (legacy: `PALE_ALE_MODEL_DIR`). Offline mode forbids downloads.
+- The canonical model spec is pinned to `sentence-transformers/all-MiniLM-L6-v2@e4ce9877abf3edfe10b0d82785e83bdcb973e22e` with embedded BLAKE3 file hashes.
+- `pale-ale model print-hashes --json` prints current cached BLAKE3 values and a copy/paste Rust constants block for audited canonical updates.
+- `pale-ale model clear-cache --yes` removes only the pinned model/revision cache directory.
 
 ## Installation
 

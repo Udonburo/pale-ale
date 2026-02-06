@@ -1,3 +1,4 @@
+use pale_ale_modelspec::ModelSpec;
 use serde::{Deserialize, Serialize};
 
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {
@@ -219,6 +220,7 @@ pub struct BuildTrace {
 }
 
 pub fn default_measurement_config() -> MeasurementConfig {
+    let model_spec = ModelSpec::classic();
     MeasurementConfig {
         sentence_split: SentenceSplitConfig {
             sentence_split_version: "v1".to_string(),
@@ -254,22 +256,16 @@ pub fn default_measurement_config() -> MeasurementConfig {
             sentence_split_unicode_normalize: false,
         },
         embed: EmbedConfig {
-            model_id: "MODEL_ID_TBD".to_string(),
-            revision: "REVISION_TBD".to_string(),
-            required_files: vec![
-                EmbedRequiredFile {
-                    path: "model.safetensors".to_string(),
-                    blake3: None,
-                },
-                EmbedRequiredFile {
-                    path: "tokenizer.json".to_string(),
-                    blake3: None,
-                },
-                EmbedRequiredFile {
-                    path: "config.json".to_string(),
-                    blake3: None,
-                },
-            ],
+            model_id: model_spec.model_id.clone(),
+            revision: model_spec.revision.clone(),
+            required_files: model_spec
+                .required_files
+                .iter()
+                .map(|f| EmbedRequiredFile {
+                    path: f.path.clone(),
+                    blake3: Some(f.blake3.clone()),
+                })
+                .collect(),
             dtype: "f32".to_string(),
             pooling: "masked_mean".to_string(),
             l2_norm: true,

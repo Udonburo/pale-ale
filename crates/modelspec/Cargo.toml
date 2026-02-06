@@ -1,0 +1,10 @@
+[package]
+name = "pale-ale-modelspec"
+version = "1.0.1"
+edition = "2021"
+rust-version = "1.65"
+license = "MPL-2.0"
+description = "Canonical model specification for Pale-Ale Classic."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }

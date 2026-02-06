@@ -1,12 +1,19 @@
 use clap::{error::ErrorKind, Parser, Subcommand};
 use pale_ale_diagnose::{
     default_measurement_config, default_policy_config, measurement_hash, policy_hash,
-    AttestationLevel, AuditTrace, ConfigSource, HashesTrace, ModelTrace,
+    AttestationLevel, AuditTrace, ConfigSource, HashesTrace, ModelFile, ModelTrace,
+};
+use pale_ale_embed::{
+    EmbedError, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::env;
-use std::path::PathBuf;
+use std::fs;
+use std::path::Path;
+
+const PRINT_HASHES_WARNING: &str =
+    "hashes are computed from local cache bytes; treat as canonical only after pinned revision verification";
 
 #[derive(Parser, Debug)]
 #[command(name = "pale-ale", version, about = "Pale-Ale Classic CLI")]
@@ -41,6 +48,11 @@ enum ModelCommand {
     Download,
     Verify,
     Path,
+    PrintHashes,
+    ClearCache {
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 #[allow(dead_code)]
@@ -48,7 +60,6 @@ enum ModelCommand {
 enum AppErrorKind {
     Usage,
     NotImplemented,
-    OfflineMode,
     ModelMissingOffline,
     Dependency,
     Internal,
@@ -59,6 +70,8 @@ struct AppError {
     kind: AppErrorKind,
     code: &'static str,
     message: String,
+    details: Value,
+    data: Option<Value>,
 }
 
 impl AppError {
@@ -67,6 +80,8 @@ impl AppError {
             kind: AppErrorKind::Usage,
             code: "CLI_USAGE",
             message,
+            details: Value::Null,
+            data: None,
         }
     }
 
@@ -75,14 +90,8 @@ impl AppError {
             kind: AppErrorKind::NotImplemented,
             code: "NOT_IMPLEMENTED",
             message,
-        }
-    }
-
-    fn offline_mode(message: String) -> Self {
-        Self {
-            kind: AppErrorKind::OfflineMode,
-            code: "OFFLINE_MODE",
-            message,
+            details: Value::Null,
+            data: None,
         }
     }
 
@@ -91,18 +100,110 @@ impl AppError {
             kind: AppErrorKind::ModelMissingOffline,
             code: "MODEL_MISSING_OFFLINE",
             message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn offline_forbids_download(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "OFFLINE_FORBIDS_DOWNLOAD",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn model_missing(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "MODEL_MISSING",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn model_file_missing(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "MODEL_FILE_MISSING",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn model_hash_mismatch(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "MODEL_HASH_MISMATCH",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn model_hash_format_invalid(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "MODEL_HASH_FORMAT_INVALID",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn model_invalid_payload(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "MODEL_INVALID_PAYLOAD",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn dependency(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "DEPENDENCY_ERROR",
+            message,
+            details: Value::Null,
+            data: None,
+        }
+    }
+
+    fn internal(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Internal,
+            code: "INTERNAL_ERROR",
+            message,
+            details: Value::Null,
+            data: None,
         }
     }
 
     fn exit_code(&self) -> i32 {
         match self.kind {
             AppErrorKind::Usage => 1,
-            AppErrorKind::OfflineMode
-            | AppErrorKind::ModelMissingOffline
+            AppErrorKind::ModelMissingOffline
             | AppErrorKind::Dependency
             | AppErrorKind::NotImplemented => 2,
             AppErrorKind::Internal => 3,
         }
+    }
+
+    fn with_details_and_data(mut self, details: Value) -> Self {
+        self.details = details.clone();
+        self.data = Some(json!({ "details": details }));
+        self
+    }
+
+    fn with_data(mut self, data: Value) -> Self {
+        self.data = Some(data);
+        self
     }
 }
 
@@ -128,7 +229,7 @@ fn main() {
     match Cli::try_parse_from(&args) {
         Ok(cli) => {
             let json = cli.json || wants_json;
-            match run(cli) {
+            match run(cli, json) {
                 Ok(envelope) => {
                     if json {
                         print_json(&envelope);
@@ -166,10 +267,10 @@ fn main() {
     }
 }
 
-fn run(cli: Cli) -> Result<JsonEnvelope, AppError> {
+fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
     match cli.command {
         Commands::Doctor => doctor(cli.offline),
-        Commands::Model { command } => model(command, cli.offline),
+        Commands::Model { command } => model(command, cli.offline, json),
         Commands::Eval {
             query: _,
             context: _,
@@ -178,45 +279,102 @@ fn run(cli: Cli) -> Result<JsonEnvelope, AppError> {
     }
 }
 
-fn doctor(_offline: bool) -> Result<JsonEnvelope, AppError> {
+fn doctor(offline: bool) -> Result<JsonEnvelope, AppError> {
     Ok(JsonEnvelope {
         status: "OK".to_string(),
         error: None,
-        audit_trace: stub_audit_trace(),
-        data: Some(json!({ "mode": "doctor", "offline": _offline })),
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({ "mode": "doctor", "offline": offline })),
     })
 }
 
-fn model(command: ModelCommand, offline: bool) -> Result<JsonEnvelope, AppError> {
+fn model(command: ModelCommand, offline: bool, json: bool) -> Result<JsonEnvelope, AppError> {
+    let manager = ModelManager::new(ModelSpec::classic());
     match command {
         ModelCommand::Download => {
-            if offline {
-                return Err(AppError::offline_mode(
-                    "offline mode forbids model download".to_string(),
-                ));
-            }
-            Err(AppError::not_implemented(
-                "model download not implemented".to_string(),
-            ))
-        }
-        ModelCommand::Verify => Err(AppError::not_implemented(
-            "model verify not implemented".to_string(),
-        )),
-        ModelCommand::Path => Ok(JsonEnvelope {
-            status: "OK".to_string(),
-            error: None,
-            audit_trace: stub_audit_trace(),
-            data: Some(json!({ "path": model_dir().to_string_lossy() })),
-        }),
-        ModelCommand::Status => {
-            let present = model_cache_present();
+            let report = manager.download(offline).map_err(map_embed_error)?;
             Ok(JsonEnvelope {
                 status: "OK".to_string(),
                 error: None,
-                audit_trace: stub_audit_trace(),
+                audit_trace: audit_trace_with_model(model_trace_from_verify(
+                    manager.spec(),
+                    &report,
+                )),
+                data: Some(json!(report)),
+            })
+        }
+        ModelCommand::Verify => {
+            let report = manager.verify().map_err(map_embed_error)?;
+            Ok(JsonEnvelope {
+                status: "OK".to_string(),
+                error: None,
+                audit_trace: audit_trace_with_model(model_trace_from_verify(
+                    manager.spec(),
+                    &report,
+                )),
+                data: Some(json!(report)),
+            })
+        }
+        ModelCommand::Path => Ok(JsonEnvelope {
+            status: "OK".to_string(),
+            error: None,
+            audit_trace: audit_trace_with_model(model_trace_from_spec(manager.spec())),
+            data: Some(json!({ "path": manager.resolved_dir() })),
+        }),
+        ModelCommand::Status => {
+            let report = manager.status();
+            Ok(JsonEnvelope {
+                status: "OK".to_string(),
+                error: None,
+                audit_trace: audit_trace_with_model(model_trace_from_spec(manager.spec())),
+                data: Some(json!(report)),
+            })
+        }
+        ModelCommand::PrintHashes => {
+            let status = manager.status();
+            if !status.cache_present || !status.missing_files.is_empty() {
+                return Err(AppError::model_missing(format!(
+                    "model cache missing or incomplete: {}",
+                    status.cache_dir.display()
+                ))
+                .with_data(json!({ "warning": PRINT_HASHES_WARNING })));
+            }
+            let report = manager.print_hashes().map_err(map_embed_error)?;
+            if !json {
+                print!("{}", report.rust_constants);
+                eprintln!("WARNING: {}", PRINT_HASHES_WARNING);
+            }
+            Ok(JsonEnvelope {
+                status: "OK".to_string(),
+                error: None,
+                audit_trace: audit_trace_with_model(model_trace_from_details(
+                    manager.spec(),
+                    &report.details,
+                )),
+                data: Some(print_hashes_data_with_warning(&report)),
+            })
+        }
+        ModelCommand::ClearCache { yes } => {
+            if !yes {
+                return Err(AppError::usage(
+                    "model clear-cache requires --yes to perform deletion".to_string(),
+                ));
+            }
+            let path = manager.resolved_dir();
+            let bytes_freed = if path.exists() {
+                dir_size_bytes(&path).ok()
+            } else {
+                None
+            };
+            let deleted = manager.clear_cache().map_err(map_embed_error)?;
+            Ok(JsonEnvelope {
+                status: "OK".to_string(),
+                error: None,
+                audit_trace: audit_trace_with_model(model_trace_from_spec(manager.spec())),
                 data: Some(json!({
-                    "cache_present": present,
-                    "note": "status check is stubbed; missing is non-fatal in PR2"
+                    "deleted": deleted,
+                    "path": path,
+                    "bytes_freed": bytes_freed,
                 })),
             })
         }
@@ -224,37 +382,26 @@ fn model(command: ModelCommand, offline: bool) -> Result<JsonEnvelope, AppError>
 }
 
 fn eval(offline: bool) -> Result<JsonEnvelope, AppError> {
-    if offline && !model_cache_present() {
-        return Err(AppError::model_missing_offline(
-            "model cache missing in offline mode".to_string(),
-        ));
+    if offline {
+        let manager = ModelManager::new(ModelSpec::classic());
+        let status = manager.status();
+        if !status.cache_present || !status.missing_files.is_empty() {
+            return Err(AppError::model_missing_offline(
+                "model cache missing in offline mode".to_string(),
+            ));
+        }
     }
     Err(AppError::not_implemented(
         "eval not implemented".to_string(),
     ))
 }
 
-fn model_dir() -> PathBuf {
-    if let Ok(path) = env::var("PA_MODEL_DIR") {
-        return PathBuf::from(path);
-    }
-    PathBuf::from("models")
-}
-
-fn model_cache_present() -> bool {
-    model_dir().exists()
-}
-
-fn stub_audit_trace() -> AuditTrace {
+fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
     let measurement = measurement_hash(&default_measurement_config());
     let policy = policy_hash(&default_policy_config());
 
     AuditTrace {
-        model: ModelTrace {
-            model_id: "UNAVAILABLE".to_string(),
-            revision: "UNAVAILABLE".to_string(),
-            files: Vec::new(),
-        },
+        model,
         hashes: HashesTrace {
             measurement_hash: measurement,
             policy_hash: policy,
@@ -275,14 +422,176 @@ fn error_envelope(err: &AppError) -> JsonEnvelope {
         error: Some(ErrorEnvelope {
             code: err.code.to_string(),
             message: err.message.clone(),
-            details: Value::Null,
+            details: err.details.clone(),
         }),
-        audit_trace: stub_audit_trace(),
-        data: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: err.data.clone(),
     }
 }
 
 fn print_json(envelope: &JsonEnvelope) {
     let json = serde_json::to_string(envelope).expect("failed to serialize json");
     println!("{json}");
+}
+
+fn default_model_trace() -> ModelTrace {
+    let spec = ModelSpec::classic();
+    model_trace_from_spec(&spec)
+}
+
+fn model_trace_from_spec(spec: &ModelSpec) -> ModelTrace {
+    ModelTrace {
+        model_id: spec.model_id.clone(),
+        revision: spec.revision.clone(),
+        files: spec
+            .required_files
+            .iter()
+            .map(|file| ModelFile {
+                path: file.path.clone(),
+                blake3: Some(file.blake3.clone()),
+                size_bytes: file.size_bytes,
+            })
+            .collect(),
+    }
+}
+
+fn model_trace_from_verify(spec: &ModelSpec, report: &VerifyReport) -> ModelTrace {
+    ModelTrace {
+        model_id: spec.model_id.clone(),
+        revision: spec.revision.clone(),
+        files: report
+            .files
+            .iter()
+            .map(|file| ModelFile {
+                path: file.path.clone(),
+                blake3: Some(file.actual_blake3.clone()),
+                size_bytes: Some(file.size_bytes),
+            })
+            .collect(),
+    }
+}
+
+fn model_trace_from_details(spec: &ModelSpec, details: &[VerifyDetail]) -> ModelTrace {
+    ModelTrace {
+        model_id: spec.model_id.clone(),
+        revision: spec.revision.clone(),
+        files: details
+            .iter()
+            .map(|detail| ModelFile {
+                path: detail.path.clone(),
+                blake3: detail
+                    .actual_blake3
+                    .clone()
+                    .or_else(|| Some(detail.expected_blake3.clone())),
+                size_bytes: detail.size_bytes,
+            })
+            .collect(),
+    }
+}
+
+fn print_hashes_data_with_warning(report: &PrintHashesReport) -> Value {
+    let mut value =
+        serde_json::to_value(report).expect("failed to serialize print hashes report to json");
+    if let Some(obj) = value.as_object_mut() {
+        obj.insert(
+            "warning".to_string(),
+            Value::String(PRINT_HASHES_WARNING.to_string()),
+        );
+    }
+    value
+}
+
+fn dir_size_bytes(path: &Path) -> std::io::Result<u64> {
+    if path.is_file() {
+        return fs::metadata(path).map(|m| m.len());
+    }
+    let mut total = 0_u64;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            total = total.saturating_add(dir_size_bytes(&entry_path)?);
+        } else {
+            total = total.saturating_add(entry.metadata()?.len());
+        }
+    }
+    Ok(total)
+}
+
+fn map_embed_error(err: EmbedError) -> AppError {
+    match err {
+        EmbedError::OfflineForbidden => {
+            AppError::offline_forbids_download("offline mode forbids model download".to_string())
+        }
+        EmbedError::ModelMissing { dir } => {
+            AppError::model_missing(format!("model cache missing: {}", dir.display()))
+        }
+        EmbedError::ModelFileMissing { path, details } => {
+            AppError::model_file_missing(format!("model file missing: {}", path.display()))
+                .with_details_and_data(json!(details))
+        }
+        EmbedError::HashMismatch {
+            path,
+            expected,
+            actual,
+            details,
+        } => AppError::model_hash_mismatch(format!(
+            "model hash mismatch: {} (expected {}, got {})",
+            path.display(),
+            expected,
+            actual
+        ))
+        .with_details_and_data(json!(details)),
+        EmbedError::InvalidHashFormat { path, hash } => AppError::model_hash_format_invalid(
+            format!("invalid manifest hash for {}: {}", path, hash),
+        )
+        .with_details_and_data(json!({ "path": path, "hash": hash })),
+        EmbedError::InvalidPayloadHtml {
+            path,
+            snippet_len,
+            final_url,
+        } => {
+            AppError::model_invalid_payload(format!("invalid html payload for {}", path.display()))
+                .with_details_and_data(
+                    json!({ "path": path, "snippet_len": snippet_len, "final_url": final_url }),
+                )
+        }
+        EmbedError::InvalidPayloadJson {
+            path,
+            message,
+            final_url,
+        } => {
+            let detail_message = message.clone();
+            AppError::model_invalid_payload(format!(
+                "invalid json payload for {}: {}",
+                path.display(),
+                detail_message
+            ))
+            .with_details_and_data(json!({
+                "path": path,
+                "message": message,
+                "final_url": final_url
+            }))
+        }
+        EmbedError::DownloadFailed {
+            url,
+            message,
+            final_url,
+            etag,
+            content_length,
+        } => AppError::dependency(format!("model download failed: {} ({})", url, message))
+            .with_details_and_data(json!({
+                "request_url": url,
+                "final_url": final_url,
+                "etag": etag,
+                "content_length": content_length,
+            })),
+        EmbedError::InvalidUrl { url } => AppError::internal(format!("invalid model URL: {}", url)),
+        EmbedError::Io { path, message } => {
+            let detail = path
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            AppError::dependency(format!("I/O error at {}: {}", detail, message))
+        }
+    }
 }
