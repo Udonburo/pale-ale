@@ -45,16 +45,16 @@ fn json_doctor_success() {
 }
 
 #[test]
-fn json_eval_not_implemented() {
+fn json_eval_usage_error() {
     let output = cargo_bin_cmd!("pale-ale")
-        .args(["eval", "q", "c", "a", "--json"])
+        .args(["eval", "--json"])
         .output()
         .unwrap();
 
-    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(output.status.code(), Some(1));
     let stdout = String::from_utf8(output.stdout).unwrap();
     let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
-    assert_eq!(value["error"]["code"], "NOT_IMPLEMENTED");
+    assert_eq!(value["error"]["code"], "CLI_USAGE");
 }
 
 #[test]
@@ -219,6 +219,21 @@ fn json_embed_offline_missing_cache() {
     let output = cargo_bin_cmd!("pale-ale")
         .env("PA_MEASURE_MODEL_DIR", temp.path())
         .args(["embed", "hello", "--offline", "--json"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["error"]["code"], "MODEL_MISSING_OFFLINE");
+}
+
+#[test]
+fn json_eval_offline_missing_cache() {
+    let temp = TempDir::new().unwrap();
+    let output = cargo_bin_cmd!("pale-ale")
+        .env("PA_MEASURE_MODEL_DIR", temp.path())
+        .args(["eval", "q", "c", "a", "--offline", "--json"])
         .output()
         .unwrap();
 

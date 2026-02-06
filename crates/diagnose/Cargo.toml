@@ -8,6 +8,7 @@ description = "Pale-Ale audit diagnostics and canonical hashing."
 
 [dependencies]
 blake3 = "1.5"
+pale-ale-core = { path = "../.." }
 pale-ale-modelspec = { path = "../modelspec" }
 serde = { version = "1.0", features = ["derive"] }
 serde_jcs = "0.1"

@@ -1,7 +1,8 @@
 use clap::{error::ErrorKind, Parser, Subcommand};
 use pale_ale_diagnose::{
-    default_measurement_config, default_policy_config, measurement_hash, policy_hash,
-    AttestationLevel, AuditTrace, ConfigSource, HashesTrace, ModelFile, ModelTrace,
+    default_measurement_config, default_policy_config, measure_eval, measurement_hash, policy_hash,
+    AttestationLevel, AuditTrace, ConfigSource, EvalResult, HashesTrace, MeasureError, ModelFile,
+    ModelTrace, PairScore,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -82,16 +83,6 @@ impl AppError {
         Self {
             kind: AppErrorKind::Usage,
             code: "CLI_USAGE",
-            message,
-            details: Value::Null,
-            data: None,
-        }
-    }
-
-    fn not_implemented(message: String) -> Self {
-        Self {
-            kind: AppErrorKind::NotImplemented,
-            code: "NOT_IMPLEMENTED",
             message,
             details: Value::Null,
             data: None,
@@ -276,10 +267,10 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
         Commands::Model { command } => model(command, cli.offline, json),
         Commands::Embed { text } => embed(text, cli.offline, json),
         Commands::Eval {
-            query: _,
-            context: _,
-            answer: _,
-        } => eval(cli.offline),
+            query,
+            context,
+            answer,
+        } => eval(query, context, answer, cli.offline, json),
     }
 }
 
@@ -422,19 +413,53 @@ fn embed(text: String, offline: bool, json: bool) -> Result<JsonEnvelope, AppErr
     })
 }
 
-fn eval(offline: bool) -> Result<JsonEnvelope, AppError> {
-    if offline {
-        let manager = ModelManager::new(ModelSpec::classic());
+fn eval(
+    query: String,
+    context: String,
+    answer: String,
+    offline: bool,
+    json: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let manager = ModelManager::new(ModelSpec::classic());
+    let verify_report = if offline {
         let status = manager.status();
         if !status.cache_present || !status.missing_files.is_empty() {
-            return Err(AppError::model_missing_offline(
-                "model cache missing in offline mode".to_string(),
-            ));
+            return Err(AppError::model_missing_offline(format!(
+                "model cache missing in offline mode: {}",
+                status.cache_dir.display()
+            )));
         }
+        manager.verify().map_err(map_embed_error)?
+    } else {
+        manager.download(false).map_err(map_embed_error)?
+    };
+
+    let embedder = Embedder::new(&manager).map_err(map_embed_error)?;
+    let result = measure_eval(
+        &|sentence: &str| {
+            embedder
+                .embed(sentence)
+                .map_err(|err| format!("embed failure: {:?}", err))
+        },
+        &query,
+        &context,
+        &answer,
+    )
+    .map_err(map_measure_error)?;
+
+    if !json {
+        print_eval_summary(&result);
     }
-    Err(AppError::not_implemented(
-        "eval not implemented".to_string(),
-    ))
+
+    Ok(JsonEnvelope {
+        status: "UNKNOWN".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(model_trace_from_verify(
+            manager.spec(),
+            &verify_report,
+        )),
+        data: Some(json!(result)),
+    })
 }
 
 fn print_vector_summary(vector: &[f32]) {
@@ -446,6 +471,32 @@ fn print_vector_summary(vector: &[f32]) {
         preview.join(", "),
         suffix
     );
+}
+
+fn print_eval_summary(result: &EvalResult) {
+    println!(
+        "eval summary: ctx_n={} ans_n={} pairs_n={} max_score_ratio={:.6}",
+        result.summary.ctx_n,
+        result.summary.ans_n,
+        result.summary.pairs_n,
+        result.summary.max_score_ratio
+    );
+    let mut top_pairs = result.pairs.clone();
+    top_pairs.sort_by(compare_pairs_for_output);
+    for pair in top_pairs.iter().take(3) {
+        println!(
+            "ans[{}] -> ctx[{}] ratio={:.6} struct={:.6} sem={:.6}",
+            pair.ans_idx, pair.ctx_idx, pair.score_ratio, pair.score_struct, pair.score_sem
+        );
+    }
+}
+
+fn compare_pairs_for_output(left: &PairScore, right: &PairScore) -> std::cmp::Ordering {
+    right
+        .score_ratio
+        .total_cmp(&left.score_ratio)
+        .then_with(|| left.ans_idx.cmp(&right.ans_idx))
+        .then_with(|| left.ctx_idx.cmp(&right.ctx_idx))
 }
 
 fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
@@ -670,4 +721,8 @@ fn map_embed_error(err: EmbedError) -> AppError {
             AppError::dependency(format!("I/O error at {}: {}", detail, message))
         }
     }
+}
+
+fn map_measure_error(err: MeasureError) -> AppError {
+    AppError::internal(format!("measurement failed: {}", err))
 }
