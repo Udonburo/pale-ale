@@ -1,6 +1,12 @@
 use pale_ale_modelspec::ModelSpec;
 use serde::{Deserialize, Serialize};
 
+mod measure;
+
+pub use measure::{
+    measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
+};
+
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {
     serde_jcs::to_vec(value).expect("JCS serialization failed")
 }
