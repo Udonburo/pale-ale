@@ -107,6 +107,27 @@ pub enum EmbedError {
     InvalidUrl {
         url: String,
     },
+    ConfigLoad {
+        path: PathBuf,
+        message: String,
+    },
+    ModelLoad {
+        path: PathBuf,
+        message: String,
+    },
+    TokenizerLoad {
+        path: PathBuf,
+        message: String,
+    },
+    Tokenization {
+        message: String,
+    },
+    Tensor {
+        message: String,
+    },
+    Inference {
+        message: String,
+    },
     Io {
         path: Option<PathBuf>,
         message: String,

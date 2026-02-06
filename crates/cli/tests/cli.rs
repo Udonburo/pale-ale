@@ -212,3 +212,58 @@ fn json_model_clear_cache_yes_deletes_model_dir() {
     );
     assert!(!model_path.exists());
 }
+
+#[test]
+fn json_embed_offline_missing_cache() {
+    let temp = TempDir::new().unwrap();
+    let output = cargo_bin_cmd!("pale-ale")
+        .env("PA_MEASURE_MODEL_DIR", temp.path())
+        .args(["embed", "hello", "--offline", "--json"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["error"]["code"], "MODEL_MISSING_OFFLINE");
+}
+
+#[test]
+fn json_embed_vector_invariants() {
+    let output = cargo_bin_cmd!("pale-ale")
+        .args(["embed", "Hello world", "--json"])
+        .output()
+        .unwrap();
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "embed failed with stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+
+    assert_eq!(value["status"], "OK");
+    assert_eq!(value["data"]["dim"], 384);
+
+    let vector = value["data"]["vector"]
+        .as_array()
+        .expect("vector array missing");
+    assert_eq!(vector.len(), 384, "expected 384-d embedding");
+
+    let mut sq_sum = 0.0_f64;
+    for (idx, item) in vector.iter().enumerate() {
+        let v = item
+            .as_f64()
+            .unwrap_or_else(|| panic!("non-float embedding value at index {}", idx));
+        assert!(v.is_finite(), "non-finite embedding value at index {}", idx);
+        sq_sum += v * v;
+    }
+    let norm = sq_sum.sqrt();
+    assert!(
+        (norm - 1.0).abs() < 1e-3,
+        "embedding norm out of bounds: {}",
+        norm
+    );
+}

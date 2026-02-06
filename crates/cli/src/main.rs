@@ -4,7 +4,7 @@ use pale_ale_diagnose::{
     AttestationLevel, AuditTrace, ConfigSource, HashesTrace, ModelFile, ModelTrace,
 };
 use pale_ale_embed::{
-    EmbedError, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
+    EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -34,6 +34,9 @@ enum Commands {
     Model {
         #[command(subcommand)]
         command: ModelCommand,
+    },
+    Embed {
+        text: String,
     },
     Eval {
         query: String,
@@ -271,6 +274,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
     match cli.command {
         Commands::Doctor => doctor(cli.offline),
         Commands::Model { command } => model(command, cli.offline, json),
+        Commands::Embed { text } => embed(text, cli.offline, json),
         Commands::Eval {
             query: _,
             context: _,
@@ -381,6 +385,43 @@ fn model(command: ModelCommand, offline: bool, json: bool) -> Result<JsonEnvelop
     }
 }
 
+fn embed(text: String, offline: bool, json: bool) -> Result<JsonEnvelope, AppError> {
+    let manager = ModelManager::new(ModelSpec::classic());
+    let verify_report = if offline {
+        let status = manager.status();
+        if !status.cache_present || !status.missing_files.is_empty() {
+            return Err(AppError::model_missing_offline(format!(
+                "model cache missing in offline mode: {}",
+                status.cache_dir.display()
+            )));
+        }
+        manager.verify().map_err(map_embed_error)?
+    } else {
+        manager.download(false).map_err(map_embed_error)?
+    };
+
+    let embedder = Embedder::new(&manager).map_err(map_embed_error)?;
+    let vector = embedder.embed(&text).map_err(map_embed_error)?;
+    let dim = vector.len();
+
+    if !json {
+        print_vector_summary(&vector);
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(model_trace_from_verify(
+            manager.spec(),
+            &verify_report,
+        )),
+        data: Some(json!({
+            "dim": dim,
+            "vector": vector,
+        })),
+    })
+}
+
 fn eval(offline: bool) -> Result<JsonEnvelope, AppError> {
     if offline {
         let manager = ModelManager::new(ModelSpec::classic());
@@ -394,6 +435,17 @@ fn eval(offline: bool) -> Result<JsonEnvelope, AppError> {
     Err(AppError::not_implemented(
         "eval not implemented".to_string(),
     ))
+}
+
+fn print_vector_summary(vector: &[f32]) {
+    let preview: Vec<String> = vector.iter().take(8).map(|v| format!("{v:.6}")).collect();
+    let suffix = if vector.len() > 8 { ", ..." } else { "" };
+    println!(
+        "embedding dim={} [{}{}]",
+        vector.len(),
+        preview.join(", "),
+        suffix
+    );
 }
 
 fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
@@ -587,6 +639,30 @@ fn map_embed_error(err: EmbedError) -> AppError {
                 "content_length": content_length,
             })),
         EmbedError::InvalidUrl { url } => AppError::internal(format!("invalid model URL: {}", url)),
+        EmbedError::ConfigLoad { path, message } => AppError::dependency(format!(
+            "invalid model config at {}: {}",
+            path.display(),
+            message
+        )),
+        EmbedError::ModelLoad { path, message } => AppError::dependency(format!(
+            "failed to load model at {}: {}",
+            path.display(),
+            message
+        )),
+        EmbedError::TokenizerLoad { path, message } => AppError::dependency(format!(
+            "failed to load tokenizer at {}: {}",
+            path.display(),
+            message
+        )),
+        EmbedError::Tokenization { message } => {
+            AppError::internal(format!("tokenization failed: {}", message))
+        }
+        EmbedError::Tensor { message } => {
+            AppError::internal(format!("tensor operation failed: {}", message))
+        }
+        EmbedError::Inference { message } => {
+            AppError::internal(format!("embedding inference failed: {}", message))
+        }
         EmbedError::Io { path, message } => {
             let detail = path
                 .map(|p| p.display().to_string())
