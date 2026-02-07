@@ -1,8 +1,8 @@
 use clap::{error::ErrorKind, Parser, Subcommand};
 use pale_ale_diagnose::{
-    default_measurement_config, default_policy_config, diagnose_eval, measure_eval,
-    measurement_hash, policy_hash, AttestationLevel, AuditTrace, ConfigSource, EvalReport,
-    HashesTrace, MeasureError, ModelFile, ModelTrace, VerdictStatus,
+    compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
+    measure_eval, measurement_hash, policy_hash, AttestationLevel, AuditTrace, ConfigSource,
+    EvalReport, HashesTrace, MeasureError, ModelFile, ModelTrace, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -74,8 +74,9 @@ struct AppError {
     kind: AppErrorKind,
     code: &'static str,
     message: String,
-    details: Value,
-    data: Option<Value>,
+    details: Box<Value>,
+    data: Option<Box<Value>>,
+    inputs_hash: Option<String>,
 }
 
 impl AppError {
@@ -84,8 +85,9 @@ impl AppError {
             kind: AppErrorKind::Usage,
             code: "CLI_USAGE",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -94,8 +96,9 @@ impl AppError {
             kind: AppErrorKind::ModelMissingOffline,
             code: "MODEL_MISSING_OFFLINE",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -104,8 +107,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "OFFLINE_FORBIDS_DOWNLOAD",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -114,8 +118,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "MODEL_MISSING",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -124,8 +129,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "MODEL_FILE_MISSING",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -134,8 +140,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "MODEL_HASH_MISMATCH",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -144,8 +151,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "MODEL_HASH_FORMAT_INVALID",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -154,8 +162,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "MODEL_INVALID_PAYLOAD",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -164,8 +173,9 @@ impl AppError {
             kind: AppErrorKind::Dependency,
             code: "DEPENDENCY_ERROR",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -174,8 +184,9 @@ impl AppError {
             kind: AppErrorKind::Internal,
             code: "INTERNAL_ERROR",
             message,
-            details: Value::Null,
+            details: Box::new(Value::Null),
             data: None,
+            inputs_hash: None,
         }
     }
 
@@ -190,13 +201,18 @@ impl AppError {
     }
 
     fn with_details_and_data(mut self, details: Value) -> Self {
-        self.details = details.clone();
-        self.data = Some(json!({ "details": details }));
+        self.details = Box::new(details.clone());
+        self.data = Some(Box::new(json!({ "details": details })));
         self
     }
 
     fn with_data(mut self, data: Value) -> Self {
-        self.data = Some(data);
+        self.data = Some(Box::new(data));
+        self
+    }
+
+    fn with_inputs_hash(mut self, inputs_hash: String) -> Self {
+        self.inputs_hash = Some(inputs_hash);
         self
     }
 }
@@ -420,6 +436,7 @@ fn eval(
     offline: bool,
     json: bool,
 ) -> Result<JsonEnvelope, AppError> {
+    let inputs_hash_hex = compute_inputs_hash(&query, &context, &answer);
     let manager = ModelManager::new(ModelSpec::classic());
     let verify_report = if offline {
         let status = manager.status();
@@ -427,14 +444,23 @@ fn eval(
             return Err(AppError::model_missing_offline(format!(
                 "model cache missing in offline mode: {}",
                 status.cache_dir.display()
-            )));
+            ))
+            .with_inputs_hash(inputs_hash_hex.clone()));
         }
-        manager.verify().map_err(map_embed_error)?
+        manager
+            .verify()
+            .map_err(map_embed_error)
+            .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?
     } else {
-        manager.download(false).map_err(map_embed_error)?
+        manager
+            .download(false)
+            .map_err(map_embed_error)
+            .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?
     };
 
-    let embedder = Embedder::new(&manager).map_err(map_embed_error)?;
+    let embedder = Embedder::new(&manager)
+        .map_err(map_embed_error)
+        .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?;
     let measurement = measure_eval(
         &|sentence: &str| {
             embedder
@@ -445,7 +471,8 @@ fn eval(
         &context,
         &answer,
     )
-    .map_err(map_measure_error)?;
+    .map_err(map_measure_error)
+    .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?;
     let policy = default_policy_config();
     let diagnose_result = diagnose_eval(measurement, &policy);
 
@@ -456,10 +483,10 @@ fn eval(
     Ok(JsonEnvelope {
         status: verdict_status_str(diagnose_result.status).to_string(),
         error: None,
-        audit_trace: audit_trace_with_model(model_trace_from_verify(
-            manager.spec(),
-            &verify_report,
-        )),
+        audit_trace: audit_trace_with_model_and_inputs(
+            model_trace_from_verify(manager.spec(), &verify_report),
+            Some(inputs_hash_hex),
+        ),
         data: Some(json!(diagnose_result.report)),
     })
 }
@@ -508,6 +535,10 @@ fn verdict_status_str(status: VerdictStatus) -> &'static str {
 }
 
 fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
+    audit_trace_with_model_and_inputs(model, None)
+}
+
+fn audit_trace_with_model_and_inputs(model: ModelTrace, inputs_hash: Option<String>) -> AuditTrace {
     let measurement = measurement_hash(&default_measurement_config());
     let policy = policy_hash(&default_policy_config());
 
@@ -516,7 +547,7 @@ fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
         hashes: HashesTrace {
             measurement_hash: measurement,
             policy_hash: policy,
-            inputs_hash: "UNAVAILABLE".to_string(),
+            inputs_hash: inputs_hash.unwrap_or_else(|| "UNAVAILABLE".to_string()),
         },
         config_source: ConfigSource::Default,
         attestation_level: AttestationLevel::Unattested,
@@ -533,10 +564,13 @@ fn error_envelope(err: &AppError) -> JsonEnvelope {
         error: Some(ErrorEnvelope {
             code: err.code.to_string(),
             message: err.message.clone(),
-            details: err.details.clone(),
+            details: (*err.details).clone(),
         }),
-        audit_trace: audit_trace_with_model(default_model_trace()),
-        data: err.data.clone(),
+        audit_trace: audit_trace_with_model_and_inputs(
+            default_model_trace(),
+            err.inputs_hash.clone(),
+        ),
+        data: err.data.as_deref().cloned(),
     }
 }
 

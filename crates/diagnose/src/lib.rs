@@ -1,9 +1,11 @@
 use pale_ale_modelspec::ModelSpec;
 use serde::{Deserialize, Serialize};
 
+mod binding;
 mod diagnose;
 mod measure;
 
+pub use binding::compute_inputs_hash;
 pub use diagnose::{
     diagnose_eval, DiagnoseResult, EvalReport, EvidenceItem, ScoresSummary, VerdictStatus,
 };

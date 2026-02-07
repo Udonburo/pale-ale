@@ -5,6 +5,13 @@ use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
+fn is_lower_hex_64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
 #[test]
 fn json_usage_error_when_missing_subcommand() {
     let output = cargo_bin_cmd!("pale-ale").arg("--json").output().unwrap();
@@ -55,6 +62,10 @@ fn json_eval_usage_error() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
     assert_eq!(value["error"]["code"], "CLI_USAGE");
+    assert_eq!(
+        value["audit_trace"]["hashes"]["inputs_hash"], "UNAVAILABLE",
+        "inputs_hash must be UNAVAILABLE when eval inputs are incomplete"
+    );
 }
 
 #[test]
@@ -241,6 +252,10 @@ fn json_eval_offline_missing_cache() {
     let stdout = String::from_utf8(output.stdout).unwrap();
     let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
     assert_eq!(value["error"]["code"], "MODEL_MISSING_OFFLINE");
+    let inputs_hash = value["audit_trace"]["hashes"]["inputs_hash"]
+        .as_str()
+        .expect("inputs_hash string");
+    assert!(is_lower_hex_64(inputs_hash), "inputs_hash format invalid");
 }
 
 #[test]
@@ -277,6 +292,30 @@ fn json_eval_success_has_verdict_and_evidence() {
         "data.status should not exist"
     );
     assert!(value["data"]["evidence"].is_array());
+}
+
+#[test]
+fn json_eval_inputs_hash_present() {
+    let verify_output = cargo_bin_cmd!("pale-ale")
+        .args(["model", "verify", "--json"])
+        .output()
+        .unwrap();
+    if verify_output.status.code() != Some(0) {
+        return;
+    }
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args(["eval", "q", "c.", "a.", "--offline", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    let inputs_hash = value["audit_trace"]["hashes"]["inputs_hash"]
+        .as_str()
+        .expect("inputs_hash string");
+    assert!(is_lower_hex_64(inputs_hash), "inputs_hash format invalid");
 }
 
 #[test]

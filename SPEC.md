@@ -292,6 +292,7 @@ Implementations MUST use a JCS-compliant serializer. Manual implementations MUST
 
 - `measurement_hash = BLAKE3(JCS(MeasurementConfig))`
 - `policy_hash      = BLAKE3(JCS(PolicyConfig))`
+- `inputs_hash      = BLAKE3(JCS({v,query,context,answer}))` after newline normalization (`CRLF/CR -> LF`)
 
 Optional build trace hashes (for example, `cargo_lock_hash`) MAY be included in `audit_trace.build`.
 
@@ -519,9 +520,18 @@ Recommended build metadata:
 
 `inputs_hash` definition (normative):
 
-- `inputs_hash = BLAKE3(JCS({ query: <string>, context: <string>, answer: <string> }))`
-
-No trimming or normalization is applied unless explicitly defined as measurement-critical preprocessing.
+- Canonical input object schema:
+  `{ "v": 1, "query": <string>, "context": <string>, "answer": <string> }`
+- `v` is the canonical-input schema version and MUST be `1` for `v1.0.1`.
+  Future incompatible input-binding changes MUST increment `v`.
+- Newline normalization is applied before hashing:
+  `CRLF (\r\n) -> LF (\n)` and `CR (\r) -> LF (\n)`.
+- Whitespace is otherwise preserved (no trim).
+- `inputs_hash = BLAKE3(JCS(canonical_input_object))`
+- Hashing target is raw eval inputs (post transport/read, pre measurement transforms such as
+  `trim` or sentence split).
+- `inputs_hash` is computed only when all three eval inputs (`query`,`context`,`answer`) are present.
+  If inputs are incomplete (for example CLI usage/parse errors), `inputs_hash` MUST be `"UNAVAILABLE"`.
 
 `model verify --json` detail contract (CLI envelope):
 
