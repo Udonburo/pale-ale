@@ -1,4 +1,5 @@
 mod batch;
+mod report;
 
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
@@ -61,6 +62,19 @@ enum Commands {
         strict: bool,
         #[arg(long)]
         dry_run: bool,
+    },
+    Report {
+        input_ndjson: String,
+        #[arg(long)]
+        summary: bool,
+        #[arg(long, default_value = "10")]
+        top: usize,
+        #[arg(long = "filter")]
+        filters: Vec<String>,
+        #[arg(long)]
+        find: Option<String>,
+        #[arg(long)]
+        tui: bool,
     },
 }
 
@@ -341,6 +355,24 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             strict,
             dry_run,
         }),
+        Commands::Report {
+            input_ndjson,
+            summary,
+            top,
+            filters,
+            find,
+            tui,
+        } => report::run(
+            report::ReportCommand {
+                input: input_ndjson,
+                summary,
+                top,
+                filters,
+                find,
+                tui,
+            },
+            json,
+        ),
     }
 }
 

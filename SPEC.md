@@ -461,6 +461,7 @@ Minimum command set:
 - `pale-ale model clear-cache [--yes] [--json]` (dev helper, scoped to pinned model/revision)
 - `pale-ale doctor [--offline]`
 - `pale-ale batch <input> [--out <path>] [--format jsonl|tsv] [--threads N] [--max-rows N] [--strict] [--dry-run] [--offline] [--json]`
+- `pale-ale report <input_ndjson> [--summary] [--top N] [--filter status=...] [--filter has_warning] [--filter has_error] [--find <substr>] [--json] [--tui]`
 
 A standalone `embed` command is not required for `v1.0.1`. If added for debugging, outputs MUST be labeled `UNATTESTED`.
 
@@ -554,6 +555,75 @@ Summary:
 - `--dry-run` parses input and computes `inputs_hash` only.
 - It does not download/load the model and does not run embedding or measurement.
 - Dry-run rows emit `status = "UNKNOWN"`, `error = null`, `data = null` unless a row-level input parse/validation error occurs.
+
+<a id="sec-10-5"></a>
+
+### 10.5 `report` Contract
+
+`report` inspects batch NDJSON rows and computes deterministic aggregates without model loading.
+
+Input normalization:
+
+- Reads NDJSON line-by-line.
+- Skips blank/whitespace-only lines.
+- Strips UTF-8 BOM only on the first non-empty line.
+- Each non-empty parsed line is treated as a row object; unknown keys are ignored.
+
+Filters:
+
+- `--filter status=<LUCID|HAZY|DELIRIUM|UNKNOWN>`
+- `--filter has_warning` (row `audit_trace.warnings` non-empty)
+- `--filter has_error` (`error != null`)
+- `--find <substr>` matches `id` substring and `inputs_hash` prefix/substring
+- Filters are applied before `worst_k` ranking.
+
+Summary fields:
+
+- `rows_total`
+- `rows_ok` (`error == null`)
+- `rows_err` (`error != null`)
+- `counts_by_status` with fixed keys: `LUCID`, `HAZY`, `DELIRIUM`, `UNKNOWN`
+- `rows_with_warnings`
+- `worst_k`: top `N` rows by `data.scores.max_score_ratio` descending; ties break by lower `row_index`
+- `worst_k` item fields: `row_index`, `id?`, `status`, `inputs_hash`, `max_score_ratio`, `err_code?`
+
+`--json` summary envelope shape:
+
+```json
+{
+  "status": "OK",
+  "error": null,
+  "audit_trace": { "...": "..." },
+  "data": {
+    "input_path": "path/to/file.ndjson",
+    "rows_total": 0,
+    "rows_ok": 0,
+    "rows_err": 0,
+    "counts_by_status": {
+      "LUCID": 0,
+      "HAZY": 0,
+      "DELIRIUM": 0,
+      "UNKNOWN": 0
+    },
+    "rows_with_warnings": 0,
+    "worst_k": [
+      {
+        "row_index": 0,
+        "id": "optional",
+        "status": "HAZY",
+        "inputs_hash": "hex-or-id",
+        "max_score_ratio": 1.5,
+        "err_code": "optional"
+      }
+    ]
+  }
+}
+```
+
+TUI note:
+
+- `--tui` is explicitly non-contract UX; layout/controls may evolve.
+- If terminal initialization fails, implementations SHOULD fall back to summary mode.
 
 ---
 

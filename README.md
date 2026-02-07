@@ -27,6 +27,30 @@ Unlike cosine similarity (angle-only), this metric detects **block-wise structur
 - `pale-ale model print-hashes --json` prints current cached BLAKE3 values and a copy/paste Rust constants block for audited canonical updates.
 - `pale-ale model clear-cache --yes` removes only the pinned model/revision cache directory.
 
+## CLI Report Viewer
+
+`pale-ale report` inspects batch NDJSON output (`pale-ale.batch.ndjson`) without loading a model.
+
+Summary examples:
+
+```bash
+pale-ale report pale-ale.batch.ndjson
+pale-ale report pale-ale.batch.ndjson --summary --top 20 --filter status=HAZY
+pale-ale report pale-ale.batch.ndjson --filter has_warning --find abc123 --json
+```
+
+Optional TUI build:
+
+```bash
+cargo build -p pale-ale-cli --features cli-tui
+```
+
+Then run:
+
+```bash
+pale-ale report pale-ale.batch.ndjson --tui
+```
+
 ## Installation
 
 ### Python
