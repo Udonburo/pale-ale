@@ -212,12 +212,23 @@ Status (`LUCID < HAZY < DELIRIUM`):
 - `status_ratio_hazy_min`: `<f32>` in `[0,1]` (below this is `DELIRIUM`)
 - `status_sem_raw_min`: `<f32>` in `[0,1]`
 - `status_struct_min`: `<f32>` in `[0,1]`
+- `th_ratio_hazy`: `<f32>` (default `1.5`)
+- `th_ratio_delirium`: `<f32>` (default `2.2`)
+
+Verdict mapping (v1):
+
+- Let `r_max = max(score_ratio)` across selected measurement pairs.
+- if `r_max >= th_ratio_delirium` => `DELIRIUM`
+- else if `r_max >= th_ratio_hazy` => `HAZY`
+- else => `LUCID`
 
 Evidence (extraction, caps, ordering):
 
 - `evidence_max_items`: `<u32>`
 - `evidence_max_per_ctx_sentence`: `<u32>`
 - `evidence_max_per_ans_sentence`: `<u32>`
+- `max_evidence`: `<usize>` (default `6`)
+- `max_evidence_per_answer`: `<usize>` (default `3`)
 - `evidence_min_score_ratio`: `<f32>` in `[0,1]`
 - `evidence_min_score_sem_raw`: `<f32>` in `[0,1]`
 - `evidence_min_score_struct`: `<f32>` in `[0,1]`
@@ -528,9 +539,19 @@ Each `evidence` element MUST include at minimum:
 
 - `ctx_sentence_index`, `ans_sentence_index`
 - excerpt text fields (for example, `text`, `match_context`, etc.)
-- `score_struct`, `score_sem_raw`, `score_ratio`
+- `score_struct`, `score_sem`, `score_ratio`
 - `tags: string[]`
 - `rule_trace: string[]`
+
+Evidence ordering and cap rules (deterministic v1):
+
+- Group by `ans_sentence_index`.
+- Inside each answer group, sort by:
+  higher `score_ratio`, then lower `ctx_sentence_index`, then lower `ans_sentence_index`.
+- Take `max_evidence_per_answer` per answer group.
+- Merge candidates globally and sort by:
+  higher `score_ratio`, then lower `ans_sentence_index`, then lower `ctx_sentence_index`.
+- Take `max_evidence` total.
 
 <a id="sec-11-4"></a>
 
