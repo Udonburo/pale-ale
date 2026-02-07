@@ -1,4 +1,6 @@
-use clap::{error::ErrorKind, Parser, Subcommand};
+mod batch;
+
+use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
     compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
     measure_eval, measurement_hash, policy_hash, AttestationLevel, AuditTrace, ConfigSource,
@@ -11,7 +13,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const PRINT_HASHES_WARNING: &str =
     "hashes are computed from local cache bytes; treat as canonical only after pinned revision verification";
@@ -44,6 +46,27 @@ enum Commands {
         context: String,
         answer: String,
     },
+    Batch {
+        input: String,
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long, value_enum, default_value = "jsonl")]
+        format: BatchFormat,
+        #[arg(long)]
+        threads: Option<usize>,
+        #[arg(long)]
+        max_rows: Option<usize>,
+        #[arg(long)]
+        strict: bool,
+        #[arg(long)]
+        dry_run: bool,
+    },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum BatchFormat {
+    Jsonl,
+    Tsv,
 }
 
 #[derive(Subcommand, Debug)]
@@ -190,13 +213,24 @@ impl AppError {
         }
     }
 
+    fn strict_failure(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "BATCH_STRICT_FAILURE",
+            message,
+            details: Box::new(Value::Null),
+            data: None,
+            inputs_hash: None,
+        }
+    }
+
     fn exit_code(&self) -> i32 {
         match self.kind {
             AppErrorKind::Usage => 1,
             AppErrorKind::ModelMissingOffline
             | AppErrorKind::Dependency
-            | AppErrorKind::NotImplemented => 2,
-            AppErrorKind::Internal => 3,
+            | AppErrorKind::NotImplemented
+            | AppErrorKind::Internal => 2,
         }
     }
 
@@ -287,6 +321,25 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             context,
             answer,
         } => eval(query, context, answer, cli.offline, json),
+        Commands::Batch {
+            input,
+            out,
+            format,
+            threads,
+            max_rows,
+            strict,
+            dry_run,
+        } => batch::run(batch::BatchCommand {
+            input,
+            out,
+            format,
+            threads,
+            max_rows,
+            offline: cli.offline,
+            json_output: json,
+            strict,
+            dry_run,
+        }),
     }
 }
 
