@@ -2,7 +2,7 @@ use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::str::contains;
 use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 
 fn is_lower_hex_64(value: &str) -> bool {
@@ -10,6 +10,14 @@ fn is_lower_hex_64(value: &str) -> bool {
         && value
             .bytes()
             .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
+
+fn read_ndjson(path: &Path) -> Vec<Value> {
+    let content = fs::read_to_string(path).expect("read ndjson");
+    content
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).expect("valid ndjson row"))
+        .collect()
 }
 
 #[test]
@@ -356,4 +364,182 @@ fn json_embed_vector_invariants() {
         "embedding norm out of bounds: {}",
         norm
     );
+}
+
+#[test]
+fn json_batch_offline_missing_cache() {
+    let temp = TempDir::new().unwrap();
+    let model_dir = temp.path().join("empty-model-cache");
+    let input_path = temp.path().join("input.jsonl");
+    let out_path = temp.path().join("out.ndjson");
+
+    fs::write(&input_path, r#"{"query":"q","context":"c","answer":"a"}"#).unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .env("PA_MEASURE_MODEL_DIR", &model_dir)
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path.to_str().unwrap(),
+            "--offline",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["error"]["code"], "MODEL_MISSING_OFFLINE");
+}
+
+#[test]
+fn json_batch_dry_run_non_strict_row_errors_and_ordering() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("input.jsonl");
+    let out_path = temp.path().join("out.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "{\"id\":\"bad\",\"query\":\"q1\",\"context\":\"c1\"}\n",
+            "{\"id\":\"ok\",\"query\":\"q2\",\"context\":\"c2\",\"answer\":\"a2\"}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path.to_str().unwrap(),
+            "--dry-run",
+            "--threads",
+            "4",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["status"], "OK");
+    assert_eq!(value["data"]["rows_total"], 2);
+    assert_eq!(value["data"]["rows_ok"], 1);
+    assert_eq!(value["data"]["rows_err"], 1);
+
+    let rows = read_ndjson(&out_path);
+    assert_eq!(rows.len(), 2);
+
+    assert_eq!(rows[0]["row_index"], 0);
+    assert_eq!(rows[0]["status"], "UNKNOWN");
+    assert_eq!(rows[0]["error"]["code"], "BATCH_INPUT_MISSING_FIELDS");
+
+    assert_eq!(rows[1]["row_index"], 1);
+    assert!(rows[1]["error"].is_null());
+    assert_eq!(rows[1]["status"], "UNKNOWN");
+    let hash = rows[1]["inputs_hash"].as_str().expect("inputs_hash");
+    assert!(is_lower_hex_64(hash));
+}
+
+#[test]
+fn json_batch_dry_run_hash_determinism_and_stable_output() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("input.jsonl");
+    let out_path_a = temp.path().join("out-a.ndjson");
+    let out_path_b = temp.path().join("out-b.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "{\"id\":\"r0\",\"query\":\"q0\",\"context\":\"c0\",\"answer\":\"a0\"}\n",
+            "{\"id\":\"r1\",\"query\":\"q1\",\"context\":\"c1\"}\n",
+            "{\"id\":\"r2\",\"query\":\"q2\",\"context\":\"c2\",\"answer\":\"a2\"}\n",
+            "{\"id\":\"r3\",\"query\":\"q3\",\"context\":\"c3\",\"answer\":\"a3\"}\n"
+        ),
+    )
+    .unwrap();
+
+    let first = cargo_bin_cmd!("pale-ale")
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path_a.to_str().unwrap(),
+            "--dry-run",
+            "--threads",
+            "4",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(first.status.code(), Some(0));
+
+    let second = cargo_bin_cmd!("pale-ale")
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path_b.to_str().unwrap(),
+            "--dry-run",
+            "--threads",
+            "4",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(second.status.code(), Some(0));
+
+    let out_a = fs::read_to_string(&out_path_a).unwrap();
+    let out_b = fs::read_to_string(&out_path_b).unwrap();
+    assert_eq!(out_a, out_b, "dry-run NDJSON output must be deterministic");
+
+    let rows = read_ndjson(&out_path_a);
+    for (idx, row) in rows.iter().enumerate() {
+        assert_eq!(row["row_index"], idx as u64);
+        let hash = row["inputs_hash"].as_str().expect("inputs_hash");
+        assert!(is_lower_hex_64(hash));
+    }
+}
+
+#[test]
+fn json_batch_dry_run_strict_failure_exit_code_2() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("input.jsonl");
+    let out_path = temp.path().join("out.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "{\"id\":\"bad\",\"query\":\"q1\",\"context\":\"c1\"}\n",
+            "{\"id\":\"ok\",\"query\":\"q2\",\"context\":\"c2\",\"answer\":\"a2\"}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path.to_str().unwrap(),
+            "--dry-run",
+            "--strict",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["error"]["code"], "BATCH_STRICT_FAILURE");
+    assert_eq!(value["data"]["rows_total"], 2);
+    assert_eq!(value["data"]["rows_err"], 1);
+
+    let rows = read_ndjson(&out_path);
+    assert_eq!(rows.len(), 2);
 }

@@ -1,6 +1,6 @@
 # Pale-Ale Classic (E8 Edition) - Rust CLI Specification
 
-**Spec v2026-02-05** (Target: Rust CLI `v1.0.1`)
+**Spec v2026-02-07** (Target: Rust CLI `v1.0.1`)
 
 <a id="sec-0"></a>
 
@@ -445,6 +445,7 @@ Minimum command set:
 - `pale-ale model print-hashes [--json]` (dev helper, read-only)
 - `pale-ale model clear-cache [--yes] [--json]` (dev helper, scoped to pinned model/revision)
 - `pale-ale doctor [--offline]`
+- `pale-ale batch <input> [--out <path>] [--format jsonl|tsv] [--threads N] [--max-rows N] [--strict] [--dry-run] [--offline] [--json]`
 
 A standalone `embed` command is not required for `v1.0.1`. If added for debugging, outputs MUST be labeled `UNATTESTED`.
 
@@ -456,8 +457,7 @@ Fixed exit codes:
 
 - `0`: success (`LUCID`, `HAZY`, `DELIRIUM`, etc.)
 - `1`: CLI usage error
-- `2`: dependency/environment error (missing model, permission issues, offline download attempts, corruption, hash mismatch, etc.)
-- `3`: internal error (captured panic, invariant violation, etc.)
+- `2`: runtime error (dependency/environment failures and internal processing failures)
 
 `--json` contract:
 
@@ -477,6 +477,64 @@ Fixed exit codes:
 - `model download --offline`: MUST fail immediately with error code `OFFLINE_FORBIDS_DOWNLOAD` (exit `2`).
 - `model status|verify --offline`: MUST work if network is not required (success `0` / failure `2`).
 - `doctor --offline`: MUST skip network checks and fail only for fatal local issues (exit `2`).
+
+<a id="sec-10-4"></a>
+
+### 10.4 `batch` Contract
+
+`batch` evaluates many `(query, context, answer)` rows with the same measurement/policy pipeline used by `eval`.
+
+Input:
+
+- `input` accepts a file path or `-` (stdin).
+- `--format jsonl` (default): one JSON object per line.
+  Required fields: `query`, `context`, `answer`.
+  Optional field: `id`.
+  Unknown keys are ignored.
+- `--format tsv`: `query<TAB>context<TAB>answer`.
+  Tabs inside fields are not escaped in `v1.0.1`; each row must contain exactly 3 columns.
+
+Model handling:
+
+- Without `--dry-run`, model setup happens once at batch start.
+- `--offline` requires pinned files already present and verified; otherwise fail with `MODEL_MISSING_OFFLINE` (exit `2`).
+- Without `--offline`, download and verify once, then reuse for all rows.
+
+Per-row NDJSON output:
+
+- NDJSON is always written to `--out <path>`.
+- Default output path is `./pale-ale.batch.ndjson`.
+- Output order MUST match input order (`row_index` ascending), even with parallel workers.
+- Every row object includes:
+  - `row_index` (0-based),
+  - `id` (when provided),
+  - `inputs_hash` (64-char lowercase BLAKE3 hex),
+  - `status` (`LUCID|HAZY|DELIRIUM|UNKNOWN`),
+  - `error` (`null` or `{ code, message, details }`),
+  - `data` (`EvalReport` on success, `null` on row error),
+  - `audit_trace` (same shape as `eval`, with row `inputs_hash` binding).
+
+Strict and non-strict behavior:
+
+- Missing required input fields are row failures.
+- Non-strict mode: emit row error and continue.
+- `--strict`: complete output generation, then fail command with `BATCH_STRICT_FAILURE` if any row failed (exit `2`).
+
+Summary:
+
+- `BatchSummary` includes:
+  - `input_path`, `out_path`,
+  - `rows_total`, `rows_ok`, `rows_err`,
+  - `duration_ms`,
+  - `worst_k` (top 10 successful rows by `max_score_ratio`, with `row_index`, `id`, `inputs_hash`, `max_score_ratio`, `status`).
+- With `--json`, stdout prints one summary envelope only; row NDJSON is never printed to stdout.
+- Without `--json`, stdout prints a concise human summary only.
+
+`--dry-run`:
+
+- `--dry-run` parses input and computes `inputs_hash` only.
+- It does not download/load the model and does not run embedding or measurement.
+- Dry-run rows emit `status = "UNKNOWN"`, `error = null`, `data = null` unless a row-level input parse/validation error occurs.
 
 ---
 
