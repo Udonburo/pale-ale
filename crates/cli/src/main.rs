@@ -1,8 +1,8 @@
 use clap::{error::ErrorKind, Parser, Subcommand};
 use pale_ale_diagnose::{
-    default_measurement_config, default_policy_config, measure_eval, measurement_hash, policy_hash,
-    AttestationLevel, AuditTrace, ConfigSource, EvalResult, HashesTrace, MeasureError, ModelFile,
-    ModelTrace, PairScore,
+    default_measurement_config, default_policy_config, diagnose_eval, measure_eval,
+    measurement_hash, policy_hash, AttestationLevel, AuditTrace, ConfigSource, EvalReport,
+    HashesTrace, MeasureError, ModelFile, ModelTrace, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -435,7 +435,7 @@ fn eval(
     };
 
     let embedder = Embedder::new(&manager).map_err(map_embed_error)?;
-    let result = measure_eval(
+    let measurement = measure_eval(
         &|sentence: &str| {
             embedder
                 .embed(sentence)
@@ -446,19 +446,21 @@ fn eval(
         &answer,
     )
     .map_err(map_measure_error)?;
+    let policy = default_policy_config();
+    let diagnose_result = diagnose_eval(measurement, &policy);
 
     if !json {
-        print_eval_summary(&result);
+        print_eval_report(diagnose_result.status, &diagnose_result.report);
     }
 
     Ok(JsonEnvelope {
-        status: "UNKNOWN".to_string(),
+        status: verdict_status_str(diagnose_result.status).to_string(),
         error: None,
         audit_trace: audit_trace_with_model(model_trace_from_verify(
             manager.spec(),
             &verify_report,
         )),
-        data: Some(json!(result)),
+        data: Some(json!(diagnose_result.report)),
     })
 }
 
@@ -473,30 +475,36 @@ fn print_vector_summary(vector: &[f32]) {
     );
 }
 
-fn print_eval_summary(result: &EvalResult) {
+fn print_eval_report(status: VerdictStatus, report: &EvalReport) {
+    println!("verdict: {}", verdict_status_str(status));
     println!(
-        "eval summary: ctx_n={} ans_n={} pairs_n={} max_score_ratio={:.6}",
-        result.summary.ctx_n,
-        result.summary.ans_n,
-        result.summary.pairs_n,
-        result.summary.max_score_ratio
+        "scores: ctx_n={} ans_n={} pairs_n={} max_ratio={:.6} max_struct={:.6} min_sem={:.6}",
+        report.scores.ctx_n,
+        report.scores.ans_n,
+        report.scores.pairs_n,
+        report.scores.max_score_ratio,
+        report.scores.max_score_struct,
+        report.scores.min_score_sem,
     );
-    let mut top_pairs = result.pairs.clone();
-    top_pairs.sort_by(compare_pairs_for_output);
-    for pair in top_pairs.iter().take(3) {
+    for item in report.evidence.iter().take(3) {
         println!(
-            "ans[{}] -> ctx[{}] ratio={:.6} struct={:.6} sem={:.6}",
-            pair.ans_idx, pair.ctx_idx, pair.score_ratio, pair.score_struct, pair.score_sem
+            "ans[{}] -> ctx[{}] ratio={:.6} struct={:.6} sem={:.6} tags={}",
+            item.ans_sentence_index,
+            item.ctx_sentence_index,
+            item.score_ratio,
+            item.score_struct,
+            item.score_sem,
+            item.tags.join("|")
         );
     }
 }
 
-fn compare_pairs_for_output(left: &PairScore, right: &PairScore) -> std::cmp::Ordering {
-    right
-        .score_ratio
-        .total_cmp(&left.score_ratio)
-        .then_with(|| left.ans_idx.cmp(&right.ans_idx))
-        .then_with(|| left.ctx_idx.cmp(&right.ctx_idx))
+fn verdict_status_str(status: VerdictStatus) -> &'static str {
+    match status {
+        VerdictStatus::Lucid => "LUCID",
+        VerdictStatus::Hazy => "HAZY",
+        VerdictStatus::Delirium => "DELIRIUM",
+    }
 }
 
 fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {

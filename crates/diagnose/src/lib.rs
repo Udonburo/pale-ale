@@ -1,8 +1,12 @@
 use pale_ale_modelspec::ModelSpec;
 use serde::{Deserialize, Serialize};
 
+mod diagnose;
 mod measure;
 
+pub use diagnose::{
+    diagnose_eval, DiagnoseResult, EvalReport, EvidenceItem, ScoresSummary, VerdictStatus,
+};
 pub use measure::{
     measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
 };
@@ -96,10 +100,14 @@ pub struct PolicyConfig {
     pub status_ratio_hazy_min: f32,
     pub status_sem_raw_min: f32,
     pub status_struct_min: f32,
+    pub th_ratio_hazy: f32,
+    pub th_ratio_delirium: f32,
 
     pub evidence_max_items: u32,
     pub evidence_max_per_ctx_sentence: u32,
     pub evidence_max_per_ans_sentence: u32,
+    pub max_evidence: usize,
+    pub max_evidence_per_answer: usize,
     pub evidence_min_score_ratio: f32,
     pub evidence_min_score_sem_raw: f32,
     pub evidence_min_score_struct: f32,
@@ -304,9 +312,13 @@ pub fn default_policy_config() -> PolicyConfig {
         status_ratio_hazy_min: 0.6,
         status_sem_raw_min: 0.5,
         status_struct_min: 0.5,
+        th_ratio_hazy: 1.5,
+        th_ratio_delirium: 2.2,
         evidence_max_items: 20,
         evidence_max_per_ctx_sentence: 3,
         evidence_max_per_ans_sentence: 3,
+        max_evidence: 6,
+        max_evidence_per_answer: 3,
         evidence_min_score_ratio: 0.2,
         evidence_min_score_sem_raw: 0.2,
         evidence_min_score_struct: 0.2,
