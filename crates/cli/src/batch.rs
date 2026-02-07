@@ -1,13 +1,14 @@
 use crate::{
-    audit_trace_with_model, audit_trace_with_model_and_inputs, map_embed_error, map_measure_error,
-    model_trace_from_spec, model_trace_from_verify, verdict_status_str, AppError, BatchFormat,
-    ErrorEnvelope, JsonEnvelope,
+    audit_trace_with_model_and_inputs, audit_trace_with_model_and_inputs_cfg, map_embed_error,
+    map_measure_error, model_trace_from_spec, model_trace_from_verify, verdict_status_str,
+    AppError, BatchFormat, ErrorEnvelope, JsonEnvelope,
 };
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use indicatif::{ProgressBar, ProgressStyle};
 use pale_ale_diagnose::{
-    compute_inputs_hash, default_policy_config, diagnose_eval, measure_eval, AuditTrace,
-    EvalReport, ModelTrace,
+    compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
+    measure_eval, measurement_hash, AuditTrace, AuditWarning, EvalReport, MeasurementConfig,
+    ModelTrace, SentenceEmbedding,
 };
 use pale_ale_embed::{Embedder, ModelManager, ModelSpec};
 use serde::{Deserialize, Serialize};
@@ -56,6 +57,8 @@ struct WorkerConfig {
     dry_run: bool,
     model_spec: ModelSpec,
     model_trace: ModelTrace,
+    measurement_cfg: MeasurementConfig,
+    measurement_hash: String,
 }
 
 struct WorkerState {
@@ -136,6 +139,8 @@ pub(super) fn run(command: BatchCommand) -> Result<JsonEnvelope, AppError> {
     let started = Instant::now();
     let out_path = out.unwrap_or_else(|| PathBuf::from(DEFAULT_BATCH_OUT_PATH));
     let out_path_display = out_path.display().to_string();
+    let measurement_cfg = default_measurement_config();
+    let measurement_hash_hex = measurement_hash(&measurement_cfg);
 
     let manager = ModelManager::new(ModelSpec::classic());
     let model_trace = prepare_model_trace(&manager, offline, dry_run)?;
@@ -143,6 +148,8 @@ pub(super) fn run(command: BatchCommand) -> Result<JsonEnvelope, AppError> {
         dry_run,
         model_spec: manager.spec().clone(),
         model_trace: model_trace.clone(),
+        measurement_cfg: measurement_cfg.clone(),
+        measurement_hash: measurement_hash_hex.clone(),
     };
 
     let progress = build_progress_bar(&input, max_rows)?;
@@ -254,7 +261,13 @@ pub(super) fn run(command: BatchCommand) -> Result<JsonEnvelope, AppError> {
     Ok(JsonEnvelope {
         status: "OK".to_string(),
         error: None,
-        audit_trace: audit_trace_with_model(model_trace),
+        audit_trace: audit_trace_with_model_and_inputs_cfg(
+            model_trace,
+            None,
+            &measurement_cfg,
+            Some(measurement_hash_hex),
+            Vec::new(),
+        ),
         data: Some(json!(summary)),
     })
 }
@@ -329,13 +342,9 @@ fn count_lines(path: &Path, max_rows: Option<usize>) -> Result<usize, AppError> 
     let mut reader = BufReader::new(file);
     let mut count = 0usize;
     let mut line = String::new();
+    let mut saw_first_non_empty_line = false;
 
     loop {
-        if let Some(limit) = max_rows {
-            if count >= limit {
-                break;
-            }
-        }
         line.clear();
         let read = reader.read_line(&mut line).map_err(|err| {
             AppError::dependency(format!(
@@ -346,6 +355,25 @@ fn count_lines(path: &Path, max_rows: Option<usize>) -> Result<usize, AppError> 
         })?;
         if read == 0 {
             break;
+        }
+        trim_line_ending(&mut line);
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        if !saw_first_non_empty_line {
+            strip_utf8_bom(&mut line);
+            saw_first_non_empty_line = true;
+            if line.trim().is_empty() {
+                continue;
+            }
+        }
+
+        if let Some(limit) = max_rows {
+            if count >= limit {
+                break;
+            }
         }
         count = count.saturating_add(1);
     }
@@ -364,14 +392,9 @@ fn dispatch_lines<R: BufRead>(
 ) -> Result<(), AppError> {
     let mut row_index = 0usize;
     let mut line = String::new();
+    let mut saw_first_non_empty_line = false;
 
     loop {
-        if let Some(limit) = max_rows {
-            if row_index >= limit {
-                break;
-            }
-        }
-
         line.clear();
         let read = reader
             .read_line(&mut line)
@@ -380,6 +403,24 @@ fn dispatch_lines<R: BufRead>(
             break;
         }
         trim_line_ending(&mut line);
+
+        if line.trim().is_empty() {
+            continue;
+        }
+
+        if !saw_first_non_empty_line {
+            strip_utf8_bom(&mut line);
+            saw_first_non_empty_line = true;
+            if line.trim().is_empty() {
+                continue;
+            }
+        }
+
+        if let Some(limit) = max_rows {
+            if row_index >= limit {
+                break;
+            }
+        }
 
         match parse_input_line(row_index, &line, format) {
             Ok(task) => {
@@ -411,6 +452,12 @@ fn dispatch_lines<R: BufRead>(
 fn trim_line_ending(line: &mut String) {
     while line.ends_with('\n') || line.ends_with('\r') {
         line.pop();
+    }
+}
+
+fn strip_utf8_bom(line: &mut String) {
+    if let Some(stripped) = line.strip_prefix('\u{feff}') {
+        *line = stripped.to_string();
     }
 }
 
@@ -556,40 +603,50 @@ impl WorkerState {
         if self.config.dry_run {
             return BatchRowResult::dry_run(task, &self.config.model_trace);
         }
+        let model_trace = self.config.model_trace.clone();
+        let measurement_cfg = self.config.measurement_cfg.clone();
+        let measurement_hash = self.config.measurement_hash.clone();
 
         let embedder = match self.ensure_embedder() {
             Ok(embedder) => embedder,
-            Err(err) => {
-                return BatchRowResult::runtime_failure(task, err, &self.config.model_trace)
-            }
+            Err(err) => return BatchRowResult::runtime_failure(task, err, &model_trace),
         };
 
         let measurement = measure_eval(
             &|sentence: &str| {
-                embedder
+                let embedded = embedder
                     .embed(sentence)
-                    .map_err(|err| format!("embed failure: {:?}", err))
+                    .map_err(|err| format!("embed failure: {:?}", err))?;
+                Ok(SentenceEmbedding {
+                    vector: embedded.vector,
+                    truncated: embedded.truncated,
+                    seq_len: embedded.seq_len,
+                    max_seq_len: embedded.max_seq_len,
+                })
             },
             &task.query,
             &task.context,
             &task.answer,
+            &measurement_cfg,
         )
         .map_err(map_measure_error);
 
         let measurement = match measurement {
             Ok(measurement) => measurement,
-            Err(err) => {
-                return BatchRowResult::runtime_failure(task, err, &self.config.model_trace)
-            }
+            Err(err) => return BatchRowResult::runtime_failure(task, err, &model_trace),
         };
 
+        let warnings = measurement.warnings.clone();
         let policy = default_policy_config();
         let diagnosed = diagnose_eval(measurement, &policy);
         BatchRowResult::success(
             task,
             diagnosed.status,
             diagnosed.report,
-            &self.config.model_trace,
+            &model_trace,
+            warnings,
+            &measurement_cfg,
+            &measurement_hash,
         )
     }
 
@@ -611,6 +668,9 @@ impl BatchRowResult {
         status: pale_ale_diagnose::VerdictStatus,
         report: EvalReport,
         model_trace: &ModelTrace,
+        warnings: Vec<AuditWarning>,
+        measurement_cfg: &MeasurementConfig,
+        measurement_hash: &str,
     ) -> Self {
         let max_score_ratio = report.scores.max_score_ratio;
         let inputs_hash = task.inputs_hash;
@@ -621,7 +681,13 @@ impl BatchRowResult {
             status: verdict_status_str(status).to_string(),
             error: None,
             data: Some(report),
-            audit_trace: audit_trace_with_model_and_inputs(model_trace.clone(), Some(inputs_hash)),
+            audit_trace: audit_trace_with_model_and_inputs_cfg(
+                model_trace.clone(),
+                Some(inputs_hash),
+                measurement_cfg,
+                Some(measurement_hash.to_string()),
+                warnings,
+            ),
             max_score_ratio: Some(max_score_ratio),
         }
     }

@@ -11,6 +11,7 @@ pub use diagnose::{
 };
 pub use measure::{
     measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
+    SentenceEmbedding,
 };
 
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {
@@ -31,6 +32,7 @@ pub fn policy_hash(config: &PolicyConfig) -> String {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MeasurementConfig {
+    pub measurement_algo_id: String,
     #[serde(flatten)]
     pub sentence_split: SentenceSplitConfig,
     pub embed: EmbedConfig,
@@ -183,6 +185,8 @@ pub fn attestation_level(
 pub struct AuditTrace {
     pub model: ModelTrace,
     pub hashes: HashesTrace,
+    #[serde(default)]
+    pub warnings: Vec<AuditWarning>,
     pub config_source: ConfigSource,
     pub attestation_level: AttestationLevel,
     pub invalid_block_rate: f32,
@@ -212,6 +216,15 @@ pub struct HashesTrace {
     pub inputs_hash: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AuditWarning {
+    #[serde(rename = "type")]
+    pub warning_type: String,
+    pub field: String,
+    pub sentence_index: usize,
+    pub max_seq_len: usize,
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ConfigSource {
@@ -238,6 +251,9 @@ pub struct BuildTrace {
 pub fn default_measurement_config() -> MeasurementConfig {
     let model_spec = ModelSpec::classic();
     MeasurementConfig {
+        measurement_algo_id:
+            "spin3_rotor29_v1_w_intra0.6-0.4_w_inter0.4-0.6_w_hct0.6-0.4_w_final0.5-0.3-0.2"
+                .to_string(),
         sentence_split: SentenceSplitConfig {
             sentence_split_version: "v1".to_string(),
             sentence_split_max_sentences: 64,
@@ -292,8 +308,8 @@ pub fn default_measurement_config() -> MeasurementConfig {
         },
         core: CoreConfig {
             e8_roots: 240,
-            k: 8.0,
-            beta: 1.0,
+            k: 3.0,
+            beta: 12.0,
             aggregation_weights: AggregationWeights {
                 d_intra: 0.5,
                 d_inter: 0.3,
@@ -450,6 +466,7 @@ fn trim_ascii_ws(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pale_ale_core::{SPIN3_DEFAULT_BETA, SPIN3_DEFAULT_K};
     use serde_json::json;
 
     #[test]
@@ -502,5 +519,23 @@ mod tests {
         let input = "\n \t \n";
         let out = split_sentences_v1(input);
         assert!(out.is_empty());
+    }
+
+    #[test]
+    fn measurement_hash_changes_when_algo_id_changes() {
+        let mut base = default_measurement_config();
+        let baseline_hash = measurement_hash(&base);
+
+        base.measurement_algo_id.push_str("_variant");
+        let variant_hash = measurement_hash(&base);
+
+        assert_ne!(baseline_hash, variant_hash);
+    }
+
+    #[test]
+    fn default_measurement_core_matches_runtime_defaults() {
+        let cfg = default_measurement_config();
+        assert_eq!(cfg.core.k as usize, SPIN3_DEFAULT_K);
+        assert!((cfg.core.beta as f64 - SPIN3_DEFAULT_BETA).abs() < f64::EPSILON);
     }
 }

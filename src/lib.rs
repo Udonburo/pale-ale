@@ -11,6 +11,9 @@ const SEMANTIC_EPS: f64 = 1e-9;
 const SNAP_SOFT_K: usize = 3;
 const SNAP_SOFT_BETA: f64 = 12.0;
 
+pub const SPIN3_DEFAULT_K: usize = SNAP_SOFT_K;
+pub const SPIN3_DEFAULT_BETA: f64 = SNAP_SOFT_BETA;
+
 struct SnapMeta {
     soft: [f64; ROOT_DIM],
     #[allow(dead_code)]
@@ -834,7 +837,30 @@ pub fn spin3_struct(
 
 /// Pure Rust API: computes the structural-only distance between two vectors (default k/beta).
 pub fn spin3_struct_distance(u: &[f64], v: &[f64]) -> Result<f64, String> {
-    spin3_struct(u, v, None, None)
+    spin3_struct_distance_with_params(u, v, SPIN3_DEFAULT_K as f64, SPIN3_DEFAULT_BETA)
+}
+
+/// Pure Rust API: computes structural-only distance with explicit k/beta parameters.
+pub fn spin3_struct_distance_with_params(
+    u: &[f64],
+    v: &[f64],
+    k: f64,
+    beta: f64,
+) -> Result<f64, String> {
+    if !k.is_finite() {
+        return Err("k must be a finite number".to_string());
+    }
+    if k < 1.0 {
+        return Err("k must be >= 1".to_string());
+    }
+    if k > ROOT_COUNT as f64 {
+        return Err(format!("k must be <= {}", ROOT_COUNT));
+    }
+    if k.fract() != 0.0 {
+        return Err("k must be an integer value".to_string());
+    }
+    let k_usize = k as usize;
+    spin3_struct(u, v, Some(k_usize), Some(beta))
 }
 
 /// Pure Rust API: returns structural component breakdown (default k/beta).
@@ -911,6 +937,19 @@ mod tests {
             let d_mix = spin3_distance(&u, &v, Some(1.0)).unwrap();
             assert!((d_struct - d_mix).abs() < 1e-12);
         }
+    }
+
+    #[test]
+    fn struct_distance_default_matches_explicit_defaults() {
+        let u: Vec<f64> = (0..32).map(|i| ((i as f64) * 0.21).sin()).collect();
+        let v: Vec<f64> = (0..32).map(|i| ((i as f64) * 0.19).cos()).collect();
+
+        let default_distance = spin3_struct_distance(&u, &v).expect("default");
+        let explicit_distance =
+            spin3_struct_distance_with_params(&u, &v, SPIN3_DEFAULT_K as f64, SPIN3_DEFAULT_BETA)
+                .expect("explicit");
+
+        assert!((default_distance - explicit_distance).abs() < 1e-12);
     }
 
     #[test]

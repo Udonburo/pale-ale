@@ -7,9 +7,31 @@ use std::path::Path;
 use tokenizers::tokenizer::{
     PaddingParams, PaddingStrategy, Tokenizer, TruncationParams, TruncationStrategy,
 };
+use tokenizers::Encoding;
 
 const MAX_SEQ_LEN: usize = 512;
 const EMBED_DIM: usize = 384;
+
+#[derive(Clone, Debug)]
+pub struct EmbedOutput {
+    pub vector: Vec<f32>,
+    pub truncated: bool,
+    pub seq_len: usize,
+    pub max_seq_len: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TokenizeMeta {
+    pub truncated: bool,
+    pub seq_len: usize,
+    pub max_seq_len: usize,
+}
+
+#[derive(Clone, Debug)]
+struct TokenizedInput {
+    encoding: Encoding,
+    meta: TokenizeMeta,
+}
 
 pub struct Embedder {
     model: BertModel,
@@ -54,13 +76,9 @@ impl Embedder {
         })
     }
 
-    pub fn embed(&self, text: &str) -> Result<Vec<f32>, EmbedError> {
-        let encoding =
-            self.tokenizer
-                .encode(text, true)
-                .map_err(|err| EmbedError::Tokenization {
-                    message: err.to_string(),
-                })?;
+    pub fn embed(&self, text: &str) -> Result<EmbedOutput, EmbedError> {
+        let tokenized = tokenize_with_meta(&self.tokenizer, text)?;
+        let encoding = tokenized.encoding;
         if encoding.len() != MAX_SEQ_LEN {
             return Err(EmbedError::Tokenization {
                 message: format!(
@@ -123,7 +141,12 @@ impl Embedder {
                 ),
             });
         }
-        Ok(vector)
+        Ok(EmbedOutput {
+            vector,
+            truncated: tokenized.meta.truncated,
+            seq_len: tokenized.meta.seq_len,
+            max_seq_len: tokenized.meta.max_seq_len,
+        })
     }
 }
 
@@ -170,6 +193,23 @@ fn load_tokenizer(path: &Path) -> Result<Tokenizer, EmbedError> {
             message: err.to_string(),
         })?;
     Ok(tokenizer)
+}
+
+fn tokenize_with_meta(tokenizer: &Tokenizer, text: &str) -> Result<TokenizedInput, EmbedError> {
+    let encoding = tokenizer
+        .encode(text, true)
+        .map_err(|err| EmbedError::Tokenization {
+            message: err.to_string(),
+        })?;
+
+    Ok(TokenizedInput {
+        meta: TokenizeMeta {
+            truncated: !encoding.get_overflowing().is_empty(),
+            seq_len: encoding.len(),
+            max_seq_len: MAX_SEQ_LEN,
+        },
+        encoding,
+    })
 }
 
 fn masked_mean_pooling_v1(
@@ -243,6 +283,9 @@ fn l2_normalize(input: &Tensor) -> Result<Tensor, EmbedError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use tokenizers::models::wordlevel::WordLevel;
+    use tokenizers::pre_tokenizers::whitespace::Whitespace;
 
     #[test]
     fn test_masked_mean_pooling() {
@@ -261,5 +304,42 @@ mod tests {
             .and_then(|t| t.to_vec1::<f32>())
             .expect("values");
         assert_eq!(values, vec![1.0, 2.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn tokenize_with_meta_flags_truncation_without_model_weights() {
+        let mut vocab = HashMap::new();
+        vocab.insert("[UNK]".to_string(), 0);
+        vocab.insert("[PAD]".to_string(), 1);
+        vocab.insert("tok".to_string(), 2);
+
+        let model = WordLevel::builder()
+            .vocab(vocab)
+            .unk_token("[UNK]".to_string())
+            .build()
+            .expect("wordlevel model");
+
+        let mut tokenizer = Tokenizer::new(model);
+        tokenizer.with_pre_tokenizer(Whitespace);
+        tokenizer.with_padding(Some(PaddingParams {
+            strategy: PaddingStrategy::Fixed(MAX_SEQ_LEN),
+            pad_id: 1,
+            pad_token: "[PAD]".to_string(),
+            ..Default::default()
+        }));
+        tokenizer
+            .with_truncation(Some(TruncationParams {
+                max_length: MAX_SEQ_LEN,
+                strategy: TruncationStrategy::LongestFirst,
+                ..Default::default()
+            }))
+            .expect("truncation config");
+
+        let long_text = vec!["tok"; MAX_SEQ_LEN + 128].join(" ");
+        let tokenized = tokenize_with_meta(&tokenizer, &long_text).expect("tokenize");
+
+        assert!(tokenized.meta.truncated);
+        assert_eq!(tokenized.meta.seq_len, MAX_SEQ_LEN);
+        assert_eq!(tokenized.meta.max_seq_len, MAX_SEQ_LEN);
     }
 }

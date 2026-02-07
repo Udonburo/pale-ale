@@ -56,6 +56,7 @@ pub fn diagnose_eval(measurement: EvalResult, policy: &PolicyConfig) -> Diagnose
         ans_sentences,
         pairs,
         summary: _,
+        warnings: _,
     } = measurement;
 
     let max_score_ratio = pairs
@@ -222,6 +223,7 @@ mod tests {
                 pairs_n: ratios.len(),
                 max_score_ratio: ratios.iter().copied().fold(0.0, f32::max),
             },
+            warnings: Vec::new(),
         }
     }
 
@@ -304,6 +306,7 @@ mod tests {
                 pairs_n: 6,
                 max_score_ratio: 2.0,
             },
+            warnings: Vec::new(),
         };
 
         let result_a = diagnose_eval(measurement.clone(), &policy);
