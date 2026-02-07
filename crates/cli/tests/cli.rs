@@ -356,8 +356,16 @@ fn json_eval_emits_truncation_warning_for_long_input() {
 
 #[test]
 fn json_embed_vector_invariants() {
+    let verify_output = cargo_bin_cmd!("pale-ale")
+        .args(["model", "verify", "--json"])
+        .output()
+        .unwrap();
+    if verify_output.status.code() != Some(0) {
+        return;
+    }
+
     let output = cargo_bin_cmd!("pale-ale")
-        .args(["embed", "Hello world", "--json"])
+        .args(["embed", "Hello world", "--offline", "--json"])
         .output()
         .unwrap();
 
@@ -392,6 +400,74 @@ fn json_embed_vector_invariants() {
         "embedding norm out of bounds: {}",
         norm
     );
+}
+
+#[test]
+fn json_report_summary_counts_and_worst_k_ordering() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("batch.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "{\"row_index\":0,\"id\":\"r0\",\"inputs_hash\":\"hash-0\",\"status\":\"LUCID\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":1.0}},\"audit_trace\":{\"warnings\":[]}}\n",
+            "{\"row_index\":1,\"id\":\"r1\",\"inputs_hash\":\"hash-1\",\"status\":\"UNKNOWN\",\"error\":{\"code\":\"ROW_ERR\",\"message\":\"bad\",\"details\":{}},\"data\":null,\"audit_trace\":{\"warnings\":[]}}\n",
+            "{\"row_index\":2,\"id\":\"r2\",\"inputs_hash\":\"hash-2\",\"status\":\"HAZY\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":2.5}},\"audit_trace\":{\"warnings\":[{\"type\":\"EMBED_TRUNCATED\"}]}}\n",
+            "{\"row_index\":3,\"id\":\"r3\",\"inputs_hash\":\"hash-3\",\"status\":\"DELIRIUM\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":2.5}},\"audit_trace\":{\"warnings\":[]}}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "report",
+            input_path.to_str().unwrap(),
+            "--summary",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["status"], "OK");
+    assert!(value["error"].is_null());
+
+    assert_eq!(value["data"]["rows_total"], 4);
+    assert_eq!(value["data"]["rows_ok"], 3);
+    assert_eq!(value["data"]["rows_err"], 1);
+    assert_eq!(value["data"]["counts_by_status"]["LUCID"], 1);
+    assert_eq!(value["data"]["counts_by_status"]["HAZY"], 1);
+    assert_eq!(value["data"]["counts_by_status"]["DELIRIUM"], 1);
+    assert_eq!(value["data"]["counts_by_status"]["UNKNOWN"], 1);
+    assert_eq!(value["data"]["rows_with_warnings"], 1);
+
+    let worst = value["data"]["worst_k"].as_array().expect("worst_k array");
+    assert_eq!(worst.len(), 3);
+    assert_eq!(worst[0]["row_index"], 2);
+    assert_eq!(worst[1]["row_index"], 3);
+    assert_eq!(worst[2]["row_index"], 0);
+}
+
+#[test]
+fn report_tui_requires_feature_in_default_build() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("batch.ndjson");
+    fs::write(
+        &input_path,
+        "{\"row_index\":0,\"inputs_hash\":\"hash-0\",\"status\":\"UNKNOWN\",\"error\":null,\"data\":null,\"audit_trace\":{\"warnings\":[]}}\n",
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args(["report", input_path.to_str().unwrap(), "--tui"])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("--tui is unavailable in this build"));
 }
 
 #[test]
