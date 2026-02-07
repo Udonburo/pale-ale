@@ -3,8 +3,9 @@ mod batch;
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
     compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
-    measure_eval, measurement_hash, policy_hash, AttestationLevel, AuditTrace, ConfigSource,
-    EvalReport, HashesTrace, MeasureError, ModelFile, ModelTrace, VerdictStatus,
+    measure_eval, measurement_hash, policy_hash, AttestationLevel, AuditTrace, AuditWarning,
+    ConfigSource, EvalReport, HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace,
+    SentenceEmbedding, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -461,11 +462,11 @@ fn embed(text: String, offline: bool, json: bool) -> Result<JsonEnvelope, AppErr
     };
 
     let embedder = Embedder::new(&manager).map_err(map_embed_error)?;
-    let vector = embedder.embed(&text).map_err(map_embed_error)?;
-    let dim = vector.len();
+    let output = embedder.embed(&text).map_err(map_embed_error)?;
+    let dim = output.vector.len();
 
     if !json {
-        print_vector_summary(&vector);
+        print_vector_summary(&output.vector);
     }
 
     Ok(JsonEnvelope {
@@ -477,7 +478,10 @@ fn embed(text: String, offline: bool, json: bool) -> Result<JsonEnvelope, AppErr
         )),
         data: Some(json!({
             "dim": dim,
-            "vector": vector,
+            "vector": output.vector,
+            "truncated": output.truncated,
+            "seq_len": output.seq_len,
+            "max_seq_len": output.max_seq_len,
         })),
     })
 }
@@ -490,6 +494,9 @@ fn eval(
     json: bool,
 ) -> Result<JsonEnvelope, AppError> {
     let inputs_hash_hex = compute_inputs_hash(&query, &context, &answer);
+    let measurement_cfg = default_measurement_config();
+    let measurement_hash_hex = measurement_hash(&measurement_cfg);
+    debug_assert_eq!(measurement_hash(&measurement_cfg), measurement_hash_hex);
     let manager = ModelManager::new(ModelSpec::classic());
     let verify_report = if offline {
         let status = manager.status();
@@ -516,16 +523,24 @@ fn eval(
         .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?;
     let measurement = measure_eval(
         &|sentence: &str| {
-            embedder
+            let embedded = embedder
                 .embed(sentence)
-                .map_err(|err| format!("embed failure: {:?}", err))
+                .map_err(|err| format!("embed failure: {:?}", err))?;
+            Ok(SentenceEmbedding {
+                vector: embedded.vector,
+                truncated: embedded.truncated,
+                seq_len: embedded.seq_len,
+                max_seq_len: embedded.max_seq_len,
+            })
         },
         &query,
         &context,
         &answer,
+        &measurement_cfg,
     )
     .map_err(map_measure_error)
     .map_err(|err| err.with_inputs_hash(inputs_hash_hex.clone()))?;
+    let warnings = measurement.warnings.clone();
     let policy = default_policy_config();
     let diagnose_result = diagnose_eval(measurement, &policy);
 
@@ -536,9 +551,12 @@ fn eval(
     Ok(JsonEnvelope {
         status: verdict_status_str(diagnose_result.status).to_string(),
         error: None,
-        audit_trace: audit_trace_with_model_and_inputs(
+        audit_trace: audit_trace_with_model_and_inputs_cfg(
             model_trace_from_verify(manager.spec(), &verify_report),
             Some(inputs_hash_hex),
+            &measurement_cfg,
+            Some(measurement_hash_hex),
+            warnings,
         ),
         data: Some(json!(diagnose_result.report)),
     })
@@ -592,7 +610,19 @@ fn audit_trace_with_model(model: ModelTrace) -> AuditTrace {
 }
 
 fn audit_trace_with_model_and_inputs(model: ModelTrace, inputs_hash: Option<String>) -> AuditTrace {
-    let measurement = measurement_hash(&default_measurement_config());
+    let measurement_cfg = default_measurement_config();
+    audit_trace_with_model_and_inputs_cfg(model, inputs_hash, &measurement_cfg, None, Vec::new())
+}
+
+fn audit_trace_with_model_and_inputs_cfg(
+    model: ModelTrace,
+    inputs_hash: Option<String>,
+    measurement_cfg: &MeasurementConfig,
+    precomputed_measurement_hash: Option<String>,
+    warnings: Vec<AuditWarning>,
+) -> AuditTrace {
+    let measurement =
+        precomputed_measurement_hash.unwrap_or_else(|| measurement_hash(measurement_cfg));
     let policy = policy_hash(&default_policy_config());
 
     AuditTrace {
@@ -602,6 +632,7 @@ fn audit_trace_with_model_and_inputs(model: ModelTrace, inputs_hash: Option<Stri
             policy_hash: policy,
             inputs_hash: inputs_hash.unwrap_or_else(|| "UNAVAILABLE".to_string()),
         },
+        warnings,
         config_source: ConfigSource::Default,
         attestation_level: AttestationLevel::Unattested,
         invalid_block_rate: 0.0,

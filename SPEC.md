@@ -164,6 +164,7 @@ Any change in this section implies `UNATTESTED`.
 
 The following fields are fixed in `MeasurementConfig` for `v1.0.1` (all measurement-critical):
 
+- `measurement_algo_id`: stable algorithm identity string for rotor aggregation and score composition.
 - `sentence_split_version`: `"v1"`
 - `sentence_split_max_sentences`: `64`
 - `sentence_split_normalize_newlines`: `true`
@@ -182,6 +183,7 @@ The following fields are fixed in `MeasurementConfig` for `v1.0.1` (all measurem
 - structural distance aggregation: weights for `d_intra / d_inter / d_hct` (for example, `0.5/0.3/0.2`)
 - semantic distance definition (for example, `0.5 * (1 - cos)` plus EPS behavior)
 - score formulas: `score_sem_raw`, `score_sem_used`, `score_ratio`, and any required intermediate definitions
+- execution binding is mandatory: runtime structural measurement MUST use the effective `MeasurementConfig.core.k` and `MeasurementConfig.core.beta` values.
 
 <a id="sec-4-2"></a>
 
@@ -294,6 +296,9 @@ Implementations MUST use a JCS-compliant serializer. Manual implementations MUST
 - `policy_hash      = BLAKE3(JCS(PolicyConfig))`
 - `inputs_hash      = BLAKE3(JCS({v,query,context,answer}))` after newline normalization (`CRLF/CR -> LF`)
 
+`MeasurementConfig` hashing MUST include algorithm identity (`measurement_algo_id`).
+Changing only algorithm id (for example, rotor weighting revision string) MUST change `measurement_hash`.
+
 Optional build trace hashes (for example, `cargo_lock_hash`) MAY be included in `audit_trace.build`.
 
 <a id="sec-5-4"></a>
@@ -394,6 +399,16 @@ A naive `mean(dim=1)` is forbidden (padding contamination). The embedding pipeli
 
 If stabilization steps are added (for example, cast to `f32`, per-element `round(1e-6)`), the exact choice and procedure MUST be treated as measurement-critical.
 
+### 7.3 Truncation Visibility (Normative)
+
+Tokenizer truncation (max sequence length) MUST be surfaced in audit output.
+
+- For each embedded sentence, truncation detection SHOULD use tokenizer-provided overflow metadata.
+- `eval`/`batch` outputs MUST carry structured warnings under `audit_trace.warnings`.
+- Minimum warning schema:
+  `{ "type":"EMBED_TRUNCATED", "field":"query|context|answer", "sentence_index":<usize>, "max_seq_len":512 }`
+- Emitting truncation warnings MUST NOT, by itself, change verdict thresholds in `v1.0.1`.
+
 ---
 
 <a id="sec-8"></a>
@@ -491,6 +506,10 @@ Input:
   Required fields: `query`, `context`, `answer`.
   Optional field: `id`.
   Unknown keys are ignored.
+- Batch input normalization:
+  blank/whitespace-only lines are skipped.
+  A UTF-8 BOM is stripped only on the first non-empty line.
+  `row_index` is assigned after this normalization (`0..N-1` for processed rows).
 - `--format tsv`: `query<TAB>context<TAB>answer`.
   Tabs inside fields are not escaped in `v1.0.1`; each row must contain exactly 3 columns.
 
@@ -564,6 +583,7 @@ Additional top-level keys SHOULD NOT be added in `v1.0.1`.
 - `tool`: `{ name, version, features?, target_triple? }`
 - `model`: `{ model_id, revision, files: [{ path, blake3, size_bytes }] }`
 - `hashes`: `{ measurement_hash, policy_hash, inputs_hash }` (BLAKE3 hex)
+- `warnings`: structured warning array (may be empty)
 - `config_source`: `default | file | env`
 - `attestation_level`: `ATTESTED | ATTESTED_WITH_POLICY | UNATTESTED`
 - `invalid_block_rate`
@@ -575,6 +595,13 @@ Additional top-level keys SHOULD NOT be added in `v1.0.1`.
 Recommended build metadata:
 
 - `build`: `{ git_commit?, git_dirty?, rustc_version?, profile?, cargo_lock_hash? }`
+
+`audit_trace.warnings` entry contract (minimum):
+
+- `type`: warning discriminator string
+- `field`: `query | context | answer`
+- `sentence_index`: zero-based sentence index in that field
+- `max_seq_len`: tokenizer max sequence length used by embed runtime
 
 `inputs_hash` definition (normative):
 

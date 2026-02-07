@@ -327,6 +327,34 @@ fn json_eval_inputs_hash_present() {
 }
 
 #[test]
+fn json_eval_emits_truncation_warning_for_long_input() {
+    let verify_output = cargo_bin_cmd!("pale-ale")
+        .args(["model", "verify", "--json"])
+        .output()
+        .unwrap();
+    if verify_output.status.code() != Some(0) {
+        return;
+    }
+
+    let long_context = vec!["token"; 1800].join(" ");
+    let output = cargo_bin_cmd!("pale-ale")
+        .args(["eval", "q", &long_context, "a", "--offline", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    let warnings = value["audit_trace"]["warnings"]
+        .as_array()
+        .expect("warnings array");
+    assert!(
+        warnings.iter().any(|w| w["type"] == "EMBED_TRUNCATED"),
+        "expected EMBED_TRUNCATED warning in audit_trace.warnings"
+    );
+}
+
+#[test]
 fn json_embed_vector_invariants() {
     let output = cargo_bin_cmd!("pale-ale")
         .args(["embed", "Hello world", "--json"])
@@ -542,4 +570,48 @@ fn json_batch_dry_run_strict_failure_exit_code_2() {
 
     let rows = read_ndjson(&out_path);
     assert_eq!(rows.len(), 2);
+}
+
+#[test]
+fn json_batch_dry_run_accepts_bom_and_skips_blank_lines() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("input.jsonl");
+    let out_path = temp.path().join("out.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "\u{FEFF}{\"id\":\"r0\",\"query\":\"q0\",\"context\":\"c0\",\"answer\":\"a0\"}\n",
+            "\n",
+            "   \n",
+            "{\"id\":\"r1\",\"query\":\"q1\",\"context\":\"c1\",\"answer\":\"a1\"}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "batch",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_path.to_str().unwrap(),
+            "--dry-run",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["data"]["rows_total"], 2);
+    assert_eq!(value["data"]["rows_ok"], 2);
+    assert_eq!(value["data"]["rows_err"], 0);
+
+    let rows = read_ndjson(&out_path);
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["row_index"], 0);
+    assert_eq!(rows[1]["row_index"], 1);
+    assert!(rows[0]["error"].is_null());
+    assert!(rows[1]["error"].is_null());
 }
