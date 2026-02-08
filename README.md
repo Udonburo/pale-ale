@@ -51,6 +51,33 @@ Then run:
 pale-ale report pale-ale.batch.ndjson --tui
 ```
 
+## CLI Calibration
+
+`pale-ale calibrate` reads batch NDJSON rows and suggests policy ratio thresholds from historical `max_score_ratio` values.
+
+```bash
+pale-ale calibrate pale-ale.batch.ndjson --json
+```
+
+Human output is a copy-pastable snippet:
+
+```yaml
+policy:
+  th_ratio_hazy: 1.5
+  th_ratio_delirium: 2.2
+calibration:
+  method: quantile_nearest_rank
+  hazy_q: 0.9
+  delirium_q: 0.98
+  rows_total: 100
+  rows_used: 92
+  rows_err: 8
+  min_ratio: 1.0
+  max_ratio: 4.7
+```
+
+Paste the `policy` block into your policy config and re-run `eval`/`batch` with that policy.
+
 ## Installation
 
 ### Python

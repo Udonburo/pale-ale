@@ -1,4 +1,5 @@
 mod batch;
+mod calibrate;
 mod report;
 
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
@@ -76,12 +77,30 @@ enum Commands {
         #[arg(long)]
         tui: bool,
     },
+    Calibrate {
+        input_ndjson: String,
+        #[arg(long, value_enum, default_value = "quantile")]
+        method: CalibrateMethod,
+        #[arg(long, default_value = "0.90")]
+        hazy_q: f64,
+        #[arg(long, default_value = "0.98")]
+        delirium_q: f64,
+        #[arg(long, default_value = "50")]
+        min_rows: usize,
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum BatchFormat {
     Jsonl,
     Tsv,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum CalibrateMethod {
+    Quantile,
 }
 
 #[derive(Subcommand, Debug)]
@@ -239,6 +258,17 @@ impl AppError {
         }
     }
 
+    fn calibration_insufficient_data(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Dependency,
+            code: "CALIBRATION_INSUFFICIENT_DATA",
+            message,
+            details: Box::new(Value::Null),
+            data: None,
+            inputs_hash: None,
+        }
+    }
+
     fn exit_code(&self) -> i32 {
         match self.kind {
             AppErrorKind::Usage => 1,
@@ -370,6 +400,24 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
                 filters,
                 find,
                 tui,
+            },
+            json,
+        ),
+        Commands::Calibrate {
+            input_ndjson,
+            method,
+            hazy_q,
+            delirium_q,
+            min_rows,
+            out,
+        } => calibrate::run(
+            calibrate::CalibrateCommand {
+                input: input_ndjson,
+                method,
+                hazy_q,
+                delirium_q,
+                min_rows,
+                out,
             },
             json,
         ),
