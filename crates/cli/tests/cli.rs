@@ -471,6 +471,129 @@ fn report_tui_requires_feature_in_default_build() {
 }
 
 #[test]
+fn json_calibrate_quantile_success_with_bom_and_blank_lines() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("calibration.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "\u{feff}{\"row_index\":0,\"status\":\"LUCID\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":1.0}}}\n",
+            "\n",
+            "{\"row_index\":1,\"status\":\"HAZY\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":2.0}}}\n",
+            "{\"row_index\":2,\"status\":\"DELIRIUM\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":10.0}}}\n",
+            "{\"row_index\":3,\"status\":\"UNKNOWN\",\"error\":{\"code\":\"ROW_ERR\",\"message\":\"bad\",\"details\":{}},\"data\":null}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "calibrate",
+            input_path.to_str().unwrap(),
+            "--min-rows",
+            "1",
+            "--hazy-q",
+            "0.90",
+            "--delirium-q",
+            "0.98",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+
+    assert_eq!(value["status"], "OK");
+    assert!(value["error"].is_null());
+    assert_eq!(value["data"]["method"], "quantile_nearest_rank");
+    assert_eq!(value["data"]["rows_total"], 4);
+    assert_eq!(value["data"]["rows_used"], 3);
+    assert_eq!(value["data"]["rows_err"], 1);
+    assert_eq!(value["data"]["th_ratio_hazy"], 10.0);
+    assert_eq!(value["data"]["th_ratio_delirium"], 10.0);
+    assert_eq!(value["data"]["min_ratio"], 1.0);
+    assert_eq!(value["data"]["max_ratio"], 10.0);
+}
+
+#[test]
+fn json_calibrate_insufficient_data_returns_runtime_error() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("calibration.ndjson");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "\u{feff}{\"row_index\":0,\"status\":\"LUCID\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":1.0}}}\n",
+            "{\"row_index\":1,\"status\":\"HAZY\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":2.0}}}\n",
+            "{\"row_index\":2,\"status\":\"DELIRIUM\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":10.0}}}\n",
+            "{\"row_index\":3,\"status\":\"UNKNOWN\",\"error\":{\"code\":\"ROW_ERR\",\"message\":\"bad\",\"details\":{}},\"data\":null}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "calibrate",
+            input_path.to_str().unwrap(),
+            "--min-rows",
+            "10",
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+
+    assert_eq!(value["status"], "UNKNOWN");
+    assert_eq!(
+        value["error"]["code"],
+        Value::String("CALIBRATION_INSUFFICIENT_DATA".to_string())
+    );
+}
+
+#[test]
+fn calibrate_non_json_writes_same_snippet_to_out_file() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("calibration.ndjson");
+    let out_path = temp.path().join("policy-snippet.yaml");
+
+    fs::write(
+        &input_path,
+        concat!(
+            "\u{feff}{\"row_index\":0,\"status\":\"LUCID\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":1.0}}}\n",
+            "{\"row_index\":1,\"status\":\"HAZY\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":2.0}}}\n",
+            "{\"row_index\":2,\"status\":\"DELIRIUM\",\"error\":null,\"data\":{\"scores\":{\"max_score_ratio\":10.0}}}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "calibrate",
+            input_path.to_str().unwrap(),
+            "--min-rows",
+            "1",
+            "--out",
+            out_path.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.starts_with("---\npolicy:\n"));
+    assert!(stdout.ends_with("---\n"));
+
+    let written = fs::read_to_string(&out_path).expect("read out snippet");
+    assert_eq!(written, stdout);
+}
+
+#[test]
 fn json_batch_offline_missing_cache() {
     let temp = TempDir::new().unwrap();
     let model_dir = temp.path().join("empty-model-cache");

@@ -462,6 +462,7 @@ Minimum command set:
 - `pale-ale doctor [--offline]`
 - `pale-ale batch <input> [--out <path>] [--format jsonl|tsv] [--threads N] [--max-rows N] [--strict] [--dry-run] [--offline] [--json]`
 - `pale-ale report <input_ndjson> [--summary] [--top N] [--filter status=...] [--filter has_warning] [--filter has_error] [--find <substr>] [--json] [--tui]`
+- `pale-ale calibrate <input_ndjson> [--method quantile] [--hazy-q <f64>] [--delirium-q <f64>] [--min-rows <usize>] [--out <path>] [--json]`
 
 A standalone `embed` command is not required for `v1.0.1`. If added for debugging, outputs MUST be labeled `UNATTESTED`.
 
@@ -624,6 +625,77 @@ TUI note:
 
 - `--tui` is explicitly non-contract UX; layout/controls may evolve.
 - If terminal initialization fails, implementations SHOULD fall back to summary mode.
+
+<a id="sec-10-6"></a>
+
+### 10.6 `calibrate` Contract
+
+`calibrate` computes policy threshold suggestions from batch/report NDJSON rows without model loading.
+
+Input normalization (must match batch/report conventions):
+
+- Read UTF-8 NDJSON line-by-line.
+- Skip blank/whitespace-only lines.
+- Strip UTF-8 BOM only on the first non-empty line.
+- Each remaining line is expected to be a JSON object. Parse failures are treated as row errors in default mode (continue).
+
+Usable-row selection:
+
+- A row is usable iff:
+  - `error == null`
+  - `data.scores.max_score_ratio` exists
+  - `max_score_ratio` is finite
+- Summary counters:
+  - `rows_total`: non-empty normalized rows
+  - `rows_used`: usable rows
+  - `rows_err = rows_total - rows_used`
+
+Quantile method:
+
+- Current method: `quantile_nearest_rank`.
+- Deterministic nearest-rank definition on ascending-sorted usable ratios:
+  - `n = len(ratios)`
+  - if `n == 1`, return `ratios[0]`
+  - `rank = ceil(q * n)`, clamped to `[1, n]`
+  - quantile value is `ratios[rank - 1]`
+
+Suggested thresholds:
+
+- `th_ratio_hazy = quantile(ratios, hazy_q)`
+- `th_ratio_delirium = quantile(ratios, delirium_q)`
+- enforce `th_ratio_delirium >= th_ratio_hazy`; if violated, set:
+  - `th_ratio_delirium = th_ratio_hazy + 1e-6`
+
+Runtime insufficiency error:
+
+- If `rows_used < min_rows`, command fails with runtime class (exit `2`) and error code:
+  - `CALIBRATION_INSUFFICIENT_DATA`
+- With `--json`, failure envelope still follows global JSON error behavior.
+
+Non-JSON output:
+
+- stdout prints a copy-pastable YAML snippet with:
+  - `policy.th_ratio_hazy`
+  - `policy.th_ratio_delirium`
+  - `calibration.{method,hazy_q,delirium_q,rows_total,rows_used,rows_err,min_ratio,max_ratio}`
+- `--out <path>` writes the same snippet as UTF-8, newline-terminated.
+
+`--json` success `data` fields:
+
+```json
+{
+  "method": "quantile_nearest_rank",
+  "hazy_q": 0.9,
+  "delirium_q": 0.98,
+  "rows_total": 0,
+  "rows_used": 0,
+  "rows_err": 0,
+  "min_ratio": 0.0,
+  "max_ratio": 0.0,
+  "th_ratio_hazy": 0.0,
+  "th_ratio_delirium": 0.0
+}
+```
 
 ---
 
