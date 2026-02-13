@@ -1,65 +1,81 @@
-# pale-ale-core
+# pale-ale
 
-Geometric auditing engine for LLM embeddings using E8 lattices and geometric algebra. This crate provides deterministic, structure-aware distance metrics that complement cosine similarity.
+Geometric auditing engine for LLM embeddings using E8 lattice decomposition.
 
-## Overview
+`pale-ale` provides deterministic, structure-aware distance metrics that complement cosine similarity.
+The workspace also includes the `pale-ale` CLI for end-to-end audit workflows (`eval`, `batch`, `report`, `calibrate`).
 
-`pale-ale-core` computes a structural distance between embedding vectors by:
+## Why This Exists
 
-- Decomposing vectors into 8D blocks
+Cosine similarity is angle-only. It can miss block-wise structural drift that still matters for auditability.
+
+`pale-ale` measures that drift by:
+
+- Splitting vectors into 8D blocks
 - Snapping blocks to the 240 roots of the E8 lattice
-- Comparing rotors/bivectors to measure flow and consistency
+- Comparing rotor/bivector behavior across blocks
 
-The result is a stable, deterministic signal designed for auditing and analysis.
+This yields a deterministic structural signal intended to complement, not replace, semantic similarity.
 
-Unlike cosine similarity (angle-only), this metric detects **block-wise structural drift and flow/topology breaks** that can be invisible in high-dimensional angle metrics.
+E8 is used because in 8 dimensions it offers an exceptionally symmetric and dense lattice structure (240 minimal roots; Weyl group order 696,729,600), giving a stable anchor set for block-wise structural comparison.
 
 ## Features
 
 - Deterministic E8-based structural distance
-- Zero-copy Numpy integration for contiguous arrays
-- Zero-alloc hot path for k=1..3 and stack-only dyn path
-- NaN/Inf rejection for inputs and parameters
-- Optional `python-inspect` feature for detailed diagnostics (the `inspect` feature is kept as a deprecated alias, documented here)
-- Python bindings are gated behind the `python` feature (default is pure Rust); `numpy-support` and `python-inspect` imply `python`.
-- Model files are cached under the OS cache directory; override with `PA_MEASURE_MODEL_DIR` (legacy: `PALE_ALE_MODEL_DIR`). Offline mode forbids downloads.
-- The canonical model spec is pinned to `sentence-transformers/all-MiniLM-L6-v2@e4ce9877abf3edfe10b0d82785e83bdcb973e22e` with embedded BLAKE3 file hashes.
-- `pale-ale model print-hashes --json` prints current cached BLAKE3 values and a copy/paste Rust constants block for audited canonical updates.
-- `pale-ale model clear-cache --yes` removes only the pinned model/revision cache directory.
+- Zero-alloc hot path for k=1..3 and stack-only dynamic path
+- Zero-copy NumPy integration for contiguous arrays (via PyO3)
+- NaN/Inf rejection for all inputs and parameters
+- BLAKE3-verified model integrity with offline mode support
 
-## CLI Report Viewer
+## Quick Start
 
-`pale-ale report` inspects batch NDJSON output (`pale-ale.batch.ndjson`) without loading a model.
-
-Summary examples:
+The binary is `pale-ale` (built from the `pale-ale-cli` crate in this workspace).
 
 ```bash
-pale-ale report pale-ale.batch.ndjson
-pale-ale report pale-ale.batch.ndjson --summary --top 20 --filter status=HAZY
-pale-ale report pale-ale.batch.ndjson --filter has_warning --find abc123 --json
+# Development path (fastest iteration; no install needed)
+cargo run -p pale-ale-cli -- doctor
+cargo run -p pale-ale-cli -- model status
+cargo run -p pale-ale-cli -- eval "query" "context" "answer"
 ```
 
-Optional TUI build:
+For a release binary:
 
 ```bash
-cargo build -p pale-ale-cli --features cli-tui
+cargo build -p pale-ale-cli --release
+target/release/pale-ale doctor
+target/release/pale-ale eval "query" "context" "answer"
 ```
 
-Then run:
+On Windows, use `target\\release\\pale-ale.exe`.
+
+If you also want the TUI report viewer (`report --tui`), build with:
 
 ```bash
-pale-ale report pale-ale.batch.ndjson --tui
+cargo build -p pale-ale-cli --features cli-tui --release
 ```
 
-## CLI Calibration
-
-`pale-ale calibrate` reads batch NDJSON rows and suggests policy ratio thresholds from historical `max_score_ratio` values.
+Basic commands:
 
 ```bash
-pale-ale calibrate pale-ale.batch.ndjson --json
+# Environment/model health
+pale-ale doctor
+pale-ale model status
+
+# Single evaluation
+pale-ale eval "query" "context" "answer"
+
+# Batch run -> NDJSON report
+pale-ale batch input.ndjson --out report_out.ndjson
+
+# Report summary / filtering
+pale-ale report report_out.ndjson --summary --top 20
+pale-ale report report_out.ndjson --filter status=HAZY --find abc123
+
+# Threshold calibration from batch output
+pale-ale calibrate report_out.ndjson --json
 ```
 
-Human output is a copy-pastable snippet:
+Calibration produces a copy-pastable policy snippet:
 
 ```yaml
 policy:
@@ -78,105 +94,108 @@ calibration:
 
 Paste the `policy` block into your policy config and re-run `eval`/`batch` with that policy.
 
-## Installation
+## Audit Binding
 
-### Python
+When running with `--json`, audit-relevant fields are bound in the output envelope:
 
-Use the wrapper package:
+- `audit_trace.hashes.inputs_hash`: binds raw eval input tuple (`query`, `context`, `answer`)
+- `audit_trace.hashes.measurement_hash`: binds measurement definition
+- `audit_trace.hashes.policy_hash`: binds verdict policy
+- `audit_trace.model.files[].blake3`: binds model artifacts to pinned hashes
 
-```bash
-pip install pale-ale
+This makes results replayable and reviewable as audit receipts.
+
+## Batch NDJSON (Minimal)
+
+Input row (JSONL):
+
+```json
+{"id":"1","query":"...","context":"...","answer":"..."}
 ```
 
-`pale-ale` is the higher-level wrapper/CLI; `pale-ale-core` provides the Rust engine and Python bindings.
+Output row (NDJSON):
 
-Core-only (no CLI):
-
-```bash
-pip install pale-ale-core
+```json
+{"row_index":0,"id":"1","inputs_hash":"...","status":"LUCID","error":null,"data":{...},"audit_trace":{...}}
 ```
 
-### Rust
+## Report TUI
+
+```bash
+pale-ale report report_out.ndjson --tui
+```
+
+> **Note:** `--tui` requires building with `--features cli-tui`.
+> **Note (Windows):** The TUI expects full alternate-screen support.
+> VSCode-based editors (VSCode, Cursor, Windsurf, Trae, etc.) may show flickering or residual frames on exit due to ConPTY limitations.
+> For best results, run `--tui` in **Windows Terminal** or another standalone terminal emulator.
+> Behavior on macOS/Linux integrated terminals has not been fully verified yet.
+> If `--tui` is unstable in your terminal, use `--summary` (always supported).
+> `--json` with `--tui` requires `--summary`.
+
+## Rust Library Usage
+
+Rust library crate naming stays `pale-ale-core` for crates.io namespace safety.
 
 ```toml
 [dependencies]
-pale-ale-core = "1.0.0"
+pale-ale-core = "1"
 ```
-
-## Usage (Python)
-
-Directly using the core bindings. Note that `spin3_struct_distance` is the primary metric for structural auditing.
-
-```python
-import numpy as np
-import pale_ale_core
-
-# Must be float64, length % 8 == 0
-# Use ascontiguousarray to ensure zero-copy passing to Rust
-u = np.ascontiguousarray(np.random.rand(1536), dtype=np.float64)
-v = np.ascontiguousarray(u + 0.1, dtype=np.float64)
-
-# 1. Structural-only distance (0.0 .. 1.0) -> Recommended for auditing
-d_struct = pale_ale_core.spin3_struct_distance(u, v)
-
-# 2. Mixed distance (Semantic + Structural)
-# alpha is a linear mixing weight: (1-alpha)*semantic + alpha*structural
-d_mix = pale_ale_core.spin3_distance(u, v, alpha=0.15)
-
-# 3. Detailed Breakdown
-components = pale_ale_core.spin3_components(u, v)
-
-print(f"Structural Dist: {d_struct:.6f}")
-print(f"Intra-Block:     {components['intra']:.6f}")
-print(f"Topology (HCT):  {components['hct']:.6f}")
-```
-
-### Python API Reference
-
-| Function | Description |
-| --- | --- |
-| `spin3_struct_distance(u, v)` | Pure structural distance. `0` = identity, `1` = maximally different under this metric. |
-| `spin3_distance(u, v, alpha)` | Mixed distance. Blends a cosine-like semantic distance (normalized dot) with structural distance. |
-| `spin3_components(u, v)` | Returns a dictionary of detailed metrics (intra, inter, hct, anchors). |
-
-## Usage (Rust)
 
 ```rust
 use pale_ale_core::{spin3_components, spin3_struct_distance};
 
 fn main() {
-    let u: Vec<f64> = vec![0.1; 8];
-    let v: Vec<f64> = vec![0.2; 8];
+    let u = vec![0.1_f64; 8];
+    let v = vec![0.2_f64; 8];
 
-    let d = spin3_struct_distance(&u, &v).unwrap();
-    let components = spin3_components(&u, &v).unwrap();
+    let d_struct = spin3_struct_distance(&u, &v).unwrap();
+    let comp = spin3_components(&u, &v).unwrap();
 
-    println!("d_struct = {:.6}", d);
-    println!("d_intra  = {:.6}", components.d_intra);
+    println!("d_struct = {:.6}", d_struct);
+    println!("d_intra  = {:.6}", comp.d_intra);
+    println!("d_hct    = {:.6}", comp.d_hct);
 }
 ```
+
+| Function | Description |
+| --- | --- |
+| `spin3_struct_distance(u, v)` | Structural-only distance (`0` = identity, `1` = maximally different) |
+| `spin3_distance(u, v, alpha)` | Semantic + structural blend. `alpha` controls mixing weight. |
+| `spin3_components(u, v)` | Detailed breakdown (intra, inter, hct, anchors) |
+
+## Python Bindings
+
+```bash
+pip install pale-ale
+```
+
+For best performance with NumPy, pass contiguous `float64` arrays.
+Non-contiguous arrays are safely copied internally.
+
+## Model Cache and Integrity
+
+- Model files are cached under the OS cache directory; override with `PA_MEASURE_MODEL_DIR`.
+- Offline mode (`--offline`) forbids downloads.
+- `pale-ale model print-hashes --json` prints cached BLAKE3 hashes for audit.
+- `pale-ale model clear-cache --yes` removes only the pinned model revision cache.
 
 ## Constraints
 
 - Vector length must be a multiple of 8
-- Inputs must be `float64` / `f64`
-- Inputs must be finite (NaN/Inf are rejected)
+- Inputs must be finite `f64` (`float64` in Python)
 - `alpha` must be finite
+
+For the full CLI contract, output schema, and measurement details, see [SPEC.public.md](SPEC.public.md).
 
 ## MSRV
 
-- Rust 1.65+
+Rust 1.65+
 
-## Note on Numpy Contiguity
+## Roadmap
 
-When using the Python bindings, contiguous Numpy arrays are borrowed zero-copy. Non-contiguous arrays (e.g., slices like `arr[::2]`) will fall back to an owned copy internally to ensure safety.
-
-## Roadmap & Licensing Note
-
-The project is preparing a Technical Whitepaper detailing the geometric properties of E8 lattices for AI auditing.
-
-The current release is licensed under MPL-2.0 to preserve research integrity during the initial phase. The project is considering a future dual license (MIT / Apache-2.0) after the whitepaper publication to encourage wider adoption. No decision has been made yet.
+The project is preparing a technical whitepaper on geometric auditing with E8 lattices.
 
 ## License
 
-Licensed under the Mozilla Public License 2.0. See `LICENSE` for details.
+Licensed under the Mozilla Public License 2.0. See [LICENSE](LICENSE) for details.
