@@ -26,6 +26,7 @@ Thumbs.db
 
 # Internal docs
 RELEASE.md
+SPEC.md
 SPEC.*.local.md
 
 # Data files
