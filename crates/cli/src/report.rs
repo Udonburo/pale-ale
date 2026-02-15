@@ -218,9 +218,9 @@ pub(super) fn run_tui_from_path(path: &Path, options: TuiOptions) -> Result<(), 
     #[cfg(not(feature = "cli-tui"))]
     {
         let _ = (path, options);
-        return Err(AppError::usage(
+        Err(AppError::usage(
             "--tui is unavailable in this build; recompile with --features cli-tui".to_string(),
-        ));
+        ))
     }
 
     #[cfg(feature = "cli-tui")]

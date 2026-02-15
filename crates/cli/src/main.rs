@@ -319,6 +319,7 @@ impl AppError {
         }
     }
 
+    #[cfg(feature = "cli-tui")]
     fn target_unresolved_non_tty(message: String) -> Self {
         Self {
             kind: AppErrorKind::Usage,
@@ -330,6 +331,7 @@ impl AppError {
         }
     }
 
+    #[cfg(feature = "cli-tui")]
     fn launcher_requires_tty(message: String) -> Self {
         Self {
             kind: AppErrorKind::Usage,
@@ -341,6 +343,7 @@ impl AppError {
         }
     }
 
+    #[cfg(feature = "cli-tui")]
     fn target_invalid(message: String) -> Self {
         Self {
             kind: AppErrorKind::Usage,
@@ -524,6 +527,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
     }
 }
 
+#[cfg(feature = "cli-tui")]
 fn ok_cli_envelope(data: Option<Value>) -> JsonEnvelope {
     JsonEnvelope {
         status: "OK".to_string(),
@@ -537,9 +541,9 @@ fn run_launcher(json: bool) -> Result<JsonEnvelope, AppError> {
     #[cfg(not(feature = "cli-tui"))]
     {
         let _ = json;
-        return Err(AppError::usage(
+        Err(AppError::usage(
             "launcher is unavailable in this build; recompile with --features cli-tui".to_string(),
-        ));
+        ))
     }
 
     #[cfg(feature = "cli-tui")]
@@ -597,9 +601,9 @@ fn run_tui_command(
     #[cfg(not(feature = "cli-tui"))]
     {
         let _ = (target_positional, target_flag, theme, color, ascii);
-        return Err(AppError::usage(
+        Err(AppError::usage(
             "tui is unavailable in this build; recompile with --features cli-tui".to_string(),
-        ));
+        ))
     }
 
     #[cfg(feature = "cli-tui")]
