@@ -1,6 +1,10 @@
 mod batch;
 mod calibrate;
+#[cfg(feature = "cli-tui")]
+mod launcher;
 mod report;
+#[cfg(feature = "cli-tui")]
+mod target_resolver;
 
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
@@ -20,12 +24,15 @@ use std::path::{Path, PathBuf};
 
 const PRINT_HASHES_WARNING: &str =
     "hashes are computed from local cache bytes; treat as canonical only after pinned revision verification";
+const TARGET_UNRESOLVED_NON_TTY_EXIT: i32 = 20;
+const LAUNCHER_REQUIRES_TTY_EXIT: i32 = 21;
+const TARGET_INVALID_EXIT: i32 = 22;
 
 #[derive(Parser, Debug)]
 #[command(name = "pale-ale", version, about = "Pale-Ale Classic CLI")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 
     #[arg(long, short = 'j', global = true)]
     json: bool,
@@ -36,6 +43,17 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    Tui {
+        target: Option<String>,
+        #[arg(long = "target", short = 't', value_name = "TARGET")]
+        target_flag: Option<String>,
+        #[arg(long, value_enum, default_value = "classic")]
+        theme: ReportThemeArg,
+        #[arg(long, value_enum, default_value = "auto")]
+        color: ReportColorArg,
+        #[arg(long)]
+        ascii: bool,
+    },
     Doctor,
     Model {
         #[command(subcommand)]
@@ -74,8 +92,6 @@ enum Commands {
         filters: Vec<String>,
         #[arg(long)]
         find: Option<String>,
-        #[arg(long)]
-        tui: bool,
     },
     Calibrate {
         input_ndjson: String,
@@ -101,6 +117,40 @@ enum BatchFormat {
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum CalibrateMethod {
     Quantile,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum ReportThemeArg {
+    Classic,
+    Term,
+    Cyber,
+}
+
+impl From<ReportThemeArg> for report::ReportTheme {
+    fn from(value: ReportThemeArg) -> Self {
+        match value {
+            ReportThemeArg::Classic => report::ReportTheme::Classic,
+            ReportThemeArg::Term => report::ReportTheme::Term,
+            ReportThemeArg::Cyber => report::ReportTheme::Cyber,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum ReportColorArg {
+    Auto,
+    Always,
+    Never,
+}
+
+impl From<ReportColorArg> for report::ReportColor {
+    fn from(value: ReportColorArg) -> Self {
+        match value {
+            ReportColorArg::Auto => report::ReportColor::Auto,
+            ReportColorArg::Always => report::ReportColor::Always,
+            ReportColorArg::Never => report::ReportColor::Never,
+        }
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -269,7 +319,47 @@ impl AppError {
         }
     }
 
+    fn target_unresolved_non_tty(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Usage,
+            code: "TARGET_UNRESOLVED_NON_TTY",
+            message,
+            details: Box::new(Value::Null),
+            data: None,
+            inputs_hash: None,
+        }
+    }
+
+    fn launcher_requires_tty(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Usage,
+            code: "LAUNCHER_REQUIRES_TTY",
+            message,
+            details: Box::new(Value::Null),
+            data: None,
+            inputs_hash: None,
+        }
+    }
+
+    fn target_invalid(message: String) -> Self {
+        Self {
+            kind: AppErrorKind::Usage,
+            code: "TARGET_INVALID",
+            message,
+            details: Box::new(Value::Null),
+            data: None,
+            inputs_hash: None,
+        }
+    }
+
     fn exit_code(&self) -> i32 {
+        match self.code {
+            "TARGET_UNRESOLVED_NON_TTY" => return TARGET_UNRESOLVED_NON_TTY_EXIT,
+            "LAUNCHER_REQUIRES_TTY" => return LAUNCHER_REQUIRES_TTY_EXIT,
+            "TARGET_INVALID" => return TARGET_INVALID_EXIT,
+            _ => {}
+        }
+
         match self.kind {
             AppErrorKind::Usage => 1,
             AppErrorKind::ModelMissingOffline
@@ -358,15 +448,23 @@ fn main() {
 
 fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
     match cli.command {
-        Commands::Doctor => doctor(cli.offline),
-        Commands::Model { command } => model(command, cli.offline, json),
-        Commands::Embed { text } => embed(text, cli.offline, json),
-        Commands::Eval {
+        None => run_launcher(json),
+        Some(Commands::Tui {
+            target,
+            target_flag,
+            theme,
+            color,
+            ascii,
+        }) => run_tui_command(target, target_flag, theme.into(), color.into(), ascii),
+        Some(Commands::Doctor) => doctor(cli.offline),
+        Some(Commands::Model { command }) => model(command, cli.offline, json),
+        Some(Commands::Embed { text }) => embed(text, cli.offline, json),
+        Some(Commands::Eval {
             query,
             context,
             answer,
-        } => eval(query, context, answer, cli.offline, json),
-        Commands::Batch {
+        }) => eval(query, context, answer, cli.offline, json),
+        Some(Commands::Batch {
             input,
             out,
             format,
@@ -374,7 +472,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             max_rows,
             strict,
             dry_run,
-        } => batch::run(batch::BatchCommand {
+        }) => batch::run(batch::BatchCommand {
             input,
             out,
             format,
@@ -385,32 +483,34 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             strict,
             dry_run,
         }),
-        Commands::Report {
+        Some(Commands::Report {
             input_ndjson,
             summary,
             top,
             filters,
             find,
-            tui,
-        } => report::run(
+        }) => report::run(
             report::ReportCommand {
                 input: input_ndjson,
                 summary,
                 top,
                 filters,
                 find,
-                tui,
+                tui: false,
+                theme: report::ReportTheme::Classic,
+                color: report::ReportColor::Auto,
+                ascii: false,
             },
             json,
         ),
-        Commands::Calibrate {
+        Some(Commands::Calibrate {
             input_ndjson,
             method,
             hazy_q,
             delirium_q,
             min_rows,
             out,
-        } => calibrate::run(
+        }) => calibrate::run(
             calibrate::CalibrateCommand {
                 input: input_ndjson,
                 method,
@@ -422,6 +522,157 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             json,
         ),
     }
+}
+
+fn ok_cli_envelope(data: Option<Value>) -> JsonEnvelope {
+    JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data,
+    }
+}
+
+fn run_launcher(json: bool) -> Result<JsonEnvelope, AppError> {
+    #[cfg(not(feature = "cli-tui"))]
+    {
+        let _ = json;
+        return Err(AppError::usage(
+            "launcher is unavailable in this build; recompile with --features cli-tui".to_string(),
+        ));
+    }
+
+    #[cfg(feature = "cli-tui")]
+    {
+        use launcher::LauncherAction;
+        use target_resolver::TargetResolver;
+
+        if !launcher::stdio_is_tty() {
+            return Err(AppError::launcher_requires_tty(
+                "launcher requires an interactive TTY; use `pale-ale tui --target <TARGET>`"
+                    .to_string(),
+            ));
+        }
+        if json {
+            return Err(AppError::usage(
+                "launcher is interactive; use `pale-ale tui [TARGET]` for scripted usage"
+                    .to_string(),
+            ));
+        }
+
+        let resolver = TargetResolver::from_environment();
+        match launcher::run_launcher(&resolver)
+            .map_err(|message| AppError::internal(format!("launcher failed: {}", message)))?
+        {
+            LauncherAction::Quit => Ok(ok_cli_envelope(Some(json!({
+                "mode": "launcher",
+                "action": "quit"
+            })))),
+            LauncherAction::Launch { target, theme } => run_resolved_tui(
+                &resolver,
+                target,
+                report::TuiOptions {
+                    theme,
+                    color: report::ReportColor::Auto,
+                    ascii: false,
+                },
+            ),
+        }
+    }
+}
+
+fn run_tui_command(
+    target_positional: Option<String>,
+    target_flag: Option<String>,
+    theme: report::ReportTheme,
+    color: report::ReportColor,
+    ascii: bool,
+) -> Result<JsonEnvelope, AppError> {
+    if target_positional.is_some() && target_flag.is_some() {
+        return Err(AppError::usage(
+            "provide TARGET either positionally or via --target/-t, not both".to_string(),
+        ));
+    }
+
+    #[cfg(not(feature = "cli-tui"))]
+    {
+        let _ = (target_positional, target_flag, theme, color, ascii);
+        return Err(AppError::usage(
+            "tui is unavailable in this build; recompile with --features cli-tui".to_string(),
+        ));
+    }
+
+    #[cfg(feature = "cli-tui")]
+    {
+        use target_resolver::{ResolveError, ResolveRequest, TargetResolver};
+
+        let resolver = TargetResolver::from_environment();
+        let requested = target_flag.or(target_positional);
+
+        let resolved = match resolver.resolve(ResolveRequest {
+            explicit_target: requested,
+        }) {
+            Ok(target) => target,
+            Err(ResolveError::InvalidTarget(message)) => {
+                return Err(AppError::target_invalid(message));
+            }
+            Err(ResolveError::Unresolved(message)) => {
+                if !launcher::stdio_is_tty() {
+                    return Err(AppError::target_unresolved_non_tty(message));
+                }
+
+                match launcher::prompt_for_target(&resolver)
+                    .map_err(|err| AppError::internal(format!("launcher prompt failed: {}", err)))?
+                {
+                    Some(target) => target,
+                    None => {
+                        return Ok(ok_cli_envelope(Some(json!({
+                            "mode": "tui",
+                            "action": "cancelled"
+                        }))));
+                    }
+                }
+            }
+        };
+
+        run_resolved_tui(
+            &resolver,
+            resolved,
+            report::TuiOptions {
+                theme,
+                color,
+                ascii,
+            },
+        )
+    }
+}
+
+#[cfg(feature = "cli-tui")]
+fn run_resolved_tui(
+    resolver: &target_resolver::TargetResolver,
+    resolved: target_resolver::ResolvedTarget,
+    options: report::TuiOptions,
+) -> Result<JsonEnvelope, AppError> {
+    report::run_tui_from_path(&resolved.ndjson_path, options)?;
+
+    if let Err(err) = resolver.persist_last_target(&resolved.target) {
+        eprintln!("warning: failed to persist last_target: {}", err);
+    }
+    let theme_name = match options.theme {
+        report::ReportTheme::Classic => "classic",
+        report::ReportTheme::Term => "term",
+        report::ReportTheme::Cyber => "cyber",
+    };
+    if let Err(err) = resolver.persist_last_theme(theme_name) {
+        eprintln!("warning: failed to persist last_theme: {}", err);
+    }
+
+    Ok(ok_cli_envelope(Some(json!({
+        "mode": "tui",
+        "source": resolved.source.as_str(),
+        "target": resolved.target.display().to_string(),
+        "input": resolved.ndjson_path.display().to_string(),
+    }))))
 }
 
 fn doctor(offline: bool) -> Result<JsonEnvelope, AppError> {
