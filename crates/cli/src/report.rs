@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
+#[cfg_attr(not(feature = "cli-tui"), allow(dead_code))]
 pub(super) struct ReportCommand {
     pub input: String,
     pub summary: bool,
@@ -12,6 +13,31 @@ pub(super) struct ReportCommand {
     pub filters: Vec<String>,
     pub find: Option<String>,
     pub tui: bool,
+    pub theme: ReportTheme,
+    pub color: ReportColor,
+    pub ascii: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ReportTheme {
+    Classic,
+    Term,
+    Cyber,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ReportColor {
+    Auto,
+    Always,
+    Never,
+}
+
+#[cfg_attr(not(feature = "cli-tui"), allow(dead_code))]
+#[derive(Clone, Copy, Debug)]
+pub(super) struct TuiOptions {
+    pub theme: ReportTheme,
+    pub color: ReportColor,
+    pub ascii: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -146,7 +172,12 @@ pub(super) fn run(command: ReportCommand, json_output: bool) -> Result<JsonEnvel
     if command.tui && !json_output {
         #[cfg(feature = "cli-tui")]
         {
-            match tui::run(rows, filters) {
+            let options = TuiOptions {
+                theme: command.theme,
+                color: command.color,
+                ascii: command.ascii,
+            };
+            match tui::run(rows, filters, options) {
                 Ok(()) => {
                     print_summary_mode = false;
                 }
@@ -180,6 +211,34 @@ pub(super) fn run(command: ReportCommand, json_output: bool) -> Result<JsonEnvel
         audit_trace: audit_trace_with_model(default_model_trace()),
         data: Some(data),
     })
+}
+
+#[cfg_attr(not(feature = "cli-tui"), allow(dead_code))]
+pub(super) fn run_tui_from_path(path: &Path, options: TuiOptions) -> Result<(), AppError> {
+    #[cfg(not(feature = "cli-tui"))]
+    {
+        let _ = (path, options);
+        Err(AppError::usage(
+            "--tui is unavailable in this build; recompile with --features cli-tui".to_string(),
+        ))
+    }
+
+    #[cfg(feature = "cli-tui")]
+    {
+        let rows = read_rows_from_path(path)?;
+        let filters = ReportFilters::default();
+        match tui::run(rows, filters, options) {
+            Ok(()) => Ok(()),
+            Err(tui::TuiError::Init(message)) => Err(AppError::dependency(format!(
+                "failed to initialize TUI: {}",
+                message
+            ))),
+            Err(tui::TuiError::Runtime(message)) => Err(AppError::internal(format!(
+                "report TUI failed: {}",
+                message
+            ))),
+        }
+    }
 }
 
 fn parse_filters(raw_filters: &[String], find: Option<String>) -> Result<ReportFilters, AppError> {
@@ -527,522 +586,8 @@ fn strip_utf8_bom(line: &mut String) {
 }
 
 #[cfg(feature = "cli-tui")]
-mod tui {
-    use super::{row_matches_filters, value_to_usize, ReportFilters, ReportRow, ReportStatus};
-    use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-    use crossterm::execute;
-    use crossterm::terminal::{
-        disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-    };
-    use ratatui::backend::CrosstermBackend;
-    use ratatui::layout::{Constraint, Direction, Layout};
-    use ratatui::style::{Color, Modifier, Style};
-    use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap};
-    use ratatui::Terminal;
-    use serde_json::Value;
-    use std::fmt::Write as _;
-    use std::io;
-    use std::time::Duration;
-
-    pub(super) enum TuiError {
-        Init(String),
-        Runtime(String),
-    }
-
-    #[derive(Clone, Copy, Eq, PartialEq)]
-    enum InputMode {
-        Normal,
-        Search,
-    }
-
-    struct ViewState {
-        rows: Vec<ReportRow>,
-        status_filter: Option<ReportStatus>,
-        require_warning: bool,
-        require_error: bool,
-        search_query: String,
-        search_edit: String,
-        input_mode: InputMode,
-        selected: usize,
-    }
-
-    impl ViewState {
-        fn new(rows: Vec<ReportRow>, base_filters: ReportFilters) -> Self {
-            Self {
-                rows,
-                status_filter: base_filters.status,
-                require_warning: base_filters.has_warning,
-                require_error: base_filters.has_error,
-                search_query: base_filters.find.unwrap_or_default(),
-                search_edit: String::new(),
-                input_mode: InputMode::Normal,
-                selected: 0,
-            }
-        }
-
-        fn effective_filters(&self) -> ReportFilters {
-            ReportFilters {
-                status: self.status_filter,
-                has_warning: self.require_warning,
-                has_error: self.require_error,
-                find: if self.search_query.is_empty() {
-                    None
-                } else {
-                    Some(self.search_query.clone())
-                },
-            }
-        }
-
-        fn filtered_indices(&self) -> Vec<usize> {
-            let filters = self.effective_filters();
-            self.rows
-                .iter()
-                .enumerate()
-                .filter_map(|(index, row)| {
-                    if row_matches_filters(row, &filters) {
-                        Some(index)
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        }
-
-        fn clamp_selection(&mut self) {
-            let len = self.filtered_indices().len();
-            if len == 0 {
-                self.selected = 0;
-            } else if self.selected >= len {
-                self.selected = len - 1;
-            }
-        }
-
-        fn move_selection_up(&mut self) {
-            let len = self.filtered_indices().len();
-            if len == 0 {
-                self.selected = 0;
-                return;
-            }
-            if self.selected == 0 {
-                self.selected = len - 1;
-            } else {
-                self.selected -= 1;
-            }
-        }
-
-        fn move_selection_down(&mut self) {
-            let len = self.filtered_indices().len();
-            if len == 0 {
-                self.selected = 0;
-                return;
-            }
-            self.selected = (self.selected + 1) % len;
-        }
-
-        fn cycle_error_warning_filters(&mut self) {
-            match (self.require_error, self.require_warning) {
-                (false, false) => {
-                    self.require_error = true;
-                    self.require_warning = false;
-                }
-                (true, false) => {
-                    self.require_error = false;
-                    self.require_warning = true;
-                }
-                (false, true) => {
-                    self.require_error = true;
-                    self.require_warning = true;
-                }
-                (true, true) => {
-                    self.require_error = false;
-                    self.require_warning = false;
-                }
-            }
-            self.selected = 0;
-        }
-
-        fn filter_mode_label(&self) -> &'static str {
-            match (self.require_error, self.require_warning) {
-                (false, false) => "none",
-                (true, false) => "has_error",
-                (false, true) => "has_warning",
-                (true, true) => "has_error+has_warning",
-            }
-        }
-    }
-
-    pub(super) fn run(rows: Vec<ReportRow>, base_filters: ReportFilters) -> Result<(), TuiError> {
-        enable_raw_mode()
-            .map_err(|err| TuiError::Init(format!("failed to enable raw mode: {}", err)))?;
-
-        let mut stdout = io::stdout();
-        if let Err(err) = execute!(stdout, EnterAlternateScreen) {
-            let _ = disable_raw_mode();
-            return Err(TuiError::Init(format!(
-                "failed to enter alternate screen: {}",
-                err
-            )));
-        }
-
-        let backend = CrosstermBackend::new(stdout);
-        let mut terminal = match Terminal::new(backend) {
-            Ok(terminal) => terminal,
-            Err(err) => {
-                let _ = disable_raw_mode();
-                let mut cleanup_stdout = io::stdout();
-                let _ = execute!(cleanup_stdout, LeaveAlternateScreen);
-                return Err(TuiError::Init(format!(
-                    "failed to initialize terminal: {}",
-                    err
-                )));
-            }
-        };
-
-        let mut state = ViewState::new(rows, base_filters);
-        let run_result = run_loop(&mut terminal, &mut state);
-
-        let mut cleanup_error: Option<String> = None;
-        if let Err(err) = disable_raw_mode() {
-            cleanup_error = Some(format!("failed to disable raw mode: {}", err));
-        }
-        if let Err(err) = execute!(terminal.backend_mut(), LeaveAlternateScreen) {
-            cleanup_error = Some(format!("failed to leave alternate screen: {}", err));
-        }
-        if let Err(err) = terminal.show_cursor() {
-            cleanup_error = Some(format!("failed to restore terminal cursor: {}", err));
-        }
-
-        if let Some(cleanup_error) = cleanup_error {
-            return Err(TuiError::Runtime(cleanup_error));
-        }
-
-        run_result
-    }
-
-    fn run_loop(
-        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-        state: &mut ViewState,
-    ) -> Result<(), TuiError> {
-        loop {
-            state.clamp_selection();
-            terminal.draw(|frame| render(frame, state)).map_err(|err| {
-                TuiError::Runtime(format!("failed to draw report viewer: {}", err))
-            })?;
-
-            if !event::poll(Duration::from_millis(120))
-                .map_err(|err| TuiError::Runtime(format!("failed to poll TUI events: {}", err)))?
-            {
-                continue;
-            }
-
-            let event = event::read()
-                .map_err(|err| TuiError::Runtime(format!("failed to read TUI event: {}", err)))?;
-
-            if let Event::Key(key) = event {
-                if key.kind != KeyEventKind::Press {
-                    continue;
-                }
-
-                match state.input_mode {
-                    InputMode::Normal => match key.code {
-                        KeyCode::Char('q') => return Ok(()),
-                        KeyCode::Up => state.move_selection_up(),
-                        KeyCode::Down => state.move_selection_down(),
-                        KeyCode::Char('/') => {
-                            state.input_mode = InputMode::Search;
-                            state.search_edit = state.search_query.clone();
-                        }
-                        KeyCode::Char('f') => state.cycle_error_warning_filters(),
-                        _ => {}
-                    },
-                    InputMode::Search => match key.code {
-                        KeyCode::Enter => {
-                            state.search_query = state.search_edit.clone();
-                            state.input_mode = InputMode::Normal;
-                            state.selected = 0;
-                        }
-                        KeyCode::Esc => {
-                            state.search_edit.clear();
-                            state.input_mode = InputMode::Normal;
-                        }
-                        KeyCode::Backspace => {
-                            state.search_edit.pop();
-                        }
-                        KeyCode::Char(ch) => {
-                            state.search_edit.push(ch);
-                        }
-                        _ => {}
-                    },
-                }
-            }
-        }
-    }
-
-    fn render(frame: &mut ratatui::Frame<'_>, state: &ViewState) {
-        let outer = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Length(2)])
-            .split(frame.area());
-
-        let body = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(54), Constraint::Percentage(46)])
-            .split(outer[0]);
-
-        let filtered = state.filtered_indices();
-        let mut table_state = TableState::default();
-        if !filtered.is_empty() {
-            table_state.select(Some(state.selected));
-        }
-
-        let header = Row::new(vec![
-            Cell::from("row_index"),
-            Cell::from("id"),
-            Cell::from("status"),
-            Cell::from("max_ratio"),
-            Cell::from("warn_count"),
-            Cell::from("err_code"),
-        ])
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        );
-
-        let table_rows: Vec<Row<'_>> = filtered
-            .iter()
-            .map(|index| {
-                let row = &state.rows[*index];
-                let warn_count = row.warnings.len().to_string();
-                let max_ratio = row
-                    .max_score_ratio
-                    .map(|ratio| format!("{ratio:.6}"))
-                    .unwrap_or_else(|| "-".to_string());
-                let err_code = row
-                    .error
-                    .as_ref()
-                    .and_then(|error| error.code.clone())
-                    .unwrap_or_else(|| "-".to_string());
-                Row::new(vec![
-                    Cell::from(row.row_index.to_string()),
-                    Cell::from(row.id.clone().unwrap_or_else(|| "-".to_string())),
-                    Cell::from(row.status.as_str()),
-                    Cell::from(max_ratio),
-                    Cell::from(warn_count),
-                    Cell::from(err_code),
-                ])
-            })
-            .collect();
-
-        let table = Table::new(
-            table_rows,
-            [
-                Constraint::Length(9),
-                Constraint::Length(20),
-                Constraint::Length(10),
-                Constraint::Length(12),
-                Constraint::Length(10),
-                Constraint::Min(10),
-            ],
-        )
-        .header(header)
-        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED))
-        .highlight_symbol("> ")
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Rows (Up/Down select, / search, f toggle, q quit)"),
-        );
-        frame.render_stateful_widget(table, body[0], &mut table_state);
-
-        let selected_row = filtered
-            .get(state.selected)
-            .and_then(|index| state.rows.get(*index));
-        let detail_text = render_details(selected_row);
-
-        let details = Paragraph::new(detail_text)
-            .block(Block::default().title("Details").borders(Borders::ALL))
-            .wrap(Wrap { trim: false });
-        frame.render_widget(details, body[1]);
-
-        let help_text = if state.input_mode == InputMode::Search {
-            format!("search: /{} (Enter apply, Esc cancel)", state.search_edit)
-        } else {
-            format!(
-                "status={} filter={} search={} matches={}",
-                state
-                    .status_filter
-                    .map(|status| status.as_str().to_string())
-                    .unwrap_or_else(|| "ALL".to_string()),
-                state.filter_mode_label(),
-                if state.search_query.is_empty() {
-                    "-".to_string()
-                } else {
-                    state.search_query.clone()
-                },
-                filtered.len()
-            )
-        };
-
-        let help =
-            Paragraph::new(help_text).block(Block::default().borders(Borders::ALL).title("State"));
-        frame.render_widget(help, outer[1]);
-    }
-
-    fn render_details(row: Option<&ReportRow>) -> String {
-        let Some(row) = row else {
-            return "No rows match current filters.".to_string();
-        };
-
-        let mut out = String::new();
-        let _ = writeln!(out, "row_index: {}", row.row_index);
-        let _ = writeln!(
-            out,
-            "id: {}",
-            row.id.clone().unwrap_or_else(|| "-".to_string())
-        );
-        let _ = writeln!(out, "inputs_hash: {}", row.inputs_hash);
-        let _ = writeln!(out, "status: {}", row.status.as_str());
-
-        if let Some(error) = &row.error {
-            let _ = writeln!(
-                out,
-                "error: code={} message={}",
-                error.code.clone().unwrap_or_else(|| "-".to_string()),
-                error.message.clone().unwrap_or_else(|| "-".to_string())
-            );
-        } else {
-            let _ = writeln!(out, "error: none");
-        }
-
-        if let Some(hashes) = row
-            .raw
-            .get("audit_trace")
-            .and_then(|audit| audit.get("hashes"))
-            .and_then(Value::as_object)
-        {
-            let _ = writeln!(
-                out,
-                "audit hashes: inputs={} measurement={} policy={}",
-                hashes
-                    .get("inputs_hash")
-                    .and_then(Value::as_str)
-                    .unwrap_or("-"),
-                hashes
-                    .get("measurement_hash")
-                    .and_then(Value::as_str)
-                    .unwrap_or("-"),
-                hashes
-                    .get("policy_hash")
-                    .and_then(Value::as_str)
-                    .unwrap_or("-")
-            );
-        }
-
-        if row.warnings.is_empty() {
-            let _ = writeln!(out, "warnings: none");
-        } else {
-            let _ = writeln!(out, "warnings ({}):", row.warnings.len());
-            for warning in row.warnings.iter().take(8) {
-                let warning_type = warning.get("type").and_then(Value::as_str).unwrap_or("-");
-                let field = warning.get("field").and_then(Value::as_str).unwrap_or("-");
-                let sentence_index = warning
-                    .get("sentence_index")
-                    .and_then(value_to_usize)
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|| "-".to_string());
-                let max_seq_len = warning
-                    .get("max_seq_len")
-                    .and_then(value_to_usize)
-                    .map(|v| v.to_string())
-                    .unwrap_or_else(|| "-".to_string());
-                let _ = writeln!(
-                    out,
-                    "- type={} field={} sentence_index={} max_seq_len={}",
-                    warning_type, field, sentence_index, max_seq_len
-                );
-            }
-            if row.warnings.len() > 8 {
-                let _ = writeln!(out, "- ... ({} more)", row.warnings.len() - 8);
-            }
-        }
-
-        if let Some(evidence) = row
-            .raw
-            .get("data")
-            .and_then(|data| data.get("evidence"))
-            .and_then(Value::as_array)
-        {
-            if evidence.is_empty() {
-                let _ = writeln!(out, "top evidence: none");
-            } else {
-                let _ = writeln!(out, "top evidence ({} shown):", evidence.len().min(6));
-                for item in evidence.iter().take(6) {
-                    let ans_idx = item
-                        .get("ans_sentence_index")
-                        .and_then(value_to_usize)
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|| "-".to_string());
-                    let ctx_idx = item
-                        .get("ctx_sentence_index")
-                        .and_then(value_to_usize)
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|| "-".to_string());
-                    let ratio = item
-                        .get("score_ratio")
-                        .and_then(Value::as_f64)
-                        .map(|v| format!("{v:.6}"))
-                        .unwrap_or_else(|| "-".to_string());
-                    let sem = item
-                        .get("score_sem")
-                        .or_else(|| item.get("score_sem_raw"))
-                        .and_then(Value::as_f64)
-                        .map(|v| format!("{v:.6}"))
-                        .unwrap_or_else(|| "-".to_string());
-                    let structural = item
-                        .get("score_struct")
-                        .and_then(Value::as_f64)
-                        .map(|v| format!("{v:.6}"))
-                        .unwrap_or_else(|| "-".to_string());
-                    let tags = item
-                        .get("tags")
-                        .and_then(Value::as_array)
-                        .map(|tags| {
-                            tags.iter()
-                                .map(|tag| {
-                                    tag.as_str()
-                                        .map(|v| v.to_string())
-                                        .unwrap_or_else(|| tag.to_string())
-                                })
-                                .collect::<Vec<String>>()
-                                .join("|")
-                        })
-                        .filter(|joined| !joined.is_empty())
-                        .unwrap_or_else(|| "-".to_string());
-
-                    let _ = writeln!(
-                        out,
-                        "- ans[{}] ctx[{}] ratio={} sem={} struct={} tags={}",
-                        ans_idx, ctx_idx, ratio, sem, structural, tags
-                    );
-
-                    if let Some(rule_trace) = item.get("rule_trace") {
-                        let trace_text = rule_trace
-                            .as_str()
-                            .map(|v| v.to_string())
-                            .unwrap_or_else(|| rule_trace.to_string());
-                        let _ = writeln!(out, "  rule_trace: {}", trace_text);
-                    }
-                }
-            }
-        } else {
-            let _ = writeln!(out, "top evidence: unavailable");
-        }
-
-        out
-    }
-}
-
+#[path = "tui.rs"]
+mod tui;
 #[cfg(test)]
 mod tests {
     use super::{read_rows_from_reader, summarize_rows, ReportRow};

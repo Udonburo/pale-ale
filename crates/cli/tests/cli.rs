@@ -83,7 +83,7 @@ fn non_json_usage_error() {
         .failure()
         .code(1)
         .stdout(predicates::str::is_empty())
-        .stderr(contains("Usage"));
+        .stderr(contains("launcher is unavailable in this build"));
 }
 
 #[test]
@@ -467,7 +467,7 @@ fn report_tui_requires_feature_in_default_build() {
 
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(stderr.contains("--tui is unavailable in this build"));
+    assert!(stderr.contains("unexpected argument '--tui' found"));
 }
 
 #[test]

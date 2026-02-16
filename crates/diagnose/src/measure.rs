@@ -263,7 +263,7 @@ fn semantic_distance(left: &[f32], right: &[f32]) -> Result<f32, MeasureError> {
         .zip(right.iter())
         .map(|(l, r)| (*l as f64) * (*r as f64))
         .sum::<f64>();
-    Ok((1.0_f64 - dot.clamp(-1.0, 1.0)) as f32)
+    Ok((0.5_f64 * (1.0_f64 - dot.clamp(-1.0, 1.0))) as f32)
 }
 
 fn compare_pair_scores(left: &PairScore, right: &PairScore) -> Ordering {
@@ -283,7 +283,7 @@ mod tests {
         let same = semantic_distance(&[1.0_f32, 0.0], &[1.0_f32, 0.0]).expect("same");
         let opposite = semantic_distance(&[1.0_f32, 0.0], &[-1.0_f32, 0.0]).expect("opposite");
         assert!(same.abs() < 1e-6, "same={}", same);
-        assert!((opposite - 2.0).abs() < 1e-6, "opposite={}", opposite);
+        assert!((opposite - 1.0).abs() < 1e-6, "opposite={}", opposite);
     }
 
     #[test]

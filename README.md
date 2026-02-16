@@ -48,7 +48,7 @@ target/release/pale-ale eval "query" "context" "answer"
 
 On Windows, use `target\\release\\pale-ale.exe`.
 
-If you also want the TUI report viewer (`report --tui`), build with:
+If you want the launcher/TUI (`pale-ale` / `pale-ale tui`), build with:
 
 ```bash
 cargo build -p pale-ale-cli --features cli-tui --release
@@ -119,19 +119,73 @@ Output row (NDJSON):
 {"row_index":0,"id":"1","inputs_hash":"...","status":"LUCID","error":null,"data":{...},"audit_trace":{...}}
 ```
 
-## Report TUI
+## Launcher + TUI
 
 ```bash
-pale-ale report report_out.ndjson --tui
+# Launcher (TTY only)
+pale-ale
+
+# Direct TUI
+pale-ale tui
+pale-ale tui ./report_out.ndjson
+pale-ale tui --target ./report_out.ndjson
+
+# Theme/compat flags
+pale-ale tui --target ./report_out.ndjson --theme classic --color auto
+pale-ale tui --target ./report_out.ndjson --theme term --color never --ascii
+pale-ale tui --target ./report_out.ndjson --theme cyber --color always
 ```
 
-> **Note:** `--tui` requires building with `--features cli-tui`.
-> **Note (Windows):** The TUI expects full alternate-screen support.
-> VSCode-based editors (VSCode, Cursor, Windsurf, Trae, etc.) may show flickering or residual frames on exit due to ConPTY limitations.
-> For best results, run `--tui` in **Windows Terminal** or another standalone terminal emulator.
-> Behavior on macOS/Linux integrated terminals has not been fully verified yet.
-> If `--tui` is unstable in your terminal, use `--summary` (always supported).
-> `--json` with `--tui` requires `--summary`.
+`TARGET` currently accepts:
+
+- run bundle directory (must include `manifest.json`)
+- `.ndjson` report file
+
+`pale-ale tui` target resolution order (when TARGET omitted):
+
+1. explicit `--target/-t` or positional `TARGET`
+2. environment variable `PALE_ALE_TARGET`
+3. state file `last_target`
+   - launcher also keeps `recent_targets` (max 5, success-only updates)
+4. CWD discovery:
+   - latest `./runs/*/manifest.json` by `mtime` desc, tie-break by path asc
+   - otherwise `./report_out.ndjson`
+5. unresolved:
+   - TTY: prompt for target input
+   - non-TTY: exit with code `20`
+
+Non-TTY rules:
+
+- `pale-ale` launcher requires TTY; otherwise exits with code `21`
+- `pale-ale tui` never prompts on non-TTY
+
+Launcher keys:
+
+- `Enter`: open detected target
+- `/`: target input mode (Esc/q to cancel)
+- `r`: recent targets
+- `t`: cycle theme (`classic -> term -> cyber`)
+- `?`: help
+- `q`: quit
+
+Launcher preview limits:
+
+- NDJSON quick preview reads at most 200 rows and 64 KiB
+- full-file scans are intentionally avoided
+
+Stable exit codes:
+
+- `20`: `TARGET_UNRESOLVED_NON_TTY`
+- `21`: `LAUNCHER_REQUIRES_TTY`
+- `22`: `TARGET_INVALID`
+
+Theme modes:
+
+- `classic`: calm dark palette with subtle accents (default)
+- `term`: terminal-respecting mode (avoids background painting where possible)
+- `cyber`: higher-contrast accents for fast scanning, without large color fills
+
+Runtime key: `t` cycles themes (`classic -> term -> cyber`).
 
 ## Rust Library Usage
 
