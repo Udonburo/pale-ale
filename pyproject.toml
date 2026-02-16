@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pale-ale"
-version = "1.0.0"
+version = "1.0.1"
 description = "Pale Ale (Rust core): deterministic Spin(3) rotor distance kernels"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,4 +25,4 @@ Wrapper-CLI = "https://pypi.org/project/pale-ale/"
 
 [tool.maturin]
 module-name = "pale_ale_core"
-features = ["pyo3/extension-module", "pyo3/abi3-py310"]
+features = ["python-inspect"]

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1 - 2026-02-16
+
+### Fixed
+
+- Python wheel build now consistently enables the `python-inspect` feature via `pyproject.toml`, preventing missing `PyInit_pale_ale_core` symbol issues in isolated builds.
+
+### Added
+
+- `scripts/build_wheel.ps1` for reproducible local wheel builds with optional install/verify flow.
+- `dist/wheel_provenance.json` generation in the wheel script, including `core_git_sha` and `wheel_sha256`.
+
 ## 1.0.0 - 2026-02-03
 
 ### Changed
