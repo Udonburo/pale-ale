@@ -7,12 +7,15 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::marker::PhantomData;
 
-use crate::{spin3_components_with, spin3_distance, spin3_struct, Spin3Components};
+use crate::{
+    core_build_id, core_git_sha, spin3_components_with, spin3_distance, spin3_distance_rs,
+    spin3_struct, Spin3Components,
+};
 
 #[cfg(feature = "python-inspect")]
 use crate::{
-    calculate_components, clamp, resolve_alpha, semantic_distance, validate_alpha, ROOT_COUNT,
-    SNAP_SOFT_BETA, SNAP_SOFT_K,
+    calculate_components, clamp, resolve_alpha, resolve_root_selection, semantic_distance,
+    validate_alpha, ROOT_COUNT, SNAP_SOFT_BETA, SNAP_SOFT_K,
 };
 
 enum DataView<'a> {
@@ -58,6 +61,28 @@ fn spin3_distance_py(
     spin3_distance(u_view.as_slice(), v_view.as_slice(), alpha).map_err(PyValueError::new_err)
 }
 
+/// Python API wrapper for spin3_distance with explicit root set selection.
+#[pyfunction]
+#[pyo3(name = "spin3_distance_rs")]
+fn spin3_distance_rs_py(
+    u: &Bound<'_, PyAny>,
+    v: &Bound<'_, PyAny>,
+    alpha: Option<f64>,
+    root_set: Option<&str>,
+    root_seed: Option<u64>,
+) -> PyResult<f64> {
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    spin3_distance_rs(
+        u_view.as_slice(),
+        v_view.as_slice(),
+        alpha,
+        root_set,
+        root_seed,
+    )
+    .map_err(PyValueError::new_err)
+}
+
 /// Python API wrapper for spin3_struct
 #[pyfunction]
 #[pyo3(name = "spin3_struct")]
@@ -98,6 +123,28 @@ fn spin3_components_py<'py>(
     build_components_dict(py, &components)
 }
 
+#[cfg(feature = "python-inspect")]
+fn set_runtime_meta<'py>(
+    dict: &Bound<'py, PyDict>,
+    root_set: &str,
+    root_seed: Option<u64>,
+) -> PyResult<()> {
+    dict.set_item("root_set", root_set)?;
+    dict.set_item("root_seed", root_seed)?;
+    dict.set_item("core_build_id", core_build_id())?;
+    dict.set_item("core_git_sha", core_git_sha())?;
+    Ok(())
+}
+
+#[pyfunction]
+#[pyo3(name = "spin3_core_meta")]
+fn spin3_core_meta<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    let dict = PyDict::new_bound(py);
+    dict.set_item("core_build_id", core_build_id())?;
+    dict.set_item("core_git_sha", core_git_sha())?;
+    Ok(dict)
+}
+
 fn build_components_dict<'py>(
     py: Python<'py>,
     components: &Spin3Components,
@@ -135,12 +182,15 @@ fn build_inspect_dict<'py>(
     alpha_weight: f64,
     d_struct: f64,
     total: f64,
+    root_set: &str,
+    root_seed: Option<u64>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let dict = build_components_dict(py, components)?;
     dict.set_item("semantic", d_sem)?;
     dict.set_item("total", total)?;
     dict.set_item("alpha", alpha_weight)?;
     dict.set_item("d_struct", d_struct)?;
+    set_runtime_meta(&dict, root_set, root_seed)?;
     Ok(dict)
 }
 
@@ -158,6 +208,9 @@ fn spin3_inspect<'py>(
     let components = calculate_components(
         u_view.as_slice(),
         v_view.as_slice(),
+        resolve_root_selection(Some("e8"), None)
+            .map_err(PyValueError::new_err)?
+            .roots(),
         SNAP_SOFT_K,
         SNAP_SOFT_BETA,
     )
@@ -175,7 +228,63 @@ fn spin3_inspect<'py>(
         )
     };
 
-    build_inspect_dict(py, &components, d_sem, alpha_weight, d_struct, total)
+    build_inspect_dict(
+        py,
+        &components,
+        d_sem,
+        alpha_weight,
+        d_struct,
+        total,
+        "e8",
+        None,
+    )
+}
+
+#[cfg(feature = "python-inspect")]
+#[pyfunction]
+fn spin3_inspect_rs<'py>(
+    py: Python<'py>,
+    u: &Bound<'py, PyAny>,
+    v: &Bound<'py, PyAny>,
+    alpha: Option<f64>,
+    root_set: Option<&str>,
+    root_seed: Option<u64>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let selection = resolve_root_selection(root_set, root_seed).map_err(PyValueError::new_err)?;
+    let u_view = extract_view(u)?;
+    let v_view = extract_view(v)?;
+    validate_alpha(alpha).map_err(PyValueError::new_err)?;
+    let components = calculate_components(
+        u_view.as_slice(),
+        v_view.as_slice(),
+        selection.roots(),
+        SNAP_SOFT_K,
+        SNAP_SOFT_BETA,
+    )
+    .map_err(PyValueError::new_err)?;
+    let alpha_weight = resolve_alpha(alpha);
+    let d_sem = semantic_distance(u_view.as_slice(), v_view.as_slice());
+    let d_struct = components.structural_distance();
+    let total = if u_view.as_slice().is_empty() {
+        0.0
+    } else {
+        clamp(
+            (1.0 - alpha_weight) * d_sem + alpha_weight * d_struct,
+            0.0,
+            1.0,
+        )
+    };
+
+    build_inspect_dict(
+        py,
+        &components,
+        d_sem,
+        alpha_weight,
+        d_struct,
+        total,
+        selection.root_set,
+        selection.root_seed,
+    )
 }
 
 #[cfg(feature = "python-inspect")]
@@ -198,8 +307,16 @@ fn spin3_inspect_dev<'py>(
     let u_view = extract_view(u)?;
     let v_view = extract_view(v)?;
     validate_alpha(alpha).map_err(PyValueError::new_err)?;
-    let components = calculate_components(u_view.as_slice(), v_view.as_slice(), k, beta)
-        .map_err(PyValueError::new_err)?;
+    let components = calculate_components(
+        u_view.as_slice(),
+        v_view.as_slice(),
+        resolve_root_selection(Some("e8"), None)
+            .map_err(PyValueError::new_err)?
+            .roots(),
+        k,
+        beta,
+    )
+    .map_err(PyValueError::new_err)?;
     let alpha_weight = resolve_alpha(alpha);
     let d_sem = semantic_distance(u_view.as_slice(), v_view.as_slice());
     let d_struct = components.structural_distance();
@@ -213,17 +330,30 @@ fn spin3_inspect_dev<'py>(
         )
     };
 
-    build_inspect_dict(py, &components, d_sem, alpha_weight, d_struct, total)
+    build_inspect_dict(
+        py,
+        &components,
+        d_sem,
+        alpha_weight,
+        d_struct,
+        total,
+        "e8",
+        None,
+    )
 }
 
 #[pymodule]
 fn pale_ale_core(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spin3_distance_py, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_distance_rs_py, m)?)?;
     m.add_function(wrap_pyfunction!(spin3_struct_py, m)?)?;
     m.add_function(wrap_pyfunction!(spin3_struct_distance_py, m)?)?;
     m.add_function(wrap_pyfunction!(spin3_components_py, m)?)?;
+    m.add_function(wrap_pyfunction!(spin3_core_meta, m)?)?;
     #[cfg(feature = "python-inspect")]
     m.add_function(wrap_pyfunction!(spin3_inspect, m)?)?;
+    #[cfg(feature = "python-inspect")]
+    m.add_function(wrap_pyfunction!(spin3_inspect_rs, m)?)?;
     #[cfg(feature = "python-inspect")]
     m.add_function(wrap_pyfunction!(spin3_inspect_dev, m)?)?;
     Ok(())
@@ -253,6 +383,72 @@ mod tests {
                 spin3_inspect_dev(py, u.as_any(), v.as_any(), 3, 12.0, Some(f64::INFINITY))
                     .is_err()
             );
+        });
+    }
+
+    #[test]
+    fn distance_rs_validation_contract() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let u = PyList::new_bound(py, vec![1.0_f64; 8]);
+            let v = PyList::new_bound(py, vec![2.0_f64; 8]);
+            assert!(spin3_distance_rs_py(
+                u.as_any(),
+                v.as_any(),
+                Some(1.0),
+                Some("random240"),
+                None
+            )
+            .is_err());
+            assert!(
+                spin3_distance_rs_py(u.as_any(), v.as_any(), Some(1.0), Some("e8"), Some(0),)
+                    .is_err()
+            );
+            assert!(spin3_distance_rs_py(
+                u.as_any(),
+                v.as_any(),
+                Some(1.0),
+                Some("random240"),
+                Some(0),
+            )
+            .is_ok());
+        });
+    }
+
+    #[cfg(feature = "python-inspect")]
+    #[test]
+    fn inspect_rs_returns_meta_fields() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let u = PyList::new_bound(py, vec![1.0_f64; 8]);
+            let v = PyList::new_bound(py, vec![2.0_f64; 8]);
+            let out = spin3_inspect_rs(
+                py,
+                u.as_any(),
+                v.as_any(),
+                Some(1.0),
+                Some("random240"),
+                Some(3),
+            )
+            .unwrap();
+            assert_eq!(
+                out.get_item("root_set")
+                    .unwrap()
+                    .unwrap()
+                    .extract::<String>()
+                    .unwrap(),
+                "random240"
+            );
+            assert_eq!(
+                out.get_item("root_seed")
+                    .unwrap()
+                    .unwrap()
+                    .extract::<u64>()
+                    .unwrap(),
+                3
+            );
+            assert!(out.get_item("core_build_id").unwrap().is_some());
+            assert!(out.get_item("core_git_sha").is_ok());
         });
     }
 

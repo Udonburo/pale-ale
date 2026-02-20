@@ -1,5 +1,7 @@
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::f64::consts::PI;
+use std::sync::{Arc, RwLock};
 
 const ROOT_DIM: usize = 8;
 const ROOT_COUNT: usize = 240;
@@ -13,6 +15,7 @@ const SNAP_SOFT_BETA: f64 = 12.0;
 
 pub const SPIN3_DEFAULT_K: usize = SNAP_SOFT_K;
 pub const SPIN3_DEFAULT_BETA: f64 = SNAP_SOFT_BETA;
+pub const CORE_GIT_SHA: Option<&str> = option_env!("PALE_ALE_CORE_GIT_SHA");
 
 struct SnapMeta {
     soft: [f64; ROOT_DIM],
@@ -51,6 +54,36 @@ pub struct Spin3Components {
 impl Spin3Components {
     pub fn structural_distance(&self) -> f64 {
         self.d_struct
+    }
+}
+
+#[derive(Clone, Debug)]
+enum RootCollection {
+    Static(&'static [[f64; ROOT_DIM]]),
+    Shared(Arc<Vec<[f64; ROOT_DIM]>>),
+}
+
+impl RootCollection {
+    fn as_slice(&self) -> &[[f64; ROOT_DIM]] {
+        match self {
+            RootCollection::Static(roots) => roots,
+            RootCollection::Shared(roots) => roots.as_slice(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct RootSelection {
+    #[allow(dead_code)]
+    pub root_set: &'static str,
+    #[allow(dead_code)]
+    pub root_seed: Option<u64>,
+    roots: RootCollection,
+}
+
+impl RootSelection {
+    pub(crate) fn roots(&self) -> &[[f64; ROOT_DIM]] {
+        self.roots.as_slice()
     }
 }
 
@@ -94,6 +127,166 @@ static E8_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
     debug_assert_eq!(roots.len(), ROOT_COUNT);
     roots
 });
+
+static D8_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
+    let mut roots = Vec::with_capacity(112);
+    let inv_sqrt2 = 1.0 / (2.0_f64).sqrt();
+    let signs = [-1.0, 1.0];
+    for i in 0..ROOT_DIM {
+        for j in (i + 1)..ROOT_DIM {
+            for &si in &signs {
+                for &sj in &signs {
+                    let mut v = [0.0; ROOT_DIM];
+                    v[i] = si * inv_sqrt2;
+                    v[j] = sj * inv_sqrt2;
+                    roots.push(v);
+                }
+            }
+        }
+    }
+    debug_assert_eq!(roots.len(), 112);
+    roots
+});
+
+static AXIS16_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
+    let mut roots = Vec::with_capacity(16);
+    for i in 0..ROOT_DIM {
+        let mut pos = [0.0; ROOT_DIM];
+        pos[i] = 1.0;
+        roots.push(pos);
+        let mut neg = [0.0; ROOT_DIM];
+        neg[i] = -1.0;
+        roots.push(neg);
+    }
+    debug_assert_eq!(roots.len(), 16);
+    roots
+});
+
+static RANDOM240_CACHE: Lazy<RwLock<HashMap<u64, Arc<Vec<[f64; ROOT_DIM]>>>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
+
+fn splitmix64_next(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E3779B97F4A7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31)
+}
+
+fn rng_uniform_open01(state: &mut u64) -> f64 {
+    let x = splitmix64_next(state) >> 11;
+    let u = (x as f64) * (1.0 / ((1u64 << 53) as f64));
+    u.clamp(1e-12, 1.0 - 1e-12)
+}
+
+fn rng_normal_box_muller(state: &mut u64) -> f64 {
+    let u1 = rng_uniform_open01(state);
+    let u2 = rng_uniform_open01(state);
+    let r = (-2.0 * u1.ln()).sqrt();
+    let theta = 2.0 * PI * u2;
+    r * theta.cos()
+}
+
+fn generate_random240(seed: u64) -> Vec<[f64; ROOT_DIM]> {
+    let mut state = seed;
+    let mut roots = Vec::with_capacity(ROOT_COUNT);
+    while roots.len() < ROOT_COUNT {
+        let mut raw = [0.0; ROOT_DIM];
+        for val in raw.iter_mut().take(ROOT_DIM) {
+            *val = rng_normal_box_muller(&mut state);
+        }
+        if let Some(normed) = normalize8(&raw) {
+            roots.push(normed);
+        }
+    }
+    roots
+}
+
+fn random240_roots(seed: u64) -> Arc<Vec<[f64; ROOT_DIM]>> {
+    if let Ok(cache) = RANDOM240_CACHE.read() {
+        if let Some(existing) = cache.get(&seed) {
+            return Arc::clone(existing);
+        }
+    }
+
+    let generated = Arc::new(generate_random240(seed));
+    if let Ok(mut cache) = RANDOM240_CACHE.write() {
+        let entry = cache.entry(seed).or_insert_with(|| Arc::clone(&generated));
+        return Arc::clone(entry);
+    }
+    generated
+}
+
+pub(crate) fn resolve_root_selection(
+    root_set: Option<&str>,
+    root_seed: Option<u64>,
+) -> Result<RootSelection, String> {
+    let normalized = root_set.unwrap_or("e8").trim().to_ascii_lowercase();
+    match normalized.as_str() {
+        "e8" => {
+            if root_seed.is_some() {
+                return Err("root_seed must be None unless root_set is 'random240'".to_string());
+            }
+            Ok(RootSelection {
+                root_set: "e8",
+                root_seed: None,
+                roots: RootCollection::Static(E8_ROOTS.as_slice()),
+            })
+        }
+        "random240" => {
+            let seed = root_seed.ok_or_else(|| {
+                "root_seed must be provided when root_set is 'random240'".to_string()
+            })?;
+            Ok(RootSelection {
+                root_set: "random240",
+                root_seed: Some(seed),
+                roots: RootCollection::Shared(random240_roots(seed)),
+            })
+        }
+        "d8" => {
+            if root_seed.is_some() {
+                return Err("root_seed must be None unless root_set is 'random240'".to_string());
+            }
+            Ok(RootSelection {
+                root_set: "d8",
+                root_seed: None,
+                roots: RootCollection::Static(D8_ROOTS.as_slice()),
+            })
+        }
+        "axis16" => {
+            if root_seed.is_some() {
+                return Err("root_seed must be None unless root_set is 'random240'".to_string());
+            }
+            Ok(RootSelection {
+                root_set: "axis16",
+                root_seed: None,
+                roots: RootCollection::Static(AXIS16_ROOTS.as_slice()),
+            })
+        }
+        other => Err(format!(
+            "unsupported root_set '{}'; expected one of: e8, random240, d8, axis16",
+            other
+        )),
+    }
+}
+
+pub fn core_build_id() -> String {
+    if let Some(explicit) = option_env!("PALE_ALE_CORE_BUILD_ID") {
+        return explicit.to_string();
+    }
+    if let Some(hash) = option_env!("PALE_ALE_CORE_WHEEL_SHA256") {
+        return format!(
+            "pale-ale-core/{}+sha256:{}",
+            env!("CARGO_PKG_VERSION"),
+            hash
+        );
+    }
+    format!("pale-ale-core/{}", env!("CARGO_PKG_VERSION"))
+}
+
+pub fn core_git_sha() -> Option<&'static str> {
+    CORE_GIT_SHA
+}
 
 #[inline]
 fn clamp(x: f64, lo: f64, hi: f64) -> f64 {
@@ -311,13 +504,19 @@ fn snap_e8(a: &[f64; ROOT_DIM]) -> [f64; ROOT_DIM] {
     best
 }
 
-fn snap_soft_meta_dyn(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta {
-    let k = k.clamp(1, ROOT_COUNT);
-    let mut top_dots = [f64::NEG_INFINITY; ROOT_COUNT];
-    let mut top_idx = [usize::MAX; ROOT_COUNT];
-    let mut weights = [0.0; ROOT_COUNT];
+fn snap_soft_meta_dyn(
+    u_unit: &[f64; ROOT_DIM],
+    roots: &[[f64; ROOT_DIM]],
+    k: usize,
+    beta: f64,
+) -> SnapMeta {
+    let root_count = roots.len();
+    let k = k.clamp(1, root_count);
+    let mut top_dots = vec![f64::NEG_INFINITY; k];
+    let mut top_idx = vec![usize::MAX; k];
+    let mut weights = vec![0.0; k];
 
-    for (idx, root) in E8_ROOTS.iter().enumerate() {
+    for (idx, root) in roots.iter().enumerate() {
         let d = dot8(u_unit, root);
 
         let mut insert_pos = None;
@@ -343,7 +542,7 @@ fn snap_soft_meta_dyn(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta
     let hard_dot = top_dots[0];
     let hard_idx = top_idx[0];
 
-    let mut soft = E8_ROOTS[hard_idx];
+    let mut soft = roots[hard_idx];
     let max_dot = hard_dot;
     let mut weight_sum = 0.0;
     for i in 0..k {
@@ -357,7 +556,7 @@ fn snap_soft_meta_dyn(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta
         let inv_sum = 1.0 / weight_sum;
         for i in 0..k {
             let w = weights[i] * inv_sum;
-            let root = E8_ROOTS[top_idx[i]];
+            let root = roots[top_idx[i]];
             for j in 0..ROOT_DIM {
                 acc[j] += w * root[j];
             }
@@ -374,92 +573,35 @@ fn snap_soft_meta_dyn(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta
     }
 }
 
-fn snap_soft_meta_fixed<const K: usize>(u_unit: &[f64; ROOT_DIM], beta: f64) -> SnapMeta {
-    let mut top_dots = [f64::NEG_INFINITY; K];
-    let mut top_idx = [usize::MAX; K];
-
-    for (idx, root) in E8_ROOTS.iter().enumerate() {
-        let d = dot8(u_unit, root);
-
-        let mut insert_pos = None;
-        for i in 0..K {
-            let cur_dot = top_dots[i];
-            let cur_idx = top_idx[i];
-            if d > cur_dot || (d == cur_dot && idx < cur_idx) {
-                insert_pos = Some(i);
-                break;
-            }
-        }
-
-        if let Some(pos) = insert_pos {
-            for j in (pos + 1..K).rev() {
-                top_dots[j] = top_dots[j - 1];
-                top_idx[j] = top_idx[j - 1];
-            }
-            top_dots[pos] = d;
-            top_idx[pos] = idx;
-        }
-    }
-
-    let hard_dot = top_dots[0];
-    let hard_idx = top_idx[0];
-
-    let mut soft = E8_ROOTS[hard_idx];
-    let max_dot = hard_dot;
-    let mut weights = [0.0; K];
-    let mut weight_sum = 0.0;
-    for i in 0..K {
-        let w = (beta * (top_dots[i] - max_dot)).exp();
-        weights[i] = w;
-        weight_sum += w;
-    }
-
-    if weight_sum > 0.0 && weight_sum.is_finite() {
-        let mut acc = [0.0; ROOT_DIM];
-        let inv_sum = 1.0 / weight_sum;
-        for i in 0..K {
-            let w = weights[i] * inv_sum;
-            let root = E8_ROOTS[top_idx[i]];
-            for j in 0..ROOT_DIM {
-                acc[j] += w * root[j];
-            }
-        }
-        if let Some(normed) = normalize8(&acc) {
-            soft = normed;
-        }
-    }
-
-    SnapMeta {
-        soft,
-        hard_idx,
-        hard_dot,
-    }
-}
-
-fn snap_soft_meta(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> SnapMeta {
-    let k = k.clamp(1, ROOT_COUNT);
-    match k {
-        1 => snap_soft_meta_fixed::<1>(u_unit, beta),
-        2 => snap_soft_meta_fixed::<2>(u_unit, beta),
-        3 => snap_soft_meta_fixed::<3>(u_unit, beta),
-        _ => snap_soft_meta_dyn(u_unit, k, beta),
-    }
+fn snap_soft_meta(
+    u_unit: &[f64; ROOT_DIM],
+    roots: &[[f64; ROOT_DIM]],
+    k: usize,
+    beta: f64,
+) -> SnapMeta {
+    snap_soft_meta_dyn(u_unit, roots, k, beta)
 }
 
 #[allow(dead_code)]
-fn snap_soft(u_unit: &[f64; ROOT_DIM], k: usize, beta: f64) -> [f64; ROOT_DIM] {
-    snap_soft_meta(u_unit, k, beta).soft
+fn snap_soft(
+    u_unit: &[f64; ROOT_DIM],
+    roots: &[[f64; ROOT_DIM]],
+    k: usize,
+    beta: f64,
+) -> [f64; ROOT_DIM] {
+    snap_soft_meta(u_unit, roots, k, beta).soft
 }
 
 fn precompute_soft_and_anchor(
     blocks: &[Option<[f64; ROOT_DIM]>],
+    roots: &[[f64; ROOT_DIM]],
     k: usize,
     beta: f64,
 ) -> Vec<Option<PrecomputedBlock>> {
     let mut precomputed = Vec::with_capacity(blocks.len());
     for block in blocks.iter() {
         if let Some(u_unit) = block {
-            let meta = snap_soft_meta(u_unit, k, beta);
+            let meta = snap_soft_meta(u_unit, roots, k, beta);
             precomputed.push(Some(PrecomputedBlock {
                 soft: meta.soft,
                 anchor: angle_dist_from_dot(meta.hard_dot),
@@ -567,14 +709,17 @@ fn hct_distance_stats(
 
 #[allow(dead_code)]
 fn hct_distance(u_blocks: &[Option<[f64; ROOT_DIM]>], v_blocks: &[Option<[f64; ROOT_DIM]>]) -> f64 {
-    let u_pre = precompute_soft_and_anchor(u_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA);
-    let v_pre = precompute_soft_and_anchor(v_blocks, SNAP_SOFT_K, SNAP_SOFT_BETA);
+    let u_pre =
+        precompute_soft_and_anchor(u_blocks, E8_ROOTS.as_slice(), SNAP_SOFT_K, SNAP_SOFT_BETA);
+    let v_pre =
+        precompute_soft_and_anchor(v_blocks, E8_ROOTS.as_slice(), SNAP_SOFT_K, SNAP_SOFT_BETA);
     hct_distance_stats(u_blocks, v_blocks, &u_pre, &v_pre).0
 }
 
 fn calculate_components(
     u: &[f64],
     v: &[f64],
+    roots: &[[f64; ROOT_DIM]],
     k: usize,
     beta: f64,
 ) -> Result<Spin3Components, String> {
@@ -607,6 +752,9 @@ fn calculate_components(
     if dim % ROOT_DIM != 0 {
         return Err("vector length must be a multiple of 8".to_string());
     }
+    if roots.is_empty() {
+        return Err("root set must not be empty".to_string());
+    }
 
     let blocks = dim / ROOT_DIM;
     let mut u_blocks = Vec::with_capacity(blocks);
@@ -628,8 +776,8 @@ fn calculate_components(
         v_blocks.push(normalize8(&v_block));
     }
 
-    let u_pre = precompute_soft_and_anchor(&u_blocks, k, beta);
-    let v_pre = precompute_soft_and_anchor(&v_blocks, k, beta);
+    let u_pre = precompute_soft_and_anchor(&u_blocks, roots, k, beta);
+    let v_pre = precompute_soft_and_anchor(&v_blocks, roots, k, beta);
 
     let mut anchor_u_sum = 0.0;
     let mut anchor_u_count = 0usize;
@@ -807,7 +955,33 @@ fn calculate_components(
 /// Prefer `spin3_struct` + Python-side semantic mixing for new integrations.
 pub fn spin3_distance(u: &[f64], v: &[f64], alpha: Option<f64>) -> Result<f64, String> {
     validate_alpha(alpha)?;
-    let components = calculate_components(u, v, SNAP_SOFT_K, SNAP_SOFT_BETA)?;
+    let components = calculate_components(u, v, E8_ROOTS.as_slice(), SNAP_SOFT_K, SNAP_SOFT_BETA)?;
+    if u.is_empty() {
+        return Ok(0.0);
+    }
+
+    let alpha_weight = resolve_alpha(alpha);
+    let d_sem = semantic_distance(u, v);
+    let d_struct = components.d_struct;
+    let d = (1.0 - alpha_weight) * d_sem + alpha_weight * d_struct;
+    Ok(clamp(d, 0.0, 1.0))
+}
+
+/// Pure Rust API: computes mixed semantic/structural distance with explicit root set.
+///
+/// Validation contract:
+/// - if `root_set == "random240"`, `root_seed` must be provided
+/// - else, `root_seed` must be None
+pub fn spin3_distance_rs(
+    u: &[f64],
+    v: &[f64],
+    alpha: Option<f64>,
+    root_set: Option<&str>,
+    root_seed: Option<u64>,
+) -> Result<f64, String> {
+    validate_alpha(alpha)?;
+    let selection = resolve_root_selection(root_set, root_seed)?;
+    let components = calculate_components(u, v, selection.roots(), SNAP_SOFT_K, SNAP_SOFT_BETA)?;
     if u.is_empty() {
         return Ok(0.0);
     }
@@ -827,7 +1001,7 @@ pub fn spin3_struct(
     beta: Option<f64>,
 ) -> Result<f64, String> {
     let (k, beta) = resolve_k_beta(k, beta)?;
-    let components = calculate_components(u, v, k, beta)?;
+    let components = calculate_components(u, v, E8_ROOTS.as_slice(), k, beta)?;
     if u.is_empty() {
         return Ok(0.0);
     }
@@ -875,7 +1049,7 @@ fn spin3_components_with(
     beta: Option<f64>,
 ) -> Result<Spin3Components, String> {
     let (k, beta) = resolve_k_beta(k, beta)?;
-    calculate_components(u, v, k, beta)
+    calculate_components(u, v, E8_ROOTS.as_slice(), k, beta)
 }
 #[cfg(feature = "python")]
 mod python;
@@ -1004,7 +1178,7 @@ mod tests {
             *val = ((i as f64) * 0.37 + 0.11).sin();
         }
         let unit = normalize8(&raw).expect("normalize8 should succeed for test input");
-        let meta = snap_soft_meta(&unit, SNAP_SOFT_K, SNAP_SOFT_BETA);
+        let meta = snap_soft_meta(&unit, E8_ROOTS.as_slice(), SNAP_SOFT_K, SNAP_SOFT_BETA);
         let hard_dot = dot8(&unit, &E8_ROOTS[meta.hard_idx]);
         assert!((hard_dot - meta.hard_dot).abs() < 1e-12);
         let anchor_dot = angle_dist_from_dot(meta.hard_dot);
@@ -1013,7 +1187,7 @@ mod tests {
     }
 
     #[test]
-    fn snap_soft_meta_fixed_matches_dyn() {
+    fn snap_soft_meta_matches_dyn() {
         let mut raw = [0.0; ROOT_DIM];
         for (i, val) in raw.iter_mut().enumerate() {
             *val = (i as f64 * 0.17 + 0.09).sin();
@@ -1021,13 +1195,8 @@ mod tests {
         let unit = normalize8(&raw).expect("normalize8 should succeed for test input");
         let beta = 7.25;
         for k in [1_usize, 2, 3] {
-            let fixed = match k {
-                1 => snap_soft_meta_fixed::<1>(&unit, beta),
-                2 => snap_soft_meta_fixed::<2>(&unit, beta),
-                3 => snap_soft_meta_fixed::<3>(&unit, beta),
-                _ => unreachable!("k is restricted to 1..=3 in this test"),
-            };
-            let dyn_meta = snap_soft_meta_dyn(&unit, k, beta);
+            let fixed = snap_soft_meta(&unit, E8_ROOTS.as_slice(), k, beta);
+            let dyn_meta = snap_soft_meta_dyn(&unit, E8_ROOTS.as_slice(), k, beta);
 
             assert_eq!(fixed.hard_idx, dyn_meta.hard_idx);
             assert!((fixed.hard_dot - dyn_meta.hard_dot).abs() < 1e-12);
@@ -1079,6 +1248,36 @@ mod tests {
         let u = vec![0.1; 10];
         let v = vec![0.1; 10];
         assert!(spin3_distance(&u, &v, None).is_err());
+    }
+
+    #[test]
+    fn root_set_validation_rules() {
+        let u = vec![0.1; 16];
+        let v = vec![0.2; 16];
+
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("random240"), None).is_err());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("e8"), Some(0)).is_err());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("d8"), Some(0)).is_err());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("axis16"), Some(0)).is_err());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("unknown"), None).is_err());
+
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("random240"), Some(0)).is_ok());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("e8"), None).is_ok());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("d8"), None).is_ok());
+        assert!(spin3_distance_rs(&u, &v, Some(1.0), Some("axis16"), None).is_ok());
+    }
+
+    #[test]
+    fn random240_seed_is_deterministic() {
+        let u: Vec<f64> = (0..16).map(|i| (i as f64 * 0.13).sin()).collect();
+        let v: Vec<f64> = (0..16).map(|i| (i as f64 * 0.17).cos()).collect();
+
+        let d1 = spin3_distance_rs(&u, &v, Some(1.0), Some("random240"), Some(7)).unwrap();
+        let d2 = spin3_distance_rs(&u, &v, Some(1.0), Some("random240"), Some(7)).unwrap();
+        let d3 = spin3_distance_rs(&u, &v, Some(1.0), Some("random240"), Some(8)).unwrap();
+
+        assert!((d1 - d2).abs() < 1e-12);
+        assert!((d1 - d3).abs() > 1e-9);
     }
 
     #[test]
