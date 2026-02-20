@@ -13,6 +13,10 @@ const SEMANTIC_EPS: f64 = 1e-9;
 const SNAP_SOFT_K: usize = 3;
 const SNAP_SOFT_BETA: f64 = 12.0;
 
+type RootVec = Vec<[f64; ROOT_DIM]>;
+type SharedRoots = Arc<RootVec>;
+type Random240Cache = RwLock<HashMap<u64, SharedRoots>>;
+
 pub const SPIN3_DEFAULT_K: usize = SNAP_SOFT_K;
 pub const SPIN3_DEFAULT_BETA: f64 = SNAP_SOFT_BETA;
 pub const CORE_GIT_SHA: Option<&str> = option_env!("PALE_ALE_CORE_GIT_SHA");
@@ -60,7 +64,7 @@ impl Spin3Components {
 #[derive(Clone, Debug)]
 enum RootCollection {
     Static(&'static [[f64; ROOT_DIM]]),
-    Shared(Arc<Vec<[f64; ROOT_DIM]>>),
+    Shared(SharedRoots),
 }
 
 impl RootCollection {
@@ -162,8 +166,7 @@ static AXIS16_ROOTS: Lazy<Vec<[f64; ROOT_DIM]>> = Lazy::new(|| {
     roots
 });
 
-static RANDOM240_CACHE: Lazy<RwLock<HashMap<u64, Arc<Vec<[f64; ROOT_DIM]>>>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
+static RANDOM240_CACHE: Lazy<Random240Cache> = Lazy::new(|| RwLock::new(HashMap::new()));
 
 fn splitmix64_next(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9E3779B97F4A7C15);
@@ -202,7 +205,7 @@ fn generate_random240(seed: u64) -> Vec<[f64; ROOT_DIM]> {
     roots
 }
 
-fn random240_roots(seed: u64) -> Arc<Vec<[f64; ROOT_DIM]>> {
+fn random240_roots(seed: u64) -> SharedRoots {
     if let Ok(cache) = RANDOM240_CACHE.read() {
         if let Some(existing) = cache.get(&seed) {
             return Arc::clone(existing);
