@@ -1,0 +1,12 @@
+[package]
+name = "pale-ale-rotor"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.65"
+license = "MPL-2.0"
+description = "Geometric rotor primitives for pale-ale."
+
+[dependencies]
+
+[dev-dependencies]
+approx = "0.5"
