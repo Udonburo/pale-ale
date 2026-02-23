@@ -45,4 +45,5 @@ members = [
   "crates/diagnose",
   "crates/cli",
   "crates/embed",
+  "crates/rotor",
 ]
