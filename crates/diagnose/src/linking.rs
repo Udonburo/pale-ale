@@ -303,7 +303,10 @@ pub fn evaluate_link_sanity_with_seed(
     explicitly_unrelated_sample_ids: &[u64],
     seed: u64,
 ) -> Result<LinkSanityResult, LinkSanityError> {
-    let sample_ids: Vec<u64> = sample_reports.iter().map(|report| report.sample_id).collect();
+    let sample_ids: Vec<u64> = sample_reports
+        .iter()
+        .map(|report| report.sample_id)
+        .collect();
     let selected_sample_ids = select_sanity_sample_ids(&sample_ids, seed, LINK_SANITY_K)?;
     let k_eff = selected_sample_ids.len();
 
@@ -319,7 +322,9 @@ pub fn evaluate_link_sanity_with_seed(
     let mut category_counts: BTreeMap<SanityCategory, usize> = BTreeMap::new();
 
     for sample_id in &selected_sample_ids {
-        let report = report_by_id.get(sample_id).expect("selected sample id must exist");
+        let report = report_by_id
+            .get(sample_id)
+            .expect("selected sample id must exist");
         let representative = report.top1.representative_top1();
         let (representative_ans_unit_id, selected_doc_unit_id, category, judgment) =
             match representative {
@@ -588,9 +593,7 @@ mod tests {
 
         assert_eq!(
             selected,
-            vec![
-                5, 18, 26, 25, 1, 12, 21, 17, 8, 16, 9, 4, 30, 0, 3, 10
-            ]
+            vec![5, 18, 26, 25, 1, 12, 21, 17, 8, 16, 9, 4, 30, 0, 3, 10]
         );
 
         let mut reversed = ids.clone();
@@ -654,7 +657,9 @@ mod tests {
         let mut reports: Vec<SampleLinkReport> = (0..9_u64)
             .map(|sample_id| link_report_with_top1(sample_id, 7))
             .collect();
-        reports.extend((9..16_u64).map(|sample_id| link_report_with_top1(sample_id, sample_id as u32)));
+        reports.extend(
+            (9..16_u64).map(|sample_id| link_report_with_top1(sample_id, sample_id as u32)),
+        );
 
         let sanity = evaluate_link_sanity(&reports, &[]).unwrap();
         assert!(sanity.max_share > LINK_SANITY_DOMINANT_SHARE_THRESHOLD);

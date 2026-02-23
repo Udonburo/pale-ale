@@ -12,9 +12,9 @@ pub use diagnose::{
 };
 pub use linking::{
     canonicalize_links, compute_top1_accounting, evaluate_link_sanity, CanonicalLink,
-    CanonicalizationCounters, CanonicalizedSampleLinks, LinkRow, LinkSanityError,
-    LinkSanityRecord, LinkSanityResult, SampleLinkReport, SampleLinksInput, SanityCategory,
-    SanityJudgment, Top1Accounting, Top1Step,
+    CanonicalizationCounters, CanonicalizedSampleLinks, LinkRow, LinkSanityError, LinkSanityRecord,
+    LinkSanityResult, SampleLinkReport, SampleLinksInput, SanityCategory, SanityJudgment,
+    Top1Accounting, Top1Step,
 };
 pub use measure::{
     measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
