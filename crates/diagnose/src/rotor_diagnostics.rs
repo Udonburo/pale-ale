@@ -499,12 +499,10 @@ fn compute_top1_track(
                             is_antipodal_angle_only: false,
                             is_antipodal_drop: false,
                         });
-                        debug_assert!(
-                            top1_gate_steps
-                                .last()
-                                .map(|s| s.dot.is_finite())
-                                .unwrap_or(false)
-                        );
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
                         StepSignal {
                             theta: Some(theta),
                             rotor: Some(r29),
@@ -524,12 +522,10 @@ fn compute_top1_track(
                             is_antipodal_angle_only: true,
                             is_antipodal_drop: false,
                         });
-                        debug_assert!(
-                            top1_gate_steps
-                                .last()
-                                .map(|s| s.dot.is_finite())
-                                .unwrap_or(false)
-                        );
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
                         StepSignal {
                             theta: Some(theta),
                             rotor: None,
@@ -549,12 +545,10 @@ fn compute_top1_track(
                             is_antipodal_angle_only: false,
                             is_antipodal_drop: true,
                         });
-                        debug_assert!(
-                            top1_gate_steps
-                                .last()
-                                .map(|s| s.dot.is_finite())
-                                .unwrap_or(false)
-                        );
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
                         StepSignal {
                             theta: None,
                             rotor: None,
@@ -574,12 +568,10 @@ fn compute_top1_track(
                             is_antipodal_angle_only: false,
                             is_antipodal_drop: false,
                         });
-                        debug_assert!(
-                            top1_gate_steps
-                                .last()
-                                .map(|s| s.dot.is_finite())
-                                .unwrap_or(false)
-                        );
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
                         excluded_reason = Some(ExcludedReason::RotorRenormFailure);
                         StepSignal::missing()
                     }
