@@ -1620,6 +1620,7 @@ dependencies = [
  "blake3",
  "pale-ale-core",
  "pale-ale-modelspec",
+ "pale-ale-rotor",
  "serde",
  "serde_jcs",
  "serde_json",

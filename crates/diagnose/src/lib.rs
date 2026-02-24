@@ -5,6 +5,7 @@ mod binding;
 mod diagnose;
 mod linking;
 mod measure;
+mod rotor_diagnostics;
 
 pub use binding::compute_inputs_hash;
 pub use diagnose::{
@@ -19,6 +20,14 @@ pub use linking::{
 pub use measure::{
     measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
     SentenceEmbedding,
+};
+pub use rotor_diagnostics::{
+    compute_rotor_diagnostics, AlignmentMetric, DegeneratePathRateCounts, ExcludedReason,
+    MetricField, MetricMissingReason, PlaneTurnMetric, RateMetrics, RotorDiagnosticsError,
+    RotorDiagnosticsInput, RotorDiagnosticsResult, TrackCounts, TrackDiagnostics,
+    TrimmedStabilityDiagnostics, WanderingMetric, DISTANCE_ID, EPS_DIST, EPS_NORM,
+    MAX_ANTIPODAL_DROP_RATE, METHOD_ID, MIN_PLANES, MIN_ROTORS, TAU_PLANE, TAU_WEDGE,
+    THETA_SOURCE_ID, TRIMMED_BEST_ID,
 };
 
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {
