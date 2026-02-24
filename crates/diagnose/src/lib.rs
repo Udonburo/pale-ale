@@ -6,6 +6,7 @@ mod diagnose;
 mod linking;
 mod measure;
 mod rotor_diagnostics;
+mod run_eval;
 
 pub use binding::compute_inputs_hash;
 pub use diagnose::{
@@ -24,10 +25,17 @@ pub use measure::{
 pub use rotor_diagnostics::{
     compute_rotor_diagnostics, AlignmentMetric, DegeneratePathRateCounts, ExcludedReason,
     MetricField, MetricMissingReason, PlaneTurnMetric, RateMetrics, RotorDiagnosticsError,
-    RotorDiagnosticsInput, RotorDiagnosticsResult, TrackCounts, TrackDiagnostics,
+    RotorDiagnosticsInput, RotorDiagnosticsResult, Top1GateStep, TrackCounts, TrackDiagnostics,
     TrimmedStabilityDiagnostics, WanderingMetric, DISTANCE_ID, EPS_DIST, EPS_NORM,
     MAX_ANTIPODAL_DROP_RATE, METHOD_ID, MIN_PLANES, MIN_ROTORS, TAU_PLANE, TAU_WEDGE,
     THETA_SOURCE_ID, TRIMMED_BEST_ID,
+};
+pub use run_eval::{
+    compute_run_eval, AucUndefinedReason, CollapseGateStatus, CollapseInvalidReason, Quantiles4,
+    RunEvalError, RunEvalInput, RunEvalResult, RunEvalSample, RunInvalidReason, AUC_ALGORITHM_ID,
+    COLLAPSE_RATE_ANTIPODAL_DROP_THRESHOLD, COLLAPSE_RATE_COLLINEAR_THRESHOLD,
+    PRIMARY_EXCLUSION_CEILING, QUANTILE_ID, QUANTILE_P01, QUANTILE_P50, QUANTILE_P90, QUANTILE_P99,
+    RANK_METHOD_ID,
 };
 
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {

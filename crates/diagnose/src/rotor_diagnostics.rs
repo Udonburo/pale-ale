@@ -64,8 +64,20 @@ pub struct RotorDiagnosticsResult {
     pub trimmed_best_id: String,
     pub top1: TrackDiagnostics,
     pub trimmed: TrackDiagnostics,
+    pub top1_gate_steps: Vec<Top1GateStep>,
     pub trimmed_stability: TrimmedStabilityDiagnostics,
     pub degenerate_path_rate_counts: DegeneratePathRateCounts,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Top1GateStep {
+    pub ans_unit_id: u32,
+    pub doc_unit_id: u32,
+    pub dot: f64,
+    pub wedge_norm: Option<f64>,
+    pub is_collinear: bool,
+    pub is_antipodal_angle_only: bool,
+    pub is_antipodal_drop: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -273,6 +285,7 @@ pub fn compute_rotor_diagnostics(
         distance_id: DISTANCE_ID.to_string(),
         theta_source_id: THETA_SOURCE_ID.to_string(),
         trimmed_best_id: TRIMMED_BEST_ID.to_string(),
+        top1_gate_steps: top1.top1_gate_steps,
         top1: top1.diagnostics,
         trimmed: trimmed.diagnostics,
         trimmed_stability,
@@ -431,6 +444,7 @@ struct TrackBuild {
     diagnostics: TrackDiagnostics,
     trimmed_rbar_norm_pre: Vec<f64>,
     trimmed_failure_steps: usize,
+    top1_gate_steps: Vec<Top1GateStep>,
 }
 
 fn compute_top1_track(
@@ -453,6 +467,7 @@ fn compute_top1_track(
 
     let mut steps = Vec::with_capacity(steps_total);
     let mut excluded_reason = None;
+    let mut top1_gate_steps = Vec::new();
     for step in &input.links.top1.steps {
         let signal = match *step {
             Top1Step::MissingLink { .. } => StepSignal::missing(),
@@ -461,41 +476,102 @@ fn compute_top1_track(
                 ans_unit_id,
                 doc_unit_id,
             } => {
-                let candidate = compute_candidate_signal(
-                    &vec8_summary.normalized_doc[doc_unit_id as usize],
-                    &vec8_summary.normalized_ans[ans_unit_id as usize],
-                );
+                let doc_vec8 = &vec8_summary.normalized_doc[doc_unit_id as usize];
+                let ans_vec8 = &vec8_summary.normalized_ans[ans_unit_id as usize];
+                let (dot, wedge_norm) = dot_wedge_from_normalized(doc_vec8, ans_vec8);
+                // dot is always finite: Vec8 contract rejects non-finite inputs,
+                // normalize_vec8_with_stats ensures unit norm, and dot_wedge_from_normalized
+                // clamps the inner product to [-1, 1].
+                let candidate = compute_candidate_signal(doc_vec8, ans_vec8);
                 match candidate {
                     CandidateSignal::Materialized {
                         theta,
                         r29,
                         bhat,
                         is_collinear,
-                    } => StepSignal {
-                        theta: Some(theta),
-                        rotor: Some(r29),
-                        bhat,
-                        is_collinear,
-                        antipodal_angle_only: false,
-                        antipodal_drop: false,
-                    },
-                    CandidateSignal::AntipodalAngleOnly { theta } => StepSignal {
-                        theta: Some(theta),
-                        rotor: None,
-                        bhat: None,
-                        is_collinear: false,
-                        antipodal_angle_only: true,
-                        antipodal_drop: false,
-                    },
-                    CandidateSignal::AntipodalDrop => StepSignal {
-                        theta: None,
-                        rotor: None,
-                        bhat: None,
-                        is_collinear: false,
-                        antipodal_angle_only: false,
-                        antipodal_drop: true,
-                    },
+                    } => {
+                        top1_gate_steps.push(Top1GateStep {
+                            ans_unit_id,
+                            doc_unit_id,
+                            dot,
+                            wedge_norm: Some(wedge_norm),
+                            is_collinear,
+                            is_antipodal_angle_only: false,
+                            is_antipodal_drop: false,
+                        });
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
+                        StepSignal {
+                            theta: Some(theta),
+                            rotor: Some(r29),
+                            bhat,
+                            is_collinear,
+                            antipodal_angle_only: false,
+                            antipodal_drop: false,
+                        }
+                    }
+                    CandidateSignal::AntipodalAngleOnly { theta } => {
+                        top1_gate_steps.push(Top1GateStep {
+                            ans_unit_id,
+                            doc_unit_id,
+                            dot,
+                            wedge_norm: None,
+                            is_collinear: false,
+                            is_antipodal_angle_only: true,
+                            is_antipodal_drop: false,
+                        });
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
+                        StepSignal {
+                            theta: Some(theta),
+                            rotor: None,
+                            bhat: None,
+                            is_collinear: false,
+                            antipodal_angle_only: true,
+                            antipodal_drop: false,
+                        }
+                    }
+                    CandidateSignal::AntipodalDrop => {
+                        top1_gate_steps.push(Top1GateStep {
+                            ans_unit_id,
+                            doc_unit_id,
+                            dot,
+                            wedge_norm: None,
+                            is_collinear: false,
+                            is_antipodal_angle_only: false,
+                            is_antipodal_drop: true,
+                        });
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
+                        StepSignal {
+                            theta: None,
+                            rotor: None,
+                            bhat: None,
+                            is_collinear: false,
+                            antipodal_angle_only: false,
+                            antipodal_drop: true,
+                        }
+                    }
                     CandidateSignal::RotorRenormFailure => {
+                        top1_gate_steps.push(Top1GateStep {
+                            ans_unit_id,
+                            doc_unit_id,
+                            dot,
+                            wedge_norm: Some(wedge_norm),
+                            is_collinear: false,
+                            is_antipodal_angle_only: false,
+                            is_antipodal_drop: false,
+                        });
+                        debug_assert!(top1_gate_steps
+                            .last()
+                            .map(|s| s.dot.is_finite())
+                            .unwrap_or(false));
                         excluded_reason = Some(ExcludedReason::RotorRenormFailure);
                         StepSignal::missing()
                     }
@@ -518,6 +594,7 @@ fn compute_top1_track(
         diagnostics,
         trimmed_rbar_norm_pre: Vec::new(),
         trimmed_failure_steps: 0,
+        top1_gate_steps,
     }
 }
 
@@ -635,6 +712,7 @@ fn compute_trimmed_track(
         diagnostics,
         trimmed_rbar_norm_pre,
         trimmed_failure_steps,
+        top1_gate_steps: Vec::new(),
     }
 }
 
@@ -714,6 +792,7 @@ fn build_excluded_track(
         diagnostics,
         trimmed_rbar_norm_pre: Vec::new(),
         trimmed_failure_steps: 0,
+        top1_gate_steps: Vec::new(),
     }
 }
 
@@ -1060,6 +1139,23 @@ fn trimmed_candidates(links: &[CanonicalLink]) -> &[CanonicalLink] {
     let k_eff = links.len().min(GATE1_TOPK as usize);
     let m = ((k_eff as f64) * TRIMMED_BEST_P).ceil() as usize;
     &links[..m]
+}
+
+fn dot_wedge_from_normalized(doc_vec8: &[f64; ROOT_DIM], ans_vec8: &[f64; ROOT_DIM]) -> (f64, f64) {
+    let mut dot = 0.0_f64;
+    for idx in 0..ROOT_DIM {
+        dot += doc_vec8[idx] * ans_vec8[idx];
+    }
+    let dot = dot.clamp(-1.0, 1.0);
+
+    let mut wedge_sq = 0.0_f64;
+    for i in 0..ROOT_DIM {
+        for j in (i + 1)..ROOT_DIM {
+            let coeff = (doc_vec8[i] * ans_vec8[j]) - (doc_vec8[j] * ans_vec8[i]);
+            wedge_sq += coeff * coeff;
+        }
+    }
+    (dot, wedge_sq.sqrt())
 }
 
 fn compute_candidate_signal(
