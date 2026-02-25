@@ -65,6 +65,7 @@ pub struct RotorDiagnosticsResult {
     pub top1: TrackDiagnostics,
     pub trimmed: TrackDiagnostics,
     pub top1_gate_steps: Vec<Top1GateStep>,
+    pub trimmed_rbar_norm_pre_values: Vec<f64>,
     pub trimmed_stability: TrimmedStabilityDiagnostics,
     pub degenerate_path_rate_counts: DegeneratePathRateCounts,
 }
@@ -286,6 +287,7 @@ pub fn compute_rotor_diagnostics(
         theta_source_id: THETA_SOURCE_ID.to_string(),
         trimmed_best_id: TRIMMED_BEST_ID.to_string(),
         top1_gate_steps: top1.top1_gate_steps,
+        trimmed_rbar_norm_pre_values: trimmed.trimmed_rbar_norm_pre.clone(),
         top1: top1.diagnostics,
         trimmed: trimmed.diagnostics,
         trimmed_stability,

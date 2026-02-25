@@ -26,6 +26,7 @@ pub struct RunEvalInput {
 pub struct RunEvalSample {
     pub sample_id: u64,
     pub sample_label: Option<u8>,
+    pub answer_length: Option<usize>,
     pub diagnostics: RotorDiagnosticsResult,
 }
 
@@ -329,14 +330,14 @@ fn link_sanity_invalidation(sanity: &LinkSanityResult) -> (bool, Option<RunInval
 }
 
 #[derive(Clone, Copy, Debug)]
-struct AucStats {
-    auc: Option<f64>,
-    undefined_reason: Option<AucUndefinedReason>,
-    n_pos: usize,
-    n_neg: usize,
+pub(crate) struct AucStats {
+    pub auc: Option<f64>,
+    pub undefined_reason: Option<AucUndefinedReason>,
+    pub n_pos: usize,
+    pub n_neg: usize,
 }
 
-fn compute_auc_mann_whitney(points: &[(f64, bool)]) -> AucStats {
+pub(crate) fn compute_auc_mann_whitney(points: &[(f64, bool)]) -> AucStats {
     let n_pos = points.iter().filter(|(_, is_pos)| *is_pos).count();
     let n_neg = points.len().saturating_sub(n_pos);
     if n_pos == 0 || n_neg == 0 {
@@ -386,7 +387,7 @@ fn compute_auc_mann_whitney(points: &[(f64, bool)]) -> AucStats {
     }
 }
 
-fn quantiles_for_values(values: &[f64]) -> Option<Quantiles4> {
+pub(crate) fn quantiles_for_values(values: &[f64]) -> Option<Quantiles4> {
     if values.is_empty() {
         return None;
     }
@@ -400,7 +401,7 @@ fn quantiles_for_values(values: &[f64]) -> Option<Quantiles4> {
     })
 }
 
-fn nearest_rank(sorted: &[f64], p: f64) -> f64 {
+pub(crate) fn nearest_rank(sorted: &[f64], p: f64) -> f64 {
     debug_assert!(!sorted.is_empty());
     let n = sorted.len();
     let p = p.clamp(0.0, 1.0);
@@ -415,7 +416,7 @@ fn nearest_rank(sorted: &[f64], p: f64) -> f64 {
     sorted[idx]
 }
 
-fn ratio(num: usize, den: usize) -> f64 {
+pub(crate) fn ratio(num: usize, den: usize) -> f64 {
     if den == 0 {
         0.0
     } else {
@@ -515,9 +516,11 @@ mod tests {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn sample(
         sample_id: u64,
         sample_label: Option<u8>,
+        answer_length: Option<usize>,
         top1_score: Option<f64>,
         top1_missing_reason: Option<MetricMissingReason>,
         top1_excluded_reason: Option<ExcludedReason>,
@@ -532,6 +535,7 @@ mod tests {
         RunEvalSample {
             sample_id,
             sample_label,
+            answer_length,
             diagnostics: RotorDiagnosticsResult {
                 sample_id,
                 method_id: METHOD_ID.to_string(),
@@ -541,6 +545,7 @@ mod tests {
                 top1,
                 trimmed,
                 top1_gate_steps,
+                trimmed_rbar_norm_pre_values: Vec::new(),
                 trimmed_stability: TrimmedStabilityDiagnostics {
                     trimmed_rbar_norm_pre_p50: None,
                     trimmed_rbar_norm_pre_p10: None,
@@ -589,6 +594,7 @@ mod tests {
                 sample(
                     1,
                     Some(0),
+                    Some(10),
                     Some(0.1),
                     None,
                     None,
@@ -603,6 +609,7 @@ mod tests {
                 sample(
                     2,
                     Some(1),
+                    Some(20),
                     Some(0.4),
                     None,
                     None,
@@ -617,6 +624,7 @@ mod tests {
                 sample(
                     3,
                     Some(0),
+                    Some(30),
                     Some(0.5),
                     None,
                     None,
@@ -631,6 +639,7 @@ mod tests {
                 sample(
                     4,
                     Some(1),
+                    Some(40),
                     Some(0.8),
                     None,
                     None,
@@ -667,6 +676,7 @@ mod tests {
                 sample(
                     1,
                     Some(1),
+                    Some(10),
                     Some(0.9),
                     None,
                     None,
@@ -681,6 +691,7 @@ mod tests {
                 sample(
                     2,
                     Some(0),
+                    Some(20),
                     None,
                     Some(MetricMissingReason::MissingTheta),
                     None,
@@ -731,6 +742,7 @@ mod tests {
             samples: vec![sample(
                 1,
                 Some(1),
+                Some(10),
                 Some(0.8),
                 None,
                 None,
@@ -760,6 +772,7 @@ mod tests {
             samples: vec![sample(
                 1,
                 Some(1),
+                Some(10),
                 Some(0.8),
                 None,
                 None,
@@ -789,6 +802,7 @@ mod tests {
             samples: vec![sample(
                 1,
                 Some(1),
+                Some(10),
                 Some(0.8),
                 None,
                 None,
@@ -826,6 +840,7 @@ mod tests {
                 sample(
                     1,
                     Some(1),
+                    Some(10),
                     Some(0.8),
                     None,
                     None,
@@ -840,6 +855,7 @@ mod tests {
                 sample(
                     2,
                     Some(0),
+                    Some(20),
                     None,
                     Some(MetricMissingReason::MissingTheta),
                     None,
@@ -870,6 +886,7 @@ mod tests {
                 sample(
                     1,
                     Some(1),
+                    Some(10),
                     Some(0.9),
                     None,
                     None,
@@ -884,6 +901,7 @@ mod tests {
                 sample(
                     2,
                     Some(0),
+                    Some(20),
                     Some(0.2),
                     None,
                     None,
@@ -898,6 +916,7 @@ mod tests {
                 sample(
                     3,
                     Some(1),
+                    Some(30),
                     None,
                     Some(MetricMissingReason::MissingTheta),
                     None,
@@ -912,6 +931,7 @@ mod tests {
                 sample(
                     4,
                     Some(0),
+                    Some(40),
                     Some(0.1),
                     None,
                     Some(ExcludedReason::RotorRenormFailure),
@@ -925,6 +945,7 @@ mod tests {
                 ),
                 sample(
                     5,
+                    None,
                     None,
                     Some(0.5),
                     None,
@@ -956,6 +977,7 @@ mod tests {
                 sample(
                     1,
                     Some(1),
+                    Some(10),
                     Some(0.8),
                     None,
                     None,
@@ -970,6 +992,7 @@ mod tests {
                 sample(
                     2,
                     Some(0),
+                    Some(20),
                     Some(0.2),
                     None,
                     None,
@@ -984,6 +1007,7 @@ mod tests {
                 sample(
                     3,
                     Some(1),
+                    Some(30),
                     Some(0.4),
                     None,
                     None,
@@ -1013,6 +1037,7 @@ mod tests {
                 sample(
                     1,
                     Some(1),
+                    Some(10),
                     Some(0.8),
                     None,
                     None,
@@ -1027,6 +1052,7 @@ mod tests {
                 sample(
                     2,
                     Some(0),
+                    Some(20),
                     Some(0.2),
                     None,
                     None,
