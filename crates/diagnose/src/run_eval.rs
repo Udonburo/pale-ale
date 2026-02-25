@@ -516,6 +516,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn sample(
         sample_id: u64,
         sample_label: Option<u8>,
