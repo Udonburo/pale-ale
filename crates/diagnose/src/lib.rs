@@ -2,13 +2,20 @@ use pale_ale_modelspec::ModelSpec;
 use serde::{Deserialize, Serialize};
 
 mod binding;
+mod confounds;
 mod diagnose;
 mod linking;
+mod manifest_validator;
 mod measure;
 mod rotor_diagnostics;
 mod run_eval;
+mod writer;
 
 pub use binding::compute_inputs_hash;
+pub use confounds::{
+    compute_antipodal_warning, compute_confounds, AntipodalWarningOutputs, ConfoundOutputs,
+    ConfoundStatus, RUN_WARNING_ANTIPODAL_ANGLE_ONLY_HIGH,
+};
 pub use diagnose::{
     diagnose_eval, DiagnoseResult, EvalReport, EvidenceItem, ScoresSummary, VerdictStatus,
 };
@@ -18,6 +25,7 @@ pub use linking::{
     LinkSanityResult, SampleLinkReport, SampleLinksInput, SanityCategory, SanityJudgment,
     Top1Accounting, Top1Step,
 };
+pub use manifest_validator::{validate_manifest_json, ValidationError};
 pub use measure::{
     measure_eval, EvalResult, EvalSummary, MeasureError, PairScore, SentenceEmbedder,
     SentenceEmbedding,
@@ -36,6 +44,13 @@ pub use run_eval::{
     COLLAPSE_RATE_ANTIPODAL_DROP_THRESHOLD, COLLAPSE_RATE_COLLINEAR_THRESHOLD,
     PRIMARY_EXCLUSION_CEILING, QUANTILE_ID, QUANTILE_P01, QUANTILE_P50, QUANTILE_P90, QUANTILE_P99,
     RANK_METHOD_ID,
+};
+pub use writer::{
+    write_gate1_artifacts, ArtifactPaths, Gate1WriterInput, WriteError, ANTIPODAL_POLICY_ID,
+    BIVECTOR_BASIS_ID, DETERMINISM_SCOPE, FLOAT_FORMAT_ID, LABEL_MISSING_POLICY_ID,
+    LINK_TOPK_SCHEMA_ID, METRIC_MISSING_ENUM_ID, REASON_ENUM_ID, ROTOR_CONSTRUCTION_ID,
+    SPEC_HASH_INPUT_ID, SPEC_HASH_RAW_INPUT_ID, SPEC_VERSION, STATS_ID, SUMMARY_CSV_COLUMNS_V1,
+    SUMMARY_SCHEMA_ID,
 };
 
 pub fn jcs_bytes<T: Serialize>(value: &T) -> Vec<u8> {
