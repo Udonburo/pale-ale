@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 mod binding;
 mod confounds;
 mod diagnose;
+mod gate1;
 mod linking;
 mod manifest_validator;
 mod measure;
@@ -18,6 +19,10 @@ pub use confounds::{
 };
 pub use diagnose::{
     diagnose_eval, DiagnoseResult, EvalReport, EvidenceItem, ScoresSummary, VerdictStatus,
+};
+pub use gate1::{
+    run_gate1_and_write, Gate1IdentityInput, Gate1OrchestratorError, Gate1RunInputV1,
+    Gate1RunOutput, Gate1SampleInputV1,
 };
 pub use linking::{
     canonicalize_links, compute_top1_accounting, evaluate_link_sanity, CanonicalLink,
