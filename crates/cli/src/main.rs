@@ -855,6 +855,22 @@ fn gate1_run(
             "link_sanity_md: {}",
             output.artifact_paths.link_sanity_md.display()
         );
+        println!("identity_provenance:");
+        println!("spec_hash_raw_blake3: {}", identity.spec_hash_raw_blake3);
+        println!("spec_hash_blake3: {}", identity.spec_hash_blake3);
+        println!("dataset_revision_id: {}", identity.dataset_revision_id);
+        println!("dataset_hash_blake3: {}", identity.dataset_hash_blake3);
+        println!("code_git_commit: {}", identity.code_git_commit);
+        println!("build_target_triple: {}", identity.build_target_triple);
+        println!("rustc_version: {}", identity.rustc_version);
+        println!("unitization_id: {}", identity.unitization_id);
+        println!("rotor_encoder_id: {}", identity.rotor_encoder_id);
+        println!(
+            "rotor_encoder_preproc_id: {}",
+            identity.rotor_encoder_preproc_id
+        );
+        println!("vec8_postproc_id: {}", identity.vec8_postproc_id);
+        println!("evaluation_mode_id: {}", identity.evaluation_mode_id);
     }
 
     Ok(JsonEnvelope {

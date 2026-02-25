@@ -1,6 +1,6 @@
 use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::str::contains;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
@@ -99,6 +99,103 @@ fn version_exits_zero() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn gate1_non_json_prints_identity_provenance_in_stable_order() {
+    let temp = TempDir::new().unwrap();
+    let input_path = temp.path().join("gate1.json");
+    let out_dir = temp.path().join("out");
+
+    let gate1_input = json!({
+        "run_id": "cli_gate1_fixture",
+        "explicitly_unrelated_sample_ids": [],
+        "samples": [
+            {
+                "sample_id": 1001,
+                "doc_vec8": [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
+                "ans_vec8": [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]],
+                "links_topk": [{"ans_unit_id": 0, "doc_unit_id": 0, "rank": 1}],
+                "sample_label": 1,
+                "answer_length": 12
+            }
+        ]
+    });
+    fs::write(
+        &input_path,
+        serde_json::to_string(&gate1_input).expect("serialize gate1 fixture"),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "gate1",
+            "run",
+            "--input",
+            input_path.to_str().unwrap(),
+            "--out",
+            out_dir.to_str().unwrap(),
+            "--dataset-revision-id",
+            "dataset_rev_cli",
+            "--dataset-hash-blake3",
+            "dataset_hash_cli",
+            "--spec-hash-raw-blake3",
+            "spec_raw_cli",
+            "--spec-hash-blake3",
+            "spec_lf_cli",
+            "--unitization-id",
+            "sentence_split_v1",
+            "--rotor-encoder-id",
+            "encoder@rev",
+            "--rotor-encoder-preproc-id",
+            "preproc_v1",
+            "--vec8-postproc-id",
+            "vec8_postproc_v1",
+            "--evaluation-mode",
+            "supervised_v1",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "gate1 run failed with stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    assert!(stdout.contains("identity_provenance:"));
+
+    let ordered_keys = [
+        "spec_hash_raw_blake3: spec_raw_cli",
+        "spec_hash_blake3: spec_lf_cli",
+        "dataset_revision_id: dataset_rev_cli",
+        "dataset_hash_blake3: dataset_hash_cli",
+        "code_git_commit: ",
+        "build_target_triple: ",
+        "rustc_version: ",
+        "unitization_id: sentence_split_v1",
+        "rotor_encoder_id: encoder@rev",
+        "rotor_encoder_preproc_id: preproc_v1",
+        "vec8_postproc_id: vec8_postproc_v1",
+        "evaluation_mode_id: supervised_v1",
+    ];
+
+    let mut prev_idx = 0usize;
+    for key in ordered_keys {
+        let idx = stdout
+            .find(key)
+            .unwrap_or_else(|| panic!("missing key line: {}", key));
+        assert!(
+            idx >= prev_idx,
+            "key line out of order: {} (idx {} < prev {})",
+            key,
+            idx,
+            prev_idx
+        );
+        prev_idx = idx;
+    }
 }
 
 #[test]
