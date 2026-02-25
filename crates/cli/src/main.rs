@@ -9,9 +9,10 @@ mod target_resolver;
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
     compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
-    measure_eval, measurement_hash, policy_hash, AttestationLevel, AuditTrace, AuditWarning,
-    ConfigSource, EvalReport, HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace,
-    SentenceEmbedding, VerdictStatus,
+    measure_eval, measurement_hash, policy_hash, run_gate1_and_write, AttestationLevel, AuditTrace,
+    AuditWarning, ConfigSource, EvalReport, Gate1IdentityInput, Gate1OrchestratorError,
+    HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding,
+    VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -106,6 +107,10 @@ enum Commands {
         #[arg(long)]
         out: Option<PathBuf>,
     },
+    Gate1 {
+        #[command(subcommand)]
+        command: Gate1Command,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -117,6 +122,51 @@ enum BatchFormat {
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum CalibrateMethod {
     Quantile,
+}
+
+#[derive(Subcommand, Debug)]
+enum Gate1Command {
+    Run {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        dataset_revision_id: String,
+        #[arg(long)]
+        dataset_hash_blake3: String,
+        #[arg(long)]
+        spec_hash_raw_blake3: String,
+        #[arg(long)]
+        spec_hash_blake3: String,
+        #[arg(long)]
+        unitization_id: String,
+        #[arg(long)]
+        rotor_encoder_id: String,
+        #[arg(long)]
+        rotor_encoder_preproc_id: String,
+        #[arg(long)]
+        vec8_postproc_id: String,
+        #[arg(long, value_enum)]
+        evaluation_mode: Gate1EvaluationModeArg,
+    },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum Gate1EvaluationModeArg {
+    #[value(name = "supervised_v1")]
+    SupervisedV1,
+    #[value(name = "unsupervised_v1")]
+    UnsupervisedV1,
+}
+
+impl Gate1EvaluationModeArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::SupervisedV1 => "supervised_v1",
+            Self::UnsupervisedV1 => "unsupervised_v1",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -524,6 +574,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
             },
             json,
         ),
+        Some(Commands::Gate1 { command }) => gate1(command, json),
     }
 }
 
@@ -686,6 +737,197 @@ fn doctor(offline: bool) -> Result<JsonEnvelope, AppError> {
         audit_trace: audit_trace_with_model(default_model_trace()),
         data: Some(json!({ "mode": "doctor", "offline": offline })),
     })
+}
+
+fn gate1(command: Gate1Command, json: bool) -> Result<JsonEnvelope, AppError> {
+    match command {
+        Gate1Command::Run {
+            input,
+            out,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            unitization_id,
+            rotor_encoder_id,
+            rotor_encoder_preproc_id,
+            vec8_postproc_id,
+            evaluation_mode,
+        } => gate1_run(
+            input,
+            out,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            unitization_id,
+            rotor_encoder_id,
+            rotor_encoder_preproc_id,
+            vec8_postproc_id,
+            evaluation_mode.as_str().to_string(),
+            json,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn gate1_run(
+    input: PathBuf,
+    out: PathBuf,
+    dataset_revision_id: String,
+    dataset_hash_blake3: String,
+    spec_hash_raw_blake3: String,
+    spec_hash_blake3: String,
+    unitization_id: String,
+    rotor_encoder_id: String,
+    rotor_encoder_preproc_id: String,
+    vec8_postproc_id: String,
+    evaluation_mode_id: String,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let input_bytes = fs::read(&input).map_err(|err| {
+        AppError::dependency(format!(
+            "failed to read Gate1 input JSON at {}: {}",
+            input.display(),
+            err
+        ))
+    })?;
+
+    let identity = Gate1IdentityInput {
+        spec_hash_raw_blake3,
+        spec_hash_blake3,
+        dataset_revision_id,
+        dataset_hash_blake3,
+        code_git_commit: build_git_commit(),
+        build_target_triple: build_target_triple(),
+        rustc_version: build_rustc_version(),
+        unitization_id,
+        rotor_encoder_id,
+        rotor_encoder_preproc_id,
+        vec8_postproc_id,
+        evaluation_mode_id,
+    };
+
+    let output =
+        run_gate1_and_write(&out, &input_bytes, &identity).map_err(map_gate1_orchestrator_error)?;
+
+    if !json_output {
+        println!("spec_version: {}", output.spec_version);
+        println!("run_valid: {}", output.run_eval_result.run_valid);
+        println!(
+            "run_invalid_reason: {}",
+            output
+                .run_eval_result
+                .run_invalid_reason
+                .map(run_invalid_reason_str)
+                .unwrap_or("null")
+        );
+        println!(
+            "collapse_invalid_reason: {}",
+            output
+                .run_eval_result
+                .collapse_invalid_reason
+                .map(collapse_invalid_reason_str)
+                .unwrap_or("null")
+        );
+        println!(
+            "primary_auc: {}",
+            output
+                .run_eval_result
+                .primary_auc
+                .map(|value| format!("{:.17e}", value))
+                .unwrap_or_else(|| "null".to_string())
+        );
+        println!("out_dir: {}", out.display());
+        println!(
+            "manifest_json: {}",
+            output.artifact_paths.manifest_json.display()
+        );
+        println!(
+            "summary_csv: {}",
+            output.artifact_paths.summary_csv.display()
+        );
+        println!(
+            "link_topk_csv: {}",
+            output.artifact_paths.link_topk_csv.display()
+        );
+        println!(
+            "link_sanity_md: {}",
+            output.artifact_paths.link_sanity_md.display()
+        );
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate1_run",
+            "run_id": output.run_id,
+            "spec_version": output.spec_version,
+            "run_valid": output.run_eval_result.run_valid,
+            "run_invalid_reason": output.run_eval_result.run_invalid_reason.map(run_invalid_reason_str),
+            "collapse_invalid_reason": output.run_eval_result.collapse_invalid_reason.map(collapse_invalid_reason_str),
+            "primary_auc": output.run_eval_result.primary_auc,
+            "out_dir": out.display().to_string(),
+            "artifacts": {
+                "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
+                "summary_csv": output.artifact_paths.summary_csv.display().to_string(),
+                "link_topk_csv": output.artifact_paths.link_topk_csv.display().to_string(),
+                "link_sanity_md": output.artifact_paths.link_sanity_md.display().to_string(),
+            }
+        })),
+    })
+}
+
+fn build_target_triple() -> String {
+    option_env!("TARGET")
+        .or(option_env!("VERGEN_CARGO_TARGET_TRIPLE"))
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+fn build_rustc_version() -> String {
+    option_env!("VERGEN_RUSTC_SEMVER")
+        .or(option_env!("RUSTC_VERSION"))
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+fn build_git_commit() -> String {
+    option_env!("VERGEN_GIT_SHA")
+        .or(option_env!("GIT_COMMIT"))
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+fn run_invalid_reason_str(reason: pale_ale_diagnose::RunInvalidReason) -> &'static str {
+    match reason {
+        pale_ale_diagnose::RunInvalidReason::LinkSanityFail => "link_sanity_fail",
+        pale_ale_diagnose::RunInvalidReason::RandomLikeLinkCollapse => "random_like_link_collapse",
+        pale_ale_diagnose::RunInvalidReason::DominantLinkCollapse => "dominant_link_collapse",
+        pale_ale_diagnose::RunInvalidReason::ExcessExclusionsPrimary => "excess_exclusions_primary",
+        pale_ale_diagnose::RunInvalidReason::EmptyQuantilePopulationPrimary => {
+            "empty_quantile_population_primary"
+        }
+        pale_ale_diagnose::RunInvalidReason::NoSupervisedEligibleSamples => {
+            "no_supervised_eligible_samples"
+        }
+    }
+}
+
+fn collapse_invalid_reason_str(reason: pale_ale_diagnose::CollapseInvalidReason) -> &'static str {
+    match reason {
+        pale_ale_diagnose::CollapseInvalidReason::RateCollinearExceeded => {
+            "rate_collinear_exceeded"
+        }
+        pale_ale_diagnose::CollapseInvalidReason::RateAntipodalDropExceeded => {
+            "rate_antipodal_drop_exceeded"
+        }
+        pale_ale_diagnose::CollapseInvalidReason::WedgeNormP99BelowTauWedge => {
+            "wedge_norm_p99_below_tau_wedge"
+        }
+    }
 }
 
 fn model(command: ModelCommand, offline: bool, json: bool) -> Result<JsonEnvelope, AppError> {
@@ -1186,4 +1428,101 @@ fn map_embed_error(err: EmbedError) -> AppError {
 
 fn map_measure_error(err: MeasureError) -> AppError {
     AppError::internal(format!("measurement failed: {}", err))
+}
+
+fn map_gate1_orchestrator_error(err: Gate1OrchestratorError) -> AppError {
+    match err {
+        Gate1OrchestratorError::JsonParse(parse_err) => {
+            AppError::usage(format!("invalid Gate1 JSON input: {}", parse_err))
+        }
+        Gate1OrchestratorError::InvalidVec8Dim {
+            sample_id,
+            field,
+            row_index,
+            expected,
+            actual,
+        } => AppError::usage(format!(
+            "sample {} {}[{}] has invalid dimension: expected {}, got {}",
+            sample_id, field, row_index, expected, actual
+        )),
+        Gate1OrchestratorError::NonFiniteVec8 {
+            sample_id,
+            field,
+            row_index,
+            col_index,
+            value,
+        } => AppError::usage(format!(
+            "sample {} {}[{}][{}] is non-finite: {}",
+            sample_id, field, row_index, col_index, value
+        )),
+        Gate1OrchestratorError::InvalidSampleLabel { sample_id, label } => {
+            AppError::usage(format!(
+                "sample {} has invalid sample_label {} (expected 0, 1, or null)",
+                sample_id, label
+            ))
+        }
+        Gate1OrchestratorError::LinkSanity(link_err) => {
+            AppError::internal(format!("link sanity failed: {}", link_err))
+        }
+        Gate1OrchestratorError::RotorDiagnostics(diag_err) => {
+            AppError::internal(format!("rotor diagnostics failed: {}", diag_err))
+        }
+        Gate1OrchestratorError::RunEval(eval_err) => {
+            AppError::internal(format!("run evaluation failed: {}", eval_err))
+        }
+        Gate1OrchestratorError::Write(write_err) => {
+            AppError::dependency(format!("artifact write failed: {}", write_err))
+        }
+        Gate1OrchestratorError::ManifestRead(io_err) => {
+            AppError::dependency(format!("failed to read manifest.json: {}", io_err))
+        }
+        Gate1OrchestratorError::ManifestValidation(validation_err) => AppError::dependency(
+            format!("manifest validation failed after write: {}", validation_err),
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn gate1_cli_requires_identity_flags() {
+        let parsed = Cli::try_parse_from([
+            "pale-ale", "gate1", "run", "--input", "in.json", "--out", "out",
+        ]);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn gate1_cli_invalid_json_maps_to_app_error() {
+        let tmp = tempdir().expect("tmp");
+        let input_path = tmp.path().join("bad.json");
+        let out_dir = tmp.path().join("out");
+        fs::write(&input_path, "{invalid json").expect("write");
+
+        let result = gate1(
+            Gate1Command::Run {
+                input: input_path,
+                out: out_dir,
+                dataset_revision_id: "dataset_rev".to_string(),
+                dataset_hash_blake3: "dataset_hash".to_string(),
+                spec_hash_raw_blake3: "spec_raw".to_string(),
+                spec_hash_blake3: "spec_lf".to_string(),
+                unitization_id: "sentence_split_v1".to_string(),
+                rotor_encoder_id: "encoder@rev".to_string(),
+                rotor_encoder_preproc_id: "preproc_v1".to_string(),
+                vec8_postproc_id: "vec8_postproc_v1".to_string(),
+                evaluation_mode: Gate1EvaluationModeArg::SupervisedV1,
+            },
+            true,
+        );
+
+        let err = match result {
+            Ok(_) => panic!("expected parse failure"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code, "CLI_USAGE");
+    }
 }

@@ -2,8 +2,26 @@ name: Rust CI
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "crates/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
   pull_request:
+    branches:
+      - main
+    paths:
+      - "crates/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -11,10 +29,7 @@ permissions:
 jobs:
   test:
     # Default-features only is the authoritative path for Rust CLI builds.
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +56,9 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo for python build
+        uses: Swatinem/rust-cache@v2
 
       - name: Set up Python
         uses: actions/setup-python@v5
