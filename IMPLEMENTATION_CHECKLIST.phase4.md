@@ -322,26 +322,33 @@ Checklist:
 ## 5. Artifact Contract and Smoke Acceptance
 
 ### 5.1 Required artifacts
-- [ ] `manifest.json`
-- [ ] `summary.csv`
-- [ ] `link_topk.csv`
-- [ ] `link_sanity.md`
+- [x] `manifest.json`
+- [x] `summary.csv`
+- [x] `link_topk.csv`
+- [x] `link_sanity.md`
 
 ### 5.2 Required content checks
-- [ ] manifest contains all required ids/thresholds/reason fields/accounting fields/identity fields
-- [ ] manifest contains `link_sanity_selected_sample_ids`
+- [x] manifest contains all required ids/thresholds/reason fields/accounting fields/identity fields
+- [x] manifest contains `link_sanity_selected_sample_ids`
 - [ ] manifest validator checks `auc_ties = average_rank`
-- [ ] manifest validator checks `quantiles_missing_ok` and `quantile_reference_only`
+- [x] manifest validator checks `quantiles_missing_ok` and `quantile_reference_only`
 - [ ] summary includes all required metric outputs, exclusions, metric-missing counts, diagnostics
-- [ ] `link_topk.csv` row order and `summary.csv` column order are schema-compliant (`link_topk_csv_schema_v1`, `summary_csv_schema_v1`)
-- [ ] no NaN/Inf in machine artifacts
+- [x] `link_topk.csv` row order and `summary.csv` column order are schema-compliant (`link_topk_csv_schema_v1`, `summary_csv_schema_v1`)
+- [x] no NaN/Inf in machine artifacts
 
 ### 5.3 End-to-end smoke run
-- [ ] run a tiny fixture dataset (8-32 samples)
-- [ ] verify deterministic outputs across repeated runs
+- [x] run a tiny fixture dataset (8-32 samples)
+- [x] verify deterministic outputs across repeated runs
 - [ ] verify forced invalid/warning fixtures produce expected reasons
 
 **Exit criteria:** `rotor_diagnostics_v1` runs end-to-end with deterministic, audit-complete artifacts.
+
+### 5.4 Closeout notes (post PR4c)
+- [x] Added smoke fixtures:
+  - [x] `docs/examples/gate1_smoke_tiny.json`
+  - [x] `docs/examples/gate1_smoke_sanity16.json`
+- [x] Added smoke guide: `docs/gate1_smoke.md`
+- [ ] Follow-up issue candidate: add/validate `auc_ties = average_rank` field in `manifest.json` (SSOT §10.2 / checklist §4.3, §4.6, §5.2).
 
 ---
 

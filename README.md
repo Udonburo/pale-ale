@@ -75,6 +75,8 @@ pale-ale report report_out.ndjson --filter status=HAZY --find abc123
 pale-ale calibrate report_out.ndjson --json
 ```
 
+Gate1 smoke fixtures and run guide are documented in `docs/gate1_smoke.md`.
+
 Calibration produces a copy-pastable policy snippet:
 
 ```yaml
