@@ -1,3 +1,16 @@
+mod even128;
+
+pub use even128::{
+    basis_blade_even128, blade_mul_masks, blade_sign_swapcount_popcount_v1,
+    embed_simple29_to_even128, even_index_of_mask, even_masks_v1,
+    gate1_lex_bivector_index_for_pair, gate1_lex_bivector_index_to_even128_grade2_index,
+    gate1_lex_bivector_index_to_even128_index, gate1_lex_pair_from_bivector_index,
+    grade2_index_of_mask, grade_of_mask, inner, inner_via_scalar_part,
+    left_fold_mul_time_reversed_normalize_once, mul_even128, n2, n2_sum_sq, n2_via_scalar_part,
+    normalize, reverse, scalar_part, Even128, EvenError, ALGEBRA_ID, BLADE_SIGN_ID, COMPOSITION_ID,
+    EMBED_ID, EVEN128_DIM, GRADE2_BLOCK_LEN, GRADE2_BLOCK_OFFSET, NORMALIZE_ID, REVERSE_ID,
+};
+
 pub const ROOT_DIM: usize = 8;
 pub const BIV_DIM: usize = ROOT_DIM * (ROOT_DIM - 1) / 2;
 pub const ROTOR_DIM: usize = 1 + BIV_DIM;
