@@ -1,6 +1,6 @@
-# IMPLEMENTATION_CHECKLIST.phase4.gate2.md - Gate 2 Telemetry Plan (v4.1.0-ssot.2)
+# IMPLEMENTATION_CHECKLIST.phase4.gate2.md - Gate 2 Telemetry Plan (v4.1.0-ssot.3)
 
-**Spec:** `SPEC.phase4.gate2.md v4.1.0-ssot.2`  
+**Spec:** `SPEC.phase4.gate2.md v4.1.0-ssot.3`  
 **Goal:** Even128 algebra + H1/H2/H3 telemetry (no thresholds)
 
 ---
@@ -25,7 +25,7 @@
 
 - [ ] deterministic nested loop order
 - [ ] associativity tests on many basis blades / random sparse inputs
-- [ ] **Time Arrow Test:** Verify `x2' = (R12 * R01) * ~(R12 * R01) * x0` and `x2 = R12 * (R01 * x0 * ~R01) * ~R12` match within epsilon.
+- [ ] **Time Arrow Test:** Verify `x2' = (R12 * R01) * x0 * ~(R12 * R01)` and `x2 = R12 * (R01 * x0 * ~R01) * ~R12` match within epsilon.
 
 ### 5a.4 reverse + n2 + normalize
 

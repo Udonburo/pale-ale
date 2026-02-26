@@ -2,7 +2,7 @@
 
 **Closed Algebra (Cl+(8)) -> Holonomy / Closure -> Higher-Grade Energy**  
 **SSOT Status:** **DRAFT-FROZEN CANDIDATE** (Telemetry Protocol; no thresholding in v4.1.0)  
-**Spec Version:** `v4.1.0-ssot.2`  
+**Spec Version:** `v4.1.0-ssot.3`  
 **Relation:** Gate1 SSOT remains frozen at `SPEC.phase4.md v4.0.0-ssot.9`  
 **Non-Negotiables:** determinism, auditability, no silent failure, strict gate separation
 
@@ -24,7 +24,7 @@ To preserve Gate 2 as a **telemetry protocol** (not a gate), the following are h
 
 2. **Intermediate normalization inside composition chains**
    - Composition MUST be strict left-fold without intermediate normalization.
-   - Normalization is permitted **exactly once at the end** (`strict_left_fold_normalize_once_v1`).
+   - Normalization is permitted **exactly once at the end** (`strict_left_fold_time_reversed_normalize_once_v1`).
 
 3. **H2 loop shortcut**
    - In triangle holonomy, it is forbidden to set `R20 = ~R02` or derive `R20` from an existing rotor by reuse.
@@ -153,7 +153,7 @@ To correctly apply a sequence of rotors `R_0, R_1, ..., R_{T-1}` to a vector via
 ### 6.2 Normalization timing (Must)
 
 **Normalize exactly once at the end:** `P = normalize(P_raw)`  
-**No intermediate normalization** in `v4.1.0-ssot.2`.
+**No intermediate normalization** in `v4.1.0-ssot.3`.
 
 ---
 
@@ -258,7 +258,7 @@ Gate 2 is implementation-constraining. Every run / artifact that claims Gate 2 t
 
 ### 12.1 Fixed IDs (Gate 2 core)
 
-- `spec_version = v4.1.0-ssot.2`
+- `spec_version = v4.1.0-ssot.3`
 - `method_id = rotor_holonomy_telemetry_v1`
 - `algebra_id = cl8_even128_mask_grade_order_v1`
 - `blade_sign_id = swapcount_popcount_v1`
