@@ -73,6 +73,7 @@ pub fn validate_manifest_json(bytes: &[u8]) -> Result<(), ValidationError> {
     check_fixed_string(obj, "float_format_id", "sci_17e_v1")?;
     check_fixed_string(obj, "quantile_id", "nearest_rank_total_cmp_v1")?;
     check_fixed_string(obj, "rank_method_id", "average_rank_total_cmp_v1")?;
+    check_fixed_string(obj, "auc_ties", "average_rank")?;
     check_fixed_string(obj, "auc_algorithm_id", "mann_whitney_rank_sum_v1")?;
 
     check_bool_field(obj, "quantiles_missing_ok")?;
@@ -277,6 +278,7 @@ const REQUIRED_KEYS: &[&str] = &[
     "evaluation_mode_id",
     "auc_algorithm_id",
     "rank_method_id",
+    "auc_ties",
     "stats_id",
     "label_missing_policy_id",
     "quantile_id",
@@ -443,6 +445,7 @@ mod tests {
               "evaluation_mode_id":"supervised_v1",
               "auc_algorithm_id":"mann_whitney_rank_sum_v1",
               "rank_method_id":"average_rank_total_cmp_v1",
+              "auc_ties":"average_rank",
               "stats_id":"none",
               "label_missing_policy_id":"exclude_sample_on_missing_halluc_unit_v1",
               "quantile_id":"nearest_rank_total_cmp_v1",
@@ -567,6 +570,34 @@ mod tests {
         let bytes = serde_json::to_vec(&value).expect("json");
         let err = validate_manifest_json(&bytes).expect_err("schema mismatch");
         assert!(matches!(err, ValidationError::InvalidFieldValue { .. }));
+    }
+
+    #[test]
+    fn validator_fails_on_missing_auc_ties() {
+        let mut value = valid_manifest_value();
+        value.as_object_mut().expect("obj").remove("auc_ties");
+        let bytes = serde_json::to_vec(&value).expect("json");
+        let err = validate_manifest_json(&bytes).expect_err("missing auc_ties");
+        assert_eq!(err, ValidationError::MissingField("auc_ties".to_string()));
+    }
+
+    #[test]
+    fn validator_fails_on_invalid_auc_ties_value() {
+        let mut value = valid_manifest_value();
+        value.as_object_mut().expect("obj").insert(
+            "auc_ties".to_string(),
+            Value::String("min_rank".to_string()),
+        );
+        let bytes = serde_json::to_vec(&value).expect("json");
+        let err = validate_manifest_json(&bytes).expect_err("invalid auc_ties");
+        assert_eq!(
+            err,
+            ValidationError::InvalidFieldValue {
+                field: "auc_ties".to_string(),
+                expected: "average_rank".to_string(),
+                actual: "min_rank".to_string(),
+            }
+        );
     }
 
     #[test]
