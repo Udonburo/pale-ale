@@ -5,6 +5,7 @@ mod binding;
 mod confounds;
 mod diagnose;
 mod gate1;
+mod gate2;
 mod gate2_telemetry;
 mod linking;
 mod manifest_validator;
@@ -24,6 +25,12 @@ pub use diagnose::{
 pub use gate1::{
     run_gate1_and_write, Gate1IdentityInput, Gate1OrchestratorError, Gate1RunInputV1,
     Gate1RunOutput, Gate1SampleInputV1,
+};
+pub use gate2::{
+    run_gate2_and_write, validate_gate2_manifest_json, Gate2AggregateStat, Gate2ArtifactPaths,
+    Gate2IdentityInput, Gate2ManifestValidationError, Gate2OrchestratorError, Gate2RunInputV1,
+    Gate2RunOutput, Gate2RunSummary, Gate2SampleInputV1, GATE2_SAMPLES_CSV_COLUMNS_V1,
+    GATE2_SUMMARY_CSV_COLUMNS_V1,
 };
 pub use gate2_telemetry::{
     compute_gate2_telemetry, Gate2MetricMissingReason, Gate2SampleAbortReason,
