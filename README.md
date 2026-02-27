@@ -1,197 +1,130 @@
 # pale-ale
 
-Geometric auditing engine for LLM embeddings using E8 lattice decomposition.
+**Post-hoc geometric auditing of LLM outputs via Gate1 rotor diagnostics and Gate2 Cl⁺(8) telemetry.**
 
-`pale-ale` provides deterministic, structure-aware distance metrics that complement cosine similarity.
-The workspace also includes the `pale-ale` CLI for end-to-end audit workflows (`eval`, `batch`, `report`, `calibrate`).
+pale-ale measures geometric failure signals from model outputs after inference. Gate1 computes local rotor diagnostics in `SimpleRotor29`; Gate2 upgrades to the closed even subalgebra `Cl⁺(8)` (128 dimensions) to measure composition-dependent observables — holonomy, closure error, and higher-grade energy leakage. It does not modify the model; it measures what the model has already produced.
 
-## Why This Exists
+## How It Works
 
-Cosine similarity is angle-only. It can miss block-wise structural drift that still matters for auditability.
+LLM outputs are projected into 8-dimensional blocks. For each adjacent pair of vectors, pale-ale constructs a **rotor** — the Clifford algebra element that rotates one vector into another. These rotors are then **composed** along the answer trajectory.
 
-`pale-ale` measures that drift by:
+In flat space, composing rotors around a closed loop yields the identity. When it doesn't, the residual is **holonomy** — a direct, model-agnostic measurement of geometric path-dependence in the output.
 
-- Splitting vectors into 8D blocks
-- Snapping blocks to the 240 roots of the E8 lattice
-- Comparing rotor/bivector behavior across blocks
-
-This yields a deterministic structural signal intended to complement, not replace, semantic similarity.
-
-E8 is used because in 8 dimensions it offers an exceptionally symmetric and dense lattice structure (240 minimal roots; Weyl group order 696,729,600), giving a stable anchor set for block-wise structural comparison.
-
-## Features
-
-- Deterministic E8-based structural distance
-- Zero-alloc hot path for k=1..3 and stack-only dynamic path
-- Zero-copy NumPy integration for contiguous arrays (via PyO3)
-- NaN/Inf rejection for all inputs and parameters
-- BLAKE3-verified model integrity with offline mode support
-
-## Quick Start
-
-The binary is `pale-ale` (built from the `pale-ale-cli` crate in this workspace).
-
-```bash
-# Development path (fastest iteration; no install needed)
-cargo run -p pale-ale-cli -- doctor
-cargo run -p pale-ale-cli -- model status
-cargo run -p pale-ale-cli -- eval "query" "context" "answer"
+```
+ans_0 → ans_1 → ans_2 → ... → ans_N
+  R_01     R_12     R_23
+         ↓ compose ↓
+    R_total  vs  R_direct(ans_0 → ans_N)
+         ↓ compare ↓
+       closure error (H1-B)
 ```
 
-For a release binary:
+## Gate Architecture
+
+pale-ale uses a staged **gate pipeline** — each gate measures a different geometric property, with increasing algebraic complexity.
+
+### Gate 1 — Rotor Diagnostics (v4.0.0)
+
+Operates in `SimpleRotor29` (scalar + 28 bivector components). Measures:
+
+- **AUC** over rotor-derived structural distances
+- **Linking sanity** between answer units and context
+- **Collapse / entropy gates** for degenerate outputs
+- **Run validity** with threshold-based pass/fail
 
 ```bash
-cargo build -p pale-ale-cli --release
-target/release/pale-ale doctor
-target/release/pale-ale eval "query" "context" "answer"
+pale-ale gate1 run --input gate1_input.json --out ./gate1_out \
+  --dataset-revision-id rev1 --dataset-hash-blake3 abc123 \
+  --spec-hash-raw-blake3 def456 --spec-hash-blake3 ghi789 \
+  --unitization-id sentence_split_v1 \
+  --rotor-encoder-id encoder@rev \
+  --rotor-encoder-preproc-id preproc_v1 \
+  --vec8-postproc-id postproc_v1 \
+  --evaluation-mode supervised_v1
 ```
 
-On Windows, use `target\\release\\pale-ale.exe`.
+### Gate 2 — Holonomy Telemetry (v4.1.0)
 
-If you want the launcher/TUI (`pale-ale` / `pale-ale tui`), build with:
+Upgrades representation to `Even128` — the full 128-dimensional even subalgebra Cl⁺(8). Measures composition-dependent observables that are invisible in Gate 1:
+
+| Metric | What it measures |
+|---|---|
+| **H1-B** (Closure Error) | Discrepancy between composed adjacent rotors and the direct endpoint rotor |
+| **H2** (Triangle Holonomy) | Loop closure failure for 3-step triangles — non-zero values indicate path-dependent geometry |
+| **H3** (Higher-Grade Energy) | Energy leaking into grades 4, 6, 8 after composition — measures departure from pure spin group |
 
 ```bash
-cargo build -p pale-ale-cli --features cli-tui --release
+pale-ale gate2 run --input gate2_input.json --out ./gate2_out \
+  --dataset-revision-id rev1 --dataset-hash-blake3 abc123 \
+  --spec-hash-raw-blake3 def456 --spec-hash-blake3 ghi789 \
+  --unitization-id sentence_split_v1 \
+  --rotor-encoder-id encoder@rev \
+  --rotor-encoder-preproc-id preproc_v1 \
+  --vec8-postproc-id postproc_v1 \
+  --evaluation-mode-id supervised_v1
 ```
 
-Basic commands:
+**Gate 2 is telemetry-only in v4.1.0** — it measures and records, but does not invalidate runs. Thresholding is reserved for future versions.
+
+**Output artifacts** (`manifest.json`, `summary.csv`, `samples.csv`) are deterministic: UTF-8/LF, `{:.17e}` float formatting, no NaN/Inf, stable key/column/row ordering.
+
+## Mathematical Foundation
+
+| Component | Detail |
+|---|---|
+| **Algebra** | Even subalgebra Cl⁺(8) — 128 basis blades across grades {0, 2, 4, 6, 8} |
+| **Blade sign** | Swap-count with popcount (`swapcount_popcount_v1`) |
+| **Composition** | Strict left-fold over time-reversed sequence, normalize once at end |
+| **Distance** | Projective chordal: `d = √(2(1 − min(1, |⟨R₁, R₂⟩|)))` |
+| **Determinism** | Fixed accumulation order, `total_cmp` sorting, no intermediate normalization |
+
+The composition order ensures correct temporal application: older rotors act first in the sandwich product `R x ~R`.
+
+Full specifications: [SPEC.phase4.md](SPEC.phase4.md) (Gate 1) · [SPEC.phase4.gate2.md](SPEC.phase4.gate2.md) (Gate 2)
+
+## Workspace Structure
+
+```
+crates/
+  rotor/       ← leaf math: SimpleRotor29, Even128, Cl⁺(8) algebra (no deps)
+  diagnose/    ← metrics, orchestrator, artifact writer, manifest validator
+  cli/         ← thin CLI shell (gate1 run, gate2 run, eval, batch, ...)
+  embed/       ← model loading and embedding
+  modelspec/   ← model specification and verification
+```
+
+## Additional CLI Commands
+
+Beyond gate runs, pale-ale includes tools for interactive evaluation and batch processing:
 
 ```bash
-# Environment/model health
-pale-ale doctor
-pale-ale model status
-
 # Single evaluation
 pale-ale eval "query" "context" "answer"
 
-# Batch run -> NDJSON report
+# Batch run → NDJSON report
 pale-ale batch input.ndjson --out report_out.ndjson
 
 # Report summary / filtering
 pale-ale report report_out.ndjson --summary --top 20
-pale-ale report report_out.ndjson --filter status=HAZY --find abc123
 
 # Threshold calibration from batch output
 pale-ale calibrate report_out.ndjson --json
+
+# Environment / model health
+pale-ale doctor
+pale-ale model status
 ```
-
-Gate1 smoke fixtures and run guide are documented in `docs/gate1_smoke.md`.
-
-Calibration produces a copy-pastable policy snippet:
-
-```yaml
-policy:
-  th_ratio_hazy: 1.5
-  th_ratio_delirium: 2.2
-calibration:
-  method: quantile_nearest_rank
-  hazy_q: 0.9
-  delirium_q: 0.98
-  rows_total: 100
-  rows_used: 92
-  rows_err: 8
-  min_ratio: 1.0
-  max_ratio: 4.7
-```
-
-Paste the `policy` block into your policy config and re-run `eval`/`batch` with that policy.
 
 ## Audit Binding
 
-When running with `--json`, audit-relevant fields are bound in the output envelope:
+When running with `--json`, audit fields are bound in the output envelope:
 
-- `audit_trace.hashes.inputs_hash`: binds raw eval input tuple (`query`, `context`, `answer`)
-- `audit_trace.hashes.measurement_hash`: binds measurement definition
-- `audit_trace.hashes.policy_hash`: binds verdict policy
-- `audit_trace.model.files[].blake3`: binds model artifacts to pinned hashes
+- `audit_trace.hashes.inputs_hash` — binds raw eval input
+- `audit_trace.hashes.measurement_hash` — binds measurement definition
+- `audit_trace.hashes.policy_hash` — binds verdict policy
+- `audit_trace.model.files[].blake3` — binds model artifacts to pinned hashes
 
-This makes results replayable and reviewable as audit receipts.
-
-## Batch NDJSON (Minimal)
-
-Input row (JSONL):
-
-```json
-{"id":"1","query":"...","context":"...","answer":"..."}
-```
-
-Output row (NDJSON):
-
-```json
-{"row_index":0,"id":"1","inputs_hash":"...","status":"LUCID","error":null,"data":{...},"audit_trace":{...}}
-```
-
-## Launcher + TUI
-
-```bash
-# Launcher (TTY only)
-pale-ale
-
-# Direct TUI
-pale-ale tui
-pale-ale tui ./report_out.ndjson
-pale-ale tui --target ./report_out.ndjson
-
-# Theme/compat flags
-pale-ale tui --target ./report_out.ndjson --theme classic --color auto
-pale-ale tui --target ./report_out.ndjson --theme term --color never --ascii
-pale-ale tui --target ./report_out.ndjson --theme cyber --color always
-```
-
-`TARGET` currently accepts:
-
-- run bundle directory (must include `manifest.json`)
-- `.ndjson` report file
-
-`pale-ale tui` target resolution order (when TARGET omitted):
-
-1. explicit `--target/-t` or positional `TARGET`
-2. environment variable `PALE_ALE_TARGET`
-3. state file `last_target`
-   - launcher also keeps `recent_targets` (max 5, success-only updates)
-4. CWD discovery:
-   - latest `./runs/*/manifest.json` by `mtime` desc, tie-break by path asc
-   - otherwise `./report_out.ndjson`
-5. unresolved:
-   - TTY: prompt for target input
-   - non-TTY: exit with code `20`
-
-Non-TTY rules:
-
-- `pale-ale` launcher requires TTY; otherwise exits with code `21`
-- `pale-ale tui` never prompts on non-TTY
-
-Launcher keys:
-
-- `Enter`: open detected target
-- `/`: target input mode (Esc/q to cancel)
-- `r`: recent targets
-- `t`: cycle theme (`classic -> term -> cyber`)
-- `?`: help
-- `q`: quit
-
-Launcher preview limits:
-
-- NDJSON quick preview reads at most 200 rows and 64 KiB
-- full-file scans are intentionally avoided
-
-Stable exit codes:
-
-- `20`: `TARGET_UNRESOLVED_NON_TTY`
-- `21`: `LAUNCHER_REQUIRES_TTY`
-- `22`: `TARGET_INVALID`
-
-Theme modes:
-
-- `classic`: calm dark palette with subtle accents (default)
-- `term`: terminal-respecting mode (avoids background painting where possible)
-- `cyber`: higher-contrast accents for fast scanning, without large color fills
-
-Runtime key: `t` cycles themes (`classic -> term -> cyber`).
-
-## Rust Library Usage
-
-Rust library crate naming stays `pale-ale-core` for crates.io namespace safety.
+## Rust Library
 
 ```toml
 [dependencies]
@@ -201,57 +134,44 @@ pale-ale-core = "1"
 ```rust
 use pale_ale_core::{spin3_components, spin3_struct_distance};
 
-fn main() {
-    let u = vec![0.1_f64; 8];
-    let v = vec![0.2_f64; 8];
+let u = vec![0.1_f64; 8];
+let v = vec![0.2_f64; 8];
 
-    let d_struct = spin3_struct_distance(&u, &v).unwrap();
-    let comp = spin3_components(&u, &v).unwrap();
-
-    println!("d_struct = {:.6}", d_struct);
-    println!("d_intra  = {:.6}", comp.d_intra);
-    println!("d_hct    = {:.6}", comp.d_hct);
-}
+let d = spin3_struct_distance(&u, &v).unwrap();
+let c = spin3_components(&u, &v).unwrap();
+println!("d_struct={:.6} d_intra={:.6} d_hct={:.6}", d, c.d_intra, c.d_hct);
 ```
 
-| Function | Description |
-| --- | --- |
-| `spin3_struct_distance(u, v)` | Structural-only distance (`0` = identity, `1` = maximally different) |
-| `spin3_distance(u, v, alpha)` | Semantic + structural blend. `alpha` controls mixing weight. |
-| `spin3_components(u, v)` | Detailed breakdown (intra, inter, hct, anchors) |
+## Distribution
 
-## Python Bindings
+Current canonical distribution is this monorepo (GitHub tags/releases).
 
-```bash
-pip install pale-ale
-```
-
-For best performance with NumPy, pass contiguous `float64` arrays.
-Non-contiguous arrays are safely copied internally.
-
-## Model Cache and Integrity
-
-- Model files are cached under the OS cache directory; override with `PA_MEASURE_MODEL_DIR`.
-- Offline mode (`--offline`) forbids downloads.
-- `pale-ale model print-hashes --json` prints cached BLAKE3 hashes for audit.
-- `pale-ale model clear-cache --yes` removes only the pinned model revision cache.
+- CLI: build from source (`cargo build -p pale-ale-cli --release`)
+- Rust crates in this workspace: use Cargo path dependencies or published crate versions as applicable
+- Legacy PyPI packages are pre-monorepo artifacts and retained for reference only (not the current release channel)
 
 ## Constraints
 
 - Vector length must be a multiple of 8
-- Inputs must be finite `f64` (`float64` in Python)
-- `alpha` must be finite
+- All inputs must be finite `f64`
+- Determinism is a hard requirement: identical inputs always produce identical outputs
 
-For the full CLI contract, output schema, and measurement details, see [SPEC.public.md](SPEC.public.md).
+## Building
 
-## MSRV
+```bash
+cargo build -p pale-ale-cli --release
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+```
 
-Rust 1.65+
+MSRV: Rust 1.65+
 
 ## Roadmap
 
-The project is preparing a technical whitepaper on geometric auditing with E8 lattices.
+- **v4.1.1+**: Threshold calibration for Gate 2 observables
+- **v4.2+**: Gate 3 — topological features (persistent homology)
+- **v4.3+**: Gate 4–5 — conformal fusion, integrated audit pipeline
 
 ## License
 
-Licensed under the Mozilla Public License 2.0. See [LICENSE](LICENSE) for details.
+Licensed under the [Mozilla Public License 2.0](LICENSE).
