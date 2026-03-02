@@ -7,6 +7,7 @@ mod diagnose;
 mod gate1;
 mod gate2;
 mod gate2_telemetry;
+mod gate3;
 mod gate3_telemetry;
 mod linking;
 mod manifest_validator;
@@ -40,6 +41,13 @@ pub use gate2_telemetry::{
     Gate2TelemetryInput, Gate2TelemetryResult, MissingEvenRotorReason, GATE2_ANTIPODAL_POLICY_ID,
     GATE2_BIVECTOR_BASIS_ID, GATE2_METHOD_ID, GATE2_ROTOR_CONSTRUCTION_ID, GATE2_SPEC_VERSION,
     GATE2_THETA_SOURCE_ID, H3_NAME_ID,
+};
+pub use gate3::{
+    run_gate3_and_write, validate_gate3_manifest_json, Gate3AggregateStat, Gate3ArtifactPaths,
+    Gate3IdentityInput, Gate3ManifestValidationError, Gate3OrchestratorError, Gate3RunInputV1,
+    Gate3RunOutput, Gate3RunSummary, Gate3SampleInputV1, GATE3_CURVATURE_ID, GATE3_METHOD_ID,
+    GATE3_SAMPLES_CSV_COLUMNS_V1, GATE3_SPEC_VERSION, GATE3_SUMMARY_CSV_COLUMNS_V1,
+    GATE3_TORSION_ID,
 };
 pub use gate3_telemetry::{
     compute_gate3_telemetry, Gate3MissingReason, Gate3SampleTelemetry, Gate3TelemetryInput,

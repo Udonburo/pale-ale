@@ -1,7 +1,7 @@
 # IMPLEMENTATION_CHECKLIST.phase4.gate3.md
 
 **Spec:** `SPEC.phase4.gate3.md v4.2.0-draft.1`  
-**Scope in this file:** PR6a (compute-only)
+**Scope in this file:** PR6a + PR6b
 
 ## PR6a -- Gate3 compute-only telemetry
 
@@ -19,3 +19,33 @@
   - [x] smooth vs kink sensitivity
   - [x] bitwise determinism (`to_bits`)
 - [x] Re-export minimal Gate3 compute API from `crates/diagnose/src/lib.rs`.
+
+## PR6b -- Gate3 run orchestration + artifacts + CLI
+
+- [x] Add `crates/diagnose/src/gate3.rs` with compute orchestration entrypoint:
+  - [x] `run_gate3_and_write(...)`
+  - [x] deterministic sample processing order (`sample_id ASC`, then input order)
+- [x] Implement Gate3 machine artifacts:
+  - [x] `manifest.json` (deterministic key order)
+  - [x] `summary.csv` (single row, fixed schema)
+  - [x] `samples.csv` (per sample, fixed schema)
+- [x] Add lightweight Gate3 manifest validator:
+  - [x] required key checks
+  - [x] fixed ID checks
+  - [x] sci_17e float string checks
+  - [x] forbidden token checks (`NaN` / `Inf`)
+- [x] Re-export Gate3 run API from `crates/diagnose/src/lib.rs`.
+- [x] Add CLI wiring (`pale-ale gate3 run`) in `crates/cli/src/main.rs`:
+  - [x] required identity flags
+  - [x] thin wrapper over diagnose orchestrator
+  - [x] JSON envelope + non-JSON summary output
+- [x] Add smoke tooling:
+  - [x] `tools/run_gate3_smoke.ps1`
+  - [x] `tools/README_smoke_gate3.md`
+  - [x] determinism hash checks (A/B)
+  - [x] smooth vs kink comparison output
+- [x] Tests/quality gates:
+  - [x] `cargo test -p pale-ale-diagnose`
+  - [x] `cargo test -p pale-ale-cli`
+  - [x] `cargo test --workspace`
+  - [x] `cargo clippy --workspace --all-targets -- -D warnings`
