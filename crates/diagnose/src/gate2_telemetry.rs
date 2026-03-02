@@ -1,9 +1,9 @@
 use crate::metrics_common::{higher_grade_energy_ratio, projective_chordal_distance};
 use pale_ale_rotor::{
-    embed_simple29_to_even128, inner,
-    left_fold_mul_time_reversed_normalize_once, mul_even128, normalize, normalize_vec8,
-    simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig, RotorError, RotorStep, ALGEBRA_ID,
-    BLADE_SIGN_ID, COMPOSITION_ID, EMBED_ID, NORMALIZE_ID, REVERSE_ID, ROOT_DIM,
+    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once, mul_even128,
+    normalize, normalize_vec8, simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig,
+    RotorError, RotorStep, ALGEBRA_ID, BLADE_SIGN_ID, COMPOSITION_ID, EMBED_ID, NORMALIZE_ID,
+    REVERSE_ID, ROOT_DIM,
 };
 use std::collections::BTreeMap;
 use std::fmt;

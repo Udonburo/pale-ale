@@ -57,7 +57,15 @@ pub fn compute_gate3_telemetry(input: &Gate3TelemetryInput) -> Gate3SampleTeleme
     let ans_rows = match validate_and_convert_ans_vec8(&input.ans_vec8) {
         Ok(rows) => rows,
         Err(reason) => {
-            return missing_telemetry(input, count_steps_total, count_rotors_total, 0, 0, 0, reason);
+            return missing_telemetry(
+                input,
+                count_steps_total,
+                count_rotors_total,
+                0,
+                0,
+                0,
+                reason,
+            );
         }
     };
 
@@ -162,7 +170,9 @@ pub fn compute_gate3_telemetry(input: &Gate3TelemetryInput) -> Gate3SampleTeleme
     }
 }
 
-fn validate_and_convert_ans_vec8(rows: &[Vec<f64>]) -> Result<Vec<[f64; ROOT_DIM]>, Gate3MissingReason> {
+fn validate_and_convert_ans_vec8(
+    rows: &[Vec<f64>],
+) -> Result<Vec<[f64; ROOT_DIM]>, Gate3MissingReason> {
     let mut converted = Vec::with_capacity(rows.len());
     for row in rows {
         if row.len() != ROOT_DIM {
@@ -379,21 +389,22 @@ mod tests {
             answer_length: Some(4),
         };
         let out_nan = compute_gate3_telemetry(&input_nan);
-        assert_eq!(out_nan.missing_reason, Some(Gate3MissingReason::InvalidVec8));
+        assert_eq!(
+            out_nan.missing_reason,
+            Some(Gate3MissingReason::InvalidVec8)
+        );
 
         let input_dim = Gate3TelemetryInput {
             sample_id: 3,
-            ans_vec8: vec![
-                e(0),
-                vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                e(1),
-                e(2),
-            ],
+            ans_vec8: vec![e(0), vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], e(1), e(2)],
             sample_label: Some(0),
             answer_length: Some(4),
         };
         let out_dim = compute_gate3_telemetry(&input_dim);
-        assert_eq!(out_dim.missing_reason, Some(Gate3MissingReason::InvalidVec8));
+        assert_eq!(
+            out_dim.missing_reason,
+            Some(Gate3MissingReason::InvalidVec8)
+        );
     }
 
     #[test]
