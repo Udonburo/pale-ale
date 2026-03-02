@@ -10,9 +10,10 @@ use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
     compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
     measure_eval, measurement_hash, policy_hash, run_gate1_and_write, run_gate2_and_write,
-    AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport, Gate1IdentityInput,
-    Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError, HashesTrace, MeasureError,
-    MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding, VerdictStatus,
+    run_gate3_and_write, AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport,
+    Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError,
+    Gate3IdentityInput, Gate3OrchestratorError, HashesTrace, MeasureError, MeasurementConfig,
+    ModelFile, ModelTrace, SentenceEmbedding, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -115,6 +116,10 @@ enum Commands {
         #[command(subcommand)]
         command: Gate2Command,
     },
+    Gate3 {
+        #[command(subcommand)]
+        command: Gate3Command,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -184,6 +189,34 @@ enum Gate2Command {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum Gate3Command {
+    Run {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        dataset_revision_id: String,
+        #[arg(long)]
+        dataset_hash_blake3: String,
+        #[arg(long)]
+        spec_hash_raw_blake3: String,
+        #[arg(long)]
+        spec_hash_blake3: String,
+        #[arg(long)]
+        unitization_id: String,
+        #[arg(long)]
+        rotor_encoder_id: String,
+        #[arg(long)]
+        rotor_encoder_preproc_id: String,
+        #[arg(long)]
+        vec8_postproc_id: String,
+        #[arg(long, value_enum)]
+        evaluation_mode_id: Gate3EvaluationModeArg,
+    },
+}
+
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum Gate1EvaluationModeArg {
     #[value(name = "supervised_v1")]
@@ -210,6 +243,23 @@ enum Gate2EvaluationModeArg {
 }
 
 impl Gate2EvaluationModeArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::SupervisedV1 => "supervised_v1",
+            Self::UnsupervisedV1 => "unsupervised_v1",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum Gate3EvaluationModeArg {
+    #[value(name = "supervised_v1")]
+    SupervisedV1,
+    #[value(name = "unsupervised_v1")]
+    UnsupervisedV1,
+}
+
+impl Gate3EvaluationModeArg {
     fn as_str(self) -> &'static str {
         match self {
             Self::SupervisedV1 => "supervised_v1",
@@ -625,6 +675,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
         ),
         Some(Commands::Gate1 { command }) => gate1(command, json),
         Some(Commands::Gate2 { command }) => gate2(command, json),
+        Some(Commands::Gate3 { command }) => gate3(command, json),
     }
 }
 
@@ -1098,6 +1149,151 @@ fn gate2_run(
             "h2_mean": output.summary.h2.map(|stats| stats.mean),
             "h3_total_mean": output.summary.h3_total.map(|stats| stats.mean),
             "h3_loop_mean": output.summary.h3_loop.map(|stats| stats.mean),
+            "artifacts": {
+                "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
+                "summary_csv": output.artifact_paths.summary_csv.display().to_string(),
+                "samples_csv": output.artifact_paths.samples_csv.display().to_string(),
+            }
+        })),
+    })
+}
+
+fn gate3(command: Gate3Command, json: bool) -> Result<JsonEnvelope, AppError> {
+    match command {
+        Gate3Command::Run {
+            input,
+            out,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            unitization_id,
+            rotor_encoder_id,
+            rotor_encoder_preproc_id,
+            vec8_postproc_id,
+            evaluation_mode_id,
+        } => gate3_run(
+            input,
+            out,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            unitization_id,
+            rotor_encoder_id,
+            rotor_encoder_preproc_id,
+            vec8_postproc_id,
+            evaluation_mode_id.as_str().to_string(),
+            json,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn gate3_run(
+    input: PathBuf,
+    out: PathBuf,
+    dataset_revision_id: String,
+    dataset_hash_blake3: String,
+    spec_hash_raw_blake3: String,
+    spec_hash_blake3: String,
+    unitization_id: String,
+    rotor_encoder_id: String,
+    rotor_encoder_preproc_id: String,
+    vec8_postproc_id: String,
+    evaluation_mode_id: String,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let input_bytes = fs::read(&input).map_err(|err| {
+        AppError::dependency(format!(
+            "failed to read Gate3 input JSON at {}: {}",
+            input.display(),
+            err
+        ))
+    })?;
+
+    let identity = Gate3IdentityInput {
+        dataset_revision_id,
+        dataset_hash_blake3,
+        spec_hash_raw_blake3,
+        spec_hash_blake3,
+        unitization_id,
+        rotor_encoder_id,
+        rotor_encoder_preproc_id,
+        vec8_postproc_id,
+        evaluation_mode_id,
+        code_git_commit: build_git_commit(),
+        build_target_triple: build_target_triple(),
+        rustc_version: build_rustc_version(),
+    };
+
+    let output =
+        run_gate3_and_write(&out, &input_bytes, &identity).map_err(map_gate3_orchestrator_error)?;
+
+    if !json_output {
+        println!("spec_version: {}", output.spec_version);
+        println!("n_samples_total: {}", output.summary.n_samples_total);
+        println!(
+            "kappa_global_mean: {}",
+            output
+                .summary
+                .kappa_global
+                .map(|stats| format!("{:.17e}", stats.mean))
+                .unwrap_or_else(|| "null".to_string())
+        );
+        println!(
+            "tau_global_mean: {}",
+            output
+                .summary
+                .tau_global
+                .map(|stats| format!("{:.17e}", stats.mean))
+                .unwrap_or_else(|| "null".to_string())
+        );
+        println!("out_dir: {}", out.display());
+        println!(
+            "manifest_json: {}",
+            output.artifact_paths.manifest_json.display()
+        );
+        println!(
+            "summary_csv: {}",
+            output.artifact_paths.summary_csv.display()
+        );
+        println!(
+            "samples_csv: {}",
+            output.artifact_paths.samples_csv.display()
+        );
+        println!("identity_provenance:");
+        println!("spec_hash_raw_blake3: {}", identity.spec_hash_raw_blake3);
+        println!("spec_hash_blake3: {}", identity.spec_hash_blake3);
+        println!("dataset_revision_id: {}", identity.dataset_revision_id);
+        println!("dataset_hash_blake3: {}", identity.dataset_hash_blake3);
+        println!("code_git_commit: {}", identity.code_git_commit);
+        println!("build_target_triple: {}", identity.build_target_triple);
+        println!("rustc_version: {}", identity.rustc_version);
+        println!("unitization_id: {}", identity.unitization_id);
+        println!("rotor_encoder_id: {}", identity.rotor_encoder_id);
+        println!(
+            "rotor_encoder_preproc_id: {}",
+            identity.rotor_encoder_preproc_id
+        );
+        println!("vec8_postproc_id: {}", identity.vec8_postproc_id);
+        println!("evaluation_mode_id: {}", identity.evaluation_mode_id);
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate3_run",
+            "run_id": output.run_id,
+            "spec_version": output.spec_version,
+            "n_samples_total": output.summary.n_samples_total,
+            "n_samples_valid": output.summary.n_samples_valid,
+            "n_samples_missing": output.summary.n_samples_missing,
+            "kappa_global_mean": output.summary.kappa_global.map(|stats| stats.mean),
+            "tau_global_mean": output.summary.tau_global.map(|stats| stats.mean),
+            "out_dir": out.display().to_string(),
             "artifacts": {
                 "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
                 "summary_csv": output.artifact_paths.summary_csv.display().to_string(),
@@ -1765,6 +1961,44 @@ fn map_gate2_orchestrator_error(err: Gate2OrchestratorError) -> AppError {
     }
 }
 
+fn map_gate3_orchestrator_error(err: Gate3OrchestratorError) -> AppError {
+    match err {
+        Gate3OrchestratorError::JsonParse(parse_err) => {
+            AppError::usage(format!("invalid Gate3 JSON input: {}", parse_err))
+        }
+        Gate3OrchestratorError::InvalidSampleLabel { sample_id, label } => {
+            AppError::usage(format!(
+                "sample {} has invalid sample_label {} (expected 0, 1, or null)",
+                sample_id, label
+            ))
+        }
+        Gate3OrchestratorError::InvalidEvaluationMode(value) => AppError::usage(format!(
+            "invalid evaluation_mode_id '{}': expected supervised_v1 or unsupervised_v1",
+            value
+        )),
+        Gate3OrchestratorError::InvalidFloat { field, value } => AppError::internal(format!(
+            "Gate3 produced non-finite float for {}: {}",
+            field, value
+        )),
+        Gate3OrchestratorError::Io(io_err) => {
+            AppError::dependency(format!("Gate3 artifact I/O failed: {}", io_err))
+        }
+        Gate3OrchestratorError::JsonWrite(json_err) => {
+            AppError::dependency(format!("Gate3 JSON serialization failed: {}", json_err))
+        }
+        Gate3OrchestratorError::ManifestRead(io_err) => AppError::dependency(format!(
+            "failed to read Gate3 manifest.json after write: {}",
+            io_err
+        )),
+        Gate3OrchestratorError::ManifestValidation(validation_err) => {
+            AppError::dependency(format!(
+                "Gate3 manifest validation failed after write: {}",
+                validation_err
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1837,6 +2071,45 @@ mod tests {
                 rotor_encoder_preproc_id: "preproc_v1".to_string(),
                 vec8_postproc_id: "vec8_postproc_v1".to_string(),
                 evaluation_mode_id: Gate2EvaluationModeArg::SupervisedV1,
+            },
+            true,
+        );
+
+        let err = match result {
+            Ok(_) => panic!("expected parse failure"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code, "CLI_USAGE");
+    }
+
+    #[test]
+    fn gate3_cli_requires_identity_flags() {
+        let parsed = Cli::try_parse_from([
+            "pale-ale", "gate3", "run", "--input", "in.json", "--out", "out",
+        ]);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn gate3_cli_invalid_json_maps_to_app_error() {
+        let tmp = tempdir().expect("tmp");
+        let input_path = tmp.path().join("bad.json");
+        let out_dir = tmp.path().join("out");
+        fs::write(&input_path, "{invalid json").expect("write");
+
+        let result = gate3(
+            Gate3Command::Run {
+                input: input_path,
+                out: out_dir,
+                dataset_revision_id: "dataset_rev".to_string(),
+                dataset_hash_blake3: "dataset_hash".to_string(),
+                spec_hash_raw_blake3: "spec_raw".to_string(),
+                spec_hash_blake3: "spec_lf".to_string(),
+                unitization_id: "sentence_split_v1".to_string(),
+                rotor_encoder_id: "encoder@rev".to_string(),
+                rotor_encoder_preproc_id: "preproc_v1".to_string(),
+                vec8_postproc_id: "vec8_postproc_v1".to_string(),
+                evaluation_mode_id: Gate3EvaluationModeArg::SupervisedV1,
             },
             true,
         );
