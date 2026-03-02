@@ -1,0 +1,32 @@
+P0 Report: Gate2 smoke + invariance proof
+Date: 2026-03-02
+Execution timestamp (JST): 2026-03-02 23:16:25 +09:00
+Workspace: C:\Users\aoika\Documents\GitHub\pale-ale
+Branch: main
+Commit: f96db2bb0aa7
+OS: Microsoft Windows 11 Pro 10.0.22631 (64-bit)
+Rust: rustc 1.92.0 (ded5c06cf 2025-12-08)
+
+[1] Gate2 smoke on main
+Command:
+  .\tools\run_gate2_smoke.ps1
+Determinism (A vs B): PASS
+Artifact SHA-256 (runs/gate2_smoke_A):
+  manifest.json = 26f46347eecee122325c076b8c22eca3c4ce736fb78c9303ef1e0b6092d7d9e6
+  summary.csv   = 2e36176c2aaf4ab082c5ce228e0bc189c4dd5ba3756c290390948e83cd6fe61c
+  samples.csv   = 9383a6362857631d6cfcbbc9d42ade92c0971c2a043481e3f7450387d5be83ae
+Sensitivity (smooth vs kink): visible diffs in h1b/h2/h3 fields
+
+[2] Gate2 invariance check (pre6a vs main)
+Baseline worktree:
+  C:\Users\aoika\Documents\GitHub\pale-ale-pre6a @ d49c28c
+Baseline command:
+  .\tools\run_gate2_smoke.ps1
+Comparison:
+  main runs/gate2_smoke_A/* vs pre6a runs/gate2_smoke_A/*
+Result:
+  manifest.json match = True
+  summary.csv   match = True
+  samples.csv   match = True
+Conclusion:
+  Gate2 output is bit-identical across pre6a and current main for the smoke fixture.

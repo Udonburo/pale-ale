@@ -1,5 +1,7 @@
 # Gate2 Smoke Test
 
+This file is Gate2-specific (not Gate1).
+
 This smoke test generates synthetic Gate2 inputs and runs `pale-ale gate2 run` in three passes:
 
 - Run A: smooth trajectories
@@ -24,3 +26,5 @@ pwsh tools/run_gate2_smoke.ps1
 
 All generated JSON is UTF-8 with LF and validated before write:
 `sample_id` int, each `ans_vec8` row length 8, all values finite.
+
+Attestation summaries should be stored under `attestations/smoke/gate2/`.

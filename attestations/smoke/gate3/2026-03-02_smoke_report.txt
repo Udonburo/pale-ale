@@ -1,0 +1,26 @@
+Smoke Report: Gate3
+Date: 2026-03-02
+Execution timestamp (JST): 2026-03-02 23:16:25 +09:00
+Workspace: C:\Users\aoika\Documents\GitHub\pale-ale
+Branch: main
+Commit: f96db2bb0aa7
+OS: Microsoft Windows 11 Pro 10.0.22631 (64-bit)
+Rust: rustc 1.92.0 (ded5c06cf 2025-12-08)
+
+[1] Gate3 smoke on main
+Command:
+  .\tools\run_gate3_smoke.ps1
+Determinism (A vs B): PASS
+Artifact SHA-256 (runs/gate3_smoke_A):
+  manifest.json = 1d5c8d54c81b38bdb4cd57b4d76f136576f5559d386fc40c097264ac29f11be9
+  summary.csv   = bbbf621b9a26fd68aa0d7336fc546134e9ee74149a73cc153b4f5d519d33d57a
+  samples.csv   = c225e7fb85e8774bda8174df94f3ad84be946839172d3fa37f0906ed660cca5c
+
+[2] Sensitivity (smooth vs kink)
+Observed visible diffs in summary.csv:
+  kappa_global_mean: 5.52746520916775272e-2 -> 1.96084093938686060e-1
+  tau_global_mean:   8.23241102745530928e-39 -> 6.85295193112845846e-37
+  kappa_global_p90/max and tau_global_p90/max also increased on kink input.
+
+Conclusion:
+  Gate3 smoke passes determinism and shows expected sensitivity to synthetic kink trajectories.

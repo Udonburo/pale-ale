@@ -1,4 +1,4 @@
-﻿# Gate3 Smoke Test
+# Gate3 Smoke Test
 
 This smoke test runs Gate3 telemetry end-to-end on synthetic trajectories.
 
@@ -20,3 +20,5 @@ pwsh tools/run_gate3_smoke.ps1
   - `summary.csv`
   - `samples.csv`
 - Smooth vs kink comparison table shows visible numeric differences in tau-related fields.
+
+Attestation summaries should be stored under `attestations/smoke/gate3/`.
