@@ -32,3 +32,8 @@ SPEC.*.local.md
 # Data files
 *.jsonl
 *.ndjson
+
+# Gate2/Gate3 smoke outputs (generated)
+data/
+runs/
+tmp/
