@@ -1,8 +1,9 @@
+use crate::metrics_common::{higher_grade_energy_ratio, projective_chordal_distance};
 use pale_ale_rotor::{
-    embed_simple29_to_even128, even_masks_v1, grade_of_mask, inner,
-    left_fold_mul_time_reversed_normalize_once, mul_even128, normalize, normalize_vec8,
-    simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig, RotorError, RotorStep, ALGEBRA_ID,
-    BLADE_SIGN_ID, COMPOSITION_ID, EMBED_ID, NORMALIZE_ID, REVERSE_ID, ROOT_DIM,
+    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once, mul_even128,
+    normalize, normalize_vec8, simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig,
+    RotorError, RotorStep, ALGEBRA_ID, BLADE_SIGN_ID, COMPOSITION_ID, EMBED_ID, NORMALIZE_ID,
+    REVERSE_ID, ROOT_DIM,
 };
 use std::collections::BTreeMap;
 use std::fmt;
@@ -365,31 +366,6 @@ fn left_fold_time_reversed_raw(rotors_time_order: &[Even128]) -> Option<Even128>
         acc = mul_even128(&acc, rotor);
     }
     Some(acc)
-}
-
-fn projective_chordal_distance(left: &Even128, right: &Even128) -> f64 {
-    let inn = inner(left, right);
-    let a = inn.abs().min(1.0);
-    (2.0 * (1.0 - a)).max(0.0).sqrt()
-}
-
-fn higher_grade_energy_ratio(raw: &Even128) -> f64 {
-    let masks = even_masks_v1();
-    let mut e_total = 0.0;
-    let mut e_high = 0.0;
-    for (idx, &coeff) in raw.coeffs.iter().enumerate() {
-        let energy = coeff * coeff;
-        e_total += energy;
-        let grade = grade_of_mask(masks[idx]);
-        if grade >= 4 {
-            e_high += energy;
-        }
-    }
-    if e_total > 0.0 {
-        e_high / e_total
-    } else {
-        0.0
-    }
 }
 
 fn stat_triple(values: &[f64]) -> Gate2StatTriple {
