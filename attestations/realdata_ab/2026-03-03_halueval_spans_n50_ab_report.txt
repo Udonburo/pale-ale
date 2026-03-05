@@ -1,0 +1,97 @@
+realdata_ab_report_date=2026-03-03
+git_commit_sha=f0e577e8d0fb20da3870b300e3adefbb3955eb4d
+input_jsonl=data/realdata/halueval_spans_train.jsonl
+n_samples_requested=50
+n_samples_written=50
+dataset_revision_id=halueval-spans_train_main
+unitization_id=sentence_split_v1
+vec8_postproc_id_E0=chunk_sequential_48x8_v1
+vec8_postproc_id_E1=gaussian_proj_d8_seed7_v1
+vec8_postproc_matrix_hash_sha256_E1=cad29157b616784f3d4a8439f443e04bd5a7773c17201e7e03862584e9e50dd7
+determinism_e0_gate3_pass=True
+label_count_0=7
+label_count_1=43
+label_count_null=0
+hf_provenance_path=data\realdata\hf_halueval_provenance.json
+hf_provenance_sha256=4ad5bcf6efb426c28ea2823a11aa6c0696f1ea9dcbda42216b3ec6ac3b2da103
+artifact_path_e0_gate2=runs\realdata_E0_gate2
+artifact_path_e0_gate3=runs\realdata_E0_gate3
+artifact_path_e1_gate2=runs\realdata_E1_gate2
+artifact_path_e1_gate3=runs\realdata_E1_gate3
+
+===== HF provenance =====
+{
+  "repo_id": "llm-semantic-router/halueval-spans",
+  "split": "train",
+  "revision_requested": "main",
+  "revision_resolved_sha": "5682bcde1bd32453df1595b43cf844ecff3f2380",
+  "revision_resolved_note": null,
+  "n_rows_written": 1000,
+  "timestamp": "2026-03-03T05:42:28Z",
+  "datasets_version": "4.5.0",
+  "columns": [
+    "prompt",
+    "answer",
+    "labels",
+    "split",
+    "task_type",
+    "dataset",
+    "language"
+  ],
+  "answer_field": "answer",
+  "labels_field": "labels",
+  "seed": 42,
+  "selection_strategy": "first_n_dataset_order",
+  "output_jsonl": "data/realdata/halueval_spans_train.jsonl"
+}
+
+===== Gate2 E0 summary.csv =====
+spec_version,method_id,composition_id,dataset_revision_id,code_git_commit,build_target_triple,rustc_version,n_samples_total,n_samples_h1b_present,n_samples_h2_present,n_samples_h3_total_present,h1b_mean,h1b_p90,h1b_max,h2_mean,h2_p90,h2_max,h3_total_mean,h3_total_p90,h3_total_max,h3_loop_mean,h3_loop_p90,h3_loop_max
+v4.1.0-ssot.3,rotor_holonomy_telemetry_v1,strict_left_fold_time_reversed_normalize_once_v1,halueval-spans_train_main,unknown,unknown,unknown,50,50,50,50,1.37154946051877480e0,1.40256117238615419e0,1.41234720675424774e0,1.10111206560659247e0,1.15255777355587630e0,1.17821512746248724e0,7.70586129027359568e-1,9.02674143499702653e-1,9.73342547131639146e-1,9.34519149697153905e-33,1.06130941136771783e-32,1.13932350054385531e-32
+
+===== Gate2 E1 summary.csv =====
+spec_version,method_id,composition_id,dataset_revision_id,code_git_commit,build_target_triple,rustc_version,n_samples_total,n_samples_h1b_present,n_samples_h2_present,n_samples_h3_total_present,h1b_mean,h1b_p90,h1b_max,h2_mean,h2_p90,h2_max,h3_total_mean,h3_total_p90,h3_total_max,h3_loop_mean,h3_loop_p90,h3_loop_max
+v4.1.0-ssot.3,rotor_holonomy_telemetry_v1,strict_left_fold_time_reversed_normalize_once_v1,halueval-spans_train_main,unknown,unknown,unknown,50,50,50,50,9.14149249200254976e-1,1.30714526429359146e0,1.41323596719510625e0,8.77645584588411687e-1,1.32261594222710155e0,1.41323596719510625e0,4.04460894398717755e-2,1.52293857237921937e-1,3.23210879728523914e-1,5.74467479108800639e-33,9.41001148122494080e-33,2.97975638085326586e-32
+
+===== Gate3 E0 summary.csv =====
+run_id,n_samples_total,n_samples_valid,n_samples_missing,kappa_count_total,tau_count_total,kappa_global_mean,kappa_global_p90,kappa_global_max,tau_global_mean,tau_global_p90,tau_global_max
+realdata_E0_chunk,50,50,0,2300,2300,9.83512459977202380e-1,1.03573951822681720e0,1.06541223118777073e0,2.62658216881640502e-33,3.23708743796850795e-33,3.56571287990628860e-33
+
+===== Gate3 E1 summary.csv =====
+run_id,n_samples_total,n_samples_valid,n_samples_missing,kappa_count_total,tau_count_total,kappa_global_mean,kappa_global_p90,kappa_global_max,tau_global_mean,tau_global_p90,tau_global_max
+realdata_E1_proj,50,21,29,54,54,9.20663829894775687e-1,1.12697033045340733e0,1.36403205671495309e0,1.54307341660417826e-33,2.39707840070009327e-33,7.05963262727082321e-33
+
+===== ab_meta.json =====
+{
+  "input_jsonl": "data/realdata/halueval_spans_train.jsonl",
+  "fallback_dataset_created": false,
+  "n_samples_requested": 50,
+  "n_samples_written": 50,
+  "seed": 7,
+  "max_units": 24,
+  "unitization_id": "sentence_split_v1",
+  "embedding_backend_id": "minilm_all_MiniLM_L6_v2_384d_v1",
+  "embedding_model_name": "all-MiniLM-L6-v2",
+  "vec8_methods": {
+    "E0": {
+      "vec8_postproc_id": "chunk_sequential_48x8_v1",
+      "vec8_postproc_aggregate": "mean_then_chunk",
+      "steps_per_sample": 48
+    },
+    "E1": {
+      "vec8_postproc_id": "gaussian_proj_d8_seed7_v1",
+      "projection_seed": 7,
+      "vec8_postproc_matrix_hash_sha256": "cad29157b616784f3d4a8439f443e04bd5a7773c17201e7e03862584e9e50dd7",
+      "steps_per_sample": "unit_count"
+    }
+  },
+  "unit_count_stats": {
+    "min": 3,
+    "max": 7,
+    "mean": 3.66
+  },
+  "outputs": {
+    "e0_input_json": "data/realdata/out_E0_chunk.json",
+    "e1_input_json": "data/realdata/out_E1_proj.json"
+  }
+}

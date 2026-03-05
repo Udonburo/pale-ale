@@ -1,0 +1,56 @@
+date=2026-03-05
+ndjson_path=runs/triality_batch_holdout/hf14/triplets.ndjson
+labels_jsonl_path=runs/triality_batch_holdout/hf14/labels.jsonl
+labels_meta_json_path=runs/triality_batch_holdout/hf14/labels_meta.json
+ndjson_sha256=20458f0b1a643a8eb57366aaaba33f7ac83ebee2cadc080732fe9e8f89b13869
+labels_sha256=7dbcba98d03db7e78439dc5bf6e58873ea8d4b6dc5658fec704cab235325cc6b
+model_id=Qwen/Qwen2.5-1.5B
+model_revision=8faed761d45a263340a0528343f099c05c9a4323
+seed=7
+perm_R=2000
+transition_label_mode=max_pair
+primary_score_key=E
+primary_score_name=E:V_Sminus_Vnext
+min_label_coverage=0.3
+label_alignment_coverage_ratio=1.00000000000000000e+00
+label_coverage_gate_pass=True
+
+thresholds:
+  GO_MAX_P_EMP=0.05
+  GO_MIN_DELTA_AUPRC=0.02
+  GO_MIN_PRIMARY_AUPRC=0.15
+
+label_input_stats:
+  assigned_steps=53
+  ignored_rows=0
+  input_rows=53
+  negative_count=49
+  point_rows=53
+  positive_count=4
+  range_rows=0
+
+best_baseline=A:-logprob
+best_baseline_auprc=3.78571428571428559e-01
+delta_auprc_primary_vs_best_baseline=-2.53257060399917522e-01
+
+per_score_metrics:
+score,n,pos,neg,auroc,auprc,delta_auprc_vs_best_baseline
+A:-logprob,53,4,49,6.22448979591836760e-01,3.78571428571428559e-01,0.00000000000000000e+00
+B:entropy,53,4,49,3.77551020408163240e-01,7.27802701486912063e-02,-3.05791158422737352e-01
+C:V_curvature,52,5,47,3.19148936170212782e-01,2.63478208159059202e-01,-1.15093220412369357e-01
+D:V_Splus_Vnext,52,5,47,2.12765957446808512e-01,9.02769835206810173e-02,-2.88294445050747528e-01
+E:V_Sminus_Vnext,52,5,47,4.97872340425531912e-01,1.25314368171511037e-01,-2.53257060399917522e-01
+F:loop_V_Splus_Sminus_V,53,4,49,4.18367346938775531e-01,7.64627529333411771e-02,-3.02108675638087409e-01
+
+primary_endpoint:
+  name=E:V_Sminus_Vnext
+  key=E
+  auprc=1.25314368171511037e-01
+  delta_vs_best_baseline=-2.53257060399917522e-01
+  perm_p_empirical=5.53723138430784578e-01
+  perm_min=6.00204060845856979e-02
+  perm_p5=7.79772684632019653e-02
+  perm_p50=1.32469935999347754e-01
+  perm_p95=3.33689643689643711e-01
+
+verdict=NO-GO
