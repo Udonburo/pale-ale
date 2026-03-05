@@ -1,0 +1,23 @@
+date=2026-03-05
+experiment=triality_holdout_primaryE
+copied_results_jsonl=attestations/triality/2026-03-05_holdout_primaryE_results.jsonl
+holdout_indices=1..50
+primary_score=E:V_Sminus_Vnext
+
+counts:
+  total_rows=50
+  status_ok=42
+  status_skip_coverage=8
+
+ok_row_stats:
+  auprc_e_mean=3.22090406359067993e-01
+  auprc_e_median=2.94555599450284145e-01
+  baseline_auprc_mean=3.59266849032945090e-01
+  delta_mean=-3.71764426738771039e-02
+  delta_median=-2.42642226305467279e-02
+  p_emp_min=6.09695152423788134e-02
+  p_emp_median=5.07496251874062887e-01
+  count_delta_ge_0p02=12
+  count_p_emp_le_0p05=0
+
+skip_coverage_indices=10,23,27,34,45,46,47,50

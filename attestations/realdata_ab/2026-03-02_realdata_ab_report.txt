@@ -1,0 +1,64 @@
+realdata_ab_report_date=2026-03-02
+git_commit_sha=f0e577e8d0fb20da3870b300e3adefbb3955eb4d
+n_samples=10
+unitization_id=sentence_split_v1
+embedding_backend_id=minilm_all_MiniLM_L6_v2_384d_v1
+vec8_postproc_id_E0=chunk_sequential_48x8_v1
+vec8_postproc_id_E1=gaussian_proj_d8_seed7_v1
+vec8_postproc_matrix_hash_sha256_E1=cad29157b616784f3d4a8439f443e04bd5a7773c17201e7e03862584e9e50dd7
+determinism_e0_gate3_pass=True
+artifact_path_e0_gate2=runs\realdata_E0_gate2
+artifact_path_e0_gate3=runs\realdata_E0_gate3
+artifact_path_e1_gate2=runs\realdata_E1_gate2
+artifact_path_e1_gate3=runs\realdata_E1_gate3
+
+===== Gate2 E0 summary.csv =====
+spec_version,method_id,composition_id,dataset_revision_id,code_git_commit,build_target_triple,rustc_version,n_samples_total,n_samples_h1b_present,n_samples_h2_present,n_samples_h3_total_present,h1b_mean,h1b_p90,h1b_max,h2_mean,h2_p90,h2_max,h3_total_mean,h3_total_p90,h3_total_max,h3_loop_mean,h3_loop_p90,h3_loop_max
+v4.1.0-ssot.3,rotor_holonomy_telemetry_v1,strict_left_fold_time_reversed_normalize_once_v1,phase3_q2_realdata_mini_v1,unknown,unknown,unknown,10,10,10,10,1.35264154111731583e0,1.38347371533112984e0,1.40147500782841150e0,1.11218032382820420e0,1.14994048203558785e0,1.16461759548674748e0,7.66569260517066864e-1,8.49981893338338623e-1,8.82200450040353856e-1,9.71017551882314764e-33,1.06321373288402035e-32,1.06425981396279375e-32
+
+===== Gate2 E1 summary.csv =====
+spec_version,method_id,composition_id,dataset_revision_id,code_git_commit,build_target_triple,rustc_version,n_samples_total,n_samples_h1b_present,n_samples_h2_present,n_samples_h3_total_present,h1b_mean,h1b_p90,h1b_max,h2_mean,h2_p90,h2_max,h3_total_mean,h3_total_p90,h3_total_max,h3_loop_mean,h3_loop_p90,h3_loop_max
+v4.1.0-ssot.3,rotor_holonomy_telemetry_v1,strict_left_fold_time_reversed_normalize_once_v1,phase3_q2_realdata_mini_v1,unknown,unknown,unknown,10,10,10,10,1.06848204458158724e0,1.29650178717343545e0,1.36761732363991007e0,1.07501751216024388e0,1.25719934187486926e0,1.26084255132012091e0,8.78595672963561891e-2,1.51308225890187581e-1,2.41672239389397248e-1,8.19542533087967375e-33,1.11904394968393080e-32,1.64614117087158698e-32
+
+===== Gate3 E0 summary.csv =====
+run_id,n_samples_total,n_samples_valid,n_samples_missing,kappa_count_total,tau_count_total,kappa_global_mean,kappa_global_p90,kappa_global_max,tau_global_mean,tau_global_p90,tau_global_max
+realdata_E0_chunk,10,10,0,460,460,1.01324111013197893e0,1.03560367781094831e0,1.04252832690408348e0,2.80797401049433563e-33,3.15304892352111879e-33,3.25452213102183075e-33
+
+===== Gate3 E1 summary.csv =====
+run_id,n_samples_total,n_samples_valid,n_samples_missing,kappa_count_total,tau_count_total,kappa_global_mean,kappa_global_p90,kappa_global_max,tau_global_mean,tau_global_p90,tau_global_max
+realdata_E1_proj,10,9,1,18,18,9.98743825273788910e-1,1.26058449843456133e0,1.26058449843456133e0,2.28696733419893620e-33,3.84838272138344168e-33,3.84838272138344168e-33
+
+===== ab_meta.json =====
+{
+  "input_jsonl": "data/realdata/phase3_q2_realdata_mini.jsonl",
+  "fallback_dataset_created": false,
+  "n_samples_requested": 20,
+  "n_samples_written": 10,
+  "seed": 7,
+  "max_units": 24,
+  "unitization_id": "sentence_split_v1",
+  "embedding_backend_id": "minilm_all_MiniLM_L6_v2_384d_v1",
+  "embedding_model_name": "all-MiniLM-L6-v2",
+  "vec8_methods": {
+    "E0": {
+      "vec8_postproc_id": "chunk_sequential_48x8_v1",
+      "vec8_postproc_aggregate": "mean_then_chunk",
+      "steps_per_sample": 48
+    },
+    "E1": {
+      "vec8_postproc_id": "gaussian_proj_d8_seed7_v1",
+      "projection_seed": 7,
+      "vec8_postproc_matrix_hash_sha256": "cad29157b616784f3d4a8439f443e04bd5a7773c17201e7e03862584e9e50dd7",
+      "steps_per_sample": "unit_count"
+    }
+  },
+  "unit_count_stats": {
+    "min": 3,
+    "max": 4,
+    "mean": 3.9
+  },
+  "outputs": {
+    "e0_input_json": "data/realdata/out_E0_chunk.json",
+    "e1_input_json": "data/realdata/out_E1_proj.json"
+  }
+}

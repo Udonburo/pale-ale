@@ -1,0 +1,10 @@
+label_count_check_date=2026-03-03
+git_commit_sha=f0e577e8d0fb20da3870b300e3adefbb3955eb4d
+input_jsonl=data/realdata/halueval_spans_train.jsonl
+label_count_command=python tools/realdata_label_utils.py "data/realdata/halueval_spans_train.jsonl"
+total_rows=1000
+count0=208
+count1=792
+countnull=0
+hf_provenance_path=data\realdata\hf_halueval_provenance.json
+hf_provenance_sha256=4ad5bcf6efb426c28ea2823a11aa6c0696f1ea9dcbda42216b3ec6ac3b2da103

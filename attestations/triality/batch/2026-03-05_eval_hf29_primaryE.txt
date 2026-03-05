@@ -1,0 +1,56 @@
+date=2026-03-05
+ndjson_path=runs/triality_batch_holdout/hf29/triplets.ndjson
+labels_jsonl_path=runs/triality_batch_holdout/hf29/labels.jsonl
+labels_meta_json_path=runs/triality_batch_holdout/hf29/labels_meta.json
+ndjson_sha256=55c3ee8311e999880b7e8c03e286d1847dbb0935f6433b499d6dedba7bbe6847
+labels_sha256=374304633facb75e14413ee329e1490a564c23d15c61e5b613b454097122f04f
+model_id=Qwen/Qwen2.5-1.5B
+model_revision=8faed761d45a263340a0528343f099c05c9a4323
+seed=7
+perm_R=2000
+transition_label_mode=max_pair
+primary_score_key=E
+primary_score_name=E:V_Sminus_Vnext
+min_label_coverage=0.3
+label_alignment_coverage_ratio=9.66666666666666674e-01
+label_coverage_gate_pass=True
+
+thresholds:
+  GO_MAX_P_EMP=0.05
+  GO_MIN_DELTA_AUPRC=0.02
+  GO_MIN_PRIMARY_AUPRC=0.15
+
+label_input_stats:
+  assigned_steps=78
+  ignored_rows=0
+  input_rows=78
+  negative_count=49
+  point_rows=78
+  positive_count=29
+  range_rows=0
+
+best_baseline=A:-logprob
+best_baseline_auprc=4.60129447371610545e-01
+delta_auprc_primary_vs_best_baseline=-1.43762808975253509e-02
+
+per_score_metrics:
+score,n,pos,neg,auroc,auprc,delta_auprc_vs_best_baseline
+A:-logprob,78,29,49,5.60872624912033824e-01,4.60129447371610545e-01,0.00000000000000000e+00
+B:entropy,78,29,49,5.34130893736805112e-01,4.42504804357487846e-01,-1.76246430141226984e-02
+C:V_curvature,77,31,46,5.33660589060308554e-01,4.65855667185652966e-01,5.72621981404242142e-03
+D:V_Splus_Vnext,77,31,46,5.00000000000000000e-01,3.92585003911271713e-01,-6.75444434603388322e-02
+E:V_Sminus_Vnext,77,31,46,4.67741935483870941e-01,4.45753166474085194e-01,-1.43762808975253509e-02
+F:loop_V_Splus_Sminus_V,78,29,49,4.57424349049964818e-01,3.46413396873010149e-01,-1.13716050498600396e-01
+
+primary_endpoint:
+  name=E:V_Sminus_Vnext
+  key=E
+  auprc=4.45753166474085194e-01
+  delta_vs_best_baseline=-1.43762808975253509e-02
+  perm_p_empirical=3.89305347326336815e-01
+  perm_min=3.10288018143317412e-01
+  perm_p5=3.51692709086528388e-01
+  perm_p50=4.27573670484078905e-01
+  perm_p95=5.34636172170087409e-01
+
+verdict=NO-GO

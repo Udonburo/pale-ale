@@ -1,0 +1,56 @@
+date=2026-03-05
+ndjson_path=runs/triality_batch_holdout/hf31/triplets.ndjson
+labels_jsonl_path=runs/triality_batch_holdout/hf31/labels.jsonl
+labels_meta_json_path=runs/triality_batch_holdout/hf31/labels_meta.json
+ndjson_sha256=2d49e2fc229a18302d91e3dfc1de5f7021e6a57d45146b777b99a9d49ae7fe89
+labels_sha256=27baaf4c7482457206cf8fd5b44fdfe185461ce7e82bd3ce5fc2282259584059
+model_id=Qwen/Qwen2.5-1.5B
+model_revision=8faed761d45a263340a0528343f099c05c9a4323
+seed=7
+perm_R=2000
+transition_label_mode=max_pair
+primary_score_key=E
+primary_score_name=E:V_Sminus_Vnext
+min_label_coverage=0.3
+label_alignment_coverage_ratio=1.00000000000000000e+00
+label_coverage_gate_pass=True
+
+thresholds:
+  GO_MAX_P_EMP=0.05
+  GO_MIN_DELTA_AUPRC=0.02
+  GO_MIN_PRIMARY_AUPRC=0.15
+
+label_input_stats:
+  assigned_steps=117
+  ignored_rows=0
+  input_rows=117
+  negative_count=102
+  point_rows=117
+  positive_count=15
+  range_rows=0
+
+best_baseline=A:-logprob
+best_baseline_auprc=2.11217004911985862e-01
+delta_auprc_primary_vs_best_baseline=2.50184704293958393e-02
+
+per_score_metrics:
+score,n,pos,neg,auroc,auprc,delta_auprc_vs_best_baseline
+A:-logprob,117,15,102,6.18300653594771266e-01,2.11217004911985862e-01,0.00000000000000000e+00
+B:entropy,117,15,102,6.00653594771241806e-01,1.72739908691444927e-01,-3.84770962205409350e-02
+C:V_curvature,116,16,100,5.05624999999999991e-01,2.17194956389012150e-01,5.97795147702628871e-03
+D:V_Splus_Vnext,116,16,100,4.71874999999999989e-01,1.40301931936555768e-01,-7.09150729754300935e-02
+E:V_Sminus_Vnext,116,16,100,6.22500000000000053e-01,2.36235475341381701e-01,2.50184704293958393e-02
+F:loop_V_Splus_Sminus_V,117,15,102,5.92810457516339873e-01,1.77132130200812032e-01,-3.40848747111738293e-02
+
+primary_endpoint:
+  name=E:V_Sminus_Vnext
+  key=E
+  auprc=2.36235475341381701e-01
+  delta_vs_best_baseline=2.50184704293958393e-02
+  perm_p_empirical=8.44577711144427756e-02
+  perm_min=9.31341660536064431e-02
+  perm_p5=1.13349315235289572e-01
+  perm_p50=1.58773278896743253e-01
+  perm_p95=2.54283108805505531e-01
+
+verdict=NO-GO
