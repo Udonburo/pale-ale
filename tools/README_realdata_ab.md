@@ -39,3 +39,7 @@ Key attestations:
 - `attestations/realdata_ab/YYYY-MM-DD_*`
 - `attestations/triality/YYYY-MM-DD_eval_hf0_teacher_forcing_primaryE.txt`
 - `attestations/triality/YYYY-MM-DD_holdout_primaryE_summary.txt`
+
+CFA (Constraint Frustration Arena):
+- See `tools/README_cfa.md` for closed-world contradiction benchmark workflow.
+- Prereg template: `docs/cfa_prereg_template.md`

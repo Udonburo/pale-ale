@@ -1,0 +1,52 @@
+date=2026-03-05
+experiment=cfa_batch_primaryE_preregistered
+primary_score=E
+seed=7
+perm_r=2000
+cfa_jsonl=data/cfa/cfa_v1.jsonl
+results_jsonl=runs/cfa_batch_primaryE/results.jsonl
+cfa_sha256=76658a4ee2230460ae7525ffc5c488fe600b1b9ae51df3cc77d1b868e874e7d2
+results_sha256=76c444794c55379a8475dd97f1d6e6784939c646ea05cf79b79878d3fb6697ab
+
+status_counts:
+  total_rows=200
+  status_ok=200
+  ok_rows=200
+  ok_rows_no_positive_imputed=100
+
+class_valid_counts:
+  consistent=100
+  frustrated=100
+
+class_descriptive_stats:
+  consistent_median_auprc_e=0.00000000000000000e+00
+  frustrated_median_auprc_e=4.18695021254729349e-01
+  consistent_median_best_baseline_auprc=0.00000000000000000e+00
+  frustrated_median_best_baseline_auprc=2.31062877842769160e-01
+  consistent_median_delta_auprc=0.00000000000000000e+00
+  frustrated_median_delta_auprc=1.79877666081394716e-01
+  consistent_mean_delta_auprc=0.00000000000000000e+00
+  frustrated_mean_delta_auprc=2.04397687503189984e-01
+
+group_contrast_on_delta_auprc:
+  direction=frustrated_minus_consistent
+  mwu_u=1.00000000000000000e+04
+  mwu_auc=1.00000000000000000e+00
+  cliffs_delta=1.00000000000000000e+00
+  empirical_p_value=4.99750124937531218e-04
+
+preregistered_gate:
+  condition_n_per_class_min_15=True
+  condition_median_delta_frustrated_ge_0.02=True
+  condition_empirical_p_lt_0.05=True
+  VERDICT=GO
+
+model_details:
+  - model_id=Qwen/Qwen2.5-1.5B revision=8faed761d45a263340a0528343f099c05c9a4323
+
+script_sha256:
+  C:/Users/aoika/Documents/GitHub/pale-ale/tools/aggregate_cfa_batch.py=f59c09fe7f03490d9e2915f5a5d86b573dddb9a4292cb167923db5d69bd3e280
+  C:/Users/aoika/Documents/GitHub/pale-ale/tools/eval_triality_token.py=efc648f44a5c5f04fcf68e95f85864f5b2bbb8436e0d1ad3e4b71790f6607cf3
+  C:/Users/aoika/Documents/GitHub/pale-ale/tools/extract_triality_triplets.py=d30c2415762aa89fb000e45dc62d5a9824500676dbd5ae94568524c38e8d0035
+  C:/Users/aoika/Documents/GitHub/pale-ale/tools/labels_from_cfa_spans.py=e9d451669334dab1dfaeebdda48d378941af50bd1c73ef5625b9f3f8c66557eb
+  C:/Users/aoika/Documents/GitHub/pale-ale/tools/run_cfa_batch_primaryE.py=fcfba00378f9320c2f3cb33ca1908ce1464387b0ea257ff0daa15367d14b5617
