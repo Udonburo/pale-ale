@@ -9,7 +9,12 @@ Key files:
 - `YYYY-MM-DD_holdout_primaryE_results.jsonl`: reconstructed holdout results for indices `1..50`.
 - `YYYY-MM-DD_holdout_primaryE_summary.txt`: aggregate stats over holdout results.
 - `batch/YYYY-MM-DD_eval_hf{idx}_primaryE.txt`: per-index holdout eval reports.
+- `YYYY-MM-DD_manifest_index.md`: commit-scope manifest with commands, SHA256s, and validation summary.
+- `YYYY-MM-DD_cfa_batch_primaryE_report.txt`: CFA preregistered batch aggregate report.
+- `case_study/index.md`: representative-set case-study manifest.
+- `case_study/representative_set_summary.md`: top/median/bottom local-metric summary.
 
 Notes:
 - `runs/` is gitignored; commit-ready summaries are copied here.
 - Reports are normalized to repo-relative paths (no local absolute user paths).
+- `cfa_batch/` per-sample CFA eval reports are treated as local verbose artifacts and are ignored from git; keep the aggregate report instead.

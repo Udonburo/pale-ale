@@ -480,7 +480,8 @@ def run_teacher_forcing_extraction(
         return_tensors="pt",
         add_special_tokens=False,
     )["input_ids"][0]
-    expected_target_count = int(target_only_ids.shape[0])
+    target_only_count = int(target_only_ids.shape[0])
+    expected_target_count = len(target_token_indices)
 
     lm_head = model.get_output_embeddings()
     if lm_head is None or not hasattr(lm_head, "weight"):
@@ -541,9 +542,17 @@ def run_teacher_forcing_extraction(
             selected_rows,
         )
 
+        offset_index = int(t - 1) if bos_prepended else int(t)
+        tok_start, tok_end = offsets[offset_index]
+        local_char_start = max(0, tok_start - answer_char_start)
+        local_char_end = max(local_char_start, tok_end - answer_char_start)
+        local_char_end = min(local_char_end, len(target_answer))
+
         row = {
             "step": int(local_step),
             "absolute_pos": int(t),
+            "answer_char_start": int(local_char_start),
+            "answer_char_end": int(local_char_end),
             "token_id": actual_token_id,
             "token_str": tokenizer.convert_ids_to_tokens(actual_token_id),
             "V_8d": project_fwht_to_8(v_raw.detach().cpu().tolist()),
@@ -574,6 +583,8 @@ def run_teacher_forcing_extraction(
         "alignment_method": "offset_overlap_v1",
         "answer_char_start": answer_char_start,
         "target_token_indices_count": len(target_token_indices),
+        "target_only_token_count": target_only_count,
+        "boundary_merge_token_delta": extracted_target_count - target_only_count,
         "bos_prepended_for_teacher_forcing": bos_prepended,
     }
     return rows, {
@@ -656,6 +667,8 @@ def main() -> int:
         ),
         "answer_char_start": mode_details.get("answer_char_start"),
         "target_token_indices_count": mode_details.get("target_token_indices_count"),
+        "target_only_token_count": mode_details.get("target_only_token_count"),
+        "boundary_merge_token_delta": mode_details.get("boundary_merge_token_delta"),
     }
     write_meta_json(meta_path, meta)
 

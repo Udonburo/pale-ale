@@ -37,3 +37,6 @@ SPEC.*.local.md
 data/
 runs/
 tmp/
+
+# Local-only verbose triality batch artifacts
+attestations/triality/cfa_batch/
