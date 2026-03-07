@@ -165,18 +165,13 @@ pub struct Gate4TokenStepInputV1 {
     pub baseline_entropy: f64,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum Gate4Variant {
     Consistent,
     Frustrated,
+    #[default]
     Unknown,
-}
-
-impl Default for Gate4Variant {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl Gate4Variant {
