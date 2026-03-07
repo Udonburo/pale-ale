@@ -10,10 +10,11 @@ use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
     compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
     measure_eval, measurement_hash, policy_hash, run_gate1_and_write, run_gate2_and_write,
-    run_gate3_and_write, AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport,
-    Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError,
-    Gate3IdentityInput, Gate3OrchestratorError, HashesTrace, MeasureError, MeasurementConfig,
-    ModelFile, ModelTrace, SentenceEmbedding, VerdictStatus,
+    run_gate3_and_write, run_gate4_and_write, AttestationLevel, AuditTrace, AuditWarning,
+    ConfigSource, EvalReport, Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput,
+    Gate2OrchestratorError, Gate3IdentityInput, Gate3OrchestratorError, Gate4IdentityInput,
+    Gate4OrchestratorError, HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace,
+    SentenceEmbedding, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -120,6 +121,10 @@ enum Commands {
         #[command(subcommand)]
         command: Gate3Command,
     },
+    Gate4 {
+        #[command(subcommand)]
+        command: Gate4Command,
+    },
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -217,6 +222,28 @@ enum Gate3Command {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum Gate4Command {
+    Run {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        run_id: String,
+        #[arg(long)]
+        dataset_revision_id: String,
+        #[arg(long)]
+        dataset_hash_blake3: String,
+        #[arg(long)]
+        spec_hash_raw_blake3: String,
+        #[arg(long)]
+        spec_hash_blake3: String,
+        #[arg(long, value_enum)]
+        evaluation_mode_id: Gate4EvaluationModeArg,
+    },
+}
+
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum Gate1EvaluationModeArg {
     #[value(name = "supervised_v1")]
@@ -257,6 +284,23 @@ enum Gate3EvaluationModeArg {
     SupervisedV1,
     #[value(name = "unsupervised_v1")]
     UnsupervisedV1,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum Gate4EvaluationModeArg {
+    #[value(name = "supervised_v1")]
+    SupervisedV1,
+    #[value(name = "unsupervised_v1")]
+    UnsupervisedV1,
+}
+
+impl Gate4EvaluationModeArg {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::SupervisedV1 => "supervised_v1",
+            Self::UnsupervisedV1 => "unsupervised_v1",
+        }
+    }
 }
 
 impl Gate3EvaluationModeArg {
@@ -676,6 +720,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
         Some(Commands::Gate1 { command }) => gate1(command, json),
         Some(Commands::Gate2 { command }) => gate2(command, json),
         Some(Commands::Gate3 { command }) => gate3(command, json),
+        Some(Commands::Gate4 { command }) => gate4(command, json),
     }
 }
 
@@ -1298,6 +1343,120 @@ fn gate3_run(
                 "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
                 "summary_csv": output.artifact_paths.summary_csv.display().to_string(),
                 "samples_csv": output.artifact_paths.samples_csv.display().to_string(),
+            }
+        })),
+    })
+}
+
+fn gate4(command: Gate4Command, json: bool) -> Result<JsonEnvelope, AppError> {
+    match command {
+        Gate4Command::Run {
+            input,
+            out,
+            run_id,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            evaluation_mode_id,
+        } => gate4_run(
+            input,
+            out,
+            run_id,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            evaluation_mode_id.as_str().to_string(),
+            json,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn gate4_run(
+    input: PathBuf,
+    out: PathBuf,
+    run_id: String,
+    dataset_revision_id: String,
+    dataset_hash_blake3: String,
+    spec_hash_raw_blake3: String,
+    spec_hash_blake3: String,
+    evaluation_mode_id: String,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let input_bytes = fs::read(&input).map_err(|err| {
+        AppError::dependency(format!(
+            "failed to read Gate4 input JSON at {}: {}",
+            input.display(),
+            err
+        ))
+    })?;
+
+    let identity = Gate4IdentityInput {
+        run_id,
+        dataset_revision_id,
+        dataset_hash_blake3,
+        spec_hash_raw_blake3,
+        spec_hash_blake3,
+        evaluation_mode_id,
+        code_git_commit: build_git_commit(),
+        build_target_triple: build_target_triple(),
+        rustc_version: build_rustc_version(),
+    };
+
+    let output =
+        run_gate4_and_write(&out, &input_bytes, &identity).map_err(map_gate4_orchestrator_error)?;
+
+    if !json_output {
+        println!("spec_version: {}", output.spec_version);
+        println!("run_id: {}", output.run_id);
+        println!("n_samples_total: {}", output.summary.n_samples_total);
+        println!("n_token_rows_total: {}", output.summary.n_token_rows_total);
+        println!(
+            "n_transition_rows_total: {}",
+            output.summary.n_transition_rows_total
+        );
+        println!("out_dir: {}", out.display());
+        println!(
+            "manifest_json: {}",
+            output.artifact_paths.manifest_json.display()
+        );
+        println!(
+            "token_features_csv: {}",
+            output.artifact_paths.token_features_csv.display()
+        );
+        println!(
+            "sample_summary_csv: {}",
+            output.artifact_paths.sample_summary_csv.display()
+        );
+        println!("identity_provenance:");
+        println!("spec_hash_raw_blake3: {}", identity.spec_hash_raw_blake3);
+        println!("spec_hash_blake3: {}", identity.spec_hash_blake3);
+        println!("dataset_revision_id: {}", identity.dataset_revision_id);
+        println!("dataset_hash_blake3: {}", identity.dataset_hash_blake3);
+        println!("code_git_commit: {}", identity.code_git_commit);
+        println!("build_target_triple: {}", identity.build_target_triple);
+        println!("rustc_version: {}", identity.rustc_version);
+        println!("evaluation_mode_id: {}", identity.evaluation_mode_id);
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate4_run",
+            "run_id": output.run_id,
+            "spec_version": output.spec_version,
+            "n_samples_total": output.summary.n_samples_total,
+            "n_token_rows_total": output.summary.n_token_rows_total,
+            "n_transition_rows_total": output.summary.n_transition_rows_total,
+            "out_dir": out.display().to_string(),
+            "artifacts": {
+                "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
+                "token_features_csv": output.artifact_paths.token_features_csv.display().to_string(),
+                "sample_summary_csv": output.artifact_paths.sample_summary_csv.display().to_string(),
             }
         })),
     })
@@ -1999,6 +2158,97 @@ fn map_gate3_orchestrator_error(err: Gate3OrchestratorError) -> AppError {
     }
 }
 
+fn map_gate4_orchestrator_error(err: Gate4OrchestratorError) -> AppError {
+    match err {
+        Gate4OrchestratorError::JsonParse(parse_err) => {
+            AppError::usage(format!("invalid Gate4 JSON input: {}", parse_err))
+        }
+        Gate4OrchestratorError::DuplicateSampleId { sample_id } => {
+            AppError::usage(format!("duplicate Gate4 sample_id {}", sample_id))
+        }
+        Gate4OrchestratorError::MissingTokenSteps { sample_id } => {
+            AppError::usage(format!("sample {} has no token_steps", sample_id))
+        }
+        Gate4OrchestratorError::DuplicateStep { sample_id, step } => {
+            AppError::usage(format!("sample {} has duplicate step {}", sample_id, step))
+        }
+        Gate4OrchestratorError::NonContiguousStep {
+            sample_id,
+            expected,
+            actual,
+        } => AppError::usage(format!(
+            "sample {} has non-contiguous step sequence: expected {}, got {}",
+            sample_id, expected, actual
+        )),
+        Gate4OrchestratorError::InvalidLabel {
+            sample_id,
+            step,
+            label,
+        } => AppError::usage(format!(
+            "sample {} step {} has invalid label_token {} (expected 0 or 1)",
+            sample_id, step, label
+        )),
+        Gate4OrchestratorError::InvalidRange {
+            sample_id,
+            field,
+            min_inclusive,
+            max_inclusive,
+            value,
+        } => {
+            if let Some(max_inclusive) = max_inclusive {
+                AppError::usage(format!(
+                    "sample {} {} out of range [{}, {}]: {}",
+                    sample_id, field, min_inclusive, max_inclusive, value
+                ))
+            } else {
+                AppError::usage(format!(
+                    "sample {} {} below minimum {}: {}",
+                    sample_id, field, min_inclusive, value
+                ))
+            }
+        }
+        Gate4OrchestratorError::InvalidEvaluationMode(value) => AppError::usage(format!(
+            "invalid evaluation_mode_id '{}': expected supervised_v1 or unsupervised_v1",
+            value
+        )),
+        Gate4OrchestratorError::InvalidFloat {
+            sample_id,
+            step,
+            field,
+            value,
+        } => AppError::internal(format!(
+            "Gate4 produced non-finite float for {} at sample {:?} step {:?}: {}",
+            field, sample_id, step, value
+        )),
+        Gate4OrchestratorError::InvalidVec8Dim {
+            sample_id,
+            step,
+            field,
+            expected,
+            actual,
+        } => AppError::usage(format!(
+            "sample {} step {} {} has invalid dimension: expected {}, got {}",
+            sample_id, step, field, expected, actual
+        )),
+        Gate4OrchestratorError::Io(io_err) => {
+            AppError::dependency(format!("Gate4 artifact I/O failed: {}", io_err))
+        }
+        Gate4OrchestratorError::JsonWrite(json_err) => {
+            AppError::dependency(format!("Gate4 JSON serialization failed: {}", json_err))
+        }
+        Gate4OrchestratorError::ManifestRead(io_err) => AppError::dependency(format!(
+            "failed to read Gate4 manifest.json after write: {}",
+            io_err
+        )),
+        Gate4OrchestratorError::ManifestValidation(validation_err) => {
+            AppError::dependency(format!(
+                "Gate4 manifest validation failed after write: {}",
+                validation_err
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2110,6 +2360,42 @@ mod tests {
                 rotor_encoder_preproc_id: "preproc_v1".to_string(),
                 vec8_postproc_id: "vec8_postproc_v1".to_string(),
                 evaluation_mode_id: Gate3EvaluationModeArg::SupervisedV1,
+            },
+            true,
+        );
+
+        let err = match result {
+            Ok(_) => panic!("expected parse failure"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code, "CLI_USAGE");
+    }
+
+    #[test]
+    fn gate4_cli_requires_identity_flags() {
+        let parsed = Cli::try_parse_from([
+            "pale-ale", "gate4", "run", "--input", "in.json", "--out", "out",
+        ]);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn gate4_cli_invalid_json_maps_to_app_error() {
+        let tmp = tempdir().expect("tmp");
+        let input_path = tmp.path().join("bad.json");
+        let out_dir = tmp.path().join("out");
+        fs::write(&input_path, "{invalid json").expect("write");
+
+        let result = gate4(
+            Gate4Command::Run {
+                input: input_path,
+                out: out_dir,
+                run_id: "gate4_run".to_string(),
+                dataset_revision_id: "dataset_rev".to_string(),
+                dataset_hash_blake3: "dataset_hash".to_string(),
+                spec_hash_raw_blake3: "spec_raw".to_string(),
+                spec_hash_blake3: "spec_lf".to_string(),
+                evaluation_mode_id: Gate4EvaluationModeArg::SupervisedV1,
             },
             true,
         );

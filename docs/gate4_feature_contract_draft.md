@@ -14,7 +14,7 @@ Define a stable, implementation-ready feature schema for local token/span diagno
 - `sample_id` (u64)
 - `variant` (`consistent|frustrated|unknown`)
 - `world_type` (string, optional)
-- `step` (u32 local index)
+- `step` (u32 local index, contiguous `0..N-1` within a sample)
 - `absolute_pos` (u32 original token position in model sequence)
 
 ## Required Label / Coverage Columns
@@ -22,6 +22,11 @@ Define a stable, implementation-ready feature schema for local token/span diagno
 - `label_transition` (`0|1`) transition label (`max(label_t,label_t+1)` by default)
 - `label_coverage_ratio` (f64 in [0,1])
 - `exact_token_match_ratio` (f64 in [0,1+], expected >= 0.98)
+
+Duplicate-step policy:
+- `step` values must be unique within a sample
+- `step` values must be contiguous after sorting; gaps are rejected with error in the current Rust Gate4 sink
+- duplicate `step` rows are rejected with error in the current Rust Gate4 sink
 
 ## Optional Label Provenance Columns
 - `defect_span_id` (string or null)
@@ -50,9 +55,9 @@ On-wire encoding rule for transition-aligned scores undefined on the final step:
 
 ## Required Aggregate Columns (sample-level companion file)
 - `auprc_A`, `auprc_B`, `auprc_C`, `auprc_D`, `auprc_E`, `auprc_F`
-- `best_baseline_name` (`A|B`)
+- `best_baseline_name` (`A|B|none`)
 - `delta_auprc_E_vs_best_baseline`
-- `hit_at_10_E`
+- `hit_at_10_E` (positive-transition count inside the top-10 `score_E` transition steps)
 
 ## Optional Support Metrics (sample-level companion file)
 - `first_hit_distance_E_p90`
@@ -63,7 +68,8 @@ On-wire encoding rule for transition-aligned scores undefined on the final step:
 - `seed`, `perm_r`, `primary_score`
 - `dataset_revision_id`, `dataset_hash_blake3`
 - `spec_hash_raw_blake3`, `spec_hash_blake3`
-- `triplets_sha256`, `labels_sha256`, `feature_table_sha256`
+- `triplets_sha256`, `labels_sha256`
+- `input_json_sha256`, `token_features_sha256`, `sample_summary_sha256`
 - `script_sha256_extract`, `script_sha256_eval`, `script_sha256_featuregen`
 
 Canonical manifest identity uses `*_blake3` fields for dataset/spec identity. Prototype-era SHA-256 artifact hashes may be carried as auxiliary provenance fields, but they are not canonical identity keys.
