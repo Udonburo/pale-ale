@@ -313,7 +313,8 @@ Case-study behavior:
 
 - The representative set splits 15 frustrated samples into `top`, `median`, and `bottom` buckets. Source: `attestations/triality/case_study/index.md`, `tools/README_cfa.md`
 - The case-study local metric command uses `--topk 10 --percentile 0.90`. Source: `tools/README_cfa.md`, `tools/eval_local_span.py`
-- `hit_at_10` is the positive-token count inside the top-10 `score_E` tokens. `first_hit_distance_signed = first_hit_step - defect_start_step`. Source: `tools/eval_local_span.py`
+- Case-study local `hit_at_10` from `tools/eval_local_span.py` is a token-level metric: positive-token count inside the top-10 `score_E` tokens. `first_hit_distance_signed = first_hit_step - defect_start_step`.
+- Gate4 sink `hit_at_10_E` is distinct: it is the positive-transition count inside the top-10 `score_E` transition steps. Source: `tools/eval_local_span.py`, `crates/diagnose/src/gate4.rs`
 - All 15 rows in the representative-set summary have `coverage=1.0` and `exact_match=1.0`. Source: `attestations/triality/case_study/representative_set_summary.md`
 - In the top bucket, `hit@10` is `6,4,6,6,4`, and `first_hit_distance` is `0,0,5,1,0`. Source: `attestations/triality/case_study/representative_set_summary.md`
 - In the median bucket, `hit@10` is `3,3,3,2,2`, and `first_hit_distance` is `4,3,-5,2,2`. Source: `attestations/triality/case_study/representative_set_summary.md`
@@ -371,7 +372,7 @@ In the current CFA teacher-forcing path, Gate4 sink must accept the following ro
 
 | field | type | requirement | note |
 |---|---|---|---|
-| `step` | int | required | current writer emits `0..N-1`; duplicate-step behavior is `UNSPECIFIED`. |
+| `step` | int | required | current writer emits contiguous local indices `0..N-1`; duplicate steps and gaps are rejected with error in the current Rust Gate4 sink. |
 | `absolute_pos` | int | required | absolute position in the teacher-forcing tensor. |
 | `answer_char_start` | int | required for CFA char-offset labels | if absent, `triplet_char_offsets_v1` cannot be used. |
 | `answer_char_end` | int | required for CFA char-offset labels | if absent, `triplet_char_offsets_v1` cannot be used. |
@@ -535,9 +536,9 @@ The normative target artifact name is `gate4_sample_summary.csv`. Source: `docs/
 Required columns:
 
 - `auprc_A`, `auprc_B`, `auprc_C`, `auprc_D`, `auprc_E`, `auprc_F`
-- `best_baseline_name`
+- `best_baseline_name` (`A|B|none`; `none` when both token baselines are undefined)
 - `delta_auprc_E_vs_best_baseline`
-- `hit_at_10_E`
+- `hit_at_10_E` (`score_E` transition metric: positive-transition count inside the top-10 `score_E` transition steps)
 
 Source: `docs/gate4_feature_contract_draft.md`
 
@@ -579,57 +580,57 @@ The current case-study per-sample meta JSON stores subset metrics and artifact S
 
 #### 5.3.3 Run-level manifest contract
 
-There is no canonical Gate4 `manifest.json` yet in the current prototype. The current authoritative run-level artifact is the prereg batch report text. Current fields:
+The current Rust Gate4 sink emits a canonical `manifest.json`. Source: `crates/diagnose/src/gate4.rs`
 
-- `date`
-- `experiment`
-- `primary_score`
-- `seed`
-- `perm_r`
-- `cfa_jsonl`
-- `results_jsonl`
-- `cfa_sha256`
-- `results_sha256`
-- `status_counts`
-- `class_valid_counts`
-- `class_descriptive_stats`
-- `group_contrast_on_delta_auprc`
-- `preregistered_gate`
-- `model_details`
-- `script_sha256`
+Required manifest identity / provenance fields:
 
-Source: `tools/aggregate_cfa_batch.py`, `attestations/triality/2026-03-05_cfa_batch_primaryE_report.txt`
-
-At minimum, the feature sink must carry the following provenance from current code:
-
+- `spec_version`
+- `method_id`
+- `spec_hash_raw_blake3`
+- `spec_hash_raw_input_id`
+- `spec_hash_blake3`
+- `spec_hash_input_id`
+- `dataset_revision_id`
+- `dataset_hash_blake3`
+- `code_git_commit`
+- `build_target_triple`
+- `rustc_version`
+- `evaluation_mode_id`
+- `run_id`
+- `n_samples_total`
+- `n_token_rows_total`
+- `n_transition_rows_total`
+- `n_samples_with_positive_tokens`
+- `n_samples_with_positive_transitions`
 - `model_id`
 - `model_revision`
 - `seed`
-- `perm_r` when evaluation is run
-- `primary_score` when evaluation is run
-- `dataset_revision_id`
-- `dataset_hash_blake3`
-- `spec_hash_raw_blake3`
-- `spec_hash_blake3`
+- `perm_r`
+- `primary_score`
 - `proj_id`
 - `splus_def_id`
 - `sminus_def_id`
-- `triplets_sha256`
-- `labels_sha256`
-- `feature_table_sha256`
 - `script_sha256_extract`
 - `script_sha256_eval`
 - `script_sha256_featuregen`
-- auxiliary SHA-256 artifact hashes when emitted by prototype tools
+- `token_features_schema_id`
+- `sample_summary_schema_id`
+- `float_format_id`
+- `transition_label_mode_id`
+- `transition_missing_enum_id`
+- `score_missing_sentinel_id`
+- `input_json_sha256`
+- `token_features_sha256`
+- `sample_summary_sha256`
 
-Canonical Gate4 manifest identity now follows the Phase4 naming pattern for dataset/spec identity:
+Canonical Gate4 manifest identity follows the Phase4 naming pattern for dataset/spec identity:
 
 - `dataset_revision_id`
 - `dataset_hash_blake3`
 - `spec_hash_raw_blake3`
 - `spec_hash_blake3`
 
-Prototype-era SHA-256 content hashes such as `cfa_sha256`, `results_sha256`, `prompt_sha256`, and `target_answer_sha256` remain auxiliary provenance only. They are not canonical identity keys. Source: `docs/gate4_feature_contract_draft.md`, `tools/extract_triality_triplets.py`, `tools/aggregate_cfa_batch.py`, `tools/plot_cfa_case_pair.py`, `SPEC.phase4.md`
+Prototype-era SHA-256 content hashes such as `cfa_sha256`, `results_sha256`, `prompt_sha256`, and `target_answer_sha256` remain auxiliary provenance only. They are not canonical identity keys. Source: `docs/gate4_feature_contract_draft.md`, `tools/extract_triality_triplets.py`, `tools/aggregate_cfa_batch.py`, `tools/plot_cfa_case_pair.py`, `SPEC.phase4.md`, `crates/diagnose/src/gate4.rs`
 
 ### 5.4 Determinism Rules (`FROZEN`, inherited)
 
@@ -673,12 +674,13 @@ Float formatting:
 |---|---|---|---|---|
 | `C1` | general evaluator default primary score is `F`, while CFA prereg fixes primary to `E` | scoped split; general rule from `tools/eval_triality_token.py`, prereg scope from `tools/README_cfa.md` plus batch code | general evaluator default remains `F`; CFA prereg scope freezes `E` only | doc / UI must always label whether a statement is ?general evaluator default? or ?CFA prereg endpoint? |
 | `C2` | Gate4 docs did not previously declare an exact float-format id, and missing values diverged across Python artifacts as `NA` or empty string | Layer 2 wins: `SPEC.phase4.md` plus current Gate4 draft patch | machine-format floats inherit `sci_17e_v1`; Gate4 token-table missing encoding is fixed to empty string for final-step transition-aligned scores `C/D/E` | keep prototype-era artifact-specific missing encodings outside canonical Gate4 token-table schema; align future writers to the fixed token-table rule |
-| `C3` | current Gate4 prototypes hash artifacts with SHA-256, while Phase4 manifest identity uses BLAKE3 fields and dataset identity naming was previously unresolved | Layer 2 wins for integrated manifest | canonical Gate4 manifest identity uses `dataset_revision_id`, `dataset_hash_blake3`, `spec_hash_raw_blake3`, and `spec_hash_blake3`; current SHA-256 usage is auxiliary provenance only | migration scope includes at least `prompt_sha256`, `target_answer_sha256`, `output_ndjson_sha256`, `cfa_sha256`, `results_sha256`, `script_sha256`, and case-study artifact SHA fields. When Gate4 gets canonical manifest support, emit both migration-era SHA-256 artifact hashes and Phase4 BLAKE3 identity fields until deprecation is documented |
+| `C3` | current Gate4 prototypes hash artifacts with SHA-256, while Phase4 manifest identity uses BLAKE3 fields and dataset identity naming was previously unresolved | Layer 2 wins for integrated manifest | canonical Gate4 manifest identity uses `dataset_revision_id`, `dataset_hash_blake3`, `spec_hash_raw_blake3`, and `spec_hash_blake3`; current SHA-256 usage is auxiliary provenance only | migration scope includes at least `prompt_sha256`, `target_answer_sha256`, `output_ndjson_sha256`, `cfa_sha256`, `results_sha256`, `script_sha256`, and case-study artifact SHA fields. The current Rust Gate4 sink now emits canonical manifest identity plus auxiliary SHA-256 artifact hashes together |
 | `C4` | coverage naming diverges: `label_coverage_ratio` in feature-contract draft, `final_alignment_coverage_ratio` in labels meta, `coverage` in batch results | artifact-specific names coexist; no single higher-priority artifact covers all three contexts | canonical token-table column name stays `label_coverage_ratio`; canonical labels-meta field stays `final_alignment_coverage_ratio`; batch `coverage` is auxiliary | future Gate4 sink should either normalize all three under a shared glossary or emit explicit aliases |
-| `C5` | best-baseline naming diverges: `best_baseline_name (A|B)` in draft / case-study code, `best_baseline = A:-logprob|B:entropy` in evaluator report; evaluator also hard-resolves exact ties in favor of `A:-logprob` | context split; score-name authority from `tools/eval_triality_token.py`, compact CSV field from `docs/gate4_feature_contract_draft.md` | score identities are `A:-logprob` and `B:entropy`; compact summary shorthand may use `A|B` only when schema explicitly says so; exact AUPRC ties choose `A:-logprob` in the current evaluator | future canonical summary should carry both `best_baseline_key` and `best_baseline_name_full`; if tie semantics matter outside evaluator reports, freeze them explicitly |
+| `C5` | best-baseline naming diverges: `best_baseline_name (A|B|none)` in the Gate4 sink, `best_baseline = A:-logprob|B:entropy` in evaluator reports; evaluator also hard-resolves exact ties in favor of `A:-logprob` | context split; evaluator naming authority from `tools/eval_triality_token.py`, sink schema authority from `docs/gate4_feature_contract_draft.md` plus `crates/diagnose/src/gate4.rs` | score identities are `A:-logprob` and `B:entropy`; Gate4 sink summary uses compact `A|B|none`, where `none` means both token baselines are undefined | future canonical summary should carry both `best_baseline_key` and `best_baseline_name_full`; if tie semantics matter outside evaluator reports, freeze them explicitly |
 | `C6` | draft previously required `first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90`, but current code only defines single-sample distances | resolved by Gate4 draft patch | both fields move out of the required summary contract and remain optional support metrics with `PROVISIONAL-TODO` computation semantics | define percentile scope, aggregation population, and tie handling before promoting them back into any frozen summary schema |
 | `C7` | Layer 2 requires closed enums, but current Gate4 batch results use ad hoc `status` values plus free-text `reason` | Layer 2 wins on principle; current Gate4 draft patch fixes the token-table missing enum only | Gate4 v1 fixes `transition_missing_reason = none|final_step_no_successor`; prototype batch `status/reason` remain auxiliary and non-canonical | introduce any additional Gate4-specific `excluded_reason` / `metric_missing_reason` enums only when a canonical Gate4 writer actually needs them |
 | `C8` | gate4 feature draft expects full A-F sink columns, while current case-study token table emits only A/B/E | Layer 1 winner for canonical sink schema is `docs/gate4_feature_contract_draft.md`; case-study output is auxiliary evidence artifact | canonical Gate4 sink targets full A-F contract; current case-study table is not canonical | extend feature writer or keep case-study table explicitly non-canonical in future docs |
+| `C9` | case-study local `hit_at_10` from `tools/eval_local_span.py` is token-level, while Gate4 sink `hit_at_10_E` is transition-level because `score_E` is transition-aligned in the Rust sink | context split; local-analysis authority from `tools/eval_local_span.py`, sink schema authority from `crates/diagnose/src/gate4.rs` plus `docs/gate4_feature_contract_draft.md` | keep both metrics, but name them by scope: case-study `hit_at_10` is token-level, Gate4 `hit_at_10_E` is transition-level | if a unified cross-artifact local metric is later needed, add an explicit `_token` / `_transition` suffix pair rather than overloading `hit_at_10` |
 
 ## 7. Roadmap & Freeze Triggers (`PROVISIONAL`)
 

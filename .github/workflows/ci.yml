@@ -34,7 +34,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable --component rustfmt --component clippy
+          rustup default stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -55,7 +59,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable --component rustfmt --component clippy
+          rustup default stable
 
       - name: Cache cargo for python build
         uses: Swatinem/rust-cache@v2
