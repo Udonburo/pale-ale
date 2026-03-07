@@ -1,0 +1,119 @@
+date=2026-03-06
+experiment=cfa_negative_stability_consistent_scoreE
+results_jsonl=runs/cfa_batch_primaryE/results.jsonl
+cfa_jsonl=data/cfa/cfa_v1.jsonl
+results_sha256=76c444794c55379a8475dd97f1d6e6784939c646ea05cf79b79878d3fb6697ab
+cfa_sha256=76658a4ee2230460ae7525ffc5c488fe600b1b9ae51df3cc77d1b868e874e7d2
+script_sha256=c96171fa52ddd3a1522e239e06899834af4e03dd6046388997cffacdf8733d56
+
+population:
+  consistent_samples=100
+  frustrated_samples=100
+  consistent_transitions=2287
+
+score_E_run_level_distribution_consistent:
+  count=2287
+  mean=2.24317520817626903e+00
+  std=3.49751986470749732e-01
+  p50=2.27296102184662807e+00
+  p90=2.67879770601705136e+00
+  p99=2.78462664901954682e+00
+  max=2.81465041894852463e+00
+
+sample_wise_distributions_consistent:
+  max_E:
+    count=100
+    mean=2.73909916846539980e+00
+    std=5.75043519694300106e-02
+    p50=2.75673424078972040e+00
+    p90=2.79024269877662068e+00
+    p99=2.81065457155730503e+00
+    max=2.81465041894852463e+00
+  p90_E:
+    count=100
+    mean=2.64753792736988647e+00
+    std=7.66308046652330876e-02
+    p50=2.67378482348568536e+00
+    p90=2.72880239080992437e+00
+    p99=2.75503674760616768e+00
+    max=2.75503674760616768e+00
+  mean_E:
+    count=100
+    mean=2.24283154183645062e+00
+    std=4.63738120081632413e-02
+    p50=2.24404920172032885e+00
+    p90=2.29723168763638874e+00
+    p99=2.34699479576667036e+00
+    max=2.36033156016844359e+00
+
+baseline_correlation_consistent_pooled:
+  spearman_rho_E_vs_A=-1.27391069698548881e-01
+  spearman_rho_E_vs_B=-1.36591414192793387e-01
+
+decision_reference:
+  median_frustrated_max_E=2.75478742652205089e+00
+  criterion=share of consistent samples with max_E < median_frustrated_max_E
+  consistent_share_below_reference=4.79999999999999982e-01
+  verdict=Red
+
+top_consistent_spike_samples:
+  - sample_id=56 world_type=temporal contrast_sample_id=57 max_E=2.81465041894852463e+00 p90_E=2.70098568309259779e+00 mean_E=2.30763953553671142e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000056/triplets.ndjson
+    rank=1 transition_step=6 score_E=2.81465041894852463e+00 score_A=3.21182370185852051e+00 score_B=2.60577487945556641e+00 token_t="ĠNoble" token_t1="Ġhappened" char_t=(24, 30) char_t1=(30, 39)
+    rank=2 transition_step=15 score_E=2.77596732608201791e+00 score_A=2.72261595726013184e+00 score_B=3.50828552246093750e+00 token_t="Ġtrans" token_t1="itivity" char_t=(75, 81) char_t1=(81, 88)
+    rank=3 transition_step=18 score_E=2.70098568309259779e+00 score_A=9.31910157203674316e-01 score_B=2.70573663711547852e+00 token_t="Ġthe" token_t1="Ġbefore" char_t=(91, 95) char_t1=(95, 102)
+    rank=4 transition_step=14 score_E=2.69920414315838020e+00 score_A=5.53302001953125000e+00 score_B=1.77849519252777100e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(72, 75) char_t1=(75, 81)
+    rank=5 transition_step=19 score_E=2.67616769765664841e+00 score_A=4.46028757095336914e+00 score_B=2.57673501968383789e+00 token_t="Ġbefore" token_t1="Ġrelation" char_t=(95, 102) char_t1=(102, 111)
+  - sample_id=140 world_type=temporal contrast_sample_id=141 max_E=2.81065457155730503e+00 p90_E=2.72122661305761859e+00 mean_E=2.34534791084150296e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000140/triplets.ndjson
+    rank=1 transition_step=16 score_E=2.81065457155730503e+00 score_A=2.68666768074035645e+00 score_B=3.51113629341125488e+00 token_t="Ġtrans" token_t1="itivity" char_t=(76, 82) char_t1=(82, 89)
+    rank=2 transition_step=7 score_E=2.72453583054672510e+00 score_A=7.15609431266784668e-01 score_B=2.39474415779113770e+00 token_t="Ġhappened" token_t1="Ġbefore" char_t=(31, 40) char_t1=(40, 47)
+    rank=3 transition_step=15 score_E=2.72122661305761859e+00 score_A=5.67373371124267578e+00 score_B=1.90124845504760742e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(73, 76) char_t1=(76, 82)
+    rank=4 transition_step=20 score_E=2.66691298718845360e+00 score_A=4.09368467330932617e+00 score_B=2.74040508270263672e+00 token_t="Ġbefore" token_t1="Ġrelation" char_t=(96, 103) char_t1=(103, 112)
+    rank=5 transition_step=6 score_E=2.66251442128394533e+00 score_A=3.14731192588806152e+00 score_B=2.18453168869018555e+00 token_t="ĠJasper" token_t1="Ġhappened" char_t=(24, 31) char_t1=(31, 40)
+  - sample_id=32 world_type=temporal contrast_sample_id=33 max_E=2.80790879188438769e+00 p90_E=2.70040162781319326e+00 mean_E=2.28428339675778735e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000032/triplets.ndjson
+    rank=1 transition_step=11 score_E=2.80790879188438769e+00 score_A=2.08660680800676346e-03 score_B=1.92793849855661392e-02 token_t="ill" token_t1="." char_t=(55, 58) char_t1=(58, 59)
+    rank=2 transition_step=16 score_E=2.76692223707263452e+00 score_A=2.44287204742431641e+00 score_B=3.47199678421020508e+00 token_t="Ġtrans" token_t1="itivity" char_t=(75, 81) char_t1=(81, 88)
+    rank=3 transition_step=20 score_E=2.70040162781319326e+00 score_A=4.68762016296386719e+00 score_B=2.55552411079406738e+00 token_t="Ġbefore" token_t1="Ġrelation" char_t=(95, 102) char_t1=(102, 111)
+    rank=4 transition_step=15 score_E=2.67650895294434044e+00 score_A=5.52953243255615234e+00 score_B=1.52471566200256348e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(72, 75) char_t1=(75, 81)
+    rank=5 transition_step=19 score_E=2.59713453201093181e+00 score_A=8.29313278198242188e-01 score_B=2.53839540481567383e+00 token_t="Ġthe" token_t1="Ġbefore" char_t=(91, 95) char_t1=(95, 102)
+  - sample_id=188 world_type=temporal contrast_sample_id=189 max_E=2.80790879188438769e+00 p90_E=2.70040162781319326e+00 mean_E=2.28428339675778735e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000188/triplets.ndjson
+    rank=1 transition_step=11 score_E=2.80790879188438769e+00 score_A=2.08660680800676346e-03 score_B=1.92793849855661392e-02 token_t="ill" token_t1="." char_t=(55, 58) char_t1=(58, 59)
+    rank=2 transition_step=16 score_E=2.76692223707263452e+00 score_A=2.44287204742431641e+00 score_B=3.47199678421020508e+00 token_t="Ġtrans" token_t1="itivity" char_t=(75, 81) char_t1=(81, 88)
+    rank=3 transition_step=20 score_E=2.70040162781319326e+00 score_A=4.68762016296386719e+00 score_B=2.55552411079406738e+00 token_t="Ġbefore" token_t1="Ġrelation" char_t=(95, 102) char_t1=(102, 111)
+    rank=4 transition_step=15 score_E=2.67650895294434044e+00 score_A=5.52953243255615234e+00 score_B=1.52471566200256348e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(72, 75) char_t1=(75, 81)
+    rank=5 transition_step=19 score_E=2.59713453201093181e+00 score_A=8.29313278198242188e-01 score_B=2.53839540481567383e+00 token_t="Ġthe" token_t1="Ġbefore" char_t=(91, 95) char_t1=(95, 102)
+  - sample_id=48 world_type=genealogy contrast_sample_id=49 max_E=2.80490540653756248e+00 p90_E=2.65679398157212621e+00 mean_E=2.27018178249413927e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000048/triplets.ndjson
+    rank=1 transition_step=6 score_E=2.80490540653756248e+00 score_A=3.94863076508045197e-03 score_B=3.13524454832077026e-02 token_t="eryl" token_t1="Ġis" char_t=(20, 24) char_t1=(24, 27)
+    rank=2 transition_step=18 score_E=2.74626869188499523e+00 score_A=2.34784460067749023e+00 score_B=3.07849216461181641e+00 token_t="Ġtrans" token_t1="itivity" char_t=(65, 71) char_t1=(71, 78)
+    rank=3 transition_step=12 score_E=2.65679398157212621e+00 score_A=3.63522238330915570e-04 score_B=4.24148421734571457e-03 token_t="al" token_t1="x" char_t=(45, 47) char_t1=(47, 48)
+    rank=4 transition_step=10 score_E=2.56575365414270617e+00 score_A=3.51681858301162720e-02 score_B=2.17693939805030823e-01 token_t="Ġof" token_t1="ĠOp" char_t=(39, 42) char_t1=(42, 45)
+    rank=5 transition_step=9 score_E=2.56005408425299708e+00 score_A=3.69549691677093506e-02 score_B=2.57780581712722778e-01 token_t="Ġancestor" token_t1="Ġof" char_t=(30, 39) char_t1=(39, 42)
+  - sample_id=106 world_type=reachability contrast_sample_id=107 max_E=2.80381705180228469e+00 p90_E=2.66197240333168317e+00 mean_E=2.28410397437159052e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000106/triplets.ndjson
+    rank=1 transition_step=24 score_E=2.80381705180228469e+00 score_A=9.46624651551246643e-02 score_B=5.63651442527770996e-01 token_t="ability" token_t1="." char_t=(105, 112) char_t1=(112, 113)
+    rank=2 transition_step=22 score_E=2.74111290722589995e+00 score_A=2.69077134132385254e+00 score_B=2.14456558227539062e+00 token_t="Ġpath" token_t1="Ġreach" char_t=(94, 99) char_t1=(99, 105)
+    rank=3 transition_step=19 score_E=2.66197240333168317e+00 score_A=2.88445425033569336e+00 score_B=3.34803724288940430e+00 token_t="Ġtrans" token_t1="itivity" char_t=(78, 84) char_t1=(84, 91)
+    rank=4 transition_step=11 score_E=2.65468381260203712e+00 score_A=1.51492981240153313e-02 score_B=9.92205739021301270e-02 token_t="appa" token_t1="Ġto" char_t=(48, 52) char_t1=(52, 55)
+    rank=5 transition_step=18 score_E=2.62479873271161912e+00 score_A=4.49641656875610352e+00 score_B=1.52349138259887695e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(75, 78) char_t1=(78, 84)
+  - sample_id=10 world_type=reachability contrast_sample_id=11 max_E=2.80212233673421451e+00 p90_E=2.72706110523079870e+00 mean_E=2.29165176492867362e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000010/triplets.ndjson
+    rank=1 transition_step=11 score_E=2.80212233673421451e+00 score_A=4.96772769838571548e-03 score_B=4.30693849921226501e-02 token_t="z" token_t1="Ġto" char_t=(51, 52) char_t1=(52, 55)
+    rank=2 transition_step=23 score_E=2.73381454375647559e+00 score_A=1.62434160709381104e-01 score_B=8.59553933143615723e-01 token_t="ability" token_t1="." char_t=(106, 113) char_t1=(113, 114)
+    rank=3 transition_step=21 score_E=2.72706110523079870e+00 score_A=2.85990810394287109e+00 score_B=2.17046380043029785e+00 token_t="Ġpath" token_t1="Ġreach" char_t=(95, 100) char_t1=(100, 106)
+    rank=4 transition_step=10 score_E=2.70606073512132816e+00 score_A=4.41480636596679688e-01 score_B=1.67238414287567139e+00 token_t="ĠWalt" token_t1="z" char_t=(46, 51) char_t1=(51, 52)
+    rank=5 transition_step=9 score_E=2.69105115408561257e+00 score_A=1.99636474251747131e-01 score_B=8.82546007633209229e-01 token_t="Ġfrom" token_t1="ĠWalt" char_t=(41, 46) char_t1=(46, 51)
+  - sample_id=166 world_type=reachability contrast_sample_id=167 max_E=2.80212233673421451e+00 p90_E=2.72706110523079870e+00 mean_E=2.29165176492867362e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000166/triplets.ndjson
+    rank=1 transition_step=11 score_E=2.80212233673421451e+00 score_A=4.96772769838571548e-03 score_B=4.30693849921226501e-02 token_t="z" token_t1="Ġto" char_t=(51, 52) char_t1=(52, 55)
+    rank=2 transition_step=23 score_E=2.73381454375647559e+00 score_A=1.62434160709381104e-01 score_B=8.59553933143615723e-01 token_t="ability" token_t1="." char_t=(106, 113) char_t1=(113, 114)
+    rank=3 transition_step=21 score_E=2.72706110523079870e+00 score_A=2.85990810394287109e+00 score_B=2.17046380043029785e+00 token_t="Ġpath" token_t1="Ġreach" char_t=(95, 100) char_t1=(100, 106)
+    rank=4 transition_step=10 score_E=2.70606073512132816e+00 score_A=4.41480636596679688e-01 score_B=1.67238414287567139e+00 token_t="ĠWalt" token_t1="z" char_t=(46, 51) char_t1=(51, 52)
+    rank=5 transition_step=9 score_E=2.69105115408561257e+00 score_A=1.99636474251747131e-01 score_B=8.82546007633209229e-01 token_t="Ġfrom" token_t1="ĠWalt" char_t=(41, 46) char_t1=(46, 51)
+  - sample_id=134 world_type=temporal contrast_sample_id=135 max_E=2.79620373285008395e+00 p90_E=2.68065661546579337e+00 mean_E=2.27651573110110084e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000134/triplets.ndjson
+    rank=1 transition_step=15 score_E=2.79620373285008395e+00 score_A=2.62137508392333984e+00 score_B=3.53764605522155762e+00 token_t="Ġtrans" token_t1="itivity" char_t=(75, 81) char_t1=(81, 88)
+    rank=2 transition_step=14 score_E=2.68249727482309375e+00 score_A=5.54380702972412109e+00 score_B=1.89796698093414307e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(72, 75) char_t1=(75, 81)
+    rank=3 transition_step=19 score_E=2.68065661546579337e+00 score_A=4.78610420227050781e+00 score_B=2.52689886093139648e+00 token_t="Ġbefore" token_t1="Ġrelation" char_t=(95, 102) char_t1=(102, 111)
+    rank=4 transition_step=18 score_E=2.67628248857912521e+00 score_A=9.81087744235992432e-01 score_B=2.77471828460693359e+00 token_t="Ġthe" token_t1="Ġbefore" char_t=(91, 95) char_t1=(95, 102)
+    rank=5 transition_step=3 score_E=2.53385910732399822e+00 score_A=4.86553519964218140e-01 score_B=1.66417634487152100e+00 token_t="Ġfacts" token_t1="," char_t=(11, 17) char_t1=(17, 18)
+  - sample_id=28 world_type=reachability contrast_sample_id=29 max_E=2.79024269877662068e+00 p90_E=2.63994856402134648e+00 mean_E=2.27471096310318543e+00 triplets=runs/cfa_batch_primaryE/samples/sample_000028/triplets.ndjson
+    rank=1 transition_step=24 score_E=2.79024269877662068e+00 score_A=1.08697988092899323e-01 score_B=6.26881361007690430e-01 token_t="ability" token_t1="." char_t=(105, 112) char_t1=(112, 113)
+    rank=2 transition_step=22 score_E=2.76857527046806773e+00 score_A=2.71766948699951172e+00 score_B=2.10083365440368652e+00 token_t="Ġpath" token_t1="Ġreach" char_t=(94, 99) char_t1=(99, 105)
+    rank=3 transition_step=18 score_E=2.63994856402134648e+00 score_A=4.42834043502807617e+00 score_B=1.50740194320678711e+00 token_t="Ġby" token_t1="Ġtrans" char_t=(75, 78) char_t1=(78, 84)
+    rank=4 transition_step=10 score_E=2.58080839491213032e+00 score_A=5.72820544242858887e-01 score_B=1.89088368415832520e+00 token_t="ĠXen" token_t1="on" char_t=(46, 50) char_t1=(50, 52)
+    rank=5 transition_step=14 score_E=2.57813053775516376e+00 score_A=1.15625746548175812e-03 score_B=1.08391307294368744e-02 token_t="appa" token_t1="." char_t=(57, 61) char_t1=(61, 62)

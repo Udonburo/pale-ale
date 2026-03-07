@@ -319,6 +319,19 @@ Case-study behavior:
 - In the median bucket, `hit@10` is `3,3,3,2,2`, and `first_hit_distance` is `4,3,-5,2,2`. Source: `attestations/triality/case_study/representative_set_summary.md`
 - In the bottom bucket, `hit@10` is `2,4,2,3,3`, and `first_hit_distance` is `9,2,11,3,3`. Source: `attestations/triality/case_study/representative_set_summary.md`
 
+Negative stability check (consistent-only diagnostics):
+
+- Population: `consistent_samples=100`, `frustrated_samples=100`, `consistent_transitions=2287`
+- Consistent run-level `score_E`: `mean=2.243e+00`, `p90=2.679e+00`, `max=2.815e+00`
+- Reference: `median_frustrated_max_E=2.755e+00`
+- Stability criterion: share of consistent samples with `max_E < median_frustrated_max_E` = `0.48`
+- Verdict: `Red` (threshold was `>= 0.90` for Green)
+- Pooled Spearman: `rho(E, A)=-0.127`, `rho(E, B)=-0.137` (weak negative; spikes are not baseline copies)
+- Strongest consistent-side spikes are dominated by tokenizer/subword seam patterns (`"trans"->"itivity"`, `"ability"->"."`, subword-split proper nouns). This is an observation, not a proven causal claim.
+- CFA GO remains valid: GO is AUPRC-based (positive enrichment), not threshold-based (absolute separation)
+
+Source: `attestations/triality/negative_stability/consistent100_scoreE_report.txt`, `tools/check_cfa_negative_stability.py`
+
 ### 4.2 What Is Not Proven
 
 The following are not proven by the current repo evidence:
@@ -328,6 +341,7 @@ The following are not proven by the current repo evidence:
 - robustness to tokenizer / model revision changes
 - any theorem-level claim about holonomy / sheaf / proxy-observable theory / E8
 - false positive rate stability on ground-truth negative distributions
+- `score_E` absolute threshold separation between consistent and frustrated samples (negative stability check returned `Red`; `max(score_E)` distributions overlap at 48% vs 90% Green threshold)
 
 ## 5. Gate4 Frozen Contract: Feature Sink
 
