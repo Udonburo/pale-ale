@@ -488,11 +488,13 @@ The normative target artifact name is `gate4_token_features.csv`. Source: `docs/
 Required columns:
 
 - identity: `run_id`, `sample_id`, `variant`, `world_type`, `step`, `absolute_pos`
-- label / coverage: `label_token`, `label_transition`, `defect_span_id`, `label_coverage_ratio`, `exact_token_match_ratio`
+- label / coverage: `label_token`, `label_transition`, `label_coverage_ratio`, `exact_token_match_ratio`
+- missing-state: `transition_missing_reason`
 - score: `score_A_logprob`, `score_B_entropy`, `score_C_v_curvature`, `score_D_v_splus_vnext`, `score_E_v_sminus_vnext`, `score_F_loop`
 
 Optional columns:
 
+- `defect_span_id`
 - `z_A`, `z_B`, `z_C`, `z_D`, `z_E`, `z_F`
 - `rank_E_desc`
 - `is_topk_E`
@@ -503,7 +505,8 @@ Final-step undefined rule:
 
 - `docs/gate4_feature_contract_draft.md` explicitly uses `Option<f64>` in its Rust mapping note for `scores undefined on final step transitions`
 - therefore, under the current canonical interpretation, transition-aligned scores `C/D/E` are undefined at the final step in the token table
-- however, the on-wire missing sentinel is not fixed in the current Gate4 docs, so it remains `UNSPECIFIED`
+- the on-wire CSV encoding is now fixed: `score_C_v_curvature`, `score_D_v_splus_vnext`, and `score_E_v_sminus_vnext` serialize as empty string on the final step
+- the companion closed enum is `transition_missing_reason = none|final_step_no_successor`
 
 Source: `docs/gate4_feature_contract_draft.md`
 
@@ -535,6 +538,11 @@ Required columns:
 - `best_baseline_name`
 - `delta_auprc_E_vs_best_baseline`
 - `hit_at_10_E`
+
+Source: `docs/gate4_feature_contract_draft.md`
+
+Optional support metrics:
+
 - `first_hit_distance_E_p90`
 - `first_hit_after_defect_distance_E_p90`
 
@@ -567,7 +575,7 @@ Source: `tools/run_cfa_batch_primaryE.py`
 
 The current case-study per-sample meta JSON stores subset metrics and artifact SHA values. Source: `tools/plot_cfa_case_pair.py`
 
-`first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90` do not have a fixed percentile population anywhere in the current repo. `eval_local_span.py` only defines single-sample scalars `first_hit_distance_signed` / `first_hit_after_defect_distance`. Therefore the exact computation contract for these two columns is `PROVISIONAL-TODO`. Source: `docs/gate4_feature_contract_draft.md`, `tools/eval_local_span.py`
+`first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90` do not have a fixed percentile population anywhere in the current repo. `eval_local_span.py` only defines single-sample scalars `first_hit_distance_signed` / `first_hit_after_defect_distance`. Therefore these two columns are optional support metrics, and their exact computation contract remains `PROVISIONAL-TODO`. Source: `docs/gate4_feature_contract_draft.md`, `tools/eval_local_span.py`
 
 #### 5.3.3 Run-level manifest contract
 
@@ -599,6 +607,10 @@ At minimum, the feature sink must carry the following provenance from current co
 - `seed`
 - `perm_r` when evaluation is run
 - `primary_score` when evaluation is run
+- `dataset_revision_id`
+- `dataset_hash_blake3`
+- `spec_hash_raw_blake3`
+- `spec_hash_blake3`
 - `proj_id`
 - `splus_def_id`
 - `sminus_def_id`
@@ -608,9 +620,16 @@ At minimum, the feature sink must carry the following provenance from current co
 - `script_sha256_extract`
 - `script_sha256_eval`
 - `script_sha256_featuregen`
-- dataset identity
+- auxiliary SHA-256 artifact hashes when emitted by prototype tools
 
-The exact field name for dataset identity is not unified in the current repo. Current prototypes use SHA-256 content hashes such as `cfa_sha256`, `results_sha256`, `prompt_sha256`, and `target_answer_sha256`, and also carry paths. Path-hash policy remains `UNSPECIFIED`. Source: `docs/gate4_feature_contract_draft.md`, `tools/extract_triality_triplets.py`, `tools/aggregate_cfa_batch.py`, `tools/plot_cfa_case_pair.py`
+Canonical Gate4 manifest identity now follows the Phase4 naming pattern for dataset/spec identity:
+
+- `dataset_revision_id`
+- `dataset_hash_blake3`
+- `spec_hash_raw_blake3`
+- `spec_hash_blake3`
+
+Prototype-era SHA-256 content hashes such as `cfa_sha256`, `results_sha256`, `prompt_sha256`, and `target_answer_sha256` remain auxiliary provenance only. They are not canonical identity keys. Source: `docs/gate4_feature_contract_draft.md`, `tools/extract_triality_triplets.py`, `tools/aggregate_cfa_batch.py`, `tools/plot_cfa_case_pair.py`, `SPEC.phase4.md`
 
 ### 5.4 Determinism Rules (`FROZEN`, inherited)
 
@@ -631,14 +650,14 @@ Stable hashing:
 Closed enums:
 
 - the closed-enum requirement itself is inherited as `FROZEN`. Source: `SPEC.phase4.md`
-- however, Gate4-local enum members are not fixed in the current repo. The current batch prototype uses `status = ok|error|skip_empty_text|skip_token_match|skip_coverage` plus free-text `reason`. Source: `tools/run_cfa_batch_primaryE.py`
-- therefore Gate4-local reason enum members are `UNSPECIFIED`
+- Gate4 v1 fixes the token-table missing enum as `transition_missing_reason = none|final_step_no_successor`
+- prototype batch `status = ok|error|skip_empty_text|skip_token_match|skip_coverage` plus free-text `reason` remains auxiliary and non-canonical for Gate4 sink output. Source: `tools/run_cfa_batch_primaryE.py`
 
 Float formatting:
 
 - inherit `float_format_id = sci_17e_v1` as the cross-gate machine-artifact rule. Source: `SPEC.phase4.md`
 - current prototype report / CSV writers use `"{:.17e}"`, but missing floats are encoded inconsistently as `NA` or empty string depending on artifact. Source: `tools/eval_triality_token.py`, `tools/plot_cfa_case_pair.py`, `tools/aggregate_cfa_batch.py`
-- the exact on-wire missing sentinel remains `UNSPECIFIED` for Gate4-local artifacts
+- Gate4 token-table numeric missing encoding is fixed to empty string for final-step transition-aligned score fields `C/D/E`
 
 ### 5.5 Explicit Non-Goals (`FROZEN`)
 
@@ -653,12 +672,12 @@ Float formatting:
 | id | conflict | winner by priority | SSOT choice | migration rule |
 |---|---|---|---|---|
 | `C1` | general evaluator default primary score is `F`, while CFA prereg fixes primary to `E` | scoped split; general rule from `tools/eval_triality_token.py`, prereg scope from `tools/README_cfa.md` plus batch code | general evaluator default remains `F`; CFA prereg scope freezes `E` only | doc / UI must always label whether a statement is ?general evaluator default? or ?CFA prereg endpoint? |
-| `C2` | Gate4 docs do not declare an exact float-format id; current Python artifacts use `"{:.17e}"` but missing values are `NA` or empty string | Layer 2 wins: `SPEC.phase4.md` | machine-format floats inherit `sci_17e_v1`; Gate4-local missing sentinel remains `UNSPECIFIED` | add `float_format_id = sci_17e_v1` and explicit missing-value encoding to future Gate4 manifest / CSV schema |
-| `C3` | current Gate4 prototypes hash artifacts with SHA-256, while Phase4 manifest identity uses BLAKE3 fields | Layer 2 wins for integrated manifest | current SHA-256 usage is a prototype fact; future integrated Gate4 manifest must align with Phase4 `*_blake3` identity fields | migration scope includes at least `prompt_sha256`, `target_answer_sha256`, `output_ndjson_sha256`, `cfa_sha256`, `results_sha256`, `script_sha256`, and case-study artifact SHA fields. When Gate4 gets canonical manifest support, emit both migration-era SHA-256 artifact hashes and Phase4 BLAKE3 identity fields until deprecation is documented |
+| `C2` | Gate4 docs did not previously declare an exact float-format id, and missing values diverged across Python artifacts as `NA` or empty string | Layer 2 wins: `SPEC.phase4.md` plus current Gate4 draft patch | machine-format floats inherit `sci_17e_v1`; Gate4 token-table missing encoding is fixed to empty string for final-step transition-aligned scores `C/D/E` | keep prototype-era artifact-specific missing encodings outside canonical Gate4 token-table schema; align future writers to the fixed token-table rule |
+| `C3` | current Gate4 prototypes hash artifacts with SHA-256, while Phase4 manifest identity uses BLAKE3 fields and dataset identity naming was previously unresolved | Layer 2 wins for integrated manifest | canonical Gate4 manifest identity uses `dataset_revision_id`, `dataset_hash_blake3`, `spec_hash_raw_blake3`, and `spec_hash_blake3`; current SHA-256 usage is auxiliary provenance only | migration scope includes at least `prompt_sha256`, `target_answer_sha256`, `output_ndjson_sha256`, `cfa_sha256`, `results_sha256`, `script_sha256`, and case-study artifact SHA fields. When Gate4 gets canonical manifest support, emit both migration-era SHA-256 artifact hashes and Phase4 BLAKE3 identity fields until deprecation is documented |
 | `C4` | coverage naming diverges: `label_coverage_ratio` in feature-contract draft, `final_alignment_coverage_ratio` in labels meta, `coverage` in batch results | artifact-specific names coexist; no single higher-priority artifact covers all three contexts | canonical token-table column name stays `label_coverage_ratio`; canonical labels-meta field stays `final_alignment_coverage_ratio`; batch `coverage` is auxiliary | future Gate4 sink should either normalize all three under a shared glossary or emit explicit aliases |
 | `C5` | best-baseline naming diverges: `best_baseline_name (A|B)` in draft / case-study code, `best_baseline = A:-logprob|B:entropy` in evaluator report; evaluator also hard-resolves exact ties in favor of `A:-logprob` | context split; score-name authority from `tools/eval_triality_token.py`, compact CSV field from `docs/gate4_feature_contract_draft.md` | score identities are `A:-logprob` and `B:entropy`; compact summary shorthand may use `A|B` only when schema explicitly says so; exact AUPRC ties choose `A:-logprob` in the current evaluator | future canonical summary should carry both `best_baseline_key` and `best_baseline_name_full`; if tie semantics matter outside evaluator reports, freeze them explicitly |
-| `C6` | draft requires `first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90`, but current code only defines single-sample distances | not resolvable from mandatory priority; higher-priority draft names columns but does not define the percentile population | mark both fields `PROVISIONAL-TODO` / exact computation `UNSPECIFIED` | define percentile scope, aggregation population, and tie handling before freezing Gate4 summary schema |
-| `C7` | Layer 2 requires closed enums, but current Gate4 batch results use ad hoc `status` values plus free-text `reason` | Layer 2 wins on principle; exact Gate4 enum members are absent | closed-enum requirement is binding; Gate4-local enum member set is `UNSPECIFIED` | introduce Gate4-specific `excluded_reason` / `metric_missing_reason` enums before Gate4 `DRAFT -> FROZEN` |
+| `C6` | draft previously required `first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90`, but current code only defines single-sample distances | resolved by Gate4 draft patch | both fields move out of the required summary contract and remain optional support metrics with `PROVISIONAL-TODO` computation semantics | define percentile scope, aggregation population, and tie handling before promoting them back into any frozen summary schema |
+| `C7` | Layer 2 requires closed enums, but current Gate4 batch results use ad hoc `status` values plus free-text `reason` | Layer 2 wins on principle; current Gate4 draft patch fixes the token-table missing enum only | Gate4 v1 fixes `transition_missing_reason = none|final_step_no_successor`; prototype batch `status/reason` remain auxiliary and non-canonical | introduce any additional Gate4-specific `excluded_reason` / `metric_missing_reason` enums only when a canonical Gate4 writer actually needs them |
 | `C8` | gate4 feature draft expects full A-F sink columns, while current case-study token table emits only A/B/E | Layer 1 winner for canonical sink schema is `docs/gate4_feature_contract_draft.md`; case-study output is auxiliary evidence artifact | canonical Gate4 sink targets full A-F contract; current case-study table is not canonical | extend feature writer or keep case-study table explicitly non-canonical in future docs |
 
 ## 7. Roadmap & Freeze Triggers (`PROVISIONAL`)
