@@ -101,3 +101,31 @@ python tools/eval_local_span.py --token-table-csv runs/cfa_case_study/sample127_
 
 Note:
 - If HuggingFace access is blocked, extraction can fail at model load. Use a locally cached model id/path.
+
+## 8) Gate4 parity / smoke validation
+
+This validates the Rust Gate4 sink against Python-computed expectations on a small CFA subset.
+- generates fresh teacher-forced triplets + labels
+- packs `Gate4RunInputV1`
+- runs `pale-ale gate4 run` twice
+- checks sample/token parity and byte-identical rerun artifacts
+
+```powershell
+python tools/run_gate4_validation_smoke.py --cfa-jsonl data/cfa/cfa_v1.jsonl --model-id Qwen/Qwen2.5-1.5B --device auto
+```
+
+Outputs:
+- input JSON: `runs/gate4_validation_smoke/gate4_input.json`
+- Gate4 artifacts: `runs/gate4_validation_smoke/gate4_out_a/` and `gate4_out_b/`
+- parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_parity_smoke.txt`
+
+Representative-set smoke (reuses existing `runs/cfa_batch_primaryE/samples/`):
+
+```powershell
+python tools/run_gate4_representative_smoke.py
+```
+
+Outputs:
+- input JSON: `runs/gate4_representative_smoke/gate4_input.json`
+- Gate4 artifacts: `runs/gate4_representative_smoke/gate4_out_a/` and `gate4_out_b/`
+- parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_representative_smoke.txt`
