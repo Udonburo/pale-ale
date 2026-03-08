@@ -317,6 +317,7 @@ def main() -> int:
         "gate4_manifest_json": (gate4_out_dir / "manifest.json").as_posix(),
         "token_features_csv": (gate4_out_dir / "gate4_token_features.csv").as_posix(),
         "sample_summary_csv": (gate4_out_dir / "gate4_sample_summary.csv").as_posix(),
+        "run_summary_csv": (gate4_out_dir / "gate4_run_summary.csv").as_posix(),
     }
     write_json(wrapper_manifest_path, wrapper_manifest)
 

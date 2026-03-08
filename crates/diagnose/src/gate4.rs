@@ -12,6 +12,7 @@ const SPEC_HASH_INPUT_ID: &str = "spec_text_utf8_lf_v1";
 const FLOAT_FORMAT_ID: &str = "sci_17e_v1";
 const TOKEN_FEATURES_SCHEMA_ID: &str = "gate4_token_features_csv_v1";
 const SAMPLE_SUMMARY_SCHEMA_ID: &str = "gate4_sample_summary_csv_v1";
+const RUN_SUMMARY_SCHEMA_ID: &str = "gate4_run_summary_csv_v1";
 const TRANSITION_LABEL_MODE_ID: &str = "max_pair_v1";
 const TRANSITION_MISSING_ENUM_ID: &str = "gate4_transition_missing_reason_v1";
 const SCORE_MISSING_SENTINEL_ID: &str = "empty_string_v1";
@@ -287,6 +288,33 @@ pub const GATE4_SAMPLE_SUMMARY_CSV_COLUMNS_V1: &[&str] = &[
     "hit_at_10_E",
 ];
 
+pub const GATE4_RUN_SUMMARY_CSV_COLUMNS_V1: &[&str] = &[
+    "run_id",
+    "n_samples_total",
+    "n_token_rows_total",
+    "n_transition_rows_total",
+    "n_samples_with_positive_tokens",
+    "n_samples_with_positive_transitions",
+    "label_coverage_ratio_mean",
+    "label_coverage_ratio_min",
+    "label_coverage_ratio_p50",
+    "label_coverage_ratio_p90",
+    "label_coverage_ratio_max",
+    "exact_token_match_ratio_mean",
+    "exact_token_match_ratio_min",
+    "exact_token_match_ratio_p50",
+    "exact_token_match_ratio_p90",
+    "exact_token_match_ratio_max",
+    "transition_missing_none_count",
+    "transition_missing_final_step_no_successor_count",
+    "score_A_available_count",
+    "score_B_available_count",
+    "score_C_available_count",
+    "score_D_available_count",
+    "score_E_available_count",
+    "score_F_available_count",
+];
+
 const REQUIRED_MANIFEST_KEYS: &[&str] = &[
     "spec_version",
     "method_id",
@@ -316,6 +344,7 @@ const REQUIRED_MANIFEST_KEYS: &[&str] = &[
     "script_sha256_featuregen",
     "token_features_schema_id",
     "sample_summary_schema_id",
+    "run_summary_schema_id",
     "float_format_id",
     "transition_label_mode_id",
     "transition_missing_enum_id",
@@ -323,6 +352,7 @@ const REQUIRED_MANIFEST_KEYS: &[&str] = &[
     "input_json_sha256",
     "token_features_sha256",
     "sample_summary_sha256",
+    "run_summary_sha256",
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -423,6 +453,7 @@ pub struct Gate4ArtifactPaths {
     pub manifest_json: PathBuf,
     pub token_features_csv: PathBuf,
     pub sample_summary_csv: PathBuf,
+    pub run_summary_csv: PathBuf,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -432,6 +463,33 @@ pub struct Gate4RunSummary {
     pub n_transition_rows_total: usize,
     pub n_samples_with_positive_tokens: usize,
     pub n_samples_with_positive_transitions: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Gate4RunHealthSummaryRow {
+    n_samples_total: usize,
+    n_token_rows_total: usize,
+    n_transition_rows_total: usize,
+    n_samples_with_positive_tokens: usize,
+    n_samples_with_positive_transitions: usize,
+    label_coverage_ratio_mean: f64,
+    label_coverage_ratio_min: f64,
+    label_coverage_ratio_p50: f64,
+    label_coverage_ratio_p90: f64,
+    label_coverage_ratio_max: f64,
+    exact_token_match_ratio_mean: f64,
+    exact_token_match_ratio_min: f64,
+    exact_token_match_ratio_p50: f64,
+    exact_token_match_ratio_p90: f64,
+    exact_token_match_ratio_max: f64,
+    transition_missing_none_count: usize,
+    transition_missing_final_step_no_successor_count: usize,
+    score_a_available_count: usize,
+    score_b_available_count: usize,
+    score_c_available_count: usize,
+    score_d_available_count: usize,
+    score_e_available_count: usize,
+    score_f_available_count: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -759,6 +817,7 @@ struct Gate4ManifestJson {
     script_sha256_featuregen: String,
     token_features_schema_id: String,
     sample_summary_schema_id: String,
+    run_summary_schema_id: String,
     float_format_id: String,
     transition_label_mode_id: String,
     transition_missing_enum_id: String,
@@ -766,6 +825,7 @@ struct Gate4ManifestJson {
     input_json_sha256: String,
     token_features_sha256: String,
     sample_summary_sha256: String,
+    run_summary_sha256: String,
 }
 
 pub fn run_gate4_and_write<P: AsRef<Path>>(
@@ -809,12 +869,6 @@ pub fn run_gate4_and_write<P: AsRef<Path>>(
     });
     sample_rows.sort_by(|left, right| left.sample_id.cmp(&right.sample_id));
 
-    let token_csv = build_token_features_csv(&identity.run_id, &token_rows)?;
-    let sample_csv = build_sample_summary_csv(&identity.run_id, &sample_rows)?;
-
-    let input_json_sha256 = sha256_hex(input_json_bytes);
-    let token_features_sha256 = sha256_hex(token_csv.as_bytes());
-    let sample_summary_sha256 = sha256_hex(sample_csv.as_bytes());
     let summary = Gate4RunSummary {
         n_samples_total: sample_rows.len(),
         n_token_rows_total: token_rows.len(),
@@ -826,6 +880,16 @@ pub fn run_gate4_and_write<P: AsRef<Path>>(
         n_samples_with_positive_transitions,
     };
 
+    let token_csv = build_token_features_csv(&identity.run_id, &token_rows)?;
+    let sample_csv = build_sample_summary_csv(&identity.run_id, &sample_rows)?;
+    let run_summary_row = build_run_health_summary(&summary, &token_rows, &sample_rows);
+    let run_summary_csv = build_run_summary_csv(&identity.run_id, &run_summary_row)?;
+
+    let input_json_sha256 = sha256_hex(input_json_bytes);
+    let token_features_sha256 = sha256_hex(token_csv.as_bytes());
+    let sample_summary_sha256 = sha256_hex(sample_csv.as_bytes());
+    let run_summary_sha256 = sha256_hex(run_summary_csv.as_bytes());
+
     let manifest = build_manifest(
         identity,
         &parsed.metadata,
@@ -833,6 +897,7 @@ pub fn run_gate4_and_write<P: AsRef<Path>>(
         &input_json_sha256,
         &token_features_sha256,
         &sample_summary_sha256,
+        &run_summary_sha256,
     );
 
     let out_dir = out_dir.as_ref();
@@ -845,10 +910,12 @@ pub fn run_gate4_and_write<P: AsRef<Path>>(
     let manifest_path = out_dir.join("manifest.json");
     let token_csv_path = out_dir.join("gate4_token_features.csv");
     let sample_csv_path = out_dir.join("gate4_sample_summary.csv");
+    let run_summary_csv_path = out_dir.join("gate4_run_summary.csv");
 
     write_bytes_lf(&manifest_path, &manifest_bytes)?;
     write_string_lf(&token_csv_path, &token_csv)?;
     write_string_lf(&sample_csv_path, &sample_csv)?;
+    write_string_lf(&run_summary_csv_path, &run_summary_csv)?;
 
     let manifest_read = fs::read(&manifest_path).map_err(Gate4OrchestratorError::ManifestRead)?;
     validate_gate4_manifest_json(&manifest_read)
@@ -862,6 +929,7 @@ pub fn run_gate4_and_write<P: AsRef<Path>>(
             manifest_json: manifest_path,
             token_features_csv: token_csv_path,
             sample_summary_csv: sample_csv_path,
+            run_summary_csv: run_summary_csv_path,
         },
     })
 }
@@ -1311,6 +1379,134 @@ fn build_sample_summary_csv(
     Ok(out)
 }
 
+fn build_run_health_summary(
+    summary: &Gate4RunSummary,
+    token_rows: &[Gate4TokenFeatureRow],
+    sample_rows: &[Gate4SampleSummaryRow],
+) -> Gate4RunHealthSummaryRow {
+    let coverage_values: Vec<f64> = sample_rows
+        .iter()
+        .map(|row| row.label_coverage_ratio)
+        .collect();
+    let exact_match_values: Vec<f64> = sample_rows
+        .iter()
+        .map(|row| row.exact_token_match_ratio)
+        .collect();
+
+    let transition_missing_none_count = token_rows
+        .iter()
+        .filter(|row| row.transition_missing_reason == TransitionMissingReason::None)
+        .count();
+    let transition_missing_final_step_no_successor_count = token_rows
+        .iter()
+        .filter(|row| {
+            row.transition_missing_reason == TransitionMissingReason::FinalStepNoSuccessor
+        })
+        .count();
+
+    Gate4RunHealthSummaryRow {
+        n_samples_total: summary.n_samples_total,
+        n_token_rows_total: summary.n_token_rows_total,
+        n_transition_rows_total: summary.n_transition_rows_total,
+        n_samples_with_positive_tokens: summary.n_samples_with_positive_tokens,
+        n_samples_with_positive_transitions: summary.n_samples_with_positive_transitions,
+        label_coverage_ratio_mean: mean_f64(&coverage_values),
+        label_coverage_ratio_min: min_f64(&coverage_values),
+        label_coverage_ratio_p50: nearest_rank_percentile_f64(&coverage_values, 0.50),
+        label_coverage_ratio_p90: nearest_rank_percentile_f64(&coverage_values, 0.90),
+        label_coverage_ratio_max: max_f64(&coverage_values),
+        exact_token_match_ratio_mean: mean_f64(&exact_match_values),
+        exact_token_match_ratio_min: min_f64(&exact_match_values),
+        exact_token_match_ratio_p50: nearest_rank_percentile_f64(&exact_match_values, 0.50),
+        exact_token_match_ratio_p90: nearest_rank_percentile_f64(&exact_match_values, 0.90),
+        exact_token_match_ratio_max: max_f64(&exact_match_values),
+        transition_missing_none_count,
+        transition_missing_final_step_no_successor_count,
+        score_a_available_count: token_rows.len(),
+        score_b_available_count: token_rows.len(),
+        score_c_available_count: token_rows
+            .iter()
+            .filter(|row| row.score_c.is_some())
+            .count(),
+        score_d_available_count: token_rows
+            .iter()
+            .filter(|row| row.score_d.is_some())
+            .count(),
+        score_e_available_count: token_rows
+            .iter()
+            .filter(|row| row.score_e.is_some())
+            .count(),
+        score_f_available_count: token_rows.len(),
+    }
+}
+
+fn build_run_summary_csv(
+    run_id: &str,
+    row: &Gate4RunHealthSummaryRow,
+) -> Result<String, Gate4OrchestratorError> {
+    let mut out = String::new();
+    out.push_str(&GATE4_RUN_SUMMARY_CSV_COLUMNS_V1.join(","));
+    out.push('\n');
+    let record = [
+        csv_escape(run_id),
+        row.n_samples_total.to_string(),
+        row.n_token_rows_total.to_string(),
+        row.n_transition_rows_total.to_string(),
+        row.n_samples_with_positive_tokens.to_string(),
+        row.n_samples_with_positive_transitions.to_string(),
+        fmt_float_csv(row.label_coverage_ratio_mean),
+        fmt_float_csv(row.label_coverage_ratio_min),
+        fmt_float_csv(row.label_coverage_ratio_p50),
+        fmt_float_csv(row.label_coverage_ratio_p90),
+        fmt_float_csv(row.label_coverage_ratio_max),
+        fmt_float_csv(row.exact_token_match_ratio_mean),
+        fmt_float_csv(row.exact_token_match_ratio_min),
+        fmt_float_csv(row.exact_token_match_ratio_p50),
+        fmt_float_csv(row.exact_token_match_ratio_p90),
+        fmt_float_csv(row.exact_token_match_ratio_max),
+        row.transition_missing_none_count.to_string(),
+        row.transition_missing_final_step_no_successor_count
+            .to_string(),
+        row.score_a_available_count.to_string(),
+        row.score_b_available_count.to_string(),
+        row.score_c_available_count.to_string(),
+        row.score_d_available_count.to_string(),
+        row.score_e_available_count.to_string(),
+        row.score_f_available_count.to_string(),
+    ];
+    out.push_str(&record.join(","));
+    out.push('\n');
+    Ok(out)
+}
+
+fn nearest_rank_percentile_f64(values: &[f64], percentile: f64) -> f64 {
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|left, right| left.total_cmp(right));
+    let rank = ((sorted.len() as f64) * percentile).ceil() as usize;
+    let idx = rank.saturating_sub(1).min(sorted.len().saturating_sub(1));
+    sorted[idx]
+}
+
+fn mean_f64(values: &[f64]) -> f64 {
+    values.iter().sum::<f64>() / (values.len() as f64)
+}
+
+fn min_f64(values: &[f64]) -> f64 {
+    values
+        .iter()
+        .copied()
+        .min_by(|left, right| left.total_cmp(right))
+        .unwrap_or(0.0)
+}
+
+fn max_f64(values: &[f64]) -> f64 {
+    values
+        .iter()
+        .copied()
+        .max_by(|left, right| left.total_cmp(right))
+        .unwrap_or(0.0)
+}
+
 fn build_manifest(
     identity: &Gate4IdentityInput,
     metadata: &Gate4MetadataInputV1,
@@ -1318,6 +1514,7 @@ fn build_manifest(
     input_json_sha256: &str,
     token_features_sha256: &str,
     sample_summary_sha256: &str,
+    run_summary_sha256: &str,
 ) -> Gate4ManifestJson {
     Gate4ManifestJson {
         spec_version: GATE4_SPEC_VERSION.to_string(),
@@ -1351,6 +1548,7 @@ fn build_manifest(
         script_sha256_featuregen: gate4_source_sha256(),
         token_features_schema_id: TOKEN_FEATURES_SCHEMA_ID.to_string(),
         sample_summary_schema_id: SAMPLE_SUMMARY_SCHEMA_ID.to_string(),
+        run_summary_schema_id: RUN_SUMMARY_SCHEMA_ID.to_string(),
         float_format_id: FLOAT_FORMAT_ID.to_string(),
         transition_label_mode_id: TRANSITION_LABEL_MODE_ID.to_string(),
         transition_missing_enum_id: TRANSITION_MISSING_ENUM_ID.to_string(),
@@ -1358,6 +1556,7 @@ fn build_manifest(
         input_json_sha256: input_json_sha256.to_string(),
         token_features_sha256: token_features_sha256.to_string(),
         sample_summary_sha256: sample_summary_sha256.to_string(),
+        run_summary_sha256: run_summary_sha256.to_string(),
     }
 }
 
@@ -1425,6 +1624,7 @@ pub fn validate_gate4_manifest_json(bytes: &[u8]) -> Result<(), Gate4ManifestVal
     validate_fixed_string(object, "spec_hash_input_id", SPEC_HASH_INPUT_ID)?;
     validate_fixed_string(object, "token_features_schema_id", TOKEN_FEATURES_SCHEMA_ID)?;
     validate_fixed_string(object, "sample_summary_schema_id", SAMPLE_SUMMARY_SCHEMA_ID)?;
+    validate_fixed_string(object, "run_summary_schema_id", RUN_SUMMARY_SCHEMA_ID)?;
     validate_fixed_string(object, "float_format_id", FLOAT_FORMAT_ID)?;
     validate_fixed_string(object, "transition_label_mode_id", TRANSITION_LABEL_MODE_ID)?;
     validate_fixed_string(
@@ -1661,6 +1861,7 @@ mod tests {
         assert!(output.artifact_paths.manifest_json.exists());
         assert!(output.artifact_paths.token_features_csv.exists());
         assert!(output.artifact_paths.sample_summary_csv.exists());
+        assert!(output.artifact_paths.run_summary_csv.exists());
 
         let manifest_bytes = fs::read(&output.artifact_paths.manifest_json).expect("manifest");
         validate_gate4_manifest_json(&manifest_bytes).expect("manifest valid");
@@ -1691,6 +1892,10 @@ mod tests {
         let summary_a = fs::read(out_a.artifact_paths.sample_summary_csv).expect("summary a");
         let summary_b = fs::read(out_b.artifact_paths.sample_summary_csv).expect("summary b");
         assert_eq!(summary_a, summary_b);
+
+        let run_summary_a = fs::read(out_a.artifact_paths.run_summary_csv).expect("run summary a");
+        let run_summary_b = fs::read(out_b.artifact_paths.run_summary_csv).expect("run summary b");
+        assert_eq!(run_summary_a, run_summary_b);
 
         let _ = fs::remove_dir_all(&out_dir_a);
         let _ = fs::remove_dir_all(&out_dir_b);
@@ -1751,6 +1956,37 @@ mod tests {
             "hit_at_10_E",
         ];
         assert_eq!(GATE4_SAMPLE_SUMMARY_CSV_COLUMNS_V1, expected.as_slice());
+    }
+
+    #[test]
+    fn run_summary_columns_are_hard_locked() {
+        let expected = [
+            "run_id",
+            "n_samples_total",
+            "n_token_rows_total",
+            "n_transition_rows_total",
+            "n_samples_with_positive_tokens",
+            "n_samples_with_positive_transitions",
+            "label_coverage_ratio_mean",
+            "label_coverage_ratio_min",
+            "label_coverage_ratio_p50",
+            "label_coverage_ratio_p90",
+            "label_coverage_ratio_max",
+            "exact_token_match_ratio_mean",
+            "exact_token_match_ratio_min",
+            "exact_token_match_ratio_p50",
+            "exact_token_match_ratio_p90",
+            "exact_token_match_ratio_max",
+            "transition_missing_none_count",
+            "transition_missing_final_step_no_successor_count",
+            "score_A_available_count",
+            "score_B_available_count",
+            "score_C_available_count",
+            "score_D_available_count",
+            "score_E_available_count",
+            "score_F_available_count",
+        ];
+        assert_eq!(GATE4_RUN_SUMMARY_CSV_COLUMNS_V1, expected.as_slice());
     }
 
     #[test]
@@ -1836,6 +2072,23 @@ mod tests {
         assert_eq!(last_frustrated_row[idx_c], "");
         assert_eq!(last_frustrated_row[idx_d], "");
         assert_eq!(last_frustrated_row[idx_e], "");
+
+        let _ = fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn run_summary_csv_reports_health_counts() {
+        let identity = identity_fixture();
+        let input = input_json_fixture();
+        let out_dir = temp_dir("run-summary");
+        fs::create_dir_all(&out_dir).expect("mkdir");
+
+        let output = run_gate4_and_write(&out_dir, &input, &identity).expect("run");
+        let csv = fs::read_to_string(output.artifact_paths.run_summary_csv).expect("run summary");
+        let lines: Vec<&str> = csv.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[1].starts_with("gate4_fixture_run,2,5,3,1,1,"));
+        assert!(lines[1].contains(",3,2,5,5,3,3,3,5"));
 
         let _ = fs::remove_dir_all(&out_dir);
     }

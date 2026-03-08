@@ -131,6 +131,8 @@ def main() -> int:
         str(gate4_out_a / "gate4_token_features.csv"),
         "--sample-summary-csv",
         str(gate4_out_a / "gate4_sample_summary.csv"),
+        "--run-summary-csv",
+        str(gate4_out_a / "gate4_run_summary.csv"),
         "--manifest-json",
         str(gate4_out_a / "manifest.json"),
         "--expected-dataset-hash-blake3",
@@ -156,7 +158,16 @@ def main() -> int:
         gate4_out_a / "gate4_sample_summary.csv",
         gate4_out_b / "gate4_sample_summary.csv",
     )
-    determinism_ok = deterministic_manifest and deterministic_tokens and deterministic_summary
+    deterministic_run_summary = smoke.compare_bytes(
+        gate4_out_a / "gate4_run_summary.csv",
+        gate4_out_b / "gate4_run_summary.csv",
+    )
+    determinism_ok = (
+        deterministic_manifest
+        and deterministic_tokens
+        and deterministic_summary
+        and deterministic_run_summary
+    )
 
     provenance_verdict = parity_report_fields.get("provenance_verdict", "")
     parity_verdict = parity_report_fields.get("parity_verdict", "")
@@ -191,6 +202,7 @@ def main() -> int:
         f"deterministic_manifest={int(deterministic_manifest)}",
         f"deterministic_token_features={int(deterministic_tokens)}",
         f"deterministic_sample_summary={int(deterministic_summary)}",
+        f"deterministic_run_summary={int(deterministic_run_summary)}",
         "determinism_verdict=PASS" if determinism_ok else "determinism_verdict=FAIL",
         f"verdict={final_verdict}",
     ]
@@ -203,7 +215,7 @@ def main() -> int:
         raise RuntimeError(
             "Gate4 representative deterministic rerun drift detected: "
             f"manifest={deterministic_manifest} token_features={deterministic_tokens} "
-            f"sample_summary={deterministic_summary}"
+            f"sample_summary={deterministic_summary} run_summary={deterministic_run_summary}"
         )
     if parity_verdict != "PASS":
         raise RuntimeError(f"unexpected parity_verdict in report: {parity_verdict}")
