@@ -1,6 +1,8 @@
+use crate::{blake3_hex, jcs_bytes};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeSet;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,6 +18,225 @@ const SCORE_MISSING_SENTINEL_ID: &str = "empty_string_v1";
 
 pub const GATE4_SPEC_VERSION: &str = "v0.1.0-ssot.draft.0";
 pub const GATE4_METHOD_ID: &str = "proxy_observable_feature_sink_v1";
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Gate4IdentityHashes {
+    pub spec_hash_raw_blake3: String,
+    pub spec_hash_blake3: String,
+    pub dataset_hash_blake3: String,
+}
+
+#[derive(Debug)]
+pub enum Gate4IdentityHashError {
+    ReadPath {
+        path: PathBuf,
+        message: String,
+    },
+    DuplicateRequestedSampleId {
+        sample_id: u64,
+    },
+    DuplicateSourceSampleId {
+        sample_id: u64,
+        first_line_no: usize,
+        duplicate_line_no: usize,
+    },
+    MissingRequestedSampleId {
+        sample_id: u64,
+    },
+    JsonLine {
+        path: PathBuf,
+        line_no: usize,
+        message: String,
+    },
+}
+
+impl fmt::Display for Gate4IdentityHashError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ReadPath { path, message } => {
+                write!(f, "failed to read {}: {}", path.display(), message)
+            }
+            Self::DuplicateRequestedSampleId { sample_id } => {
+                write!(f, "duplicate requested sample_id: {}", sample_id)
+            }
+            Self::DuplicateSourceSampleId {
+                sample_id,
+                first_line_no,
+                duplicate_line_no,
+            } => write!(
+                f,
+                "duplicate source sample_id {} in CFA dataset: lines {} and {}",
+                sample_id, first_line_no, duplicate_line_no
+            ),
+            Self::MissingRequestedSampleId { sample_id } => {
+                write!(
+                    f,
+                    "requested sample_id not found in CFA dataset: {}",
+                    sample_id
+                )
+            }
+            Self::JsonLine {
+                path,
+                line_no,
+                message,
+            } => write!(
+                f,
+                "failed to parse {}:{} as canonical CFA row: {}",
+                path.display(),
+                line_no,
+                message
+            ),
+        }
+    }
+}
+
+impl std::error::Error for Gate4IdentityHashError {}
+
+#[derive(Clone, Debug, Deserialize)]
+struct Gate4CfaRowInput {
+    sample_id: u64,
+    variant: String,
+    #[serde(default)]
+    world_type: Option<String>,
+    #[serde(default)]
+    contrast_sample_id: Option<u64>,
+    prompt: String,
+    answer: String,
+    #[serde(default)]
+    defect_spans: Vec<Gate4CfaSpanInput>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct Gate4CfaSpanInput {
+    start: usize,
+    end: usize,
+    text: String,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+struct Gate4CanonicalCfaRow {
+    sample_id: u64,
+    variant: String,
+    world_type: Option<String>,
+    contrast_sample_id: Option<u64>,
+    prompt: String,
+    answer: String,
+    defect_spans: Vec<Gate4CanonicalCfaSpan>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq, PartialOrd, Ord)]
+struct Gate4CanonicalCfaSpan {
+    start: usize,
+    end: usize,
+    text: String,
+}
+
+pub fn compute_gate4_identity_hashes(
+    cfa_jsonl_path: &Path,
+    sample_ids: &[u64],
+    spec_path: &Path,
+) -> Result<Gate4IdentityHashes, Gate4IdentityHashError> {
+    let spec_raw = fs::read(spec_path).map_err(|err| Gate4IdentityHashError::ReadPath {
+        path: spec_path.to_path_buf(),
+        message: err.to_string(),
+    })?;
+    let spec_hash_raw_blake3 = blake3_hex(&spec_raw);
+    let spec_hash_blake3 = blake3_hex(&normalize_crlf_to_lf(&spec_raw));
+    let dataset_hash_blake3 = compute_gate4_cfa_subset_hash(cfa_jsonl_path, sample_ids)?;
+    Ok(Gate4IdentityHashes {
+        spec_hash_raw_blake3,
+        spec_hash_blake3,
+        dataset_hash_blake3,
+    })
+}
+
+pub fn compute_gate4_cfa_subset_hash(
+    cfa_jsonl_path: &Path,
+    sample_ids: &[u64],
+) -> Result<String, Gate4IdentityHashError> {
+    let mut requested = BTreeSet::new();
+    for &sample_id in sample_ids {
+        if !requested.insert(sample_id) {
+            return Err(Gate4IdentityHashError::DuplicateRequestedSampleId { sample_id });
+        }
+    }
+
+    let content =
+        fs::read_to_string(cfa_jsonl_path).map_err(|err| Gate4IdentityHashError::ReadPath {
+            path: cfa_jsonl_path.to_path_buf(),
+            message: err.to_string(),
+        })?;
+    let mut rows: Vec<Gate4CanonicalCfaRow> = Vec::new();
+    let mut seen_source_ids: std::collections::BTreeMap<u64, usize> =
+        std::collections::BTreeMap::new();
+    for (line_no, line) in content.lines().enumerate() {
+        let raw = line.trim();
+        if raw.is_empty() {
+            continue;
+        }
+        let parsed: Gate4CfaRowInput =
+            serde_json::from_str(raw).map_err(|err| Gate4IdentityHashError::JsonLine {
+                path: cfa_jsonl_path.to_path_buf(),
+                line_no: line_no + 1,
+                message: err.to_string(),
+            })?;
+        if requested.contains(&parsed.sample_id) {
+            if let Some(first_line_no) = seen_source_ids.insert(parsed.sample_id, line_no + 1) {
+                return Err(Gate4IdentityHashError::DuplicateSourceSampleId {
+                    sample_id: parsed.sample_id,
+                    first_line_no,
+                    duplicate_line_no: line_no + 1,
+                });
+            }
+            rows.push(canonicalize_cfa_row(parsed));
+        }
+    }
+
+    rows.sort_by_key(|row| row.sample_id);
+    for sample_id in requested {
+        if !rows.iter().any(|row| row.sample_id == sample_id) {
+            return Err(Gate4IdentityHashError::MissingRequestedSampleId { sample_id });
+        }
+    }
+    Ok(blake3_hex(&jcs_bytes(&rows)))
+}
+
+fn canonicalize_cfa_row(row: Gate4CfaRowInput) -> Gate4CanonicalCfaRow {
+    let mut defect_spans: Vec<Gate4CanonicalCfaSpan> = row
+        .defect_spans
+        .into_iter()
+        .map(|span| Gate4CanonicalCfaSpan {
+            start: span.start,
+            end: span.end,
+            text: span.text,
+        })
+        .collect();
+    defect_spans.sort();
+    Gate4CanonicalCfaRow {
+        sample_id: row.sample_id,
+        variant: row.variant,
+        world_type: row.world_type,
+        contrast_sample_id: row.contrast_sample_id,
+        prompt: row.prompt,
+        answer: row.answer,
+        defect_spans,
+    }
+}
+
+fn normalize_crlf_to_lf(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut idx = 0usize;
+    while idx < bytes.len() {
+        if idx + 1 < bytes.len() && bytes[idx] == b'\r' && bytes[idx + 1] == b'\n' {
+            out.push(b'\n');
+            idx += 2;
+        } else {
+            out.push(bytes[idx]);
+            idx += 1;
+        }
+    }
+    out
+}
 
 pub const GATE4_TOKEN_FEATURES_CSV_COLUMNS_V1: &[&str] = &[
     "run_id",
@@ -1786,5 +2007,77 @@ mod tests {
         ));
 
         let _ = fs::remove_dir_all(&out_dir);
+    }
+
+    #[test]
+    fn compute_gate4_identity_hashes_distinguishes_raw_and_lf_spec_hashes() {
+        let temp = temp_dir("identity-hash");
+        fs::create_dir_all(&temp).expect("mkdir");
+        let spec_path = temp.join("spec.md");
+        let cfa_path = temp.join("cfa.jsonl");
+        fs::write(&spec_path, b"line1\r\nline2\r\n").expect("write spec");
+        fs::write(
+            &cfa_path,
+            "{\"sample_id\":1,\"variant\":\"consistent\",\"world_type\":\"genealogy\",\"contrast_sample_id\":null,\"prompt\":\"P1\",\"answer\":\"A1\",\"defect_spans\":[]}\n",
+        )
+        .expect("write cfa");
+
+        let hashes = compute_gate4_identity_hashes(&cfa_path, &[1], &spec_path).expect("hashes");
+        assert_ne!(hashes.spec_hash_raw_blake3, hashes.spec_hash_blake3);
+        assert_eq!(hashes.dataset_hash_blake3.len(), 64);
+
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn compute_gate4_cfa_subset_hash_is_stable_for_selected_rows() {
+        let cfa_path = temp_dir("cfa-hash").join("cfa.jsonl");
+        fs::create_dir_all(cfa_path.parent().expect("parent")).expect("mkdir");
+        fs::write(
+            &cfa_path,
+            concat!(
+                "{\"sample_id\":2,\"variant\":\"consistent\",\"world_type\":\"temporal\",\"contrast_sample_id\":3,\"prompt\":\"P2\",\"answer\":\"A2\",\"defect_spans\":[]}\n",
+                "{\"sample_id\":3,\"variant\":\"frustrated\",\"world_type\":\"temporal\",\"contrast_sample_id\":2,\"prompt\":\"P3\",\"answer\":\"A3\",\"defect_spans\":[{\"start\":1,\"end\":2,\"label\":\"x\",\"text\":\"z\"}]}\n",
+                "{\"sample_id\":1,\"variant\":\"consistent\",\"world_type\":\"genealogy\",\"contrast_sample_id\":0,\"prompt\":\"P1\",\"answer\":\"A1\",\"defect_spans\":[]}\n"
+            ),
+        )
+        .expect("write cfa");
+
+        let hash_a = compute_gate4_cfa_subset_hash(&cfa_path, &[3, 1]).expect("hash a");
+        let hash_b = compute_gate4_cfa_subset_hash(&cfa_path, &[1, 3]).expect("hash b");
+        assert_eq!(hash_a, hash_b);
+
+        let _ = fs::remove_dir_all(cfa_path.parent().expect("parent"));
+    }
+
+    #[test]
+    fn compute_gate4_cfa_subset_hash_rejects_duplicate_source_sample_ids() {
+        let cfa_path = temp_dir("cfa-hash-duplicate-source").join("cfa.jsonl");
+        fs::create_dir_all(cfa_path.parent().expect("parent")).expect("mkdir");
+        fs::write(
+            &cfa_path,
+            concat!(
+                "{\"sample_id\":1,\"variant\":\"consistent\",\"world_type\":\"genealogy\",\"contrast_sample_id\":2,\"prompt\":\"P1\",\"answer\":\"A1\",\"defect_spans\":[]}\n",
+                "{\"sample_id\":1,\"variant\":\"consistent\",\"world_type\":\"genealogy\",\"contrast_sample_id\":2,\"prompt\":\"P1b\",\"answer\":\"A1b\",\"defect_spans\":[]}\n"
+            ),
+        )
+        .expect("write cfa");
+
+        let err = compute_gate4_cfa_subset_hash(&cfa_path, &[1])
+            .expect_err("duplicate source row should fail");
+        match err {
+            Gate4IdentityHashError::DuplicateSourceSampleId {
+                sample_id,
+                first_line_no,
+                duplicate_line_no,
+            } => {
+                assert_eq!(sample_id, 1);
+                assert_eq!(first_line_no, 1);
+                assert_eq!(duplicate_line_no, 2);
+            }
+            other => panic!("unexpected error: {}", other),
+        }
+
+        let _ = fs::remove_dir_all(cfa_path.parent().expect("parent"));
     }
 }

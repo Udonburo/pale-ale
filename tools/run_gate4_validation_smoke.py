@@ -107,6 +107,43 @@ def compare_bytes(path_a: Path, path_b: Path) -> bool:
     return path_a.read_bytes() == path_b.read_bytes()
 
 
+def compute_gate4_identity_hashes(
+    cli_path: Path,
+    cfa_jsonl: Path,
+    sample_ids: Sequence[int],
+    spec_path: Path,
+) -> Dict[str, str]:
+    cmd = [
+        str(cli_path),
+        "gate4",
+        "hash-identity",
+        "--cfa-jsonl",
+        str(cfa_jsonl),
+        "--sample-ids",
+        *[str(sample_id) for sample_id in sample_ids],
+        "--spec-path",
+        str(spec_path),
+        "--json",
+    ]
+    completed = run_command(cmd, cwd=REPO_ROOT)
+    payload = json.loads(completed.stdout)
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        raise RuntimeError("gate4 hash-identity returned missing data object")
+    expected_keys = [
+        "dataset_hash_blake3",
+        "spec_hash_raw_blake3",
+        "spec_hash_blake3",
+    ]
+    out: Dict[str, str] = {}
+    for key in expected_keys:
+        value = data.get(key)
+        if not isinstance(value, str) or len(value) != 64:
+            raise RuntimeError(f"gate4 hash-identity returned invalid {key}: {value!r}")
+        out[key] = value
+    return out
+
+
 def write_report(path: Path, lines: Sequence[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -256,6 +293,8 @@ def main() -> int:
 
     rows = load_cfa_rows(cfa_path)
     selected = select_samples(rows, args.n_consistent, args.n_frustrated)
+    dataset_revision_id = "cfa_v1_small_smoke_v1"
+    spec_path = REPO_ROOT / "SPEC.internal.draft.md"
 
     extractor.configure_reproducibility(args.seed, deterministic=True)
     device = extractor.resolve_device(args.device)
@@ -289,6 +328,13 @@ def main() -> int:
     packer.write_json(gate4_input_path, pack_payload)
 
     cli_path = ensure_cli_built()
+    identity_hashes = compute_gate4_identity_hashes(
+        cli_path=cli_path,
+        cfa_jsonl=cfa_path,
+        sample_ids=sample_ids,
+        spec_path=spec_path,
+    )
+
     gate4_cmd_base = [
         str(cli_path),
         "gate4",
@@ -298,13 +344,13 @@ def main() -> int:
         "--run-id",
         args.run_id,
         "--dataset-revision-id",
-        "cfa_v1_validation_smoke",
+        dataset_revision_id,
         "--dataset-hash-blake3",
-        "0" * 64,
+        identity_hashes["dataset_hash_blake3"],
         "--spec-hash-raw-blake3",
-        "0" * 64,
+        identity_hashes["spec_hash_raw_blake3"],
         "--spec-hash-blake3",
-        "0" * 64,
+        identity_hashes["spec_hash_blake3"],
         "--evaluation-mode-id",
         "supervised_v1",
     ]
@@ -323,11 +369,11 @@ def main() -> int:
         "--manifest-json",
         str(gate4_out_a / "manifest.json"),
         "--expected-dataset-hash-blake3",
-        "0" * 64,
+        identity_hashes["dataset_hash_blake3"],
         "--expected-spec-hash-raw-blake3",
-        "0" * 64,
+        identity_hashes["spec_hash_raw_blake3"],
         "--expected-spec-hash-blake3",
-        "0" * 64,
+        identity_hashes["spec_hash_blake3"],
         "--out",
         str(parity_report),
     ]
@@ -358,11 +404,16 @@ def main() -> int:
 
     extra_lines = [
         f"cfa_jsonl={cfa_path.as_posix()}",
+        f"spec_path={spec_path.as_posix()}",
         f"sample_ids={','.join(str(x) for x in sample_ids)}",
         f"model_id={model_id}",
         f"model_revision={model_revision}",
         f"device={device}",
         f"run_id={args.run_id}",
+        f"dataset_revision_id={dataset_revision_id}",
+        f"dataset_hash_blake3={identity_hashes['dataset_hash_blake3']}",
+        f"spec_hash_raw_blake3={identity_hashes['spec_hash_raw_blake3']}",
+        f"spec_hash_blake3={identity_hashes['spec_hash_blake3']}",
         f"gate4_input_json={gate4_input_path.as_posix()}",
         f"gate4_out_a={gate4_out_a.as_posix()}",
         f"gate4_out_b={gate4_out_b.as_posix()}",

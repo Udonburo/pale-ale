@@ -25,14 +25,13 @@ def parse_args() -> argparse.Namespace:
         "--representative-summary",
         default="attestations/triality/case_study/representative_set_summary.md",
     )
+    parser.add_argument("--cfa-jsonl", default="data/cfa/cfa_v1.jsonl")
     parser.add_argument("--samples-root", default="runs/cfa_batch_primaryE/samples")
     parser.add_argument("--out-dir", default="runs/gate4_representative_smoke")
     parser.add_argument("--attest-dir", default="attestations/triality/gate4_validation")
     parser.add_argument("--run-id", default="gate4_representative_smoke")
-    parser.add_argument("--dataset-revision-id", default="cfa_v1_representative_smoke")
-    parser.add_argument("--dataset-hash-blake3", default=ZERO64)
-    parser.add_argument("--spec-hash-raw-blake3", default=ZERO64)
-    parser.add_argument("--spec-hash-blake3", default=ZERO64)
+    parser.add_argument("--dataset-revision-id", default="cfa_v1_representative15pairs_v1")
+    parser.add_argument("--spec-path", default="SPEC.internal.draft.md")
     parser.add_argument("--perm-r", type=int, default=2000)
     parser.add_argument("--primary-score", default="E")
     parser.add_argument("--script-extract", default="tools/extract_triality_triplets.py")
@@ -70,9 +69,11 @@ def flatten_pair_sample_ids(pairs: Sequence[Tuple[int, int]]) -> List[int]:
 def main() -> int:
     args = parse_args()
     summary_path = REPO_ROOT / args.representative_summary
+    cfa_jsonl = REPO_ROOT / args.cfa_jsonl
     samples_root = REPO_ROOT / args.samples_root
     out_dir = REPO_ROOT / args.out_dir
     attest_dir = REPO_ROOT / args.attest_dir
+    spec_path = REPO_ROOT / args.spec_path
     gate4_input_path = out_dir / "gate4_input.json"
     gate4_out_a = out_dir / "gate4_out_a"
     gate4_out_b = out_dir / "gate4_out_b"
@@ -93,6 +94,12 @@ def main() -> int:
     packer.write_json(gate4_input_path, payload)
 
     cli_path = smoke.ensure_cli_built()
+    identity_hashes = smoke.compute_gate4_identity_hashes(
+        cli_path=cli_path,
+        cfa_jsonl=cfa_jsonl,
+        sample_ids=sample_ids,
+        spec_path=spec_path,
+    )
     gate4_cmd_base = [
         str(cli_path),
         "gate4",
@@ -104,11 +111,11 @@ def main() -> int:
         "--dataset-revision-id",
         args.dataset_revision_id,
         "--dataset-hash-blake3",
-        args.dataset_hash_blake3,
+        identity_hashes["dataset_hash_blake3"],
         "--spec-hash-raw-blake3",
-        args.spec_hash_raw_blake3,
+        identity_hashes["spec_hash_raw_blake3"],
         "--spec-hash-blake3",
-        args.spec_hash_blake3,
+        identity_hashes["spec_hash_blake3"],
         "--evaluation-mode-id",
         "supervised_v1",
     ]
@@ -127,11 +134,11 @@ def main() -> int:
         "--manifest-json",
         str(gate4_out_a / "manifest.json"),
         "--expected-dataset-hash-blake3",
-        args.dataset_hash_blake3,
+        identity_hashes["dataset_hash_blake3"],
         "--expected-spec-hash-raw-blake3",
-        args.spec_hash_raw_blake3,
+        identity_hashes["spec_hash_raw_blake3"],
         "--expected-spec-hash-blake3",
-        args.spec_hash_blake3,
+        identity_hashes["spec_hash_blake3"],
         "--out",
         str(parity_report),
     ]
@@ -166,12 +173,18 @@ def main() -> int:
 
     extra_lines = [
         f"representative_summary={summary_path.as_posix()}",
+        f"cfa_jsonl={cfa_jsonl.as_posix()}",
         f"pair_count={len(pairs)}",
         f"sample_count={len(sample_ids)}",
         f"sample_ids={','.join(str(x) for x in sample_ids)}",
         "pairs="
         + ";".join(f"{sample_id}:{contrast_id}" for sample_id, contrast_id in pairs),
         f"run_id={args.run_id}",
+        f"spec_path={spec_path.as_posix()}",
+        f"dataset_revision_id={args.dataset_revision_id}",
+        f"dataset_hash_blake3={identity_hashes['dataset_hash_blake3']}",
+        f"spec_hash_raw_blake3={identity_hashes['spec_hash_raw_blake3']}",
+        f"spec_hash_blake3={identity_hashes['spec_hash_blake3']}",
         f"gate4_input_json={gate4_input_path.as_posix()}",
         f"gate4_out_a={gate4_out_a.as_posix()}",
         f"gate4_out_b={gate4_out_b.as_posix()}",

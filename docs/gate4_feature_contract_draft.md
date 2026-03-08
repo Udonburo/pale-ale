@@ -74,6 +74,21 @@ On-wire encoding rule for transition-aligned scores undefined on the final step:
 
 Canonical manifest identity uses `*_blake3` fields for dataset/spec identity. Prototype-era SHA-256 artifact hashes may be carried as auxiliary provenance fields, but they are not canonical identity keys.
 
+Current canonical identity targets:
+- `dataset_hash_blake3` = BLAKE3 over `pale_ale_diagnose::jcs_bytes` applied to the selected CFA subset payload
+- subset payload row fields are exactly:
+  - `sample_id`
+  - `variant`
+  - `world_type` (`null` if missing)
+  - `contrast_sample_id` (`null` if missing)
+  - `prompt`
+  - `answer`
+  - `defect_spans` (`[]` if missing)
+- `defect_spans` items carry exactly `start`, `end`, `text`, sorted by `(start, end, text)`
+- subset rows are sorted by `sample_id`
+- `spec_hash_raw_blake3` = raw bytes of `SPEC.internal.draft.md`
+- `spec_hash_blake3` = bytes of `SPEC.internal.draft.md` after `CRLF -> LF` normalization only
+
 ## File Contract (Draft)
 - `gate4_token_features.csv` (token-step rows)
 - `gate4_sample_summary.csv` (sample-level rows)

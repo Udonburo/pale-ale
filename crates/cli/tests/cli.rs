@@ -654,6 +654,58 @@ fn json_calibrate_insufficient_data_returns_runtime_error() {
 }
 
 #[test]
+fn json_gate4_hash_identity_returns_expected_hash_fields() {
+    let temp = TempDir::new().unwrap();
+    let spec_path = temp.path().join("spec.md");
+    let cfa_path = temp.path().join("cfa.jsonl");
+    fs::write(&spec_path, "line1\r\nline2\r\n").unwrap();
+    fs::write(
+        &cfa_path,
+        concat!(
+            "{\"sample_id\":1,\"variant\":\"consistent\",\"world_type\":\"genealogy\",\"contrast_sample_id\":null,\"prompt\":\"P1\",\"answer\":\"A1\",\"defect_spans\":[]}\n",
+            "{\"sample_id\":3,\"variant\":\"frustrated\",\"world_type\":null,\"contrast_sample_id\":1,\"prompt\":\"P3\",\"answer\":\"A3\",\"defect_spans\":[{\"start\":1,\"end\":2,\"text\":\"z\"}]}\n"
+        ),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("pale-ale")
+        .args([
+            "gate4",
+            "hash-identity",
+            "--cfa-jsonl",
+            cfa_path.to_str().unwrap(),
+            "--sample-ids",
+            "3",
+            "1",
+            "--spec-path",
+            spec_path.to_str().unwrap(),
+            "--json",
+        ])
+        .output()
+        .unwrap();
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "gate4 hash-identity failed with stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8(output.stdout).unwrap();
+    let value: Value = serde_json::from_str(&stdout).expect("stdout must be JSON");
+    assert_eq!(value["status"], "OK");
+    assert_eq!(value["data"]["mode"], "gate4_hash_identity");
+    assert!(is_lower_hex_64(
+        value["data"]["spec_hash_raw_blake3"].as_str().unwrap()
+    ));
+    assert!(is_lower_hex_64(
+        value["data"]["spec_hash_blake3"].as_str().unwrap()
+    ));
+    assert!(is_lower_hex_64(
+        value["data"]["dataset_hash_blake3"].as_str().unwrap()
+    ));
+}
+
+#[test]
 fn calibrate_non_json_writes_same_snippet_to_out_file() {
     let temp = TempDir::new().unwrap();
     let input_path = temp.path().join("calibration.ndjson");
