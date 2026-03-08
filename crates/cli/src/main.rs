@@ -8,13 +8,14 @@ mod target_resolver;
 
 use clap::{error::ErrorKind, Parser, Subcommand, ValueEnum};
 use pale_ale_diagnose::{
-    compute_inputs_hash, default_measurement_config, default_policy_config, diagnose_eval,
-    measure_eval, measurement_hash, policy_hash, run_gate1_and_write, run_gate2_and_write,
-    run_gate3_and_write, run_gate4_and_write, AttestationLevel, AuditTrace, AuditWarning,
-    ConfigSource, EvalReport, Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput,
-    Gate2OrchestratorError, Gate3IdentityInput, Gate3OrchestratorError, Gate4IdentityInput,
-    Gate4OrchestratorError, HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace,
-    SentenceEmbedding, VerdictStatus,
+    compute_gate4_identity_hashes, compute_inputs_hash, default_measurement_config,
+    default_policy_config, diagnose_eval, measure_eval, measurement_hash, policy_hash,
+    run_gate1_and_write, run_gate2_and_write, run_gate3_and_write, run_gate4_and_write,
+    AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport, Gate1IdentityInput,
+    Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError, Gate3IdentityInput,
+    Gate3OrchestratorError, Gate4IdentityHashError, Gate4IdentityInput, Gate4OrchestratorError,
+    HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding,
+    VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -241,6 +242,14 @@ enum Gate4Command {
         spec_hash_blake3: String,
         #[arg(long, value_enum)]
         evaluation_mode_id: Gate4EvaluationModeArg,
+    },
+    HashIdentity {
+        #[arg(long)]
+        cfa_jsonl: PathBuf,
+        #[arg(long, required = true, num_args = 1..)]
+        sample_ids: Vec<u64>,
+        #[arg(long, default_value = "SPEC.internal.draft.md")]
+        spec_path: PathBuf,
     },
 }
 
@@ -1370,7 +1379,51 @@ fn gate4(command: Gate4Command, json: bool) -> Result<JsonEnvelope, AppError> {
             evaluation_mode_id.as_str().to_string(),
             json,
         ),
+        Gate4Command::HashIdentity {
+            cfa_jsonl,
+            sample_ids,
+            spec_path,
+        } => gate4_hash_identity(cfa_jsonl, sample_ids, spec_path, json),
     }
+}
+
+fn gate4_hash_identity(
+    cfa_jsonl: PathBuf,
+    sample_ids: Vec<u64>,
+    spec_path: PathBuf,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let hashes = compute_gate4_identity_hashes(&cfa_jsonl, &sample_ids, &spec_path)
+        .map_err(map_gate4_identity_hash_error)?;
+    if !json_output {
+        println!("spec_path: {}", spec_path.display());
+        println!("cfa_jsonl: {}", cfa_jsonl.display());
+        println!(
+            "sample_ids: {}",
+            sample_ids
+                .iter()
+                .map(|value| value.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        println!("spec_hash_raw_blake3: {}", hashes.spec_hash_raw_blake3);
+        println!("spec_hash_blake3: {}", hashes.spec_hash_blake3);
+        println!("dataset_hash_blake3: {}", hashes.dataset_hash_blake3);
+    }
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate4_hash_identity",
+            "spec_path": spec_path.display().to_string(),
+            "cfa_jsonl": cfa_jsonl.display().to_string(),
+            "sample_ids": sample_ids,
+            "spec_hash_raw_blake3": hashes.spec_hash_raw_blake3,
+            "spec_hash_blake3": hashes.spec_hash_blake3,
+            "dataset_hash_blake3": hashes.dataset_hash_blake3,
+        })),
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2249,6 +2302,20 @@ fn map_gate4_orchestrator_error(err: Gate4OrchestratorError) -> AppError {
     }
 }
 
+fn map_gate4_identity_hash_error(err: Gate4IdentityHashError) -> AppError {
+    match err {
+        Gate4IdentityHashError::DuplicateRequestedSampleId { .. }
+        | Gate4IdentityHashError::MissingRequestedSampleId { .. } => {
+            AppError::usage(format!("Gate4 identity hash error: {}", err))
+        }
+        Gate4IdentityHashError::ReadPath { .. }
+        | Gate4IdentityHashError::DuplicateSourceSampleId { .. }
+        | Gate4IdentityHashError::JsonLine { .. } => {
+            AppError::dependency(format!("Gate4 identity hash error: {}", err))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2405,5 +2472,24 @@ mod tests {
             Err(err) => err,
         };
         assert_eq!(err.code, "CLI_USAGE");
+    }
+
+    #[test]
+    fn gate4_hash_identity_duplicate_requested_id_maps_to_usage() {
+        let err =
+            map_gate4_identity_hash_error(Gate4IdentityHashError::DuplicateRequestedSampleId {
+                sample_id: 7,
+            });
+        assert_eq!(err.code, "CLI_USAGE");
+    }
+
+    #[test]
+    fn gate4_hash_identity_duplicate_source_id_maps_to_dependency() {
+        let err = map_gate4_identity_hash_error(Gate4IdentityHashError::DuplicateSourceSampleId {
+            sample_id: 7,
+            first_line_no: 1,
+            duplicate_line_no: 2,
+        });
+        assert_eq!(err.code, "DEPENDENCY_ERROR");
     }
 }

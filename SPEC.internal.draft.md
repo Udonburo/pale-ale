@@ -630,6 +630,28 @@ Canonical Gate4 manifest identity follows the Phase4 naming pattern for dataset/
 - `spec_hash_raw_blake3`
 - `spec_hash_blake3`
 
+Current canonical hash targets:
+
+- `dataset_hash_blake3`
+  - BLAKE3 over `pale_ale_diagnose::jcs_bytes` applied to the selected CFA subset payload
+  - subset payload row fields are exactly:
+    - `sample_id`
+    - `variant`
+    - `world_type` (`null` if missing)
+    - `contrast_sample_id` (`null` if missing)
+    - `prompt`
+    - `answer`
+    - `defect_spans` (`[]` if missing)
+  - each `defect_spans` item carries exactly `start`, `end`, `text`
+  - `defect_spans` are sorted by `(start, end, text)`
+  - subset rows are sorted by `sample_id`
+- `spec_hash_raw_blake3`
+  - raw bytes of `SPEC.internal.draft.md`
+- `spec_hash_blake3`
+  - bytes of `SPEC.internal.draft.md` after `CRLF -> LF` normalization only
+
+If the canonical spec hash target moves away from `SPEC.internal.draft.md`, that is a hash-target change and requires a migration note or an input-id/version bump.
+
 Prototype-era SHA-256 content hashes such as `cfa_sha256`, `results_sha256`, `prompt_sha256`, and `target_answer_sha256` remain auxiliary provenance only. They are not canonical identity keys. Source: `docs/gate4_feature_contract_draft.md`, `tools/extract_triality_triplets.py`, `tools/aggregate_cfa_batch.py`, `tools/plot_cfa_case_pair.py`, `SPEC.phase4.md`, `crates/diagnose/src/gate4.rs`
 
 ### 5.4 Determinism Rules (`FROZEN`, inherited)
