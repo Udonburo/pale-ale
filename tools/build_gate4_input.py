@@ -4,12 +4,14 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 DEFAULT_PROJ_ID = "fwht_pad_pow2_take8_v1"
 DEFAULT_SPLUS_DEF_ID = "attn_lastlayer_weighted_hidden_v1"
 DEFAULT_SMINUS_DEF_ID = "lm_head_row_expectation_topk128_v1"
+SAMPLE_DIR_RE = re.compile(r"^sample_(\d{6,})$")
 
 
 def normalize_meta_value(meta: Dict[str, Any], key: str) -> Any:
@@ -27,8 +29,28 @@ def parse_args() -> argparse.Namespace:
         description="Pack sample triplets/labels outputs into Gate4RunInputV1."
     )
     parser.add_argument("--samples-root", required=True)
-    parser.add_argument("--sample-ids", nargs="+", type=int, required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--sample-ids", nargs="+", type=int)
+    selection.add_argument("--sample-id-file")
+    selection.add_argument("--all-samples", action="store_true")
+    parser.add_argument(
+        "--variant",
+        choices=("consistent", "frustrated", "unknown"),
+        help="Optional variant filter applied after sample discovery.",
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Skip the first N selected samples after filtering.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Keep at most N samples after filtering and offset.",
+    )
     parser.add_argument("--out", required=True)
+    parser.add_argument("--selection-manifest-out")
     parser.add_argument("--perm-r", type=int, default=2000)
     parser.add_argument("--primary-score", default="E")
     parser.add_argument("--script-extract", default="tools/extract_triality_triplets.py")
@@ -94,6 +116,131 @@ def load_step_labels(path: Path, n_steps: int) -> List[int]:
     if missing:
         raise ValueError(f"missing labels for steps {missing[:8]} in {path}")
     return labels
+
+
+def normalize_sample_ids(sample_ids: Iterable[int]) -> List[int]:
+    normalized = sorted(int(sample_id) for sample_id in sample_ids)
+    if not normalized:
+        raise ValueError("sample_ids must be non-empty")
+    deduped: List[int] = []
+    seen = set()
+    for sample_id in normalized:
+        if sample_id in seen:
+            raise ValueError(f"duplicate sample_id in selection: {sample_id}")
+        seen.add(sample_id)
+        deduped.append(sample_id)
+    return deduped
+
+
+def parse_sample_id_file(path: Path) -> List[int]:
+    sample_ids: List[int] = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            raw = line.strip()
+            if not raw or raw.startswith("#"):
+                continue
+            try:
+                sample_ids.append(int(raw))
+            except ValueError as err:
+                raise ValueError(
+                    f"invalid sample_id at {path}:{line_no}: {raw!r}"
+                ) from err
+    return normalize_sample_ids(sample_ids)
+
+
+def sample_dir_name(sample_id: int) -> str:
+    return f"sample_{sample_id:06d}"
+
+
+def discover_sample_dirs(samples_root: Path) -> List[Tuple[int, Path]]:
+    discovered: List[Tuple[int, Path]] = []
+    for child in samples_root.iterdir():
+        if not child.is_dir():
+            continue
+        match = SAMPLE_DIR_RE.match(child.name)
+        if not match:
+            continue
+        discovered.append((int(match.group(1)), child))
+    discovered.sort(key=lambda item: item[0])
+    if not discovered:
+        raise ValueError(f"no sample_* directories found under {samples_root}")
+    return discovered
+
+
+def load_variant_for_sample(sample_dir: Path) -> str:
+    labels_meta = load_json(sample_dir / "labels_meta.json")
+    return str(labels_meta.get("variant") or "unknown")
+
+
+def resolve_selected_sample_ids(
+    samples_root: Path,
+    sample_ids: Optional[Sequence[int]] = None,
+    sample_id_file: Optional[Path] = None,
+    all_samples: bool = False,
+    variant: Optional[str] = None,
+    offset: int = 0,
+    limit: Optional[int] = None,
+) -> List[int]:
+    if offset < 0:
+        raise ValueError("offset must be >= 0")
+    if limit is not None and limit < 0:
+        raise ValueError("limit must be >= 0")
+
+    if sample_ids is not None:
+        selected = normalize_sample_ids(sample_ids)
+    elif sample_id_file is not None:
+        selected = parse_sample_id_file(sample_id_file)
+    elif all_samples:
+        selected = [sample_id for sample_id, _ in discover_sample_dirs(samples_root)]
+    else:
+        raise ValueError("one of sample_ids, sample_id_file, or all_samples is required")
+
+    sample_dir_map = {sample_id: path for sample_id, path in discover_sample_dirs(samples_root)}
+    missing_dirs = [sample_id for sample_id in selected if sample_id not in sample_dir_map]
+    if missing_dirs:
+        raise ValueError(
+            f"missing sample directories under {samples_root}: {missing_dirs[:8]}"
+        )
+
+    if variant is not None:
+        filtered: List[int] = []
+        for sample_id in selected:
+            current_variant = load_variant_for_sample(sample_dir_map[sample_id])
+            if current_variant == variant:
+                filtered.append(sample_id)
+        selected = filtered
+
+    selected = selected[offset:]
+    if limit is not None:
+        selected = selected[:limit]
+    if not selected:
+        raise ValueError("selection is empty after applying filters")
+    return selected
+
+
+def build_selection_manifest(
+    samples_root: Path,
+    sample_ids: Sequence[int],
+    variant_filter: Optional[str],
+    offset: int,
+    limit: Optional[int],
+    out_path: Path,
+) -> Dict[str, Any]:
+    variant_counts: Dict[str, int] = {}
+    for sample_id in sample_ids:
+        variant = load_variant_for_sample(samples_root / sample_dir_name(sample_id))
+        variant_counts[variant] = variant_counts.get(variant, 0) + 1
+    return {
+        "samples_root": samples_root.as_posix(),
+        "selection_mode": "batch_packer_v1",
+        "variant_filter": variant_filter,
+        "offset": offset,
+        "limit": limit,
+        "n_samples": len(sample_ids),
+        "sample_ids": [int(sample_id) for sample_id in sample_ids],
+        "variant_counts": variant_counts,
+        "out_path": out_path.as_posix(),
+    }
 
 
 def build_sample_payload(sample_dir: Path, sample_id: int) -> Dict[str, Any]:
@@ -203,9 +350,8 @@ def pack_gate4_input(
     perm_r: int,
     primary_score: str,
 ) -> Dict[str, Any]:
-    if not sample_ids:
-        raise ValueError("sample_ids must be non-empty")
-    sample_dirs = [samples_root / f"sample_{sample_id:06d}" for sample_id in sample_ids]
+    normalized_sample_ids = normalize_sample_ids(sample_ids)
+    sample_dirs = [samples_root / sample_dir_name(sample_id) for sample_id in normalized_sample_ids]
     first_meta = validate_homogeneous_metadata(
         sample_dirs,
         keys=(
@@ -227,7 +373,7 @@ def pack_gate4_input(
         ),
         "samples": [
             build_sample_payload(path, sample_id)
-            for path, sample_id in zip(sample_dirs, sample_ids)
+            for path, sample_id in zip(sample_dirs, normalized_sample_ids)
         ],
     }
 
@@ -241,9 +387,19 @@ def write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 def main() -> int:
     args = parse_args()
-    payload = pack_gate4_input(
-        samples_root=Path(args.samples_root),
+    samples_root = Path(args.samples_root)
+    selected_ids = resolve_selected_sample_ids(
+        samples_root=samples_root,
         sample_ids=args.sample_ids,
+        sample_id_file=Path(args.sample_id_file) if args.sample_id_file else None,
+        all_samples=bool(args.all_samples),
+        variant=args.variant,
+        offset=args.offset,
+        limit=args.limit,
+    )
+    payload = pack_gate4_input(
+        samples_root=samples_root,
+        sample_ids=selected_ids,
         script_extract=Path(args.script_extract),
         script_eval=Path(args.script_eval),
         perm_r=args.perm_r,
@@ -251,8 +407,21 @@ def main() -> int:
     )
     out_path = Path(args.out)
     write_json(out_path, payload)
+
+    if args.selection_manifest_out:
+        selection_manifest = build_selection_manifest(
+            samples_root=samples_root,
+            sample_ids=selected_ids,
+            variant_filter=args.variant,
+            offset=args.offset,
+            limit=args.limit,
+            out_path=out_path,
+        )
+        write_json(Path(args.selection_manifest_out), selection_manifest)
+
     print(f"out={out_path.as_posix()}")
     print(f"n_samples={len(payload['samples'])}")
+    print(f"sample_ids={','.join(str(sample_id) for sample_id in selected_ids)}")
     print(f"input_sha256={sha256_file(out_path)}")
     return 0
 
