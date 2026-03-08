@@ -7,6 +7,20 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
+DEFAULT_PROJ_ID = "fwht_pad_pow2_take8_v1"
+DEFAULT_SPLUS_DEF_ID = "attn_lastlayer_weighted_hidden_v1"
+DEFAULT_SMINUS_DEF_ID = "lm_head_row_expectation_topk128_v1"
+
+
+def normalize_meta_value(meta: Dict[str, Any], key: str) -> Any:
+    if key == "proj_id":
+        return meta.get(key) or DEFAULT_PROJ_ID
+    if key == "splus_def_id":
+        return meta.get(key) or DEFAULT_SPLUS_DEF_ID
+    if key == "sminus_def_id":
+        return meta.get(key) or DEFAULT_SMINUS_DEF_ID
+    return meta.get(key)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -155,9 +169,9 @@ def build_metadata(
         "seed": int(first_meta["seed"]),
         "perm_r": int(perm_r),
         "primary_score": str(primary_score),
-        "proj_id": str(first_meta["proj_id"]),
-        "splus_def_id": str(first_meta["splus_def_id"]),
-        "sminus_def_id": str(first_meta["sminus_def_id"]),
+        "proj_id": str(normalize_meta_value(first_meta, "proj_id")),
+        "splus_def_id": str(normalize_meta_value(first_meta, "splus_def_id")),
+        "sminus_def_id": str(normalize_meta_value(first_meta, "sminus_def_id")),
         "script_sha256_extract": sha256_file(script_extract),
         "script_sha256_eval": sha256_file(script_eval),
     }
@@ -168,10 +182,10 @@ def validate_homogeneous_metadata(
     keys: Sequence[str],
 ) -> Dict[str, Any]:
     first_meta = load_json(sample_dirs[0] / "meta.json")
-    first_view = {key: first_meta.get(key) for key in keys}
+    first_view = {key: normalize_meta_value(first_meta, key) for key in keys}
     for sample_dir in sample_dirs[1:]:
         current_meta = load_json(sample_dir / "meta.json")
-        current_view = {key: current_meta.get(key) for key in keys}
+        current_view = {key: normalize_meta_value(current_meta, key) for key in keys}
         if current_view != first_view:
             raise ValueError(
                 f"sample metadata mismatch between {sample_dirs[0] / 'meta.json'} and "

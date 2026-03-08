@@ -118,3 +118,14 @@ Outputs:
 - input JSON: `runs/gate4_validation_smoke/gate4_input.json`
 - Gate4 artifacts: `runs/gate4_validation_smoke/gate4_out_a/` and `gate4_out_b/`
 - parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_parity_smoke.txt`
+
+Representative-set smoke (reuses existing `runs/cfa_batch_primaryE/samples/`):
+
+```powershell
+python tools/run_gate4_representative_smoke.py
+```
+
+Outputs:
+- input JSON: `runs/gate4_representative_smoke/gate4_input.json`
+- Gate4 artifacts: `runs/gate4_representative_smoke/gate4_out_a/` and `gate4_out_b/`
+- parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_representative_smoke.txt`
