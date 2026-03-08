@@ -129,3 +129,52 @@ Outputs:
 - input JSON: `runs/gate4_representative_smoke/gate4_input.json`
 - Gate4 artifacts: `runs/gate4_representative_smoke/gate4_out_a/` and `gate4_out_b/`
 - parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_representative_smoke.txt`
+
+## 9) Gate4 batch ingestion (official packer)
+
+Use `build_gate4_input.py` when you already have extracted sample directories and want a deterministic `Gate4RunInputV1` without running smoke validation.
+
+Explicit sample ids:
+
+```powershell
+python tools/build_gate4_input.py --samples-root runs/cfa_batch_primaryE/samples --sample-ids 0 1 2 3 --out runs/gate4_batch_ingestion/gate4_input.json --selection-manifest-out runs/gate4_batch_ingestion/batch_selection_manifest.json
+```
+
+Directory walk with filters:
+
+```powershell
+python tools/build_gate4_input.py --samples-root runs/cfa_batch_primaryE/samples --all-samples --variant frustrated --limit 25 --out runs/gate4_batch_ingestion/gate4_input.json --selection-manifest-out runs/gate4_batch_ingestion/batch_selection_manifest.json
+```
+
+Deterministic selection rules:
+- sample directories are discovered as `sample_<id>`
+- discovered ids are sorted ascending
+- `variant` filter is applied after discovery
+- `offset` / `limit` are applied after filtering
+- output `sample_ids` are unique and sorted ascending
+
+Artifacts:
+- `gate4_input.json`
+- optional `batch_selection_manifest.json`
+
+## 10) Gate4 batch ingestion (one-shot run)
+
+Use `run_gate4_batch_ingestion.py` to:
+- select sample dirs
+- build `gate4_input.json`
+- verify that `samples_root` prompt/answer + metadata still match the claimed raw `--cfa-jsonl`
+- compute canonical `dataset_hash_blake3`
+- compute canonical `spec_hash_*_blake3`
+- run `pale-ale gate4 run`
+
+```powershell
+python tools/run_gate4_batch_ingestion.py --samples-root runs/cfa_batch_primaryE/samples --all-samples --limit 4 --out-dir runs/gate4_batch_ingestion_smoke --dataset-revision-id cfa_v1_batch_smoke_v1
+```
+
+Outputs:
+- `runs/gate4_batch_ingestion_smoke/gate4_input.json`
+- `runs/gate4_batch_ingestion_smoke/batch_selection_manifest.json`
+- `runs/gate4_batch_ingestion_smoke/batch_run_manifest.json`
+- `runs/gate4_batch_ingestion_smoke/gate4_out/manifest.json`
+- `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_token_features.csv`
+- `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_sample_summary.csv`
