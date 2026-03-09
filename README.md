@@ -1,8 +1,13 @@
 # pale-ale
 
-**Post-hoc geometric auditing of LLM outputs via Gate1 rotor diagnostics and Gate2 Cl+(8) telemetry.**
+**Deterministic geometric defect telemetry for LLM outputs, from Gate1 rotor diagnostics through Gate4 feature-sink artifacts.**
 
-pale-ale measures geometric failure signals from model outputs after inference. Gate1 computes local rotor diagnostics in `SimpleRotor29`; Gate2 upgrades to the closed even subalgebra `Cl+(8)` (128 dimensions) to measure composition-dependent observables -- holonomy, closure error, and higher-grade energy leakage. It does not modify the model; it measures what the model has already produced.
+pale-ale measures geometric failure signals from model outputs after inference. It does not modify the model; it measures what the model has already produced. The current repository has two active surfaces:
+
+- **public/stable surface**: Gate1 and Gate2 auditing, plus the public `eval` / `batch` / `report` / `calibrate` CLI path
+- **internal/research surface**: Gate3 local geometry, Gate4 feature-sink artifacts, CFA tooling, attestations, and internal SSOT work
+
+Gate1 computes local rotor diagnostics in `SimpleRotor29`; Gate2 upgrades to the closed even subalgebra `Cl+(8)` (128 dimensions) to measure composition-dependent observables such as closure error, triangle holonomy, and higher-grade energy leakage. Gate3 and Gate4 extend the repo into local geometry telemetry and deterministic token / transition / sample / run artifact collection.
 
 ## How It Works
 
@@ -18,6 +23,22 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
          | compare |
        closure error (H1-B)
 ```
+
+## Current Surfaces
+
+### Public / Stable
+
+- `README.md` (this file): repository overview
+- [`SPEC.public.md`](SPEC.public.md): stable public evaluator / batch contract
+- [`SPEC.phase4.md`](SPEC.phase4.md): Gate1 SSOT
+- [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md): Gate2 SSOT
+
+### Internal / Research
+
+- [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md): Gate3 local rotor geometry
+- [`SPEC.internal.draft.md`](SPEC.internal.draft.md): internal identity / Gate4 / research positioning
+- [`docs/gate4_feature_contract_draft.md`](docs/gate4_feature_contract_draft.md): Gate4 feature-sink contract draft
+- `tools/`, `docs/`, `attestations/`: experimental pipelines, CFA utilities, and evidence artifacts
 
 ## Gate Architecture
 
@@ -68,6 +89,21 @@ pale-ale gate2 run --input gate2_input.json --out ./gate2_out \
 
 **Output artifacts** (`manifest.json`, `summary.csv`, `samples.csv`) are deterministic: UTF-8/LF, `{:.17e}` float formatting, no NaN/Inf, stable key/column/row ordering.
 
+### Gate 3 -- Local Rotor Geometry (draft / telemetry-only)
+
+Gate3 measures local geometry of adjacent step rotors in `Cl+(8)`. It is telemetry-only and follows the same step-construction path as Gate2. Current focus is local curvature / torsion style observables and explicit missing reasons, not threshold-based invalidation.
+
+Primary reference: [SPEC.phase4.gate3.md](SPEC.phase4.gate3.md)
+
+### Gate 4 -- Feature Sink (draft / implementation complete)
+
+Gate4 is a deterministic feature sink for token / transition / sample / run artifacts. It collects proxy-observable outputs and baselines into stable CSV / manifest artifacts. Gate4 does not introduce new math, learned fusion, or benchmark-specific verdict logic.
+
+Primary references:
+
+- [SPEC.internal.draft.md](SPEC.internal.draft.md)
+- [docs/gate4_feature_contract_draft.md](docs/gate4_feature_contract_draft.md)
+
 ## Mathematical Foundation
 
 | Component | Detail |
@@ -88,7 +124,7 @@ Full specifications: [SPEC.phase4.md](SPEC.phase4.md) (Gate 1) / [SPEC.phase4.ga
 crates/
   rotor/       <- leaf math: SimpleRotor29, Even128, Cl+(8) algebra (no deps)
   diagnose/    <- metrics, orchestrator, artifact writer, manifest validator
-  cli/         <- thin CLI shell (gate1 run, gate2 run, eval, batch, ...)
+  cli/         <- thin CLI shell (gate1, gate2, gate3, gate4, eval, batch, ...)
   embed/       <- model loading and embedding
   modelspec/   <- model specification and verification
 ```
@@ -170,11 +206,11 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 MSRV: Rust 1.65+
 
-## Roadmap
+## Near-Term Direction
 
-- **v4.1.1+**: Threshold calibration for Gate 2 observables
-- **v4.2+**: Gate 3 -- topological features (persistent homology)
-- **v4.3+**: Gate 4-5 -- conformal fusion, integrated audit pipeline
+- Freeze the Gate4 feature-sink contract only after research-facing freeze triggers are met
+- Design stricter post-CFA validation regimes (for example CFA v2 or non-synthetic benchmarks)
+- Test transport / holonomy-style Gate5 experiments without collapsing Gate4's scope as a sink
 
 ## License
 
