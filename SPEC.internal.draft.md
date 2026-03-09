@@ -344,6 +344,10 @@ The following are not proven by the current repo evidence:
 - false positive rate stability on ground-truth negative distributions
 - `score_E` absolute threshold separation between consistent and frustrated samples (negative stability check returned `Red`; `max(score_E)` distributions overlap at 48% vs 90% Green threshold)
 
+### CFA v1 independence caveat (`PROVISIONAL`)
+
+Repeated score patterns are observed across multiple CFA v1 samples, for example sample pairs `32/188` and `10/166` in `attestations/triality/gate4_validation/2026-03-09_gate4_negative_stability_from_artifacts.txt`. This suggests that some CFA v1 samples may not be statistically independent in practice, and the effective independent sample count for stability-oriented claims may be lower than the nominal `N`. This does not affect Gate4 correctness, but it should be accounted for in future statistical interpretation and CFA v2 design.
+
 ## 5. Gate4 Frozen Contract: Feature Sink
 
 ### 5.1 Boundary (`FROZEN`)

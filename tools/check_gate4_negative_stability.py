@@ -198,8 +198,11 @@ def load_sample_summary(path: Path) -> Dict[int, Dict[str, Any]]:
         sample_id = parse_int(row["sample_id"])
         out[sample_id] = {
             "sample_id": sample_id,
+            "run_id": row["run_id"],
             "variant": row["variant"],
             "world_type": row["world_type"],
+            "positive_token_count": parse_int(row["positive_token_count"]),
+            "positive_transition_count": parse_int(row["positive_transition_count"]),
             "hit_at_10_E": parse_int(row["hit_at_10_E"]),
             "delta_auprc_E_vs_best_baseline": parse_float(
                 row["delta_auprc_E_vs_best_baseline"]
@@ -212,11 +215,8 @@ def load_sample_summary(path: Path) -> Dict[int, Dict[str, Any]]:
 def build_sample_stats(
     grouped_rows: Dict[int, List[Dict[str, Any]]],
     sample_summary: Dict[int, Dict[str, Any]],
-) -> Tuple[List[Dict[str, Any]], List[float], List[float], List[float]]:
+) -> List[Dict[str, Any]]:
     samples: List[Dict[str, Any]] = []
-    pooled_e: List[float] = []
-    pooled_a: List[float] = []
-    pooled_b: List[float] = []
     for sample_id in sorted(grouped_rows):
         rows = grouped_rows[sample_id]
         transition_rows = [row for row in rows if row["score_E"] is not None]
@@ -227,9 +227,6 @@ def build_sample_stats(
         score_b = [float(row["score_B"]) for row in transition_rows if row["score_B"] is not None]
         if len(score_a) != len(score_e) or len(score_b) != len(score_e):
             raise ValueError(f"sample {sample_id} has missing baseline scores in transition rows")
-        pooled_e.extend(score_e)
-        pooled_a.extend(score_a)
-        pooled_b.extend(score_b)
         sorted_e = sorted(score_e)
         summary_row = sample_summary.get(sample_id)
         if summary_row is None:
@@ -237,10 +234,13 @@ def build_sample_stats(
         samples.append(
             {
                 "sample_id": sample_id,
+                "run_id": summary_row["run_id"],
                 "variant": summary_row["variant"],
                 "world_type": summary_row["world_type"],
                 "rows": rows,
                 "transition_rows": transition_rows,
+                "score_a_rows": score_a,
+                "score_b_rows": score_b,
                 "max_e": sorted_e[-1],
                 "p90_e": quantile_nearest_rank(sorted_e, 0.90),
                 "mean_e": statistics.fmean(sorted_e),
@@ -251,7 +251,76 @@ def build_sample_stats(
                 "best_baseline_name": summary_row["best_baseline_name"],
             }
         )
-    return samples, pooled_e, pooled_a, pooled_b
+    return samples
+
+
+def validate_manifest_artifacts(
+    manifest: Dict[str, Any],
+    token_features_path: Path,
+    sample_summary_path: Path,
+    run_summary_path: Path,
+    token_rows: Sequence[Dict[str, str]],
+    sample_summary: Dict[int, Dict[str, Any]],
+    run_summary_rows: Sequence[Dict[str, str]],
+) -> None:
+    expected_hashes = {
+        "token_features_sha256": sha256_file(token_features_path),
+        "sample_summary_sha256": sha256_file(sample_summary_path),
+        "run_summary_sha256": sha256_file(run_summary_path),
+    }
+    for key, actual in expected_hashes.items():
+        manifest_value = str(manifest.get(key, ""))
+        if manifest_value != actual:
+            raise ValueError(
+                f"manifest {key} mismatch: manifest={manifest_value} actual={actual}"
+            )
+
+    if len(run_summary_rows) != 1:
+        raise ValueError("gate4_run_summary.csv must contain exactly one data row")
+    run_summary = run_summary_rows[0]
+    manifest_run_id = str(manifest["run_id"])
+    if run_summary["run_id"] != manifest_run_id:
+        raise ValueError(
+            f"run summary run_id mismatch: {run_summary['run_id']} != {manifest_run_id}"
+        )
+    for row in token_rows:
+        if row["run_id"] != manifest_run_id:
+            raise ValueError(
+                f"token row run_id mismatch for sample_id={row['sample_id']} step={row['step']}"
+            )
+    for sample_id, row in sample_summary.items():
+        if row["run_id"] != manifest_run_id:
+            raise ValueError(f"sample summary run_id mismatch for sample_id={sample_id}")
+
+    n_samples_total = len(sample_summary)
+    n_token_rows_total = len(token_rows)
+    n_transition_rows_total = sum(
+        1 for row in token_rows if row["transition_missing_reason"] == "none"
+    )
+    n_samples_with_positive_tokens = sum(
+        1 for row in sample_summary.values() if row["positive_token_count"] > 0
+    )
+    n_samples_with_positive_transitions = sum(
+        1 for row in sample_summary.values() if row["positive_transition_count"] > 0
+    )
+    expected_counts = {
+        "n_samples_total": n_samples_total,
+        "n_token_rows_total": n_token_rows_total,
+        "n_transition_rows_total": n_transition_rows_total,
+        "n_samples_with_positive_tokens": n_samples_with_positive_tokens,
+        "n_samples_with_positive_transitions": n_samples_with_positive_transitions,
+    }
+    for key, actual in expected_counts.items():
+        manifest_value = int(manifest[key])
+        run_summary_value = int(run_summary[key])
+        if manifest_value != actual:
+            raise ValueError(
+                f"manifest {key} mismatch: manifest={manifest_value} actual={actual}"
+            )
+        if run_summary_value != actual:
+            raise ValueError(
+                f"run summary {key} mismatch: run_summary={run_summary_value} actual={actual}"
+            )
 
 
 def inspect_top_transitions(sample: Dict[str, Any], n: int) -> List[Dict[str, Any]]:
@@ -295,11 +364,18 @@ def main() -> int:
     token_rows = load_csv(token_features_path)
     sample_summary = load_sample_summary(sample_summary_path)
     run_summary_rows = load_csv(run_summary_path)
-    if len(run_summary_rows) != 1:
-        raise ValueError("gate4_run_summary.csv must contain exactly one data row")
+    validate_manifest_artifacts(
+        manifest=manifest,
+        token_features_path=token_features_path,
+        sample_summary_path=sample_summary_path,
+        run_summary_path=run_summary_path,
+        token_rows=token_rows,
+        sample_summary=sample_summary,
+        run_summary_rows=run_summary_rows,
+    )
 
     grouped = group_token_rows(token_rows)
-    samples, pooled_e, pooled_a, pooled_b = build_sample_stats(grouped, sample_summary)
+    samples = build_sample_stats(grouped, sample_summary)
 
     consistent = [sample for sample in samples if sample["variant"] == "consistent"]
     frustrated = [sample for sample in samples if sample["variant"] == "frustrated"]
@@ -320,6 +396,17 @@ def main() -> int:
         sum(1 for value in consistent_max if value < median_frustrated_max_e)
         / float(len(consistent_max))
     )
+    pooled_e = [
+        float(row["score_E"])
+        for sample in consistent
+        for row in sample["transition_rows"]
+    ]
+    pooled_a = [
+        float(value) for sample in consistent for value in sample["score_a_rows"]
+    ]
+    pooled_b = [
+        float(value) for sample in consistent for value in sample["score_b_rows"]
+    ]
     rho_e_a = spearman_rho(pooled_e, pooled_a)
     rho_e_b = spearman_rho(pooled_e, pooled_b)
 
@@ -341,6 +428,7 @@ def main() -> int:
     lines.append(f"sample_summary_sha256={sha256_file(sample_summary_path)}")
     lines.append(f"run_summary_sha256={sha256_file(run_summary_path)}")
     lines.append(f"script_sha256={sha256_file(Path(__file__))}")
+    lines.append("artifact_integrity=PASS")
     lines.append(f"run_id={manifest['run_id']}")
     lines.append(f"dataset_revision_id={manifest['dataset_revision_id']}")
     lines.append(f"dataset_hash_blake3={manifest['dataset_hash_blake3']}")
@@ -384,6 +472,7 @@ def main() -> int:
             lines.append(f"    {key}={fmt_float(value)}")
     lines.append("")
     lines.append("baseline_correlation_consistent_pooled:")
+    lines.append("  scope=consistent_only_transition_rows")
     lines.append(f"  spearman_rho_E_vs_A={fmt_float(rho_e_a)}")
     lines.append(f"  spearman_rho_E_vs_B={fmt_float(rho_e_b)}")
     lines.append("")

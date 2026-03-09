@@ -2,6 +2,7 @@
 """Run Gate4 full-batch ingestion and artifact-only sufficiency diagnostics."""
 
 import argparse
+import datetime as dt
 import subprocess
 from pathlib import Path
 from typing import Sequence
@@ -48,8 +49,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out-report",
         default=(
-            "attestations/triality/gate4_validation/"
-            "2026-03-09_gate4_negative_stability_from_artifacts.txt"
+            f"attestations/triality/gate4_validation/"
+            f"{dt.date.today().isoformat()}_gate4_negative_stability_from_artifacts.txt"
         ),
     )
     parser.add_argument("--top-samples", type=int, default=10)

@@ -9,7 +9,8 @@ manifest_sha256=f5aee3a6418f6d4c11b2baa3409ae85276b7fb141e2f4e9ea3d914fd5bb99ba7
 token_features_sha256=a647fa0a5b791b073e07ae590fdea072bec805094307bc3a8fa30d8af890a9d9
 sample_summary_sha256=3a384ae2158533203237ef0bc4e831677b8cb01196ea6ff0fa8e4dbad890db75
 run_summary_sha256=2494c4fef08d1b487379310516d4fcd1c68c4335cb308ca4c378fa0c1e20d495
-script_sha256=4cfb758e29ac694ffae27ecd295a2a5ee32f087864094c7a267984d25c825d0b
+script_sha256=6464184ca787c7a69b1336388f7e460bd3b1260d83ac01ebfc0ce5d7f192f8f3
+artifact_integrity=PASS
 run_id=gate4_artifact_sufficiency
 dataset_revision_id=cfa_v1_full200_gate4_v1
 dataset_hash_blake3=b21f0cd768454fa122ec64978e719a3bfab8b7440ed7cf22889d5011fae36cb4
@@ -61,8 +62,9 @@ sample_wise_distributions_consistent:
     max=2.36033156016844359e+00
 
 baseline_correlation_consistent_pooled:
-  spearman_rho_E_vs_A=-1.11629226915622035e-01
-  spearman_rho_E_vs_B=-1.35772711928831752e-01
+  scope=consistent_only_transition_rows
+  spearman_rho_E_vs_A=-1.27391069698548881e-01
+  spearman_rho_E_vs_B=-1.36591414192793387e-01
 
 decision_reference:
   median_frustrated_max_E=2.75478742652205089e+00
