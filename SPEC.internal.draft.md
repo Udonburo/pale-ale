@@ -748,15 +748,40 @@ Float formatting:
 | `C8` | gate4 feature draft expects full A-F sink columns, while current case-study token table emits only A/B/E | Layer 1 winner for canonical sink schema is `docs/gate4_feature_contract_draft.md`; case-study output is auxiliary evidence artifact | canonical Gate4 sink targets full A-F contract; current case-study table is not canonical | extend feature writer or keep case-study table explicitly non-canonical in future docs |
 | `C9` | case-study local `hit_at_10` from `tools/eval_local_span.py` is token-level, while Gate4 sink `hit_at_10_E` is transition-level because `score_E` is transition-aligned in the Rust sink | context split; local-analysis authority from `tools/eval_local_span.py`, sink schema authority from `crates/diagnose/src/gate4.rs` plus `docs/gate4_feature_contract_draft.md` | keep both metrics, but name them by scope: case-study `hit_at_10` is token-level, Gate4 `hit_at_10_E` is transition-level | if a unified cross-artifact local metric is later needed, add an explicit `_token` / `_transition` suffix pair rather than overloading `hit_at_10` |
 
-## 7. Roadmap & Freeze Triggers (`PROVISIONAL`)
+## 7. Gate4 Completion vs Freeze (`PROVISIONAL`)
 
-The following are required to promote this document from `DRAFT` to `FROZEN`:
+### 7.1 Gate4 v1 Implementation Checklist (`PROVISIONAL`, current status snapshot)
+
+The following implementation-facing checklist is satisfied in the current repo state.
+This means `Gate4 v1 implementation = complete`, even though this document remains `DRAFT`.
+
+- batch ingestion one-shot path exists (`tools/run_gate4_batch_ingestion.py`)
+- canonical Gate4 artifacts exist and are stable:
+  - `manifest.json`
+  - `gate4_token_features.csv`
+  - `gate4_sample_summary.csv`
+  - `gate4_run_summary.csv`
+- deterministic rerun is confirmed for:
+  - fixture parity
+  - small smoke
+  - representative smoke
+- committed fixture parity is part of core CI
+- representative smoke passes on the current CFA representative set
+- artifact-only negative-stability reanalysis is possible from Gate4 artifacts alone
+- one end-to-end Gate4 implementation exercises the current contract
+- core CI and local-heavy validation are explicitly split
+
+This checklist is about engineering completeness only.
+It does not imply research freeze, benchmark sufficiency, or generalization.
+
+### 7.2 Research / Spec Freeze Triggers (`PROVISIONAL`)
+
+The following are still required to promote this document from `DRAFT` to `FROZEN`:
 
 - at least one non-synthetic benchmark beyond CFA OR a stricter CFA v2
 - an expanded baseline set, for example windowed surprisal, that is still beaten
 - replication across 2 model variants in the same family
 - demonstrated false positive rate stability on a ground-truth negative set
-- one end-to-end Gate4 implementation exercising the contract
 
 Items that remain `RESEARCH` only:
 
