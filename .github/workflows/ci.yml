@@ -10,6 +10,7 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/**"
+      - "tools/eval_triality_token.py"
       - "tools/validate_gate4_parity.py"
       - "tools/run_gate4_fixture_parity.py"
       - "fixtures/gate4/**"
@@ -24,6 +25,7 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/**"
+      - "tools/eval_triality_token.py"
       - "tools/validate_gate4_parity.py"
       - "tools/run_gate4_fixture_parity.py"
       - "fixtures/gate4/**"
@@ -131,7 +133,7 @@ jobs:
           python-version: "3.11"
 
       - name: Python sanity
-        run: python -m py_compile tools/validate_gate4_parity.py tools/run_gate4_fixture_parity.py
+        run: python -m py_compile tools/eval_triality_token.py tools/validate_gate4_parity.py tools/run_gate4_fixture_parity.py
 
       - name: Gate4 fixture parity
         run: python tools/run_gate4_fixture_parity.py
