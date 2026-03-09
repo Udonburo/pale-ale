@@ -2,6 +2,36 @@
 
 **Version: v1.0.1**
 
+## Scope
+
+This document defines the **public-facing evaluator / batch contract** only.
+
+It covers the stable public CLI surface:
+
+- `eval`
+- `batch`
+- `report`
+- `calibrate`
+- `model`
+- `doctor`
+
+It does **not** define the repository-wide internal research surface, including:
+
+- Gate3 local rotor geometry telemetry
+- Gate4 feature-sink artifacts
+- CFA research workflows
+- internal SSOT / research positioning
+
+Those are governed separately by:
+
+- [`SPEC.phase4.md`](SPEC.phase4.md)
+- [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md)
+- [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md)
+- [`SPEC.internal.draft.md`](SPEC.internal.draft.md)
+- [`docs/gate4_feature_contract_draft.md`](docs/gate4_feature_contract_draft.md)
+
+This separation is intentional: the public evaluator contract is narrower than the current repository-wide research implementation.
+
 ## Purpose
 
 Pale Ale is an **auditor**. It does not generate content.
