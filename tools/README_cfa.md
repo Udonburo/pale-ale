@@ -179,3 +179,36 @@ Outputs:
 - `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_token_features.csv`
 - `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_sample_summary.csv`
 - `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_run_summary.csv`
+
+## 11) Gate4 artifact sufficiency (artifact-only reanalysis)
+
+Use `check_gate4_negative_stability.py` to recompute the existing negative-stability diagnostic
+from Gate4 artifacts only.
+
+Inputs:
+- `manifest.json`
+- `gate4_token_features.csv`
+- `gate4_sample_summary.csv`
+- `gate4_run_summary.csv`
+
+Example:
+
+```powershell
+python tools/check_gate4_negative_stability.py --gate4-out-dir runs/gate4_artifact_sufficiency/gate4_out --out attestations/triality/gate4_validation/2026-03-09_gate4_negative_stability_from_artifacts.txt
+```
+
+One-shot full batch:
+
+```powershell
+python tools/run_gate4_artifact_sufficiency.py --samples-root runs/cfa_batch_primaryE/samples --cfa-jsonl data/cfa/cfa_v1.jsonl --out-dir runs/gate4_artifact_sufficiency --dataset-revision-id cfa_v1_full200_gate4_v1
+```
+
+Outputs:
+- `runs/gate4_artifact_sufficiency/gate4_input.json`
+- `runs/gate4_artifact_sufficiency/batch_selection_manifest.json`
+- `runs/gate4_artifact_sufficiency/batch_run_manifest.json`
+- `runs/gate4_artifact_sufficiency/gate4_out/manifest.json`
+- `runs/gate4_artifact_sufficiency/gate4_out/gate4_token_features.csv`
+- `runs/gate4_artifact_sufficiency/gate4_out/gate4_sample_summary.csv`
+- `runs/gate4_artifact_sufficiency/gate4_out/gate4_run_summary.csv`
+- `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_negative_stability_from_artifacts.txt`
