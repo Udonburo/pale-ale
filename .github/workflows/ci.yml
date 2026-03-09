@@ -9,6 +9,12 @@ on:
       - "src/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - ".github/workflows/**"
+      - "tools/validate_gate4_parity.py"
+      - "tools/run_gate4_fixture_parity.py"
+      - "fixtures/gate4/**"
+      - "SPEC.internal.draft.md"
+      - "docs/gate4_feature_contract_draft.md"
   pull_request:
     branches:
       - main
@@ -17,6 +23,12 @@ on:
       - "src/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - ".github/workflows/**"
+      - "tools/validate_gate4_parity.py"
+      - "tools/run_gate4_fixture_parity.py"
+      - "fixtures/gate4/**"
+      - "SPEC.internal.draft.md"
+      - "docs/gate4_feature_contract_draft.md"
   workflow_dispatch:
 
 concurrency:
@@ -97,3 +109,29 @@ jobs:
           if missing:
               raise SystemExit(f"missing symbols: {missing}")
           PY
+
+  gate4-fixture-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        shell: bash
+        run: |
+          rustup set profile minimal
+          rustup toolchain install stable --component rustfmt --component clippy
+          rustup default stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python sanity
+        run: python -m py_compile tools/validate_gate4_parity.py tools/run_gate4_fixture_parity.py
+
+      - name: Gate4 fixture parity
+        run: python tools/run_gate4_fixture_parity.py

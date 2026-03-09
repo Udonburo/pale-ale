@@ -119,6 +119,8 @@ Outputs:
 - Gate4 artifacts: `runs/gate4_validation_smoke/gate4_out_a/` and `gate4_out_b/`
 - parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_parity_smoke.txt`
 
+Core CI does **not** run this workflow. It depends on local/generated sample directories and model access.
+
 Representative-set smoke (reuses existing `runs/cfa_batch_primaryE/samples/`):
 
 ```powershell
@@ -129,6 +131,30 @@ Outputs:
 - input JSON: `runs/gate4_representative_smoke/gate4_input.json`
 - Gate4 artifacts: `runs/gate4_representative_smoke/gate4_out_a/` and `gate4_out_b/`
 - parity attestation: `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_representative_smoke.txt`
+
+This is also local/heavy validation, not core CI.
+
+## 8a) Gate4 fixture parity (core CI)
+
+Core CI uses a committed, model-free fixture instead of the local smoke paths above.
+
+```powershell
+python tools/run_gate4_fixture_parity.py
+```
+
+Inputs:
+- `fixtures/gate4/core/gate4_input.json`
+- `fixtures/gate4/core/cfa_subset.txt`
+- `SPEC.internal.draft.md`
+
+What it checks:
+- `pale-ale gate4 run` parity against Python expectations
+- canonical identity hashing via `gate4 hash-identity`
+- deterministic rerun byte equality for:
+  - `manifest.json`
+  - `gate4_token_features.csv`
+  - `gate4_sample_summary.csv`
+  - `gate4_run_summary.csv`
 
 ## 9) Gate4 batch ingestion (official packer)
 
@@ -212,3 +238,5 @@ Outputs:
 - `runs/gate4_artifact_sufficiency/gate4_out/gate4_sample_summary.csv`
 - `runs/gate4_artifact_sufficiency/gate4_out/gate4_run_summary.csv`
 - `attestations/triality/gate4_validation/YYYY-MM-DD_gate4_negative_stability_from_artifacts.txt`
+
+This is local/heavy validation, not core CI.
