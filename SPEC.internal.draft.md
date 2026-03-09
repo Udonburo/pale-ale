@@ -58,6 +58,7 @@ pale-ale is not:
 
 Within the current evidence scope, the operational definition of `defect` is:
 
+- `CFA` expands to `Constraint Frustration Arena`. Source: `tools/README_cfa.md`
 - In a CFA row, `defect_spans` are character-span ground truth on the answer string. Source: `tools/README_cfa.md`, `tools/labels_from_cfa_spans.py`
 - In the current CFA batch path, `label_source = cfa_defect_spans_v1`. Source: `tools/labels_from_cfa_spans.py`, `tools/run_cfa_batch_primaryE.py`
 - A token step is positive when its `answer_char_start` and `answer_char_end` are fully contained in a defect span. The exact predicate is `ts >= ds and te <= de`. Source: `tools/labels_from_cfa_spans.py`
