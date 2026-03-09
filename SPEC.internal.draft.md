@@ -578,7 +578,45 @@ The current case-study per-sample meta JSON stores subset metrics and artifact S
 
 `first_hit_distance_E_p90` and `first_hit_after_defect_distance_E_p90` do not have a fixed percentile population anywhere in the current repo. `eval_local_span.py` only defines single-sample scalars `first_hit_distance_signed` / `first_hit_after_defect_distance`. Therefore these two columns are optional support metrics, and their exact computation contract remains `PROVISIONAL-TODO`. Source: `docs/gate4_feature_contract_draft.md`, `tools/eval_local_span.py`
 
-#### 5.3.3 Run-level manifest contract
+#### 5.3.3 Run-level health summary contract
+
+The current Rust Gate4 sink emits a canonical `gate4_run_summary.csv`. Source: `crates/diagnose/src/gate4.rs`
+
+Required columns:
+
+- `run_id`
+- `n_samples_total`
+- `n_token_rows_total`
+- `n_transition_rows_total`
+- `n_samples_with_positive_tokens`
+- `n_samples_with_positive_transitions`
+- `label_coverage_ratio_mean`
+- `label_coverage_ratio_min`
+- `label_coverage_ratio_p50`
+- `label_coverage_ratio_p90`
+- `label_coverage_ratio_max`
+- `exact_token_match_ratio_mean`
+- `exact_token_match_ratio_min`
+- `exact_token_match_ratio_p50`
+- `exact_token_match_ratio_p90`
+- `exact_token_match_ratio_max`
+- `transition_missing_none_count`
+- `transition_missing_final_step_no_successor_count`
+- `score_A_available_count`
+- `score_B_available_count`
+- `score_C_available_count`
+- `score_D_available_count`
+- `score_E_available_count`
+- `score_F_available_count`
+
+Responsibility split:
+
+- `gate4_run_summary.csv` is the operational health artifact for coverage / exact-match / missing-state / score-availability summary
+- `manifest.json` remains limited to identity / provenance / schema IDs / artifact hashes / coarse counts
+
+Source: `crates/diagnose/src/gate4.rs`, `docs/gate4_feature_contract_draft.md`
+
+#### 5.3.4 Run-level manifest contract
 
 The current Rust Gate4 sink emits a canonical `manifest.json`. Source: `crates/diagnose/src/gate4.rs`
 
@@ -615,6 +653,7 @@ Required manifest identity / provenance fields:
 - `script_sha256_featuregen`
 - `token_features_schema_id`
 - `sample_summary_schema_id`
+- `run_summary_schema_id`
 - `float_format_id`
 - `transition_label_mode_id`
 - `transition_missing_enum_id`
@@ -622,6 +661,7 @@ Required manifest identity / provenance fields:
 - `input_json_sha256`
 - `token_features_sha256`
 - `sample_summary_sha256`
+- `run_summary_sha256`
 
 Canonical Gate4 manifest identity follows the Phase4 naming pattern for dataset/spec identity:
 

@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-json", required=True)
     parser.add_argument("--token-features-csv", required=True)
     parser.add_argument("--sample-summary-csv", required=True)
+    parser.add_argument("--run-summary-csv", required=True)
     parser.add_argument("--manifest-json", required=True)
     parser.add_argument("--expected-dataset-hash-blake3")
     parser.add_argument("--expected-spec-hash-raw-blake3")
@@ -322,6 +323,7 @@ def validate_manifest(
     input_json_path: Path,
     token_csv_path: Path,
     summary_csv_path: Path,
+    run_summary_csv_path: Path,
     manifest_path: Path,
     expected_identity: Dict[str, Optional[str]],
 ) -> Dict[str, Any]:
@@ -330,6 +332,7 @@ def validate_manifest(
         "input_json_sha256": sha256_file(input_json_path),
         "token_features_sha256": sha256_file(token_csv_path),
         "sample_summary_sha256": sha256_file(summary_csv_path),
+        "run_summary_sha256": sha256_file(run_summary_csv_path),
     }
     for key, expected in checks.items():
         actual = str(manifest.get(key) or "")
@@ -371,6 +374,7 @@ def main() -> int:
     input_json_path = Path(args.input_json)
     token_csv_path = Path(args.token_features_csv)
     summary_csv_path = Path(args.sample_summary_csv)
+    run_summary_csv_path = Path(args.run_summary_csv)
     manifest_path = Path(args.manifest_json)
 
     payload = load_json(input_json_path)
@@ -392,6 +396,7 @@ def main() -> int:
         input_json_path,
         token_csv_path,
         summary_csv_path,
+        run_summary_csv_path,
         manifest_path,
         expected_identity,
     )
@@ -400,6 +405,7 @@ def main() -> int:
         f"manifest_json={manifest_path.as_posix()}",
         f"token_features_csv={token_csv_path.as_posix()}",
         f"sample_summary_csv={summary_csv_path.as_posix()}",
+        f"run_summary_csv={run_summary_csv_path.as_posix()}",
         f"run_id={run_id}",
         f"model_id={metadata['model_id']}",
         f"model_revision={metadata['model_revision']}",

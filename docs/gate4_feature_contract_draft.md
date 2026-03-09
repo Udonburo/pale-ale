@@ -1,6 +1,6 @@
 # Gate4 Feature Contract Draft
 
-Status: Draft (Python-prototyped, Rust implementation pending)
+Status: Draft (Rust feature-sink implementation landed; contract not yet frozen)
 
 ## Purpose
 Define a stable, implementation-ready feature schema for local token/span diagnostics derived from Triality telemetry and baselines.
@@ -69,7 +69,7 @@ On-wire encoding rule for transition-aligned scores undefined on the final step:
 - `dataset_revision_id`, `dataset_hash_blake3`
 - `spec_hash_raw_blake3`, `spec_hash_blake3`
 - `triplets_sha256`, `labels_sha256`
-- `input_json_sha256`, `token_features_sha256`, `sample_summary_sha256`
+- `input_json_sha256`, `token_features_sha256`, `sample_summary_sha256`, `run_summary_sha256`
 - `script_sha256_extract`, `script_sha256_eval`, `script_sha256_featuregen`
 
 Canonical manifest identity uses `*_blake3` fields for dataset/spec identity. Prototype-era SHA-256 artifact hashes may be carried as auxiliary provenance fields, but they are not canonical identity keys.
@@ -92,13 +92,49 @@ Current canonical identity targets:
 ## File Contract (Draft)
 - `gate4_token_features.csv` (token-step rows)
 - `gate4_sample_summary.csv` (sample-level rows)
-- `manifest.json` (run-level provenance / identity)
+- `gate4_run_summary.csv` (run-level health summary; coverage / exact-match / missing-state / score-availability counts)
+- `manifest.json` (run-level provenance / identity only)
 - UTF-8 + LF
 - Deterministic row ordering:
   - token table: `(sample_id ASC, step ASC)`
   - summary: `(sample_id ASC)`
 
+## Run-level Health Summary Contract (Draft)
+- Artifact name: `gate4_run_summary.csv`
+- Cardinality: exactly 1 data row per Gate4 run
+- Required columns:
+  - `run_id`
+  - `n_samples_total`
+  - `n_token_rows_total`
+  - `n_transition_rows_total`
+  - `n_samples_with_positive_tokens`
+  - `n_samples_with_positive_transitions`
+  - `label_coverage_ratio_mean`
+  - `label_coverage_ratio_min`
+  - `label_coverage_ratio_p50`
+  - `label_coverage_ratio_p90`
+  - `label_coverage_ratio_max`
+  - `exact_token_match_ratio_mean`
+  - `exact_token_match_ratio_min`
+  - `exact_token_match_ratio_p50`
+  - `exact_token_match_ratio_p90`
+  - `exact_token_match_ratio_max`
+  - `transition_missing_none_count`
+  - `transition_missing_final_step_no_successor_count`
+  - `score_A_available_count`
+  - `score_B_available_count`
+  - `score_C_available_count`
+  - `score_D_available_count`
+  - `score_E_available_count`
+  - `score_F_available_count`
+- Deterministic row ordering:
+  - exactly one row; no secondary sort key required
+- Responsibility split:
+  - `manifest.json` stays limited to identity / provenance / schema IDs / artifact hashes / coarse counts
+  - `gate4_run_summary.csv` carries operational health summary fields
+
 ## Rust Mapping Notes (Future)
 - `Gate4FeatureRow` struct should use `Option<f64>` for scores undefined on final step transitions.
 - Deterministic CSV writer with fixed float formatting and stable header order.
 - Machine-format floats inherit `sci_17e_v1`.
+- Canonical manifest keys include `run_summary_schema_id` and `run_summary_sha256`.

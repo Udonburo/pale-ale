@@ -178,3 +178,4 @@ Outputs:
 - `runs/gate4_batch_ingestion_smoke/gate4_out/manifest.json`
 - `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_token_features.csv`
 - `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_sample_summary.csv`
+- `runs/gate4_batch_ingestion_smoke/gate4_out/gate4_run_summary.csv`
