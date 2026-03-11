@@ -17,6 +17,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--surface", choices=("auto", "cfa", "seam"), default="auto")
     parser.add_argument("--cfa-jsonl")
     parser.add_argument("--seam-jsonl")
+    parser.add_argument("--seam-pair-summary-out", default="")
+    parser.add_argument("--seam-family-summary-out", default="")
     parser.add_argument("--topk", type=int, default=10)
     return parser.parse_args()
 
@@ -59,6 +61,24 @@ def read_jsonl(path: Path) -> List[Dict[str, Any]]:
             if raw:
                 rows.append(json.loads(raw))
     return rows
+
+
+def write_csv(path: Path, fieldnames: Sequence[str], rows: Sequence[Dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(fieldnames))
+        writer.writeheader()
+        for row in rows:
+            encoded: Dict[str, Any] = {}
+            for field in fieldnames:
+                value = row.get(field)
+                if isinstance(value, float):
+                    encoded[field] = f"{value:.17e}"
+                elif value is None:
+                    encoded[field] = ""
+                else:
+                    encoded[field] = value
+            writer.writerow(encoded)
 
 
 def percentile_nearest_rank(values: Sequence[float], q: float) -> Optional[float]:
@@ -178,6 +198,92 @@ def robust_normalize(delta: Optional[float], scale: Optional[float]) -> Optional
     return float(delta) / float(scale)
 
 
+def default_seam_sidecar_path(out_path: Path, suffix: str) -> Path:
+    return out_path.with_name(f"{out_path.stem}_{suffix}.csv")
+
+
+def summarize_seam_families(
+    paired_rows: Sequence[Dict[str, Any]], topk: int
+) -> List[Dict[str, Any]]:
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in paired_rows:
+        grouped[str(row["family"])].append(row)
+    summary_rows: List[Dict[str, Any]] = []
+    for family in sorted(grouped):
+        family_rows = grouped[family]
+        summary_rows.append(
+            {
+                "family": family,
+                "n_pairs": len(family_rows),
+                "mean_delta_max_f": mean(
+                    row["delta_max_f"] for row in family_rows if row["delta_max_f"] is not None
+                ),
+                "mean_delta_max_rotor": mean(
+                    row["delta_max_rotor"]
+                    for row in family_rows
+                    if row["delta_max_rotor"] is not None
+                ),
+                "mean_delta_p90_f": mean(
+                    row["delta_p90_f"] for row in family_rows if row["delta_p90_f"] is not None
+                ),
+                "mean_delta_p90_rotor": mean(
+                    row["delta_p90_rotor"]
+                    for row in family_rows
+                    if row["delta_p90_rotor"] is not None
+                ),
+                "mean_delta_mean_f": mean(
+                    row["delta_mean_f"] for row in family_rows if row["delta_mean_f"] is not None
+                ),
+                "mean_delta_mean_rotor": mean(
+                    row["delta_mean_rotor"]
+                    for row in family_rows
+                    if row["delta_mean_rotor"] is not None
+                ),
+                "mean_iqr_normalized_delta_max_f": mean(
+                    row["iqr_normalized_delta_max_f"]
+                    for row in family_rows
+                    if row["iqr_normalized_delta_max_f"] is not None
+                ),
+                "mean_iqr_normalized_delta_max_rotor": mean(
+                    row["iqr_normalized_delta_max_rotor"]
+                    for row in family_rows
+                    if row["iqr_normalized_delta_max_rotor"] is not None
+                ),
+                f"mean_top{topk}_inflation_f": mean(
+                    row["topk_inflation_f"]
+                    for row in family_rows
+                    if row["topk_inflation_f"] is not None
+                ),
+                f"mean_top{topk}_inflation_rotor": mean(
+                    row["topk_inflation_rotor"]
+                    for row in family_rows
+                    if row["topk_inflation_rotor"] is not None
+                ),
+                f"mean_top{topk}_perturbation_overlap_f": mean(
+                    row["perturbation_overlap_topk_f"] for row in family_rows
+                ),
+                f"mean_top{topk}_perturbation_overlap_rotor": mean(
+                    row["perturbation_overlap_topk_rotor"] for row in family_rows
+                ),
+                "rotor_better_delta_max_count": sum(
+                    1
+                    for row in family_rows
+                    if row["delta_max_f"] is not None
+                    and row["delta_max_rotor"] is not None
+                    and float(row["delta_max_rotor"]) < float(row["delta_max_f"])
+                ),
+                "rotor_better_delta_p90_count": sum(
+                    1
+                    for row in family_rows
+                    if row["delta_p90_f"] is not None
+                    and row["delta_p90_rotor"] is not None
+                    and float(row["delta_p90_rotor"]) < float(row["delta_p90_f"])
+                ),
+            }
+        )
+    return summary_rows
+
+
 def build_cfa_report(
     manifest: Dict[str, Any],
     token_rows: Sequence[Dict[str, str]],
@@ -289,7 +395,7 @@ def build_seam_report(
     token_rows: Sequence[Dict[str, str]],
     seam_rows: Sequence[Dict[str, Any]],
     topk: int,
-) -> str:
+) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
     grouped = group_token_rows(token_rows)
     pairs: Dict[int, Dict[str, Dict[str, Any]]] = defaultdict(dict)
     for row in seam_rows:
@@ -329,6 +435,8 @@ def build_seam_report(
         paired = {
             "pair_id": pair_id,
             "family": str(perturbed["perturbation_family"]),
+            "clean_sample_id": int(clean["sample_id"]),
+            "perturbed_sample_id": int(perturbed["sample_id"]),
             "delta_max_f": None if pert_f["max"] is None or clean_f["max"] is None else float(pert_f["max"]) - float(clean_f["max"]),
             "delta_max_rotor": None if pert_r["max"] is None or clean_r["max"] is None else float(pert_r["max"]) - float(clean_r["max"]),
             "delta_p90_f": None if pert_f["p90"] is None or clean_f["p90"] is None else float(pert_f["p90"]) - float(clean_f["p90"]),
@@ -362,7 +470,14 @@ def build_seam_report(
                 )
             )
 
+    if not paired_rows:
+        raise RuntimeError(
+            "seam aggregation found zero complete linked pairs; "
+            "check that --seam-jsonl matches the Gate5 telemetry sample ids and pair linkage"
+        )
+
     representative.sort(reverse=True)
+    family_summary_rows = summarize_seam_families(paired_rows, topk=topk)
     lines = [
         "# Gate5 Aggregate Report",
         "",
@@ -407,7 +522,7 @@ def build_seam_report(
             "- Seam is evaluated as quietness, not as contradiction-positive detection.",
         ]
     )
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines) + "\n", paired_rows, family_summary_rows
 
 
 def main() -> int:
@@ -417,14 +532,74 @@ def main() -> int:
     token_rows = read_csv(gate5_out / "gate5_token_telemetry.csv")
     sample_rows = read_csv(gate5_out / "gate5_sample_summary.csv")
     surface = detect_surface(sample_rows, args.surface, args.seam_jsonl)
+    out_path = Path(args.out)
 
     if surface == "seam":
-        seam_rows = read_jsonl(Path(args.seam_jsonl)) if args.seam_jsonl else []
-        report = build_seam_report(manifest, token_rows, seam_rows, topk=args.topk)
+        if not args.seam_jsonl:
+            raise RuntimeError(
+                "seam aggregation requires --seam-jsonl for pair linkage and perturbation spans"
+            )
+        seam_rows = read_jsonl(Path(args.seam_jsonl))
+        report, paired_rows, family_summary_rows = build_seam_report(
+            manifest, token_rows, seam_rows, topk=args.topk
+        )
+        pair_summary_out = (
+            Path(args.seam_pair_summary_out)
+            if args.seam_pair_summary_out
+            else default_seam_sidecar_path(out_path, "seam_pair_summary")
+        )
+        family_summary_out = (
+            Path(args.seam_family_summary_out)
+            if args.seam_family_summary_out
+            else default_seam_sidecar_path(out_path, "seam_family_summary")
+        )
+        write_csv(
+            pair_summary_out,
+            fieldnames=[
+                "pair_id",
+                "family",
+                "clean_sample_id",
+                "perturbed_sample_id",
+                "delta_max_f",
+                "delta_max_rotor",
+                "delta_p90_f",
+                "delta_p90_rotor",
+                "delta_mean_f",
+                "delta_mean_rotor",
+                "iqr_normalized_delta_max_f",
+                "iqr_normalized_delta_max_rotor",
+                "topk_inflation_f",
+                "topk_inflation_rotor",
+                "perturbation_overlap_topk_f",
+                "perturbation_overlap_topk_rotor",
+            ],
+            rows=paired_rows,
+        )
+        write_csv(
+            family_summary_out,
+            fieldnames=[
+                "family",
+                "n_pairs",
+                "mean_delta_max_f",
+                "mean_delta_max_rotor",
+                "mean_delta_p90_f",
+                "mean_delta_p90_rotor",
+                "mean_delta_mean_f",
+                "mean_delta_mean_rotor",
+                "mean_iqr_normalized_delta_max_f",
+                "mean_iqr_normalized_delta_max_rotor",
+                f"mean_top{args.topk}_inflation_f",
+                f"mean_top{args.topk}_inflation_rotor",
+                f"mean_top{args.topk}_perturbation_overlap_f",
+                f"mean_top{args.topk}_perturbation_overlap_rotor",
+                "rotor_better_delta_max_count",
+                "rotor_better_delta_p90_count",
+            ],
+            rows=family_summary_rows,
+        )
     else:
         report = build_cfa_report(manifest, token_rows, sample_rows, topk=args.topk)
 
-    out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(report, encoding="utf-8", newline="\n")
     print(out_path.as_posix())

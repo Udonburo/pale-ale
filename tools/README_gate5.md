@@ -78,6 +78,9 @@ python tools/run_gate5_spike.py --input runs/seam_gate5/gate4_input.json --out-d
 Notes:
 
 - `aggregate_gate5_spike.py` uses the Seam JSONL as a sidecar for pair linkage and perturbation spans.
+- Seam aggregation now also emits structured sidecars next to the markdown report:
+  - `*_seam_pair_summary.csv`
+  - `*_seam_family_summary.csv`
 - If no canonical dataset hash path is available, the attestation report will note a local fallback identity source instead of claiming full attestation.
 
 ## 5) Re-aggregate from existing Gate5 artifacts

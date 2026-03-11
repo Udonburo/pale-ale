@@ -29,6 +29,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cli-path", default="")
     parser.add_argument("--aggregate-out", default="")
     parser.add_argument("--attestation-out", default="")
+    parser.add_argument("--seam-pair-summary-out", default="")
+    parser.add_argument("--seam-family-summary-out", default="")
     return parser.parse_args()
 
 
@@ -247,6 +249,10 @@ def main() -> int:
     if args.seam_jsonl:
         aggregate_cmd.extend(["--seam-jsonl", str((REPO_ROOT / args.seam_jsonl).resolve())])
         aggregate_cmd.extend(["--surface", "seam"])
+        if args.seam_pair_summary_out:
+            aggregate_cmd.extend(["--seam-pair-summary-out", str(Path(args.seam_pair_summary_out).resolve())])
+        if args.seam_family_summary_out:
+            aggregate_cmd.extend(["--seam-family-summary-out", str(Path(args.seam_family_summary_out).resolve())])
     run_command(aggregate_cmd)
 
     print(str(out_dir))

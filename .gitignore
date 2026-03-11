@@ -30,6 +30,7 @@ SPEC.md
 SPEC.*.local.md
 00_KAGAMI_TRUE_NORTH_PRIVATE.local.md
 01_GATE5_EXECUTION_SPINE.local.md
+02_POST_GATE5_MEASUREMENT_PLAN.local.md
 
 # Data files
 *.jsonl
