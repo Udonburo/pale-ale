@@ -28,6 +28,8 @@ Thumbs.db
 RELEASE.md
 SPEC.md
 SPEC.*.local.md
+00_KAGAMI_TRUE_NORTH_PRIVATE.local.md
+01_GATE5_EXECUTION_SPINE.local.md
 
 # Data files
 *.jsonl

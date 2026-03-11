@@ -10,6 +10,7 @@ mod gate2_telemetry;
 mod gate3;
 mod gate3_telemetry;
 mod gate4;
+mod gate5;
 mod linking;
 mod manifest_validator;
 mod measure;
@@ -60,6 +61,12 @@ pub use gate4::{
     Gate4RunInputV1, Gate4RunOutput, Gate4RunSummary, Gate4SampleInputV1, Gate4TokenStepInputV1,
     Gate4Variant, GATE4_METHOD_ID, GATE4_SAMPLE_SUMMARY_CSV_COLUMNS_V1, GATE4_SPEC_VERSION,
     GATE4_TOKEN_FEATURES_CSV_COLUMNS_V1,
+};
+pub use gate5::{
+    run_gate5_and_write, validate_gate5_manifest_json, Gate5ArtifactPaths, Gate5IdentityInput,
+    Gate5ManifestValidationError, Gate5OrchestratorError, Gate5RunOutput, Gate5RunSummary,
+    GATE5_METHOD_ID, GATE5_PRIMARY_METRIC_ID, GATE5_SAMPLE_SUMMARY_CSV_COLUMNS_V1,
+    GATE5_SPEC_VERSION, GATE5_TOKEN_TELEMETRY_CSV_COLUMNS_V1,
 };
 pub use linking::{
     canonicalize_links, compute_top1_accounting, evaluate_link_sanity, CanonicalLink,

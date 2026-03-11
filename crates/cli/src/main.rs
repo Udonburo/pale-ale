@@ -11,11 +11,11 @@ use pale_ale_diagnose::{
     compute_gate4_identity_hashes, compute_inputs_hash, default_measurement_config,
     default_policy_config, diagnose_eval, measure_eval, measurement_hash, policy_hash,
     run_gate1_and_write, run_gate2_and_write, run_gate3_and_write, run_gate4_and_write,
-    AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport, Gate1IdentityInput,
-    Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError, Gate3IdentityInput,
-    Gate3OrchestratorError, Gate4IdentityHashError, Gate4IdentityInput, Gate4OrchestratorError,
-    HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding,
-    VerdictStatus,
+    run_gate5_and_write, AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport,
+    Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError,
+    Gate3IdentityInput, Gate3OrchestratorError, Gate4IdentityHashError, Gate4IdentityInput,
+    Gate4OrchestratorError, Gate5IdentityInput, Gate5OrchestratorError, HashesTrace, MeasureError,
+    MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -125,6 +125,10 @@ enum Commands {
     Gate4 {
         #[command(subcommand)]
         command: Gate4Command,
+    },
+    Gate5 {
+        #[command(subcommand)]
+        command: Gate5Command,
     },
 }
 
@@ -250,6 +254,28 @@ enum Gate4Command {
         sample_ids: Vec<u64>,
         #[arg(long, default_value = "SPEC.internal.draft.md")]
         spec_path: PathBuf,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum Gate5Command {
+    Run {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        run_id: String,
+        #[arg(long)]
+        dataset_revision_id: String,
+        #[arg(long)]
+        dataset_hash_blake3: String,
+        #[arg(long)]
+        spec_hash_raw_blake3: String,
+        #[arg(long)]
+        spec_hash_blake3: String,
+        #[arg(long, value_enum)]
+        evaluation_mode_id: Gate4EvaluationModeArg,
     },
 }
 
@@ -730,6 +756,7 @@ fn run(cli: Cli, json: bool) -> Result<JsonEnvelope, AppError> {
         Some(Commands::Gate2 { command }) => gate2(command, json),
         Some(Commands::Gate3 { command }) => gate3(command, json),
         Some(Commands::Gate4 { command }) => gate4(command, json),
+        Some(Commands::Gate5 { command }) => gate5(command, json),
     }
 }
 
@@ -1509,6 +1536,127 @@ fn gate4_run(
             "artifacts": {
                 "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
                 "token_features_csv": output.artifact_paths.token_features_csv.display().to_string(),
+                "sample_summary_csv": output.artifact_paths.sample_summary_csv.display().to_string(),
+            }
+        })),
+    })
+}
+
+fn gate5(command: Gate5Command, json: bool) -> Result<JsonEnvelope, AppError> {
+    match command {
+        Gate5Command::Run {
+            input,
+            out,
+            run_id,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            evaluation_mode_id,
+        } => gate5_run(
+            input,
+            out,
+            run_id,
+            dataset_revision_id,
+            dataset_hash_blake3,
+            spec_hash_raw_blake3,
+            spec_hash_blake3,
+            evaluation_mode_id.as_str().to_string(),
+            json,
+        ),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn gate5_run(
+    input: PathBuf,
+    out: PathBuf,
+    run_id: String,
+    dataset_revision_id: String,
+    dataset_hash_blake3: String,
+    spec_hash_raw_blake3: String,
+    spec_hash_blake3: String,
+    evaluation_mode_id: String,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let input_bytes = fs::read(&input).map_err(|err| {
+        AppError::dependency(format!(
+            "failed to read Gate5 input JSON at {}: {}",
+            input.display(),
+            err
+        ))
+    })?;
+
+    let identity = Gate5IdentityInput {
+        run_id,
+        dataset_revision_id,
+        dataset_hash_blake3,
+        spec_hash_raw_blake3,
+        spec_hash_blake3,
+        evaluation_mode_id,
+        code_git_commit: build_git_commit(),
+        build_target_triple: build_target_triple(),
+        rustc_version: build_rustc_version(),
+    };
+
+    let output =
+        run_gate5_and_write(&out, &input_bytes, &identity).map_err(map_gate5_orchestrator_error)?;
+
+    if !json_output {
+        println!("spec_version: {}", output.spec_version);
+        println!("run_id: {}", output.run_id);
+        println!("n_samples_total: {}", output.summary.n_samples_total);
+        println!("n_token_rows_total: {}", output.summary.n_token_rows_total);
+        println!(
+            "n_transition_rows_total: {}",
+            output.summary.n_transition_rows_total
+        );
+        println!("n_loop_rows_valid: {}", output.summary.n_loop_rows_valid);
+        println!(
+            "n_loop_rows_missing: {}",
+            output.summary.n_loop_rows_missing
+        );
+        println!("out_dir: {}", out.display());
+        println!(
+            "manifest_json: {}",
+            output.artifact_paths.manifest_json.display()
+        );
+        println!(
+            "token_telemetry_csv: {}",
+            output.artifact_paths.token_telemetry_csv.display()
+        );
+        println!(
+            "sample_summary_csv: {}",
+            output.artifact_paths.sample_summary_csv.display()
+        );
+        println!("identity_provenance:");
+        println!("spec_hash_raw_blake3: {}", identity.spec_hash_raw_blake3);
+        println!("spec_hash_blake3: {}", identity.spec_hash_blake3);
+        println!("dataset_revision_id: {}", identity.dataset_revision_id);
+        println!("dataset_hash_blake3: {}", identity.dataset_hash_blake3);
+        println!("code_git_commit: {}", identity.code_git_commit);
+        println!("build_target_triple: {}", identity.build_target_triple);
+        println!("rustc_version: {}", identity.rustc_version);
+        println!("evaluation_mode_id: {}", identity.evaluation_mode_id);
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate5_run",
+            "run_id": output.run_id,
+            "spec_version": output.spec_version,
+            "n_samples_total": output.summary.n_samples_total,
+            "n_token_rows_total": output.summary.n_token_rows_total,
+            "n_transition_rows_total": output.summary.n_transition_rows_total,
+            "n_loop_rows_valid": output.summary.n_loop_rows_valid,
+            "n_loop_rows_missing": output.summary.n_loop_rows_missing,
+            "out_dir": out.display().to_string(),
+            "artifacts": {
+                "manifest_json": output.artifact_paths.manifest_json.display().to_string(),
+                "token_telemetry_csv": output.artifact_paths.token_telemetry_csv.display().to_string(),
                 "sample_summary_csv": output.artifact_paths.sample_summary_csv.display().to_string(),
             }
         })),
@@ -2316,6 +2464,97 @@ fn map_gate4_identity_hash_error(err: Gate4IdentityHashError) -> AppError {
     }
 }
 
+fn map_gate5_orchestrator_error(err: Gate5OrchestratorError) -> AppError {
+    match err {
+        Gate5OrchestratorError::JsonParse(parse_err) => {
+            AppError::usage(format!("invalid Gate5 JSON input: {}", parse_err))
+        }
+        Gate5OrchestratorError::DuplicateSampleId { sample_id } => {
+            AppError::usage(format!("duplicate Gate5 sample_id {}", sample_id))
+        }
+        Gate5OrchestratorError::MissingTokenSteps { sample_id } => {
+            AppError::usage(format!("sample {} has no token_steps", sample_id))
+        }
+        Gate5OrchestratorError::DuplicateStep { sample_id, step } => {
+            AppError::usage(format!("sample {} has duplicate step {}", sample_id, step))
+        }
+        Gate5OrchestratorError::NonContiguousStep {
+            sample_id,
+            expected,
+            actual,
+        } => AppError::usage(format!(
+            "sample {} has non-contiguous step sequence: expected {}, got {}",
+            sample_id, expected, actual
+        )),
+        Gate5OrchestratorError::InvalidLabel {
+            sample_id,
+            step,
+            label,
+        } => AppError::usage(format!(
+            "sample {} step {} has invalid label_token {} (expected 0 or 1)",
+            sample_id, step, label
+        )),
+        Gate5OrchestratorError::InvalidRange {
+            sample_id,
+            field,
+            min_inclusive,
+            max_inclusive,
+            value,
+        } => {
+            if let Some(max_inclusive) = max_inclusive {
+                AppError::usage(format!(
+                    "sample {} {} out of range [{}, {}]: {}",
+                    sample_id, field, min_inclusive, max_inclusive, value
+                ))
+            } else {
+                AppError::usage(format!(
+                    "sample {} {} below minimum {}: {}",
+                    sample_id, field, min_inclusive, value
+                ))
+            }
+        }
+        Gate5OrchestratorError::InvalidEvaluationMode(value) => AppError::usage(format!(
+            "invalid evaluation_mode_id '{}': expected supervised_v1 or unsupervised_v1",
+            value
+        )),
+        Gate5OrchestratorError::InvalidFloat {
+            sample_id,
+            step,
+            field,
+            value,
+        } => AppError::internal(format!(
+            "Gate5 produced non-finite float for {} at sample {:?} step {:?}: {}",
+            field, sample_id, step, value
+        )),
+        Gate5OrchestratorError::InvalidVec8Dim {
+            sample_id,
+            step,
+            field,
+            expected,
+            actual,
+        } => AppError::usage(format!(
+            "sample {} step {} {} has invalid dimension: expected {}, got {}",
+            sample_id, step, field, expected, actual
+        )),
+        Gate5OrchestratorError::Io(io_err) => {
+            AppError::dependency(format!("Gate5 artifact I/O failed: {}", io_err))
+        }
+        Gate5OrchestratorError::JsonWrite(json_err) => {
+            AppError::dependency(format!("Gate5 JSON serialization failed: {}", json_err))
+        }
+        Gate5OrchestratorError::ManifestRead(io_err) => AppError::dependency(format!(
+            "failed to read Gate5 manifest.json after write: {}",
+            io_err
+        )),
+        Gate5OrchestratorError::ManifestValidation(validation_err) => {
+            AppError::dependency(format!(
+                "Gate5 manifest validation failed after write: {}",
+                validation_err
+            ))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2491,5 +2730,41 @@ mod tests {
             duplicate_line_no: 2,
         });
         assert_eq!(err.code, "DEPENDENCY_ERROR");
+    }
+
+    #[test]
+    fn gate5_cli_requires_identity_flags() {
+        let parsed = Cli::try_parse_from([
+            "pale-ale", "gate5", "run", "--input", "in.json", "--out", "out",
+        ]);
+        assert!(parsed.is_err());
+    }
+
+    #[test]
+    fn gate5_cli_invalid_json_maps_to_app_error() {
+        let tmp = tempdir().expect("tmp");
+        let input_path = tmp.path().join("bad.json");
+        let out_dir = tmp.path().join("out");
+        fs::write(&input_path, "{invalid json").expect("write");
+
+        let result = gate5(
+            Gate5Command::Run {
+                input: input_path,
+                out: out_dir,
+                run_id: "gate5_run".to_string(),
+                dataset_revision_id: "dataset_rev".to_string(),
+                dataset_hash_blake3: "dataset_hash".to_string(),
+                spec_hash_raw_blake3: "spec_raw".to_string(),
+                spec_hash_blake3: "spec_lf".to_string(),
+                evaluation_mode_id: Gate4EvaluationModeArg::SupervisedV1,
+            },
+            true,
+        );
+
+        let err = match result {
+            Ok(_) => panic!("expected parse failure"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code, "CLI_USAGE");
     }
 }
