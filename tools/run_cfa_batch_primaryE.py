@@ -39,6 +39,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-coverage", type=float, default=DEFAULT_MIN_COVERAGE)
     parser.add_argument("--seed", type=int, default=PREREG_SEED)
     parser.add_argument("--perm-r", type=int, default=PREREG_PERM_R)
+    parser.add_argument(
+        "--emit-native-raw",
+        action="store_true",
+        help="Preserve raw native V/Splus/Sminus vectors in triplets.ndjson for boundary experiments.",
+    )
     parser.add_argument("--sample-id-min", type=int)
     parser.add_argument("--sample-id-max", type=int)
     parser.add_argument("--max-samples", type=int)
@@ -337,6 +342,7 @@ def main() -> int:
                 tokenizer=tokenizer,
                 device=device,
                 topk=args.topk,
+                emit_native_raw=bool(args.emit_native_raw),
             )
             mode_details = triplet_meta["mode_details"]
             ratio = parse_float(mode_details.get("exact_token_match_ratio"))
@@ -349,6 +355,10 @@ def main() -> int:
                 "seed": args.seed,
                 "topk_requested": args.topk,
                 "topk_effective": int(triplet_meta["topk_effective"]),
+                "native_raw_emitted": bool(args.emit_native_raw),
+                "native_raw_schema_id": (
+                    extractor.RAW_NATIVE_SCHEMA_ID if args.emit_native_raw else None
+                ),
                 "prompt_sha256": sha256_bytes(prompt.encode("utf-8")),
                 "target_answer_sha256": sha256_bytes(answer.encode("utf-8")),
                 "output_ndjson_sha256": ndjson_sha,
