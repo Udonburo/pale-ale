@@ -1671,7 +1671,11 @@ fn gate5_run(
     })
 }
 
-fn gate5_diagnose(input: PathBuf, out: PathBuf, json_output: bool) -> Result<JsonEnvelope, AppError> {
+fn gate5_diagnose(
+    input: PathBuf,
+    out: PathBuf,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
     let input_bytes = fs::read(&input).map_err(|err| {
         AppError::dependency(format!(
             "failed to read Gate5 diagnostic input JSON at {}: {}",
@@ -1679,8 +1683,8 @@ fn gate5_diagnose(input: PathBuf, out: PathBuf, json_output: bool) -> Result<Jso
             err
         ))
     })?;
-    let output =
-        run_gate5_diagnostics_and_write(&out, &input_bytes).map_err(map_gate5_orchestrator_error)?;
+    let output = run_gate5_diagnostics_and_write(&out, &input_bytes)
+        .map_err(map_gate5_orchestrator_error)?;
 
     if !json_output {
         println!("mode: gate5_diagnose");

@@ -1,8 +1,7 @@
 use crate::gate4::{Gate4MetadataInputV1, Gate4RunInputV1, Gate4SampleInputV1, Gate4Variant};
 use pale_ale_rotor::{
-    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once,
-    normalize_vec8, simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig, RotorError,
-    RotorStep, Vec8Error,
+    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once, normalize_vec8,
+    simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig, RotorError, RotorStep, Vec8Error,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -1123,7 +1122,9 @@ fn normalize_for_comparator(input: [f64; 8]) -> (ComparatorNormStatus, Option<[f
     let norm = input.iter().map(|value| value * value).sum::<f64>().sqrt();
     match normalize_vec8(input) {
         Ok(value) => (ComparatorNormStatus::Materialized, Some(value), norm),
-        Err(Vec8Error::NonFiniteComponent) => (ComparatorNormStatus::NonFiniteComponent, None, norm),
+        Err(Vec8Error::NonFiniteComponent) => {
+            (ComparatorNormStatus::NonFiniteComponent, None, norm)
+        }
         Err(Vec8Error::ZeroOrNonFiniteNorm) => {
             (ComparatorNormStatus::ZeroOrNonFiniteNorm, None, norm)
         }
