@@ -63,8 +63,9 @@ pub use gate4::{
     GATE4_TOKEN_FEATURES_CSV_COLUMNS_V1,
 };
 pub use gate5::{
-    run_gate5_and_write, validate_gate5_manifest_json, Gate5ArtifactPaths, Gate5IdentityInput,
-    Gate5ManifestValidationError, Gate5OrchestratorError, Gate5RunOutput, Gate5RunSummary,
+    run_gate5_and_write, run_gate5_diagnostics_and_write, validate_gate5_manifest_json,
+    Gate5ArtifactPaths, Gate5DiagnosticOutput, Gate5IdentityInput, Gate5ManifestValidationError,
+    Gate5OrchestratorError, Gate5RunOutput, Gate5RunSummary, GATE5_DIAGNOSTIC_TOKEN_CSV_COLUMNS_V1,
     GATE5_METHOD_ID, GATE5_PRIMARY_METRIC_ID, GATE5_SAMPLE_SUMMARY_CSV_COLUMNS_V1,
     GATE5_SPEC_VERSION, GATE5_TOKEN_TELEMETRY_CSV_COLUMNS_V1,
 };

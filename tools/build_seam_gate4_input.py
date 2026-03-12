@@ -30,6 +30,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--topk", type=int, default=128)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--emit-native-raw",
+        action="store_true",
+        help="Preserve raw native V/Splus/Sminus vectors in triplets.ndjson for boundary experiments.",
+    )
     parser.add_argument("--perm-r", type=int, default=2000)
     parser.add_argument("--primary-score", default="E")
     parser.add_argument("--sample-ids", nargs="+", type=int)
@@ -292,6 +297,7 @@ def main() -> int:
             tokenizer=tokenizer,
             device=device,
             topk=args.topk,
+            emit_native_raw=bool(args.emit_native_raw),
         )
         effective_topk = int(result_meta["topk_effective"])
         mode_details = result_meta["mode_details"]
@@ -308,6 +314,10 @@ def main() -> int:
             "proj_id": extractor.PROJ_ID,
             "splus_def_id": extractor.SPLUS_DEF_ID,
             "sminus_def_id": extractor.SMINUS_DEF_ID_TEMPLATE.format(topk=effective_topk),
+            "native_raw_emitted": bool(args.emit_native_raw),
+            "native_raw_schema_id": (
+                extractor.RAW_NATIVE_SCHEMA_ID if args.emit_native_raw else None
+            ),
             "prompt_sha256": extractor.sha256_bytes(str(row["prompt"]).encode("utf-8")),
             "target_answer_sha256": extractor.sha256_bytes(str(row["answer"]).encode("utf-8")),
             "output_ndjson_sha256": ndjson_sha256,
@@ -385,6 +395,7 @@ def main() -> int:
         "model_revision": model_revision,
         "seed": args.seed,
         "topk_requested": args.topk,
+        "emit_native_raw": bool(args.emit_native_raw),
         "device": str(device),
     }
     write_json(build_manifest_path, build_manifest)

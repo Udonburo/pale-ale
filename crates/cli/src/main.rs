@@ -11,11 +11,12 @@ use pale_ale_diagnose::{
     compute_gate4_identity_hashes, compute_inputs_hash, default_measurement_config,
     default_policy_config, diagnose_eval, measure_eval, measurement_hash, policy_hash,
     run_gate1_and_write, run_gate2_and_write, run_gate3_and_write, run_gate4_and_write,
-    run_gate5_and_write, AttestationLevel, AuditTrace, AuditWarning, ConfigSource, EvalReport,
-    Gate1IdentityInput, Gate1OrchestratorError, Gate2IdentityInput, Gate2OrchestratorError,
-    Gate3IdentityInput, Gate3OrchestratorError, Gate4IdentityHashError, Gate4IdentityInput,
-    Gate4OrchestratorError, Gate5IdentityInput, Gate5OrchestratorError, HashesTrace, MeasureError,
-    MeasurementConfig, ModelFile, ModelTrace, SentenceEmbedding, VerdictStatus,
+    run_gate5_and_write, run_gate5_diagnostics_and_write, AttestationLevel, AuditTrace,
+    AuditWarning, ConfigSource, EvalReport, Gate1IdentityInput, Gate1OrchestratorError,
+    Gate2IdentityInput, Gate2OrchestratorError, Gate3IdentityInput, Gate3OrchestratorError,
+    Gate4IdentityHashError, Gate4IdentityInput, Gate4OrchestratorError, Gate5IdentityInput,
+    Gate5OrchestratorError, HashesTrace, MeasureError, MeasurementConfig, ModelFile, ModelTrace,
+    SentenceEmbedding, VerdictStatus,
 };
 use pale_ale_embed::{
     EmbedError, Embedder, ModelManager, ModelSpec, PrintHashesReport, VerifyDetail, VerifyReport,
@@ -276,6 +277,12 @@ enum Gate5Command {
         spec_hash_blake3: String,
         #[arg(long, value_enum)]
         evaluation_mode_id: Gate4EvaluationModeArg,
+    },
+    Diagnose {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
     },
 }
 
@@ -1564,6 +1571,7 @@ fn gate5(command: Gate5Command, json: bool) -> Result<JsonEnvelope, AppError> {
             evaluation_mode_id.as_str().to_string(),
             json,
         ),
+        Gate5Command::Diagnose { input, out } => gate5_diagnose(input, out, json),
     }
 }
 
@@ -1659,6 +1667,39 @@ fn gate5_run(
                 "token_telemetry_csv": output.artifact_paths.token_telemetry_csv.display().to_string(),
                 "sample_summary_csv": output.artifact_paths.sample_summary_csv.display().to_string(),
             }
+        })),
+    })
+}
+
+fn gate5_diagnose(
+    input: PathBuf,
+    out: PathBuf,
+    json_output: bool,
+) -> Result<JsonEnvelope, AppError> {
+    let input_bytes = fs::read(&input).map_err(|err| {
+        AppError::dependency(format!(
+            "failed to read Gate5 diagnostic input JSON at {}: {}",
+            input.display(),
+            err
+        ))
+    })?;
+    let output = run_gate5_diagnostics_and_write(&out, &input_bytes)
+        .map_err(map_gate5_orchestrator_error)?;
+
+    if !json_output {
+        println!("mode: gate5_diagnose");
+        println!("n_rows: {}", output.n_rows);
+        println!("diagnostic_csv: {}", output.diagnostic_csv_path.display());
+    }
+
+    Ok(JsonEnvelope {
+        status: "OK".to_string(),
+        error: None,
+        audit_trace: audit_trace_with_model(default_model_trace()),
+        data: Some(json!({
+            "mode": "gate5_diagnose",
+            "n_rows": output.n_rows,
+            "diagnostic_csv": output.diagnostic_csv_path.display().to_string(),
         })),
     })
 }

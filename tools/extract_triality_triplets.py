@@ -24,6 +24,7 @@ except ImportError as exc:  # pragma: no cover - user environment dependent
 PROJ_ID = "fwht_pad_pow2_take8_v1"
 SPLUS_DEF_ID = "attn_lastlayer_weighted_hidden_v1"
 SMINUS_DEF_ID_TEMPLATE = "lm_head_row_expectation_topk{topk}_v1"
+RAW_NATIVE_SCHEMA_ID = "triality_raw_native_v1"
 NORM_EPS = 1e-12
 
 
@@ -49,6 +50,11 @@ def parse_args() -> argparse.Namespace:
         "--deterministic",
         action="store_true",
         help="Force deterministic algorithms where possible.",
+    )
+    parser.add_argument(
+        "--emit-native-raw",
+        action="store_true",
+        help="Include raw native V/Splus/Sminus vectors alongside 8D projection output.",
     )
     args = parser.parse_args()
 
@@ -337,6 +343,20 @@ def write_meta_json(path: Path, payload: Dict[str, Any]) -> None:
         f.write(text + "\n")
 
 
+def maybe_attach_native_raw(
+    row: Dict[str, Any],
+    v_raw: torch.Tensor,
+    splus_raw: torch.Tensor,
+    sminus_raw: torch.Tensor,
+    emit_native_raw: bool,
+) -> None:
+    if not emit_native_raw:
+        return
+    row["V_raw_native"] = [float(x) for x in v_raw.detach().cpu().tolist()]
+    row["Splus_raw_native"] = [float(x) for x in splus_raw.detach().cpu().tolist()]
+    row["Sminus_raw_native"] = [float(x) for x in sminus_raw.detach().cpu().tolist()]
+
+
 def run_autoregressive_extraction(
     prompt: str,
     model: Any,
@@ -344,6 +364,7 @@ def run_autoregressive_extraction(
     device: torch.device,
     max_new_tokens: int,
     topk: int,
+    emit_native_raw: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     encoded = tokenizer(prompt, return_tensors="pt")
     input_ids = encoded["input_ids"].to(device)
@@ -418,6 +439,13 @@ def run_autoregressive_extraction(
             "baseline_logprob": baseline_logprob,
             "baseline_entropy": baseline_entropy,
         }
+        maybe_attach_native_raw(
+            row=row,
+            v_raw=v_raw,
+            splus_raw=splus_raw,
+            sminus_raw=sminus_raw,
+            emit_native_raw=emit_native_raw,
+        )
         rows.append(row)
 
         next_token = torch.tensor([[next_token_id]], dtype=input_ids.dtype, device=device)
@@ -446,6 +474,7 @@ def run_teacher_forcing_extraction(
     tokenizer: Any,
     device: torch.device,
     topk: int,
+    emit_native_raw: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     if not getattr(tokenizer, "is_fast", False):
         raise RuntimeError(
@@ -561,6 +590,13 @@ def run_teacher_forcing_extraction(
             "baseline_logprob": baseline_logprob,
             "baseline_entropy": baseline_entropy,
         }
+        maybe_attach_native_raw(
+            row=row,
+            v_raw=v_raw,
+            splus_raw=splus_raw,
+            sminus_raw=sminus_raw,
+            emit_native_raw=emit_native_raw,
+        )
         rows.append(row)
 
     extracted_target_count = len(rows)
@@ -619,6 +655,7 @@ def main() -> int:
             tokenizer=tokenizer,
             device=device,
             topk=args.topk,
+            emit_native_raw=bool(args.emit_native_raw),
         )
     else:
         result_rows, result_meta = run_autoregressive_extraction(
@@ -628,6 +665,7 @@ def main() -> int:
             device=device,
             max_new_tokens=args.max_new_tokens,
             topk=args.topk,
+            emit_native_raw=bool(args.emit_native_raw),
         )
     rows = result_rows
     effective_topk = int(result_meta["topk_effective"])
@@ -649,6 +687,8 @@ def main() -> int:
         "proj_id": PROJ_ID,
         "splus_def_id": SPLUS_DEF_ID,
         "sminus_def_id": SMINUS_DEF_ID_TEMPLATE.format(topk=effective_topk),
+        "native_raw_emitted": bool(args.emit_native_raw),
+        "native_raw_schema_id": RAW_NATIVE_SCHEMA_ID if args.emit_native_raw else None,
         "prompt_sha256": prompt_sha256,
         "target_answer_sha256": target_answer_sha256,
         "output_ndjson_sha256": ndjson_sha256,

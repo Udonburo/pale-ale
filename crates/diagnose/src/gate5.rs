@@ -1,6 +1,6 @@
 use crate::gate4::{Gate4MetadataInputV1, Gate4RunInputV1, Gate4SampleInputV1, Gate4Variant};
 use pale_ale_rotor::{
-    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once,
+    embed_simple29_to_even128, inner, left_fold_mul_time_reversed_normalize_once, normalize_vec8,
     simple_rotor29_doc_to_ans, Even128, EvenError, RotorConfig, RotorError, RotorStep, Vec8Error,
 };
 use serde::{Deserialize, Serialize};
@@ -78,6 +78,35 @@ pub const GATE5_SAMPLE_SUMMARY_CSV_COLUMNS_V1: &[&str] = &[
     "hit_at_10_F",
     "hit_at_10_rotor_loop_chordal_v1",
 ];
+pub const GATE5_DIAGNOSTIC_TOKEN_CSV_COLUMNS_V1: &[&str] = &[
+    "sample_id",
+    "step",
+    "absolute_pos",
+    "token_id",
+    "token_text",
+    "label_token",
+    "norm_status_v",
+    "norm_status_splus",
+    "norm_status_sminus",
+    "input_norm_v",
+    "input_norm_splus",
+    "input_norm_sminus",
+    "dot_v_splus",
+    "dot_splus_sminus",
+    "dot_sminus_v",
+    "chordal_v_splus",
+    "chordal_splus_sminus",
+    "chordal_sminus_v",
+    "edge_outcome_r1_v_to_splus",
+    "edge_outcome_r2_splus_to_sminus",
+    "edge_outcome_r3_sminus_to_v",
+    "edge_chordal_r1_v_to_splus",
+    "edge_chordal_r2_splus_to_sminus",
+    "edge_chordal_r3_sminus_to_v",
+    "loop_outcome",
+    "rotor_loop_chordal_v1",
+    "rotor_loop_nonscalar_norm_v1",
+];
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Gate5IdentityInput {
@@ -114,6 +143,12 @@ pub struct Gate5RunOutput {
     pub spec_version: String,
     pub summary: Gate5RunSummary,
     pub artifact_paths: Gate5ArtifactPaths,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Gate5DiagnosticOutput {
+    pub diagnostic_csv_path: PathBuf,
+    pub n_rows: usize,
 }
 
 #[derive(Debug)]
@@ -490,6 +525,55 @@ struct Gate5ManifestJson {
 struct EdgeComputation {
     outcome: EdgeOutcome,
     rotor: Option<Even128>,
+    edge_chordal_identity: Option<f64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ComparatorNormStatus {
+    Materialized,
+    NonFiniteComponent,
+    ZeroOrNonFiniteNorm,
+}
+
+impl ComparatorNormStatus {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Materialized => "materialized",
+            Self::NonFiniteComponent => "nonfinite_component",
+            Self::ZeroOrNonFiniteNorm => "zero_or_nonfinite_norm",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct Gate5DiagnosticTokenRow {
+    sample_id: u64,
+    step: usize,
+    absolute_pos: usize,
+    token_id: u64,
+    token_text: String,
+    label_token: u8,
+    norm_status_v: ComparatorNormStatus,
+    norm_status_splus: ComparatorNormStatus,
+    norm_status_sminus: ComparatorNormStatus,
+    input_norm_v: f64,
+    input_norm_splus: f64,
+    input_norm_sminus: f64,
+    dot_v_splus: Option<f64>,
+    dot_splus_sminus: Option<f64>,
+    dot_sminus_v: Option<f64>,
+    chordal_v_splus: Option<f64>,
+    chordal_splus_sminus: Option<f64>,
+    chordal_sminus_v: Option<f64>,
+    edge_outcome_r1: EdgeOutcome,
+    edge_outcome_r2: EdgeOutcome,
+    edge_outcome_r3: EdgeOutcome,
+    edge_chordal_r1: Option<f64>,
+    edge_chordal_r2: Option<f64>,
+    edge_chordal_r3: Option<f64>,
+    loop_outcome: LoopOutcome,
+    rotor_loop_chordal: Option<f64>,
+    rotor_loop_nonscalar_norm: Option<f64>,
 }
 
 pub fn run_gate5_and_write<P: AsRef<Path>>(
@@ -584,6 +668,31 @@ pub fn run_gate5_and_write<P: AsRef<Path>>(
             token_telemetry_csv: token_csv_path,
             sample_summary_csv: sample_csv_path,
         },
+    })
+}
+
+pub fn run_gate5_diagnostics_and_write<P: AsRef<Path>>(
+    out_csv_path: P,
+    input_json_bytes: &[u8],
+) -> Result<Gate5DiagnosticOutput, Gate5OrchestratorError> {
+    let parsed: Gate4RunInputV1 =
+        serde_json::from_slice(input_json_bytes).map_err(Gate5OrchestratorError::JsonParse)?;
+    let samples = validate_samples(parsed.samples)?;
+    let mut rows = Vec::new();
+    for sample in &samples {
+        rows.extend(compute_diagnostic_rows(sample));
+    }
+    rows.sort_by(|left, right| {
+        left.sample_id
+            .cmp(&right.sample_id)
+            .then(left.step.cmp(&right.step))
+    });
+    let csv = build_diagnostic_token_csv(&rows)?;
+    let out_csv_path = out_csv_path.as_ref();
+    write_string_lf(out_csv_path, &csv)?;
+    Ok(Gate5DiagnosticOutput {
+        diagnostic_csv_path: out_csv_path.to_path_buf(),
+        n_rows: rows.len(),
     })
 }
 
@@ -910,6 +1019,60 @@ fn compute_sample_outputs(
     (rows, summary)
 }
 
+fn compute_diagnostic_rows(sample: &ValidatedSample) -> Vec<Gate5DiagnosticTokenRow> {
+    let mut rows = Vec::with_capacity(sample.token_steps.len());
+    for token in &sample.token_steps {
+        let (norm_status_v, normalized_v, input_norm_v) = normalize_for_comparator(token.v_8d);
+        let (norm_status_splus, normalized_splus, input_norm_splus) =
+            normalize_for_comparator(token.splus_8d);
+        let (norm_status_sminus, normalized_sminus, input_norm_sminus) =
+            normalize_for_comparator(token.sminus_8d);
+
+        let dot_v_splus = normalized_pair_dot(&normalized_v, &normalized_splus);
+        let dot_splus_sminus = normalized_pair_dot(&normalized_splus, &normalized_sminus);
+        let dot_sminus_v = normalized_pair_dot(&normalized_sminus, &normalized_v);
+        let chordal_v_splus = normalized_pair_chordal(&normalized_v, &normalized_splus);
+        let chordal_splus_sminus = normalized_pair_chordal(&normalized_splus, &normalized_sminus);
+        let chordal_sminus_v = normalized_pair_chordal(&normalized_sminus, &normalized_v);
+
+        let r1 = compute_edge(token.v_8d, token.splus_8d);
+        let r2 = compute_edge(token.splus_8d, token.sminus_8d);
+        let r3 = compute_edge(token.sminus_8d, token.v_8d);
+        let (loop_outcome, chordal, nonscalar_norm) = compute_loop_metrics(&r1, &r2, &r3);
+
+        rows.push(Gate5DiagnosticTokenRow {
+            sample_id: sample.sample_id,
+            step: token.step,
+            absolute_pos: token.absolute_pos,
+            token_id: token.token_id,
+            token_text: token.token_text.clone(),
+            label_token: token.label_token,
+            norm_status_v,
+            norm_status_splus,
+            norm_status_sminus,
+            input_norm_v,
+            input_norm_splus,
+            input_norm_sminus,
+            dot_v_splus,
+            dot_splus_sminus,
+            dot_sminus_v,
+            chordal_v_splus,
+            chordal_splus_sminus,
+            chordal_sminus_v,
+            edge_outcome_r1: r1.outcome,
+            edge_outcome_r2: r2.outcome,
+            edge_outcome_r3: r3.outcome,
+            edge_chordal_r1: r1.edge_chordal_identity,
+            edge_chordal_r2: r2.edge_chordal_identity,
+            edge_chordal_r3: r3.edge_chordal_identity,
+            loop_outcome,
+            rotor_loop_chordal: chordal,
+            rotor_loop_nonscalar_norm: nonscalar_norm,
+        });
+    }
+    rows
+}
+
 fn compute_edge(doc_vec8: [f64; 8], ans_vec8: [f64; 8]) -> EdgeComputation {
     let config = RotorConfig {
         tau_wedge: TAU_WEDGE_V0,
@@ -925,27 +1088,60 @@ fn compute_edge(doc_vec8: [f64; 8], ans_vec8: [f64; 8]) -> EdgeComputation {
                 EdgeOutcome::Materialized
             },
             rotor: Some(embed_simple29_to_even128(&r29)),
+            edge_chordal_identity: Some((2.0 * (1.0 - r29[0].abs().min(1.0))).max(0.0).sqrt()),
         },
         Ok(RotorStep::AntipodalAngleOnly { .. }) => EdgeComputation {
             outcome: EdgeOutcome::AntipodalAngleOnly,
             rotor: None,
+            edge_chordal_identity: None,
         },
         Err(RotorError::Vec8(Vec8Error::NonFiniteComponent)) => EdgeComputation {
             outcome: EdgeOutcome::Vec8NonFiniteComponent,
             rotor: None,
+            edge_chordal_identity: None,
         },
         Err(RotorError::Vec8(Vec8Error::ZeroOrNonFiniteNorm)) => EdgeComputation {
             outcome: EdgeOutcome::Vec8ZeroOrNonFiniteNorm,
             rotor: None,
+            edge_chordal_identity: None,
         },
         Err(RotorError::NonFiniteTheta) => EdgeComputation {
             outcome: EdgeOutcome::RotorNonFiniteTheta,
             rotor: None,
+            edge_chordal_identity: None,
         },
         Err(RotorError::RenormFailure) => EdgeComputation {
             outcome: EdgeOutcome::RotorRenormFailure,
             rotor: None,
+            edge_chordal_identity: None,
         },
+    }
+}
+
+fn normalize_for_comparator(input: [f64; 8]) -> (ComparatorNormStatus, Option<[f64; 8]>, f64) {
+    let norm = input.iter().map(|value| value * value).sum::<f64>().sqrt();
+    match normalize_vec8(input) {
+        Ok(value) => (ComparatorNormStatus::Materialized, Some(value), norm),
+        Err(Vec8Error::NonFiniteComponent) => {
+            (ComparatorNormStatus::NonFiniteComponent, None, norm)
+        }
+        Err(Vec8Error::ZeroOrNonFiniteNorm) => {
+            (ComparatorNormStatus::ZeroOrNonFiniteNorm, None, norm)
+        }
+    }
+}
+
+fn normalized_pair_dot(left: &Option<[f64; 8]>, right: &Option<[f64; 8]>) -> Option<f64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left.iter().zip(right.iter()).map(|(a, b)| a * b).sum()),
+        _ => None,
+    }
+}
+
+fn normalized_pair_chordal(left: &Option<[f64; 8]>, right: &Option<[f64; 8]>) -> Option<f64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(d_proj(left, right)),
+        _ => None,
     }
 }
 
@@ -1077,6 +1273,48 @@ fn dot_abs_clamped(left: &[f64; 8], right: &[f64; 8]) -> f64 {
 
 fn d_proj(left: &[f64; 8], right: &[f64; 8]) -> f64 {
     (2.0 * (1.0 - dot_abs_clamped(left, right))).max(0.0).sqrt()
+}
+
+fn build_diagnostic_token_csv(
+    rows: &[Gate5DiagnosticTokenRow],
+) -> Result<String, Gate5OrchestratorError> {
+    let mut out = String::new();
+    out.push_str(&GATE5_DIAGNOSTIC_TOKEN_CSV_COLUMNS_V1.join(","));
+    out.push('\n');
+    for row in rows {
+        let line = format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            row.sample_id,
+            row.step,
+            row.absolute_pos,
+            row.token_id,
+            csv_escape(&row.token_text),
+            row.label_token,
+            csv_escape(row.norm_status_v.as_str()),
+            csv_escape(row.norm_status_splus.as_str()),
+            csv_escape(row.norm_status_sminus.as_str()),
+            fmt_float_csv(row.input_norm_v),
+            fmt_float_csv(row.input_norm_splus),
+            fmt_float_csv(row.input_norm_sminus),
+            fmt_option_float_csv(row.dot_v_splus),
+            fmt_option_float_csv(row.dot_splus_sminus),
+            fmt_option_float_csv(row.dot_sminus_v),
+            fmt_option_float_csv(row.chordal_v_splus),
+            fmt_option_float_csv(row.chordal_splus_sminus),
+            fmt_option_float_csv(row.chordal_sminus_v),
+            csv_escape(row.edge_outcome_r1.as_str()),
+            csv_escape(row.edge_outcome_r2.as_str()),
+            csv_escape(row.edge_outcome_r3.as_str()),
+            fmt_option_float_csv(row.edge_chordal_r1),
+            fmt_option_float_csv(row.edge_chordal_r2),
+            fmt_option_float_csv(row.edge_chordal_r3),
+            csv_escape(row.loop_outcome.as_str()),
+            fmt_option_float_csv(row.rotor_loop_chordal),
+            fmt_option_float_csv(row.rotor_loop_nonscalar_norm),
+        );
+        out.push_str(&line);
+    }
+    Ok(out)
 }
 
 fn build_token_telemetry_csv(

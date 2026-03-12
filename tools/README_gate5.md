@@ -94,3 +94,149 @@ or
 ```powershell
 python tools/aggregate_gate5_spike.py --gate5-out-dir runs/gate5_seam_spike --out runs/gate5_seam_spike/gate5_aggregate_report.md --surface seam --seam-jsonl data/seam/seam_v0.jsonl
 ```
+
+## 6) Boundary Liberation Smoke
+
+For post-Gate5 boundary comparison work, first preserve raw native triplets during extraction:
+
+```powershell
+python tools/build_seam_gate4_input.py --seam-jsonl data/seam/seam_v0.jsonl --out-dir runs/seam_gate5_native_source --device auto --emit-native-raw
+```
+
+Then build a native-local-span candidate on the same samples:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_native --coordinate-rule anchored_projection_v0
+```
+
+or the centered affine diagnostic variant:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_centered_affine --coordinate-rule centered_affine_local_span_v1
+```
+
+or the first rank-3 origin-span candidate:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_origin_span --coordinate-rule origin_span_projection_v2
+```
+
+These builders emit:
+
+- `gate4_input.json`
+- `native_local_span_boundary_steps.ndjson`
+- `native_local_span_build_manifest.json`
+
+Notes:
+
+- `anchored_projection_v0` and `centered_affine_local_span_v1` are useful dead-zone diagnostics, but both can collapse a triplet into an affine rank-2 plane.
+- `origin_span_projection_v2` is the first candidate that preserves the raw normalized triplet span and can materialize rank-3 frames when the source vectors support it.
+
+## 7) Dead-Zone Diagnosis
+
+To compare the inherited 8D baseline against a richer boundary candidate under the same Gate5 comparator:
+
+```powershell
+python tools/diagnose_boundary_dead_zone.py --baseline-input runs/seam_gate5_native_source/gate4_input.json --candidate-input runs/seam_gate5_native/gate4_input.json --candidate-boundary-steps runs/seam_gate5_native/native_local_span_boundary_steps.ndjson --out-dir runs/seam_gate5_dead_zone_diag
+```
+
+This emits:
+
+- `baseline_gate5_diagnostic.csv`
+- `candidate_gate5_diagnostic.csv`
+- `matched_boundary_diagnostics.csv`
+- `baseline_transport_sample_summary.csv`
+- `candidate_transport_sample_summary.csv`
+- `boundary_dead_zone_report.md`
+
+Use this before broad CFA/Seam reruns to identify whether a candidate boundary is already flat at:
+
+- emitted boundary coordinates
+- comparator input normalization
+- edge / loop transport residual stages
+
+## 8) Gate5 Failure-Mode Autopsy
+
+After a full CFA Gate5 run, inspect where rotor loses globally but still wins locally:
+
+```powershell
+python tools/analyze_gate5_autopsy.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_autopsy --sample-ids 137 147 149 11 167
+```
+
+This emits:
+
+- `gate5_autopsy_selected_cases.csv`
+- `gate5_autopsy_selected_top_tokens.csv`
+- `gate5_autopsy_frustrated_world_summary.csv`
+- `gate5_autopsy_report.md`
+
+Use this when the next question is not "can Gate5 run?" but:
+
+- where rotor wins despite losing globally
+- whether rotor has an early-hit / before-span bias
+- which world types carry the strongest rotor-vs-F split
+
+## 9) Span-Dilation Sensitivity
+
+To test whether rotor is reacting to a near-defect neighborhood rather than missing the defect entirely:
+
+```powershell
+python tools/analyze_gate5_span_dilation.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_span_dilation --sample-ids 137 147 149 11 167 --k-values 0 1 2 3
+```
+
+This emits:
+
+- `gate5_span_dilation_global_summary.csv`
+- `gate5_span_dilation_world_summary.csv`
+- `gate5_span_dilation_selected_cases.csv`
+- `gate5_span_dilation_report.md`
+
+Interpretation:
+
+- span dilation is a calibration / signal-shape diagnostic only and does not by itself justify comparator promotion
+- if rotor improves sharply for small `k`, the problem is likely early-hit / label-alignment mismatch
+- if rotor stays weak as `k` grows, the problem is more likely in the residual itself
+- if only some `world_type` groups improve, the remaining issue is more benchmark- or motif-specific than global
+
+## 10) Genealogy-Only Autopsy
+
+To isolate the persistent `world_type=genealogy` failure mode on the fixed FWHT baseline:
+
+```powershell
+python tools/analyze_gate5_autopsy.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_genealogy_autopsy --world-type genealogy --output-prefix gate5_genealogy_autopsy
+```
+
+This emits:
+
+- `gate5_genealogy_autopsy_selected_cases.csv`
+- `gate5_genealogy_autopsy_top_tokens.csv`
+- `gate5_genealogy_autopsy_world_summary.csv`
+- `gate5_genealogy_autopsy_report.md`
+
+Use this when the next question is:
+
+- whether genealogy is mainly a before-span failure
+- whether rotor overshoots after the defect span
+- whether within-span mass is too weak even when token scores are live
+
+## 11) Field-Side Diagnostics
+
+To inspect mass placement and decay shape on the existing FWHT baseline, without rerunning extraction:
+
+```powershell
+python tools/analyze_gate5_field_diagnostics.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_field
+```
+
+This emits:
+
+- `gate5_field_diagnostics_sample_summary.csv`
+- `gate5_field_diagnostics_world_summary.csv`
+- `gate5_field_diagnostics_selected_cases.csv`
+- `gate5_field_diagnostics_report.md`
+
+Use this when the next question is:
+
+- whether rotor is mainly early / prefix-heavy
+- whether useful signal concentrates near defect start
+- whether genealogy remains a mass-placement failure even after dilation diagnostics
+- whether a fixed set of case-study sample ids shows the same field-shape pattern as the full frustrated population
