@@ -240,7 +240,6 @@ Use this when the next question is:
 - whether useful signal concentrates near defect start
 - whether genealogy remains a mass-placement failure even after dilation diagnostics
 - whether a fixed set of case-study sample ids shows the same field-shape pattern as the full frustrated population
-
 ## 12) Aggregation Candidate Comparison
 
 To compare simple field readers on the fixed FWHT baseline and fixed rotor comparator:
