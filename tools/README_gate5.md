@@ -505,3 +505,37 @@ Use this when the next question is:
 - how genealogy should be reported going forward
 - which geometry is canonical vs diagnostic
 - how to keep benchmark policy separate from model-side iteration
+
+## 19) Genealogy Residual Autopsy
+
+To test whether genealogy's persistent failure is mostly benchmark-geometry mismatch or whether residual-side weakness remains:
+
+```powershell
+python tools/analyze_gate5_genealogy_residual_autopsy.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_genealogy_residual_autopsy
+```
+
+This emits:
+
+- `genealogy_residual_shape_summary.csv`
+- `genealogy_residual_selected_failures.csv`
+- `genealogy_residual_autopsy_decision.md`
+
+The analysis stays fixed on:
+
+- FWHT baseline only
+- `rotor_loop_chordal_v1` only
+- canonical `inside_span`
+- diagnostic `prefix_only_w3`
+
+It does not:
+
+- add a new boundary
+- add a new reader
+- add a new residual
+- rewrite canonical labels
+
+Use this when the next question is:
+
+- whether genealogy is mostly explained by supervision geometry mismatch
+- whether a residual-side weakness remains even after the diagnostic prefix view
+- which genealogy failures still remain negative under `prefix_only_w3`
