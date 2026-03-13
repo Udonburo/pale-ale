@@ -425,3 +425,51 @@ Use this when the next question is:
 - whether a genealogy-only reader line is justified
 - whether genealogy can be improved at `k=0` without paying back temporal `k=0`
 - whether global selected rotor-win cases remain explainable under a genealogy-specific reader
+
+## 17) Genealogy Label Geometry Lab
+
+To compare diagnostic label geometries on the fixed FWHT baseline and fixed rotor comparator:
+
+```powershell
+python tools/analyze_gate5_genealogy_label_geometry.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_genealogy_label_geometry --sample-ids 137 147 149 11 167
+```
+
+This emits:
+
+- `gate5_genealogy_label_geometry_sample_summary.csv`
+- `gate5_genealogy_label_geometry_global_summary.csv`
+- `gate5_genealogy_label_geometry_world_summary.csv`
+- `gate5_genealogy_label_geometry_selected_cases.csv`
+- `gate5_genealogy_label_geometry_report.md`
+- `gate5_genealogy_label_geometry_decision.md`
+
+The analysis stays fixed on:
+
+- FWHT baseline only
+- `rotor_loop_chordal_v1` only
+- canonical CFA labels remain unchanged
+- diagnostic label geometries only
+
+Geometries compared:
+
+- `inside_span`
+- `onset_only`
+- `start_neighborhood_w1`
+- `start_neighborhood_w3`
+- `prefix_only_w1`
+- `prefix_only_w3`
+- `symmetric_dilation_k1`
+- `symmetric_dilation_k3`
+
+Guardrails:
+
+- zero frustrated rows fails fast
+- zero frustrated `genealogy` rows fails fast
+- unresolved requested sample ids fail fast
+- selected cases include both existing global rotor wins and baseline genealogy worst failures
+
+Use this when the next question is:
+
+- whether genealogy's persistent failure is better explained by supervision geometry mismatch
+- whether prefix/onset/start-neighborhood geometries help genealogy more than temporal/reachability
+- whether the genealogy problem should move to benchmark/label-geometry work rather than reader work
