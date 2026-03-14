@@ -9,6 +9,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+GENEALOGY_DUAL_VIEW_GEOMETRIES = ("inside_span", "prefix_only_w3")
+GENEALOGY_DUAL_VIEW_PERCENTILE = 0.90
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Aggregate Gate5 spike artifacts.")
@@ -178,6 +181,134 @@ def group_token_rows(rows: Sequence[Dict[str, str]]) -> Dict[int, List[Dict[str,
     return grouped
 
 
+def defect_span(labels: Sequence[int]) -> Tuple[Optional[int], Optional[int]]:
+    positive = [idx for idx, label in enumerate(labels) if label == 1]
+    if not positive:
+        return (None, None)
+    return (positive[0], positive[-1])
+
+
+def build_genealogy_geometry_labels(base_labels: Sequence[int], geometry_id: str) -> List[int]:
+    if geometry_id == "inside_span":
+        return list(base_labels)
+    if geometry_id != "prefix_only_w3":
+        raise ValueError(f"unsupported genealogy geometry id: {geometry_id}")
+
+    n = len(base_labels)
+    defect_start, _defect_end = defect_span(base_labels)
+    if defect_start is None:
+        return [0] * n
+
+    out = [0] * n
+    lo = max(0, defect_start - 3)
+    hi = defect_start - 1
+    if hi < 0 or lo > hi:
+        return out
+    for idx in range(lo, min(hi, n - 1) + 1):
+        out[idx] = 1
+    return out
+
+
+def first_hit_distance_for_labels(
+    labels: Sequence[int],
+    scores: Sequence[Optional[float]],
+    percentile: float = GENEALOGY_DUAL_VIEW_PERCENTILE,
+) -> Optional[int]:
+    if sum(labels) == 0:
+        return None
+    valid_scores = [score for score in scores if score is not None]
+    threshold = percentile_nearest_rank(valid_scores, percentile)
+    if threshold is None:
+        return None
+    defect_start, _defect_end = defect_span(labels)
+    first_hit = next(
+        (idx for idx, score in enumerate(scores) if score is not None and score >= threshold),
+        None,
+    )
+    if defect_start is None or first_hit is None:
+        return None
+    return int(first_hit) - int(defect_start)
+
+
+def summarize_genealogy_dual_view(
+    token_rows: Sequence[Dict[str, str]],
+    sample_rows: Sequence[Dict[str, str]],
+) -> List[Dict[str, Any]]:
+    grouped = group_token_rows(token_rows)
+    genealogy_sample_ids = [
+        int(row["sample_id"])
+        for row in sample_rows
+        if row.get("variant") == "frustrated" and row.get("world_type") == "genealogy"
+    ]
+    if not genealogy_sample_ids:
+        return []
+
+    summary_rows: List[Dict[str, Any]] = []
+    for geometry_id in GENEALOGY_DUAL_VIEW_GEOMETRIES:
+        per_sample_rows: List[Dict[str, Any]] = []
+        for sample_id in genealogy_sample_ids:
+            sample_token_rows = grouped.get(sample_id, [])
+            if not sample_token_rows:
+                continue
+            base_labels = [1 if row.get("label_token") == "1" else 0 for row in sample_token_rows]
+            labels = build_genealogy_geometry_labels(base_labels, geometry_id)
+            if sum(labels) == 0:
+                continue
+            scores_f = [parse_float(row.get("score_F_loop")) for row in sample_token_rows]
+            scores_rotor = [
+                parse_float(row.get("rotor_loop_chordal_v1")) for row in sample_token_rows
+            ]
+            ap_f = average_precision(labels, scores_f)
+            ap_rotor = average_precision(labels, scores_rotor)
+            first_hit_rotor = first_hit_distance_for_labels(labels, scores_rotor)
+            per_sample_rows.append(
+                {
+                    "auprc_F": ap_f,
+                    "auprc_rotor": ap_rotor,
+                    "delta_rotor_vs_F": None
+                    if ap_f is None or ap_rotor is None
+                    else ap_rotor - ap_f,
+                    "first_hit_rotor_distance_signed": first_hit_rotor,
+                    "rotor_first_hit_before": 1.0
+                    if first_hit_rotor is not None and first_hit_rotor < 0
+                    else 0.0,
+                }
+            )
+
+        if not per_sample_rows:
+            continue
+
+        summary_rows.append(
+            {
+                "geometry_id": geometry_id,
+                "role": "canonical" if geometry_id == "inside_span" else "diagnostic-only",
+                "n_samples": len(per_sample_rows),
+                "mean_auprc_F": mean(
+                    row["auprc_F"] for row in per_sample_rows if row["auprc_F"] is not None
+                ),
+                "mean_auprc_rotor": mean(
+                    row["auprc_rotor"]
+                    for row in per_sample_rows
+                    if row["auprc_rotor"] is not None
+                ),
+                "mean_delta_rotor_vs_F": mean(
+                    row["delta_rotor_vs_F"]
+                    for row in per_sample_rows
+                    if row["delta_rotor_vs_F"] is not None
+                ),
+                "mean_first_hit_rotor_distance_signed": mean(
+                    float(row["first_hit_rotor_distance_signed"])
+                    for row in per_sample_rows
+                    if row["first_hit_rotor_distance_signed"] is not None
+                ),
+                "rotor_before_rate": mean(
+                    row["rotor_first_hit_before"] for row in per_sample_rows
+                ),
+            }
+        )
+    return summary_rows
+
+
 def detect_surface(sample_rows: Sequence[Dict[str, str]], surface: str, seam_jsonl: Optional[str]) -> str:
     if surface != "auto":
         return surface
@@ -291,6 +422,7 @@ def build_cfa_report(
     topk: int,
 ) -> str:
     grouped = group_token_rows(token_rows)
+    genealogy_dual_view_rows = summarize_genealogy_dual_view(token_rows, sample_rows)
     labels = [1 if row.get("label_token") == "1" else 0 for row in token_rows]
     ap_f = average_precision(labels, [parse_float(row.get("score_F_loop")) for row in token_rows])
     ap_rotor = average_precision(
@@ -356,9 +488,34 @@ def build_cfa_report(
         f"- mean_sample_auprc_E_transition_aligned: {render_float(mean_auprc_e)}",
         "- `E` is transition-aligned and should not be read as token-aligned evidence.",
         "",
-        "## Representative Samples",
-        "",
     ]
+    if genealogy_dual_view_rows:
+        lines.extend(
+            [
+                "## Genealogy Dual-View",
+                "",
+                "- Headline genealogy reporting remains canonical `inside_span`.",
+                "- `prefix_only_w3` is diagnostic-only and must not replace the canonical leaderboard.",
+                "",
+                "| geometry | role | n_samples | mean_auprc_F | mean_auprc_rotor | mean_delta_rotor_vs_F | mean_first_hit_rotor_distance_signed | rotor_before_rate |",
+                "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for row in genealogy_dual_view_rows:
+            lines.append(
+                f"| {row['geometry_id']} | {row['role']} | {row['n_samples']} | "
+                f"{render_float(row['mean_auprc_F'])} | {render_float(row['mean_auprc_rotor'])} | "
+                f"{render_float(row['mean_delta_rotor_vs_F'])} | "
+                f"{render_float(row['mean_first_hit_rotor_distance_signed'])} | "
+                f"{render_float(row['rotor_before_rate'])} |"
+            )
+        lines.append("")
+    lines.extend(
+        [
+            "## Representative Samples",
+            "",
+        ]
+    )
     if not per_sample_delta:
         lines.append("- No per-sample delta rows were available.")
     else:
