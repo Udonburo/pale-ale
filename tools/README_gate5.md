@@ -539,3 +539,38 @@ Use this when the next question is:
 - whether genealogy is mostly explained by supervision geometry mismatch
 - whether a residual-side weakness remains even after the diagnostic prefix view
 - which genealogy failures still remain negative under `prefix_only_w3`
+
+## 20) Genealogy Residual Remainder
+
+To measure how much residual-side weakness still remains after accepting `prefix_only_w3` as a diagnostic-only genealogy view:
+
+```powershell
+python tools/analyze_gate5_genealogy_residual_remainder.py --gate5-out-dir runs/gate5_cfa_spike --out-dir runs/gate5_cfa_spike_genealogy_residual_remainder
+```
+
+This emits:
+
+- `genealogy_residual_remainder_summary.csv`
+- `genealogy_residual_remainder_cases.csv`
+- `genealogy_residual_remainder_decision.md`
+
+The analysis stays fixed on:
+
+- FWHT baseline only
+- `rotor_loop_chordal_v1` only
+- canonical `inside_span`
+- diagnostic `prefix_only_w3`
+
+It does not:
+
+- add a new boundary
+- add a new reader
+- add a new residual
+- rewrite canonical labels
+- reopen supervision policy decisions
+
+Use this when the next question is:
+
+- whether the remaining genealogy weakness is now small after policy-adjusted interpretation
+- whether residual-side remainder is still material even under `prefix_only_w3`
+- which genealogy samples are still negative, recovered, or borderline under the diagnostic view
