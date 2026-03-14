@@ -95,6 +95,11 @@ or
 python tools/aggregate_gate5_spike.py --gate5-out-dir runs/gate5_seam_spike --out runs/gate5_seam_spike/gate5_aggregate_report.md --surface seam --seam-jsonl data/seam/seam_v0.jsonl
 ```
 
+Notes:
+
+- CFA aggregate reports now auto-append a genealogy dual-view section when frustrated `genealogy` rows are present.
+- That section keeps canonical `inside_span` first and shows `prefix_only_w3` as diagnostic-only.
+
 ## 6) Boundary Liberation Smoke
 
 For post-Gate5 boundary comparison work, first preserve raw native triplets during extraction:
