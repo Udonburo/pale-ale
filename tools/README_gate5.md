@@ -100,6 +100,31 @@ Notes:
 - CFA aggregate reports now auto-append a genealogy dual-view section when frustrated `genealogy` rows are present.
 - That section keeps canonical `inside_span` first and shows `prefix_only_w3` as diagnostic-only.
 
+## 5b) Build A Fixed Boundary Standing Scorecard
+
+When comparing `FWHT baseline`, `origin_span_projection_v2`, and `local_relation_affine_lift_v0`, freeze the headline metrics first and verify that all runs use the same sample ids.
+
+For CFA:
+
+```powershell
+python tools/build_gate5_boundary_scorecard.py --surface cfa --out runs/gate5_cfa_boundary_standing.md --csv-out runs/gate5_cfa_boundary_standing.csv --run "label=fwht_baseline;gate5_out=runs/gate5_cfa_spike;input=runs/gate5_cfa_ingestion/gate4_input.json" --run "label=origin_v2;gate5_out=runs/gate5_cfa_origin_v2;input=runs/cfa_origin_v2/gate4_input.json;boundary_manifest=runs/cfa_origin_v2/native_local_span_build_manifest.json" --run "label=relation_affine_v0;gate5_out=runs/gate5_cfa_relation_affine_v0;input=runs/cfa_relation_affine_v0/gate4_input.json;boundary_manifest=runs/cfa_relation_affine_v0/native_local_span_build_manifest.json"
+```
+
+For Seam:
+
+```powershell
+python tools/build_gate5_boundary_scorecard.py --surface seam --out runs/gate5_seam_boundary_standing.md --csv-out runs/gate5_seam_boundary_standing.csv --run "label=fwht_baseline;gate5_out=runs/gate5_seam_64e2e/gate5_out;input=runs/gate5_seam_64e2e/gate4_prep/gate4_input.json" --run "label=origin_v2;gate5_out=runs/gate5_seam_64e2e_origin_v2;input=runs/gate5_seam_64e2e_origin_v2_prep/gate4_input.json;boundary_manifest=runs/gate5_seam_64e2e_origin_v2_prep/native_local_span_build_manifest.json" --run "label=relation_affine_v0;gate5_out=runs/gate5_seam_64e2e_relation_affine_v0;input=runs/gate5_seam_64e2e_relation_affine_v0_prep/gate4_input.json;boundary_manifest=runs/gate5_seam_64e2e_relation_affine_v0_prep/native_local_span_build_manifest.json"
+```
+
+The scorecard emits:
+
+- a fixed headline table for CFA or Seam
+- `sample_id_sha256` parity across runs
+- Gate5 fixed-field parity checks
+- native-source-root parity for boundary candidates
+- strict `loop_row_coverage_match`; any dropped loop rows mark the standing as non-parity
+- a hard error if a non-baseline boundary run omits `boundary_manifest`
+
 ## 6) Boundary Liberation Smoke
 
 For post-Gate5 boundary comparison work, first preserve raw native triplets during extraction:
@@ -126,6 +151,12 @@ or the first rank-3 origin-span candidate:
 python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_origin_span --coordinate-rule origin_span_projection_v2
 ```
 
+or the first relation-first affine-lift candidate:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine --coordinate-rule local_relation_affine_lift_v0
+```
+
 These builders emit:
 
 - `gate4_input.json`
@@ -136,6 +167,7 @@ Notes:
 
 - `anchored_projection_v0` and `centered_affine_local_span_v1` are useful dead-zone diagnostics, but both can collapse a triplet into an affine rank-2 plane.
 - `origin_span_projection_v2` is the first candidate that preserves the raw normalized triplet span and can materialize rank-3 frames when the source vectors support it.
+- `local_relation_affine_lift_v0` is the first relation-first candidate: it emits a canonical triangle chart with a signed angle-profile lift derived only from the local `V/S+/S-` relation.
 
 ## 7) Dead-Zone Diagnosis
 

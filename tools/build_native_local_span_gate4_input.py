@@ -20,21 +20,29 @@ DEFAULT_BOUNDARY_STEPS = "native_local_span_boundary_steps.ndjson"
 BOUNDARY_ID_ANCHORED_V0 = "native_local_span_anchored_projection_v0"
 BOUNDARY_ID_CENTERED_AFFINE_V1 = "native_local_span_centered_affine_v1"
 BOUNDARY_ID_ORIGIN_SPAN_V2 = "native_local_span_origin_span_v2"
+BOUNDARY_ID_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_v0"
 FRAME_CONSTRUCTION_ID_ANCHORED = "anchor_v_diff_gram_schmidt_v0"
 FRAME_CONSTRUCTION_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
+FRAME_CONSTRUCTION_ID_RELATION_AFFINE = "relation_affine_lift_chart_v0"
 SOURCE_TENSOR_ID = "triality_raw_triplet_preprojection_v1"
 COORDINATE_SPACE_ID_ANCHORED_V0 = "native_local_span_coordinates_pad8_v0"
 COORDINATE_SPACE_ID_CENTERED_AFFINE_V1 = "native_local_span_coordinates_centered_affine_pad8_v1"
 COORDINATE_SPACE_ID_ORIGIN_SPAN_V2 = "native_local_span_coordinates_origin_span_pad8_v2"
+COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_coordinates_pad8_v0"
 COORDINATE_RULE_ANCHORED_V0 = "anchored_projection_v0"
 COORDINATE_RULE_CENTERED_AFFINE_V1 = "centered_affine_local_span_v1"
 COORDINATE_RULE_ORIGIN_SPAN_V2 = "origin_span_projection_v2"
+COORDINATE_RULE_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_v0"
 BASIS_RULE_ID_ANCHORED = "v_anchor_diff_gram_schmidt_v0"
 BASIS_RULE_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
+BASIS_RULE_ID_RELATION_AFFINE = "v_anchor_relation_affine_lift_v0"
 PROJECTION_OR_SPAN_RULE_ANCHORED_V0 = "unit_source_projection_onto_local_span_pad8_v0"
 PROJECTION_OR_SPAN_RULE_CENTERED_AFFINE_V1 = "centered_affine_projection_onto_local_span_pad8_v1"
 PROJECTION_OR_SPAN_RULE_ORIGIN_SPAN_V2 = (
     "unit_source_projection_onto_raw_triplet_origin_span_pad8_v2"
+)
+PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V0 = (
+    "canonical_triangle_centroid_altitude_lift_pad8_v0"
 )
 BASIS_SIGN_RULE_ID = "first_non_negligible_positive_v0"
 BASIS_ORDER_RULE_ID = "construction_order_v0"
@@ -43,6 +51,8 @@ DEGENERACY_POLICY_ID = "honest_variable_rank_no_fake_completion_v0"
 RAW_NATIVE_SCHEMA_ID = "triality_raw_native_v1"
 RAW_KEYS = ("V_raw_native", "Splus_raw_native", "Sminus_raw_native")
 FRAME_EPS = 1e-6
+SIGN_STABILITY_EPS = 1e-4
+RELATION_AREA_EPS = 1e-6
 EMIT_DIM = 8
 
 
@@ -72,6 +82,7 @@ def parse_args() -> argparse.Namespace:
             COORDINATE_RULE_ANCHORED_V0,
             COORDINATE_RULE_CENTERED_AFFINE_V1,
             COORDINATE_RULE_ORIGIN_SPAN_V2,
+            COORDINATE_RULE_RELATION_AFFINE_LIFT_V0,
         ),
         default=COORDINATE_RULE_ANCHORED_V0,
     )
@@ -155,6 +166,21 @@ def fix_sign(values: Sequence[float]) -> Tuple[List[float], int]:
     return (out, 1)
 
 
+def fix_sign_with_stability(
+    values: Sequence[float],
+) -> Tuple[List[float], int, bool, Optional[int], float]:
+    out = [float(value) for value in values]
+    for idx, value in enumerate(out):
+        magnitude = abs(value)
+        if magnitude > FRAME_EPS:
+            sign = 1
+            if value < 0.0:
+                out = [-entry for entry in out]
+                sign = -1
+            return (out, sign, magnitude >= SIGN_STABILITY_EPS, idx, magnitude)
+    return (out, 1, False, None, 0.0)
+
+
 def orthogonalize(
     direction: Sequence[float], basis: Sequence[Sequence[float]]
 ) -> Tuple[Optional[List[float]], int]:
@@ -165,6 +191,18 @@ def orthogonalize(
     if normalized is None:
         return (None, 0)
     return fix_sign(normalized)
+
+
+def orthogonalize_with_stability(
+    direction: Sequence[float], basis: Sequence[Sequence[float]]
+) -> Tuple[Optional[List[float]], int, bool, Optional[int], float]:
+    residual = [float(value) for value in direction]
+    for axis in basis:
+        residual = add(residual, scale(axis, -dot(residual, axis)))
+    normalized = normalize(residual)
+    if normalized is None:
+        return (None, 0, False, None, 0.0)
+    return fix_sign_with_stability(normalized)
 
 
 def pad8(values: Sequence[float]) -> List[float]:
@@ -213,6 +251,14 @@ def coordinate_rule_metadata(rule: str) -> Dict[str, str]:
             "frame_construction_id": FRAME_CONSTRUCTION_ID_ORIGIN_SPAN,
             "basis_rule_id": BASIS_RULE_ID_ORIGIN_SPAN,
         }
+    if rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V0:
+        return {
+            "boundary_id": BOUNDARY_ID_RELATION_AFFINE_LIFT_V0,
+            "coordinate_space_id": COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V0,
+            "projection_or_span_rule": PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V0,
+            "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE,
+            "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE,
+        }
     raise ValueError(f"unsupported coordinate rule: {rule}")
 
 
@@ -237,6 +283,25 @@ def centered_energy(values: Sequence[Sequence[float]], center: Sequence[float]) 
     for value in values:
         total += l2_norm(subtract(value, center))
     return total / float(len(values))
+
+
+def gram_schmidt_rank(values: Sequence[Sequence[float]]) -> int:
+    basis: List[List[float]] = []
+    for value in values:
+        axis, _ = orthogonalize(value, basis)
+        if axis is None:
+            continue
+        basis.append(axis)
+    return len(basis)
+
+
+def clamped_cosine(left: Sequence[float], right: Sequence[float]) -> float:
+    left_norm = l2_norm(left)
+    right_norm = l2_norm(right)
+    if left_norm <= FRAME_EPS or right_norm <= FRAME_EPS:
+        return 0.0
+    value = dot(left, right) / (left_norm * right_norm)
+    return max(-1.0, min(1.0, float(value)))
 
 
 def load_raw_triplet(row: Dict[str, Any], key: str) -> List[float]:
@@ -291,11 +356,212 @@ def build_origin_span_basis(
     return basis, basis_sources, orientation_parity
 
 
+def build_relation_affine_lift_coordinates(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+) -> Dict[str, Any]:
+    edge_len_v_splus = float(l2_norm(subtract(splus_unit, v_unit)))
+    edge_len_v_sminus = float(l2_norm(subtract(sminus_unit, v_unit)))
+    edge_len_splus_sminus = float(l2_norm(subtract(splus_unit, sminus_unit)))
+    zero_result = {
+        "coords_v": [0.0] * EMIT_DIM,
+        "coords_splus": [0.0] * EMIT_DIM,
+        "coords_sminus": [0.0] * EMIT_DIM,
+        "frame_rank": 0,
+        "orientation_parity": 0,
+        "basis_sources": [],
+        "projected_norm_v": 0.0,
+        "projected_norm_splus": 0.0,
+        "projected_norm_sminus": 0.0,
+        "raw_triplet_centroid_norm": 0.0,
+        "emitted_coord_centroid_norm": 0.0,
+        "emitted_centered_energy": 0.0,
+        "relation_signed_area2": 0.0,
+        "relation_plane_height_signed": 0.0,
+        "relation_edge_len_v_splus": edge_len_v_splus,
+        "relation_edge_len_v_sminus": edge_len_v_sminus,
+        "relation_edge_len_splus_sminus": edge_len_splus_sminus,
+        "relation_altitude_v": 0.0,
+        "relation_altitude_splus": 0.0,
+        "relation_altitude_sminus": 0.0,
+        "relation_angle_cos_v": 0.0,
+        "relation_angle_cos_splus": 0.0,
+        "relation_angle_cos_sminus": 0.0,
+        "relation_lift_rank": 0,
+        "sign_anchor_index_e1": None,
+        "sign_anchor_index_e2": None,
+        "sign_anchor_abs_e1": 0.0,
+        "sign_anchor_abs_e2": 0.0,
+    }
+
+    def set_partial_state(
+        *,
+        frame_rank: int,
+        basis_sources: Sequence[str],
+        orientation_parity: int,
+        altitude_values: Optional[Tuple[float, float, float]] = None,
+        angle_values: Optional[Tuple[float, float, float]] = None,
+    ) -> None:
+        zero_result["frame_rank"] = int(frame_rank)
+        zero_result["basis_sources"] = list(basis_sources)
+        zero_result["orientation_parity"] = int(orientation_parity)
+        if altitude_values is not None:
+            zero_result["relation_altitude_v"] = float(altitude_values[0])
+            zero_result["relation_altitude_splus"] = float(altitude_values[1])
+            zero_result["relation_altitude_sminus"] = float(altitude_values[2])
+        if angle_values is not None:
+            zero_result["relation_angle_cos_v"] = float(angle_values[0])
+            zero_result["relation_angle_cos_splus"] = float(angle_values[1])
+            zero_result["relation_angle_cos_sminus"] = float(angle_values[2])
+
+    if edge_len_v_splus <= FRAME_EPS or edge_len_v_sminus <= FRAME_EPS:
+        zero_result["boundary_outcome"] = "near_collinear"
+        return zero_result
+
+    e1, sign_e1, stable_e1, anchor_idx_e1, anchor_abs_e1 = orthogonalize_with_stability(
+        subtract(splus_unit, v_unit), []
+    )
+    zero_result["sign_anchor_index_e1"] = anchor_idx_e1
+    zero_result["sign_anchor_abs_e1"] = float(anchor_abs_e1)
+    if e1 is None:
+        zero_result["boundary_outcome"] = "near_collinear"
+        return zero_result
+    if not stable_e1:
+        zero_result["boundary_outcome"] = "sign_unstable"
+        return zero_result
+    set_partial_state(frame_rank=1, basis_sources=["d1"], orientation_parity=0)
+
+    e2, sign_e2, stable_e2, anchor_idx_e2, anchor_abs_e2 = orthogonalize_with_stability(
+        subtract(sminus_unit, v_unit), [e1]
+    )
+    zero_result["sign_anchor_index_e2"] = anchor_idx_e2
+    zero_result["sign_anchor_abs_e2"] = float(anchor_abs_e2)
+    if e2 is None:
+        zero_result["boundary_outcome"] = "zero_area"
+        return zero_result
+    if not stable_e2:
+        zero_result["boundary_outcome"] = "sign_unstable"
+        return zero_result
+
+    signed_height = float(dot(subtract(sminus_unit, v_unit), e2))
+    signed_area2 = float(edge_len_v_splus * signed_height)
+    zero_result["relation_plane_height_signed"] = signed_height
+    zero_result["relation_signed_area2"] = signed_area2
+    set_partial_state(
+        frame_rank=2,
+        basis_sources=["d1", "d2_residual"],
+        orientation_parity=int(sign_e1 * sign_e2),
+    )
+    if abs(signed_area2) <= RELATION_AREA_EPS:
+        zero_result["boundary_outcome"] = "zero_area"
+        return zero_result
+
+    p_v = [0.0, 0.0]
+    p_splus = [edge_len_v_splus, 0.0]
+    p_sminus = [
+        float(dot(subtract(sminus_unit, v_unit), e1)),
+        signed_height,
+    ]
+    xy_center = centroid([p_v, p_splus, p_sminus])
+    q_v = subtract(p_v, xy_center)
+    q_splus = subtract(p_splus, xy_center)
+    q_sminus = subtract(p_sminus, xy_center)
+
+    altitude_v = float(signed_area2 / max(edge_len_splus_sminus, FRAME_EPS))
+    altitude_splus = float(signed_area2 / max(edge_len_v_sminus, FRAME_EPS))
+    altitude_sminus = float(signed_area2 / max(edge_len_v_splus, FRAME_EPS))
+    angle_cos_v = clamped_cosine(subtract(splus_unit, v_unit), subtract(sminus_unit, v_unit))
+    angle_cos_splus = clamped_cosine(
+        subtract(v_unit, splus_unit), subtract(sminus_unit, splus_unit)
+    )
+    angle_cos_sminus = clamped_cosine(
+        subtract(v_unit, sminus_unit), subtract(splus_unit, sminus_unit)
+    )
+    z_v = signed_height * angle_cos_v
+    z_splus = signed_height * angle_cos_splus
+    z_sminus = signed_height * angle_cos_sminus
+
+    relation_v = [float(q_v[0]), float(q_v[1]), float(z_v)]
+    relation_splus = [float(q_splus[0]), float(q_splus[1]), float(z_splus)]
+    relation_sminus = [float(q_sminus[0]), float(q_sminus[1]), float(z_sminus)]
+    relation_rank = gram_schmidt_rank([relation_v, relation_splus, relation_sminus])
+    if relation_rank < 3:
+        zero_result["boundary_outcome"] = "lift_axis_collapse"
+        set_partial_state(
+            frame_rank=relation_rank,
+            basis_sources=["d1", "d2_residual", "signed_angle_profile"],
+            orientation_parity=int(sign_e1 * sign_e2),
+            altitude_values=(altitude_v, altitude_splus, altitude_sminus),
+            angle_values=(angle_cos_v, angle_cos_splus, angle_cos_sminus),
+        )
+        zero_result["relation_lift_rank"] = int(relation_rank)
+        return zero_result
+
+    coords_v = pad8(relation_v)
+    coords_splus = pad8(relation_splus)
+    coords_sminus = pad8(relation_sminus)
+    projected_norm_v = l2_norm(coords_v)
+    projected_norm_splus = l2_norm(coords_splus)
+    projected_norm_sminus = l2_norm(coords_sminus)
+    raw_triplet_centroid = centroid([v_unit, splus_unit, sminus_unit])
+    emitted_coord_centroid = centroid([coords_v, coords_splus, coords_sminus])
+    return {
+        "coords_v": coords_v,
+        "coords_splus": coords_splus,
+        "coords_sminus": coords_sminus,
+        "boundary_outcome": "materialized_rank3",
+        "frame_rank": 3,
+        "orientation_parity": int(sign_e1 * sign_e2),
+        "basis_sources": ["d1", "d2_residual", "signed_angle_profile"],
+        "projected_norm_v": float(projected_norm_v),
+        "projected_norm_splus": float(projected_norm_splus),
+        "projected_norm_sminus": float(projected_norm_sminus),
+        "raw_triplet_centroid_norm": float(l2_norm(raw_triplet_centroid)),
+        "emitted_coord_centroid_norm": float(l2_norm(emitted_coord_centroid)),
+        "emitted_centered_energy": float(
+            centered_energy([coords_v, coords_splus, coords_sminus], emitted_coord_centroid)
+        ),
+        "relation_signed_area2": signed_area2,
+        "relation_plane_height_signed": signed_height,
+        "relation_edge_len_v_splus": edge_len_v_splus,
+        "relation_edge_len_v_sminus": edge_len_v_sminus,
+        "relation_edge_len_splus_sminus": edge_len_splus_sminus,
+        "relation_altitude_v": altitude_v,
+        "relation_altitude_splus": altitude_splus,
+        "relation_altitude_sminus": altitude_sminus,
+        "relation_angle_cos_v": angle_cos_v,
+        "relation_angle_cos_splus": angle_cos_splus,
+        "relation_angle_cos_sminus": angle_cos_sminus,
+        "relation_lift_rank": int(relation_rank),
+        "sign_anchor_index_e1": anchor_idx_e1,
+        "sign_anchor_index_e2": anchor_idx_e2,
+        "sign_anchor_abs_e1": float(anchor_abs_e1),
+        "sign_anchor_abs_e2": float(anchor_abs_e2),
+    }
+
+
 def build_native_local_span_step(
     row: Dict[str, Any], sample_id: int, coordinate_rule: str
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     rule_meta = coordinate_rule_metadata(coordinate_rule)
     step = int(row["step"])
+    relation_signed_area2 = 0.0
+    relation_plane_height_signed = 0.0
+    relation_edge_len_v_splus = 0.0
+    relation_edge_len_v_sminus = 0.0
+    relation_edge_len_splus_sminus = 0.0
+    relation_altitude_v = 0.0
+    relation_altitude_splus = 0.0
+    relation_altitude_sminus = 0.0
+    relation_angle_cos_v = 0.0
+    relation_angle_cos_splus = 0.0
+    relation_angle_cos_sminus = 0.0
+    relation_lift_rank = 0
+    sign_anchor_index_e1: Optional[int] = None
+    sign_anchor_index_e2: Optional[int] = None
+    sign_anchor_abs_e1 = 0.0
+    sign_anchor_abs_e2 = 0.0
     try:
         v_raw = load_raw_triplet(row, "V_raw_native")
         splus_raw = load_raw_triplet(row, "Splus_raw_native")
@@ -333,63 +599,103 @@ def build_native_local_span_step(
             emitted_coord_centroid_norm = 0.0
             emitted_centered_energy = 0.0
         else:
-            if coordinate_rule == COORDINATE_RULE_ORIGIN_SPAN_V2:
-                basis, basis_sources, orientation_parity = build_origin_span_basis(
+            relation_edge_len_v_splus = float(l2_norm(subtract(splus_unit, v_unit)))
+            relation_edge_len_v_sminus = float(l2_norm(subtract(sminus_unit, v_unit)))
+            relation_edge_len_splus_sminus = float(l2_norm(subtract(splus_unit, sminus_unit)))
+
+            if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V0:
+                relation = build_relation_affine_lift_coordinates(
                     v_unit=v_unit,
                     splus_unit=splus_unit,
                     sminus_unit=sminus_unit,
                 )
+                coords_v = relation["coords_v"]
+                coords_splus = relation["coords_splus"]
+                coords_sminus = relation["coords_sminus"]
+                boundary_outcome = str(relation["boundary_outcome"])
+                frame_rank = int(relation["frame_rank"])
+                basis_sources = list(relation["basis_sources"])
+                projected_norm_v = float(relation["projected_norm_v"])
+                projected_norm_splus = float(relation["projected_norm_splus"])
+                projected_norm_sminus = float(relation["projected_norm_sminus"])
+                orientation_parity = int(relation["orientation_parity"])
+                raw_triplet_centroid_norm = float(relation["raw_triplet_centroid_norm"])
+                emitted_coord_centroid_norm = float(relation["emitted_coord_centroid_norm"])
+                emitted_centered_energy = float(relation["emitted_centered_energy"])
+                relation_signed_area2 = float(relation["relation_signed_area2"])
+                relation_plane_height_signed = float(relation["relation_plane_height_signed"])
+                relation_edge_len_v_splus = float(relation["relation_edge_len_v_splus"])
+                relation_edge_len_v_sminus = float(relation["relation_edge_len_v_sminus"])
+                relation_edge_len_splus_sminus = float(relation["relation_edge_len_splus_sminus"])
+                relation_altitude_v = float(relation["relation_altitude_v"])
+                relation_altitude_splus = float(relation["relation_altitude_splus"])
+                relation_altitude_sminus = float(relation["relation_altitude_sminus"])
+                relation_angle_cos_v = float(relation["relation_angle_cos_v"])
+                relation_angle_cos_splus = float(relation["relation_angle_cos_splus"])
+                relation_angle_cos_sminus = float(relation["relation_angle_cos_sminus"])
+                relation_lift_rank = int(relation["relation_lift_rank"])
+                sign_anchor_index_e1 = relation["sign_anchor_index_e1"]
+                sign_anchor_index_e2 = relation["sign_anchor_index_e2"]
+                sign_anchor_abs_e1 = float(relation["sign_anchor_abs_e1"])
+                sign_anchor_abs_e2 = float(relation["sign_anchor_abs_e2"])
             else:
-                basis, basis_sources, orientation_parity = build_v_anchor_basis(
-                    v_unit=v_unit,
-                    splus_unit=splus_unit,
-                    sminus_unit=sminus_unit,
-                )
-
-            frame_rank = len(basis)
-            if frame_rank <= 0:
-                coords_v = [0.0] * EMIT_DIM
-                coords_splus = [0.0] * EMIT_DIM
-                coords_sminus = [0.0] * EMIT_DIM
-                boundary_outcome = "frame_rank_collapse"
-                projected_norm_v = 0.0
-                projected_norm_splus = 0.0
-                projected_norm_sminus = 0.0
-                orientation_parity = 0
-                raw_triplet_centroid_norm = 0.0
-                emitted_coord_centroid_norm = 0.0
-                emitted_centered_energy = 0.0
-            else:
-                raw_triplet_centroid = centroid([v_unit, splus_unit, sminus_unit])
-                raw_triplet_centroid_norm = l2_norm(raw_triplet_centroid)
-                if coordinate_rule == COORDINATE_RULE_CENTERED_AFFINE_V1:
-                    source_v = subtract(v_unit, raw_triplet_centroid)
-                    source_splus = subtract(splus_unit, raw_triplet_centroid)
-                    source_sminus = subtract(sminus_unit, raw_triplet_centroid)
+                if coordinate_rule == COORDINATE_RULE_ORIGIN_SPAN_V2:
+                    basis, basis_sources, orientation_parity = build_origin_span_basis(
+                        v_unit=v_unit,
+                        splus_unit=splus_unit,
+                        sminus_unit=sminus_unit,
+                    )
                 else:
-                    source_v = list(v_unit)
-                    source_splus = list(splus_unit)
-                    source_sminus = list(sminus_unit)
+                    basis, basis_sources, orientation_parity = build_v_anchor_basis(
+                        v_unit=v_unit,
+                        splus_unit=splus_unit,
+                        sminus_unit=sminus_unit,
+                    )
 
-                coords_v = pad8(project_into_basis(source_v, basis))
-                coords_splus = pad8(project_into_basis(source_splus, basis))
-                coords_sminus = pad8(project_into_basis(source_sminus, basis))
-                projected_norm_v = l2_norm(coords_v)
-                projected_norm_splus = l2_norm(coords_splus)
-                projected_norm_sminus = l2_norm(coords_sminus)
-                emitted_coord_centroid = centroid([coords_v, coords_splus, coords_sminus])
-                emitted_coord_centroid_norm = l2_norm(emitted_coord_centroid)
-                emitted_centered_energy = centered_energy(
-                    [coords_v, coords_splus, coords_sminus], emitted_coord_centroid
-                )
-                if (
-                    projected_norm_v <= FRAME_EPS
-                    or projected_norm_splus <= FRAME_EPS
-                    or projected_norm_sminus <= FRAME_EPS
-                ):
-                    boundary_outcome = "coordinate_projection_zero_or_nonfinite_norm"
+                frame_rank = len(basis)
+                if frame_rank <= 0:
+                    coords_v = [0.0] * EMIT_DIM
+                    coords_splus = [0.0] * EMIT_DIM
+                    coords_sminus = [0.0] * EMIT_DIM
+                    boundary_outcome = "frame_rank_collapse"
+                    projected_norm_v = 0.0
+                    projected_norm_splus = 0.0
+                    projected_norm_sminus = 0.0
+                    orientation_parity = 0
+                    raw_triplet_centroid_norm = 0.0
+                    emitted_coord_centroid_norm = 0.0
+                    emitted_centered_energy = 0.0
                 else:
-                    boundary_outcome = boundary_outcome_from_rank(frame_rank)
+                    raw_triplet_centroid = centroid([v_unit, splus_unit, sminus_unit])
+                    raw_triplet_centroid_norm = l2_norm(raw_triplet_centroid)
+                    if coordinate_rule == COORDINATE_RULE_CENTERED_AFFINE_V1:
+                        source_v = subtract(v_unit, raw_triplet_centroid)
+                        source_splus = subtract(splus_unit, raw_triplet_centroid)
+                        source_sminus = subtract(sminus_unit, raw_triplet_centroid)
+                    else:
+                        source_v = list(v_unit)
+                        source_splus = list(splus_unit)
+                        source_sminus = list(sminus_unit)
+
+                    coords_v = pad8(project_into_basis(source_v, basis))
+                    coords_splus = pad8(project_into_basis(source_splus, basis))
+                    coords_sminus = pad8(project_into_basis(source_sminus, basis))
+                    projected_norm_v = l2_norm(coords_v)
+                    projected_norm_splus = l2_norm(coords_splus)
+                    projected_norm_sminus = l2_norm(coords_sminus)
+                    emitted_coord_centroid = centroid([coords_v, coords_splus, coords_sminus])
+                    emitted_coord_centroid_norm = l2_norm(emitted_coord_centroid)
+                    emitted_centered_energy = centered_energy(
+                        [coords_v, coords_splus, coords_sminus], emitted_coord_centroid
+                    )
+                    if (
+                        projected_norm_v <= FRAME_EPS
+                        or projected_norm_splus <= FRAME_EPS
+                        or projected_norm_sminus <= FRAME_EPS
+                    ):
+                        boundary_outcome = "coordinate_projection_zero_or_nonfinite_norm"
+                    else:
+                        boundary_outcome = boundary_outcome_from_rank(frame_rank)
 
     token_step = {
         "step": step,
@@ -429,6 +735,22 @@ def build_native_local_span_step(
         "raw_triplet_centroid_norm": float(raw_triplet_centroid_norm),
         "emitted_coord_centroid_norm": float(emitted_coord_centroid_norm),
         "emitted_centered_energy": float(emitted_centered_energy),
+        "relation_signed_area2": float(relation_signed_area2),
+        "relation_plane_height_signed": float(relation_plane_height_signed),
+        "relation_edge_len_v_splus": float(relation_edge_len_v_splus),
+        "relation_edge_len_v_sminus": float(relation_edge_len_v_sminus),
+        "relation_edge_len_splus_sminus": float(relation_edge_len_splus_sminus),
+        "relation_altitude_v": float(relation_altitude_v),
+        "relation_altitude_splus": float(relation_altitude_splus),
+        "relation_altitude_sminus": float(relation_altitude_sminus),
+        "relation_angle_cos_v": float(relation_angle_cos_v),
+        "relation_angle_cos_splus": float(relation_angle_cos_splus),
+        "relation_angle_cos_sminus": float(relation_angle_cos_sminus),
+        "relation_lift_rank": int(relation_lift_rank),
+        "sign_anchor_index_e1": sign_anchor_index_e1,
+        "sign_anchor_index_e2": sign_anchor_index_e2,
+        "sign_anchor_abs_e1": float(sign_anchor_abs_e1),
+        "sign_anchor_abs_e2": float(sign_anchor_abs_e2),
     }
     return token_step, boundary_step
 
