@@ -251,10 +251,20 @@ def build_run_row(spec: Dict[str, str], surface: str) -> Dict[str, Any]:
     row["n_loop_rows_missing"] = int(manifest.get("n_loop_rows_missing", 0))
     row["boundary_materialized_rank3"] = None
     row["boundary_sign_unstable"] = None
+    row["boundary_raw_span_axis_collapse"] = None
+    row["boundary_modulated_rows"] = None
+    row["boundary_fallback_rows"] = None
     if boundary_manifest is not None:
         outcome_counts = boundary_manifest.get("boundary_outcome_counts", {})
+        path_counts = boundary_manifest.get("raw_span_path_counts", {})
         row["boundary_materialized_rank3"] = int(outcome_counts.get("materialized_rank3", 0))
         row["boundary_sign_unstable"] = int(outcome_counts.get("sign_unstable", 0))
+        row["boundary_raw_span_axis_collapse"] = int(
+            outcome_counts.get("raw_span_axis_collapse", 0)
+        )
+        if path_counts:
+            row["boundary_modulated_rows"] = int(path_counts.get("modulated", 0))
+            row["boundary_fallback_rows"] = int(path_counts.get("fallback_materialized", 0))
     for header, metric_key in SURFACE_COLUMNS[surface]:
         row[header] = metrics.get(metric_key)
     return row
@@ -282,6 +292,9 @@ def build_markdown(surface: str, run_rows: Sequence[Dict[str, Any]]) -> str:
         "n_loop_missing",
         "boundary_rank3",
         "boundary_sign_unstable",
+        "boundary_raw_span_axis_collapse",
+        "boundary_modulated_rows",
+        "boundary_fallback_rows",
     ] + [header for header, _metric_key in SURFACE_COLUMNS[surface]]
 
     lines = [
@@ -340,6 +353,9 @@ def build_markdown(surface: str, run_rows: Sequence[Dict[str, Any]]) -> str:
             render_int(row["n_loop_rows_missing"]),
             render_int(row["boundary_materialized_rank3"]),
             render_int(row["boundary_sign_unstable"]),
+            render_int(row["boundary_raw_span_axis_collapse"]),
+            render_int(row["boundary_modulated_rows"]),
+            render_int(row["boundary_fallback_rows"]),
         ]
         for header, _metric_key in SURFACE_COLUMNS[surface]:
             cells.append(render_float(row.get(header)))
@@ -370,6 +386,9 @@ def build_csv_rows(surface: str, run_rows: Sequence[Dict[str, Any]]) -> List[Dic
             "sample_id_sha256": row["sample_id_digest"],
             "boundary_rank3": row["boundary_materialized_rank3"],
             "boundary_sign_unstable": row["boundary_sign_unstable"],
+            "boundary_raw_span_axis_collapse": row["boundary_raw_span_axis_collapse"],
+            "boundary_modulated_rows": row["boundary_modulated_rows"],
+            "boundary_fallback_rows": row["boundary_fallback_rows"],
         }
         for header, _metric_key in SURFACE_COLUMNS[surface]:
             encoded[header] = row.get(header)

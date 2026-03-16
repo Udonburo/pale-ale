@@ -21,21 +21,33 @@ BOUNDARY_ID_ANCHORED_V0 = "native_local_span_anchored_projection_v0"
 BOUNDARY_ID_CENTERED_AFFINE_V1 = "native_local_span_centered_affine_v1"
 BOUNDARY_ID_ORIGIN_SPAN_V2 = "native_local_span_origin_span_v2"
 BOUNDARY_ID_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_v0"
+BOUNDARY_ID_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_v1"
+BOUNDARY_ID_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_v2"
 FRAME_CONSTRUCTION_ID_ANCHORED = "anchor_v_diff_gram_schmidt_v0"
 FRAME_CONSTRUCTION_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
 FRAME_CONSTRUCTION_ID_RELATION_AFFINE = "relation_affine_lift_chart_v0"
+FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V1 = "relation_affine_origin_span_midrange_lift_v1"
+FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V2 = "relation_affine_angle_profile_origin_span_modulation_v2"
 SOURCE_TENSOR_ID = "triality_raw_triplet_preprojection_v1"
 COORDINATE_SPACE_ID_ANCHORED_V0 = "native_local_span_coordinates_pad8_v0"
 COORDINATE_SPACE_ID_CENTERED_AFFINE_V1 = "native_local_span_coordinates_centered_affine_pad8_v1"
 COORDINATE_SPACE_ID_ORIGIN_SPAN_V2 = "native_local_span_coordinates_origin_span_pad8_v2"
 COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_coordinates_pad8_v0"
+COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_coordinates_pad8_v1"
+COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_coordinates_pad8_v2"
 COORDINATE_RULE_ANCHORED_V0 = "anchored_projection_v0"
 COORDINATE_RULE_CENTERED_AFFINE_V1 = "centered_affine_local_span_v1"
 COORDINATE_RULE_ORIGIN_SPAN_V2 = "origin_span_projection_v2"
 COORDINATE_RULE_RELATION_AFFINE_LIFT_V0 = "local_relation_affine_lift_v0"
+COORDINATE_RULE_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_v1"
+COORDINATE_RULE_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_v2"
 BASIS_RULE_ID_ANCHORED = "v_anchor_diff_gram_schmidt_v0"
 BASIS_RULE_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
 BASIS_RULE_ID_RELATION_AFFINE = "v_anchor_relation_affine_lift_v0"
+BASIS_RULE_ID_RELATION_AFFINE_V1 = "v_anchor_relation_chart_plus_origin_span_e3_v1"
+BASIS_RULE_ID_RELATION_AFFINE_V2 = (
+    "v_anchor_relation_chart_angle_profile_plus_origin_span_modulation_v2"
+)
 PROJECTION_OR_SPAN_RULE_ANCHORED_V0 = "unit_source_projection_onto_local_span_pad8_v0"
 PROJECTION_OR_SPAN_RULE_CENTERED_AFFINE_V1 = "centered_affine_projection_onto_local_span_pad8_v1"
 PROJECTION_OR_SPAN_RULE_ORIGIN_SPAN_V2 = (
@@ -43,6 +55,12 @@ PROJECTION_OR_SPAN_RULE_ORIGIN_SPAN_V2 = (
 )
 PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V0 = (
     "canonical_triangle_centroid_altitude_lift_pad8_v0"
+)
+PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V1 = (
+    "canonical_triangle_centroid_midrange_centered_origin_span_e3_pad8_v1"
+)
+PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V2 = (
+    "canonical_triangle_centroid_angle_profile_origin_span_modulation_pad8_v2"
 )
 BASIS_SIGN_RULE_ID = "first_non_negligible_positive_v0"
 BASIS_ORDER_RULE_ID = "construction_order_v0"
@@ -54,6 +72,7 @@ FRAME_EPS = 1e-6
 SIGN_STABILITY_EPS = 1e-4
 RELATION_AREA_EPS = 1e-6
 EMIT_DIM = 8
+RAW_SPAN_MODULATION_ALPHA_V2 = 0.25
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,6 +102,8 @@ def parse_args() -> argparse.Namespace:
             COORDINATE_RULE_CENTERED_AFFINE_V1,
             COORDINATE_RULE_ORIGIN_SPAN_V2,
             COORDINATE_RULE_RELATION_AFFINE_LIFT_V0,
+            COORDINATE_RULE_RELATION_AFFINE_LIFT_V1,
+            COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
         ),
         default=COORDINATE_RULE_ANCHORED_V0,
     )
@@ -259,6 +280,22 @@ def coordinate_rule_metadata(rule: str) -> Dict[str, str]:
             "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE,
             "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE,
         }
+    if rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1:
+        return {
+            "boundary_id": BOUNDARY_ID_RELATION_AFFINE_LIFT_V1,
+            "coordinate_space_id": COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V1,
+            "projection_or_span_rule": PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V1,
+            "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V1,
+            "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE_V1,
+        }
+    if rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V2:
+        return {
+            "boundary_id": BOUNDARY_ID_RELATION_AFFINE_LIFT_V2,
+            "coordinate_space_id": COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V2,
+            "projection_or_span_rule": PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V2,
+            "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V2,
+            "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE_V2,
+        }
     raise ValueError(f"unsupported coordinate rule: {rule}")
 
 
@@ -356,10 +393,26 @@ def build_origin_span_basis(
     return basis, basis_sources, orientation_parity
 
 
-def build_relation_affine_lift_coordinates(
+def build_origin_span_e3_axis(
     v_unit: Sequence[float],
     splus_unit: Sequence[float],
     sminus_unit: Sequence[float],
+) -> Tuple[Optional[List[float]], int, bool, Optional[int], float]:
+    e_origin_v, _sign_v = orthogonalize(v_unit, [])
+    if e_origin_v is None:
+        return (None, 0, False, None, 0.0)
+    e_origin_splus, _sign_splus = orthogonalize(splus_unit, [e_origin_v])
+    if e_origin_splus is None:
+        return (None, 0, False, None, 0.0)
+    return orthogonalize_with_stability(sminus_unit, [e_origin_v, e_origin_splus])
+
+
+def build_relation_affine_lift_coordinates_with_mode(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+    *,
+    lift_mode: str,
 ) -> Dict[str, Any]:
     edge_len_v_splus = float(l2_norm(subtract(splus_unit, v_unit)))
     edge_len_v_sminus = float(l2_norm(subtract(sminus_unit, v_unit)))
@@ -391,8 +444,14 @@ def build_relation_affine_lift_coordinates(
         "relation_lift_rank": 0,
         "sign_anchor_index_e1": None,
         "sign_anchor_index_e2": None,
+        "sign_anchor_index_e3": None,
         "sign_anchor_abs_e1": 0.0,
         "sign_anchor_abs_e2": 0.0,
+        "sign_anchor_abs_e3": 0.0,
+        "raw_span_lift_center": 0.0,
+        "raw_span_lift_range": 0.0,
+        "raw_span_axis_available": False,
+        "raw_span_modulation_alpha": 0.0,
     }
 
     def set_partial_state(
@@ -478,9 +537,61 @@ def build_relation_affine_lift_coordinates(
     angle_cos_sminus = clamped_cosine(
         subtract(v_unit, sminus_unit), subtract(splus_unit, sminus_unit)
     )
+    third_basis_source = "signed_angle_profile"
+    orientation_parity = int(sign_e1 * sign_e2)
     z_v = signed_height * angle_cos_v
     z_splus = signed_height * angle_cos_splus
     z_sminus = signed_height * angle_cos_sminus
+
+    if lift_mode in (
+        COORDINATE_RULE_RELATION_AFFINE_LIFT_V1,
+        COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
+    ):
+        e3_origin, sign_e3, stable_e3, anchor_idx_e3, anchor_abs_e3 = build_origin_span_e3_axis(
+            v_unit=v_unit,
+            splus_unit=splus_unit,
+            sminus_unit=sminus_unit,
+        )
+        zero_result["sign_anchor_index_e3"] = anchor_idx_e3
+        zero_result["sign_anchor_abs_e3"] = float(anchor_abs_e3)
+        if e3_origin is None or not stable_e3:
+            if lift_mode == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1:
+                zero_result["boundary_outcome"] = "raw_span_axis_collapse"
+                return zero_result
+        else:
+            raw_z_values = [
+                0.0,
+                float(dot(subtract(splus_unit, v_unit), e3_origin)),
+                float(dot(subtract(sminus_unit, v_unit), e3_origin)),
+            ]
+            raw_span_lift_center = 0.5 * (max(raw_z_values) + min(raw_z_values))
+            centered_raw_z = [float(value - raw_span_lift_center) for value in raw_z_values]
+            zero_result["raw_span_lift_center"] = float(raw_span_lift_center)
+            zero_result["raw_span_lift_range"] = float(max(raw_z_values) - min(raw_z_values))
+            zero_result["raw_span_axis_available"] = True
+            if lift_mode == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1:
+                z_v = centered_raw_z[0]
+                z_splus = centered_raw_z[1]
+                z_sminus = centered_raw_z[2]
+                third_basis_source = "origin_span_e3"
+                orientation_parity = int(sign_e1 * sign_e2 * sign_e3)
+            else:
+                max_abs_centered = max(abs(value) for value in centered_raw_z)
+                if max_abs_centered > FRAME_EPS:
+                    raw_span_modulation = [
+                        float(value / max_abs_centered) for value in centered_raw_z
+                    ]
+                    alpha = RAW_SPAN_MODULATION_ALPHA_V2
+                    z_v = signed_height * (angle_cos_v + alpha * raw_span_modulation[0])
+                    z_splus = signed_height * (
+                        angle_cos_splus + alpha * raw_span_modulation[1]
+                    )
+                    z_sminus = signed_height * (
+                        angle_cos_sminus + alpha * raw_span_modulation[2]
+                    )
+                    zero_result["raw_span_modulation_alpha"] = float(alpha)
+                    third_basis_source = "signed_angle_profile_origin_span_modulation"
+                    orientation_parity = int(sign_e1 * sign_e2 * sign_e3)
 
     relation_v = [float(q_v[0]), float(q_v[1]), float(z_v)]
     relation_splus = [float(q_splus[0]), float(q_splus[1]), float(z_splus)]
@@ -490,8 +601,8 @@ def build_relation_affine_lift_coordinates(
         zero_result["boundary_outcome"] = "lift_axis_collapse"
         set_partial_state(
             frame_rank=relation_rank,
-            basis_sources=["d1", "d2_residual", "signed_angle_profile"],
-            orientation_parity=int(sign_e1 * sign_e2),
+            basis_sources=["d1", "d2_residual", third_basis_source],
+            orientation_parity=orientation_parity,
             altitude_values=(altitude_v, altitude_splus, altitude_sminus),
             angle_values=(angle_cos_v, angle_cos_splus, angle_cos_sminus),
         )
@@ -512,8 +623,8 @@ def build_relation_affine_lift_coordinates(
         "coords_sminus": coords_sminus,
         "boundary_outcome": "materialized_rank3",
         "frame_rank": 3,
-        "orientation_parity": int(sign_e1 * sign_e2),
-        "basis_sources": ["d1", "d2_residual", "signed_angle_profile"],
+        "orientation_parity": orientation_parity,
+        "basis_sources": ["d1", "d2_residual", third_basis_source],
         "projected_norm_v": float(projected_norm_v),
         "projected_norm_splus": float(projected_norm_splus),
         "projected_norm_sminus": float(projected_norm_sminus),
@@ -536,9 +647,54 @@ def build_relation_affine_lift_coordinates(
         "relation_lift_rank": int(relation_rank),
         "sign_anchor_index_e1": anchor_idx_e1,
         "sign_anchor_index_e2": anchor_idx_e2,
+        "sign_anchor_index_e3": zero_result["sign_anchor_index_e3"],
         "sign_anchor_abs_e1": float(anchor_abs_e1),
         "sign_anchor_abs_e2": float(anchor_abs_e2),
+        "sign_anchor_abs_e3": float(zero_result["sign_anchor_abs_e3"]),
+        "raw_span_lift_center": float(zero_result["raw_span_lift_center"]),
+        "raw_span_lift_range": float(zero_result["raw_span_lift_range"]),
+        "raw_span_axis_available": bool(zero_result["raw_span_axis_available"]),
+        "raw_span_modulation_alpha": float(zero_result["raw_span_modulation_alpha"]),
     }
+
+
+def build_relation_affine_lift_coordinates(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+) -> Dict[str, Any]:
+    return build_relation_affine_lift_coordinates_with_mode(
+        v_unit=v_unit,
+        splus_unit=splus_unit,
+        sminus_unit=sminus_unit,
+        lift_mode=COORDINATE_RULE_RELATION_AFFINE_LIFT_V0,
+    )
+
+
+def build_relation_affine_lift_coordinates_v1(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+) -> Dict[str, Any]:
+    return build_relation_affine_lift_coordinates_with_mode(
+        v_unit=v_unit,
+        splus_unit=splus_unit,
+        sminus_unit=sminus_unit,
+        lift_mode=COORDINATE_RULE_RELATION_AFFINE_LIFT_V1,
+    )
+
+
+def build_relation_affine_lift_coordinates_v2(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+) -> Dict[str, Any]:
+    return build_relation_affine_lift_coordinates_with_mode(
+        v_unit=v_unit,
+        splus_unit=splus_unit,
+        sminus_unit=sminus_unit,
+        lift_mode=COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
+    )
 
 
 def build_native_local_span_step(
@@ -560,8 +716,14 @@ def build_native_local_span_step(
     relation_lift_rank = 0
     sign_anchor_index_e1: Optional[int] = None
     sign_anchor_index_e2: Optional[int] = None
+    sign_anchor_index_e3: Optional[int] = None
     sign_anchor_abs_e1 = 0.0
     sign_anchor_abs_e2 = 0.0
+    sign_anchor_abs_e3 = 0.0
+    raw_span_lift_center = 0.0
+    raw_span_lift_range = 0.0
+    raw_span_axis_available = False
+    raw_span_modulation_alpha = 0.0
     try:
         v_raw = load_raw_triplet(row, "V_raw_native")
         splus_raw = load_raw_triplet(row, "Splus_raw_native")
@@ -603,8 +765,20 @@ def build_native_local_span_step(
             relation_edge_len_v_sminus = float(l2_norm(subtract(sminus_unit, v_unit)))
             relation_edge_len_splus_sminus = float(l2_norm(subtract(splus_unit, sminus_unit)))
 
-            if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V0:
-                relation = build_relation_affine_lift_coordinates(
+            if coordinate_rule in (
+                COORDINATE_RULE_RELATION_AFFINE_LIFT_V0,
+                COORDINATE_RULE_RELATION_AFFINE_LIFT_V1,
+                COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
+            ):
+                relation = (
+                    build_relation_affine_lift_coordinates_v2
+                    if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V2
+                    else (
+                        build_relation_affine_lift_coordinates_v1
+                        if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1
+                        else build_relation_affine_lift_coordinates
+                    )
+                )(
                     v_unit=v_unit,
                     splus_unit=splus_unit,
                     sminus_unit=sminus_unit,
@@ -636,8 +810,14 @@ def build_native_local_span_step(
                 relation_lift_rank = int(relation["relation_lift_rank"])
                 sign_anchor_index_e1 = relation["sign_anchor_index_e1"]
                 sign_anchor_index_e2 = relation["sign_anchor_index_e2"]
+                sign_anchor_index_e3 = relation["sign_anchor_index_e3"]
                 sign_anchor_abs_e1 = float(relation["sign_anchor_abs_e1"])
                 sign_anchor_abs_e2 = float(relation["sign_anchor_abs_e2"])
+                sign_anchor_abs_e3 = float(relation["sign_anchor_abs_e3"])
+                raw_span_lift_center = float(relation["raw_span_lift_center"])
+                raw_span_lift_range = float(relation["raw_span_lift_range"])
+                raw_span_axis_available = bool(relation["raw_span_axis_available"])
+                raw_span_modulation_alpha = float(relation["raw_span_modulation_alpha"])
             else:
                 if coordinate_rule == COORDINATE_RULE_ORIGIN_SPAN_V2:
                     basis, basis_sources, orientation_parity = build_origin_span_basis(
@@ -749,8 +929,14 @@ def build_native_local_span_step(
         "relation_lift_rank": int(relation_lift_rank),
         "sign_anchor_index_e1": sign_anchor_index_e1,
         "sign_anchor_index_e2": sign_anchor_index_e2,
+        "sign_anchor_index_e3": sign_anchor_index_e3,
         "sign_anchor_abs_e1": float(sign_anchor_abs_e1),
         "sign_anchor_abs_e2": float(sign_anchor_abs_e2),
+        "sign_anchor_abs_e3": float(sign_anchor_abs_e3),
+        "raw_span_lift_center": float(raw_span_lift_center),
+        "raw_span_lift_range": float(raw_span_lift_range),
+        "raw_span_axis_available": bool(raw_span_axis_available),
+        "raw_span_modulation_alpha": float(raw_span_modulation_alpha),
     }
     return token_step, boundary_step
 
@@ -876,6 +1062,34 @@ def count_by_key(rows: Sequence[Dict[str, Any]], key: str) -> Dict[str, int]:
     return counts
 
 
+def count_by_classifier(
+    rows: Sequence[Dict[str, Any]], classifier: Any
+) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for row in rows:
+        value = classifier(row)
+        if value is None:
+            continue
+        key = str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def raw_span_path_key(row: Dict[str, Any]) -> Optional[str]:
+    if row.get("coordinate_rule_id") != COORDINATE_RULE_RELATION_AFFINE_LIFT_V2:
+        return None
+    boundary_outcome = str(row.get("boundary_outcome") or "")
+    is_materialized = boundary_outcome.startswith("materialized_rank")
+    axis_available = bool(row.get("raw_span_axis_available"))
+    if is_materialized:
+        if axis_available:
+            return "modulated"
+        return "fallback_materialized"
+    if axis_available:
+        return "axis_available_nonmaterialized"
+    return "axis_unavailable_nonmaterialized"
+
+
 def main() -> int:
     args = parse_args()
     samples_root = (REPO_ROOT / args.samples_root).resolve()
@@ -961,6 +1175,8 @@ def main() -> int:
         "frame_dim_emitted": EMIT_DIM,
         "boundary_outcome_counts": count_by_key(boundary_steps, "boundary_outcome"),
         "frame_rank_counts": count_by_key(boundary_steps, "frame_rank"),
+        "raw_span_axis_available_counts": count_by_key(boundary_steps, "raw_span_axis_available"),
+        "raw_span_path_counts": count_by_classifier(boundary_steps, raw_span_path_key),
         "model_id": first_meta.get("model_id"),
         "model_revision": first_meta.get("model_revision"),
         "seed": first_meta.get("seed"),

@@ -130,7 +130,7 @@ def main() -> int:
             tmp,
             "relation",
             "CFA",
-            "local_relation_affine_lift_v0",
+            "local_relation_affine_lift_v2",
             input_payload,
             "\n".join(
                 [
@@ -153,6 +153,10 @@ def main() -> int:
                 "materialized_rank3": 2,
                 "sign_unstable": 0,
             },
+            "raw_span_path_counts": {
+                "modulated": 1,
+                "fallback_materialized": 1,
+            },
         }
         write_json(tmp / "origin" / "native_local_span_build_manifest.json", boundary_manifest)
         write_json(tmp / "relation" / "native_local_span_build_manifest.json", boundary_manifest)
@@ -169,7 +173,7 @@ def main() -> int:
                 ),
                 "--run",
                 (
-                    f"label=relation_affine_v0;gate5_out={relation_out};input={tmp / 'relation' / 'gate4_input.json'};"
+                    f"label=relation_affine_v2;gate5_out={relation_out};input={tmp / 'relation' / 'gate4_input.json'};"
                     f"boundary_manifest={tmp / 'relation' / 'native_local_span_build_manifest.json'}"
                 ),
             ],
@@ -187,8 +191,8 @@ def main() -> int:
         assert "gate5_fixed_fields_match: PASS" in scorecard
         assert "loop_row_coverage_match: PASS" in scorecard
         assert "native_samples_root_match: PASS (runs/cfa_batch_primaryE_native_raw/samples)" in scorecard
-        assert "| relation_affine_v0 | local_relation_affine_lift_v0 | 2 | 0 | 2 | 0 | 0.122385 |" in scorecard
-        assert "run,proj_id,n_samples,n_token_rows_total,n_loop_valid,n_loop_missing,sample_id_sha256" in csv_body
+        assert "| relation_affine_v2 | local_relation_affine_lift_v2 | 2 | 0 | 2 | 0 | 0 | 1 | 1 | 0.122385 |" in scorecard
+        assert "run,proj_id,n_samples,n_token_rows_total,n_loop_valid,n_loop_missing,sample_id_sha256,boundary_rank3,boundary_sign_unstable,boundary_raw_span_axis_collapse,boundary_modulated_rows,boundary_fallback_rows" in csv_body
         assert "origin_v2,origin_span_projection_v2,2,2,2,0," in csv_body
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -229,6 +233,10 @@ def main() -> int:
             "boundary_outcome_counts": {
                 "materialized_rank3": 2,
                 "sign_unstable": 0,
+            },
+            "raw_span_axis_available_counts": {
+                "True": 1,
+                "False": 1,
             },
         }
         write_json(tmp / "origin" / "native_local_span_build_manifest.json", boundary_manifest)
