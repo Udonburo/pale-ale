@@ -124,6 +124,7 @@ The scorecard emits:
 - native-source-root parity for boundary candidates
 - strict `loop_row_coverage_match`; any dropped loop rows mark the standing as non-parity
 - a hard error if a non-baseline boundary run omits `boundary_manifest`
+- modulation/fallback usage columns when a boundary manifest exposes `raw_span_path_counts`
 
 ## 6) Boundary Liberation Smoke
 
@@ -157,6 +158,18 @@ or the first relation-first affine-lift candidate:
 python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine --coordinate-rule local_relation_affine_lift_v0
 ```
 
+or the minimal hybrid follow-up:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine_v1 --coordinate-rule local_relation_affine_lift_v1
+```
+
+or the modulation-only follow-up:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine_v2 --coordinate-rule local_relation_affine_lift_v2
+```
+
 These builders emit:
 
 - `gate4_input.json`
@@ -168,6 +181,8 @@ Notes:
 - `anchored_projection_v0` and `centered_affine_local_span_v1` are useful dead-zone diagnostics, but both can collapse a triplet into an affine rank-2 plane.
 - `origin_span_projection_v2` is the first candidate that preserves the raw normalized triplet span and can materialize rank-3 frames when the source vectors support it.
 - `local_relation_affine_lift_v0` is the first relation-first candidate: it emits a canonical triangle chart with a signed angle-profile lift derived only from the local `V/S+/S-` relation.
+- `local_relation_affine_lift_v1` keeps the same relation chart but replaces the lift axis with a midrange-centered raw origin-span `e3`, so it restores one raw-span degree of freedom without changing the comparator or step-local contract.
+- `local_relation_affine_lift_v2` keeps the v0 relation chart and angle-profile lift, then applies a small midrange-centered origin-span `e3` modulation when that raw axis is stable and otherwise falls back to v0 behavior.
 
 ## 7) Dead-Zone Diagnosis
 
