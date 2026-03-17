@@ -25,6 +25,7 @@ BOUNDARY_ID_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_v1"
 BOUNDARY_ID_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_v2"
 BOUNDARY_ID_RELATION_AFFINE_LIFT_V3 = "local_relation_affine_lift_v3"
 BOUNDARY_ID_RELATION_AFFINE_LIFT_V4 = "local_relation_affine_lift_v4"
+BOUNDARY_ID_RELATION_AFFINE_LIFT_V5 = "local_relation_affine_lift_v5"
 FRAME_CONSTRUCTION_ID_ANCHORED = "anchor_v_diff_gram_schmidt_v0"
 FRAME_CONSTRUCTION_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
 FRAME_CONSTRUCTION_ID_RELATION_AFFINE = "relation_affine_lift_chart_v0"
@@ -36,6 +37,9 @@ FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V3 = (
 FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V4 = (
     "relation_affine_angle_profile_origin_span_modulation_capped_v4"
 )
+FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V5 = (
+    "relation_affine_angle_profile_origin_span_delta_capped_v5"
+)
 SOURCE_TENSOR_ID = "triality_raw_triplet_preprojection_v1"
 COORDINATE_SPACE_ID_ANCHORED_V0 = "native_local_span_coordinates_pad8_v0"
 COORDINATE_SPACE_ID_CENTERED_AFFINE_V1 = "native_local_span_coordinates_centered_affine_pad8_v1"
@@ -45,6 +49,7 @@ COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_coordi
 COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_coordinates_pad8_v2"
 COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V3 = "local_relation_affine_lift_coordinates_pad8_v3"
 COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V4 = "local_relation_affine_lift_coordinates_pad8_v4"
+COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V5 = "local_relation_affine_lift_coordinates_pad8_v5"
 COORDINATE_RULE_ANCHORED_V0 = "anchored_projection_v0"
 COORDINATE_RULE_CENTERED_AFFINE_V1 = "centered_affine_local_span_v1"
 COORDINATE_RULE_ORIGIN_SPAN_V2 = "origin_span_projection_v2"
@@ -53,6 +58,7 @@ COORDINATE_RULE_RELATION_AFFINE_LIFT_V1 = "local_relation_affine_lift_v1"
 COORDINATE_RULE_RELATION_AFFINE_LIFT_V2 = "local_relation_affine_lift_v2"
 COORDINATE_RULE_RELATION_AFFINE_LIFT_V3 = "local_relation_affine_lift_v3"
 COORDINATE_RULE_RELATION_AFFINE_LIFT_V4 = "local_relation_affine_lift_v4"
+COORDINATE_RULE_RELATION_AFFINE_LIFT_V5 = "local_relation_affine_lift_v5"
 BASIS_RULE_ID_ANCHORED = "v_anchor_diff_gram_schmidt_v0"
 BASIS_RULE_ID_ORIGIN_SPAN = "raw_triplet_origin_gram_schmidt_v1"
 BASIS_RULE_ID_RELATION_AFFINE = "v_anchor_relation_affine_lift_v0"
@@ -65,6 +71,9 @@ BASIS_RULE_ID_RELATION_AFFINE_V3 = (
 )
 BASIS_RULE_ID_RELATION_AFFINE_V4 = (
     "v_anchor_relation_chart_angle_profile_plus_origin_span_modulation_capped_v4"
+)
+BASIS_RULE_ID_RELATION_AFFINE_V5 = (
+    "v_anchor_relation_chart_angle_profile_plus_origin_span_delta_capped_v5"
 )
 PROJECTION_OR_SPAN_RULE_ANCHORED_V0 = "unit_source_projection_onto_local_span_pad8_v0"
 PROJECTION_OR_SPAN_RULE_CENTERED_AFFINE_V1 = "centered_affine_projection_onto_local_span_pad8_v1"
@@ -86,6 +95,9 @@ PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V3 = (
 PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V4 = (
     "canonical_triangle_centroid_angle_profile_origin_span_modulation_capped_pad8_v4"
 )
+PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V5 = (
+    "canonical_triangle_centroid_angle_profile_origin_span_delta_capped_pad8_v5"
+)
 BASIS_SIGN_RULE_ID = "first_non_negligible_positive_v0"
 BASIS_ORDER_RULE_ID = "construction_order_v0"
 ORIENTATION_RULE_ID = "construction_order_parity_v0"
@@ -100,6 +112,8 @@ RAW_SPAN_MODULATION_ALPHA_V2 = 0.25
 RAW_SPAN_MODULATION_ALPHA_V3 = 0.25
 RAW_SPAN_MODULATION_ALPHA_V4 = 0.25
 RAW_SPAN_Z_CAP_MULTIPLIER_V4 = 1.0
+RAW_SPAN_MODULATION_ALPHA_V5 = 0.25
+RAW_SPAN_DELTA_Z_CAP_MULTIPLIER_V5 = 0.125
 
 
 def parse_args() -> argparse.Namespace:
@@ -133,6 +147,7 @@ def parse_args() -> argparse.Namespace:
             COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
             COORDINATE_RULE_RELATION_AFFINE_LIFT_V3,
             COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+            COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
         ),
         default=COORDINATE_RULE_ANCHORED_V0,
     )
@@ -340,6 +355,14 @@ def coordinate_rule_metadata(rule: str) -> Dict[str, str]:
             "projection_or_span_rule": PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V4,
             "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V4,
             "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE_V4,
+        }
+    if rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V5:
+        return {
+            "boundary_id": BOUNDARY_ID_RELATION_AFFINE_LIFT_V5,
+            "coordinate_space_id": COORDINATE_SPACE_ID_RELATION_AFFINE_LIFT_V5,
+            "projection_or_span_rule": PROJECTION_OR_SPAN_RULE_RELATION_AFFINE_LIFT_V5,
+            "frame_construction_id": FRAME_CONSTRUCTION_ID_RELATION_AFFINE_V5,
+            "basis_rule_id": BASIS_RULE_ID_RELATION_AFFINE_V5,
         }
     raise ValueError(f"unsupported coordinate rule: {rule}")
 
@@ -607,6 +630,7 @@ def build_relation_affine_lift_coordinates_with_mode(
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V3,
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+        COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
     ):
         e3_origin, sign_e3, stable_e3, anchor_idx_e3, anchor_abs_e3 = build_origin_span_e3_axis(
             v_unit=v_unit,
@@ -657,6 +681,11 @@ def build_relation_affine_lift_coordinates_with_mode(
                         third_basis_source = (
                             "signed_angle_profile_origin_span_modulation_capped"
                         )
+                    elif lift_mode == COORDINATE_RULE_RELATION_AFFINE_LIFT_V5:
+                        alpha = RAW_SPAN_MODULATION_ALPHA_V5
+                        third_basis_source = (
+                            "signed_angle_profile_origin_span_delta_capped"
+                        )
                     else:
                         alpha = RAW_SPAN_MODULATION_ALPHA_V2
                         third_basis_source = "signed_angle_profile_origin_span_modulation"
@@ -674,6 +703,18 @@ def build_relation_affine_lift_coordinates_with_mode(
                         z_v = clamp_symmetric(uncapped_z_v, z_abs_cap)
                         z_splus = clamp_symmetric(uncapped_z_splus, z_abs_cap)
                         z_sminus = clamp_symmetric(uncapped_z_sminus, z_abs_cap)
+                    elif lift_mode == COORDINATE_RULE_RELATION_AFFINE_LIFT_V5:
+                        base_z_v = signed_height * angle_cos_v
+                        base_z_splus = signed_height * angle_cos_splus
+                        base_z_sminus = signed_height * angle_cos_sminus
+                        delta_cap = abs(signed_height) * RAW_SPAN_DELTA_Z_CAP_MULTIPLIER_V5
+                        z_v = base_z_v + clamp_symmetric(uncapped_z_v - base_z_v, delta_cap)
+                        z_splus = base_z_splus + clamp_symmetric(
+                            uncapped_z_splus - base_z_splus, delta_cap
+                        )
+                        z_sminus = base_z_sminus + clamp_symmetric(
+                            uncapped_z_sminus - base_z_sminus, delta_cap
+                        )
                     else:
                         z_v = uncapped_z_v
                         z_splus = uncapped_z_splus
@@ -811,6 +852,19 @@ def build_relation_affine_lift_coordinates_v4(
     )
 
 
+def build_relation_affine_lift_coordinates_v5(
+    v_unit: Sequence[float],
+    splus_unit: Sequence[float],
+    sminus_unit: Sequence[float],
+) -> Dict[str, Any]:
+    return build_relation_affine_lift_coordinates_with_mode(
+        v_unit=v_unit,
+        splus_unit=splus_unit,
+        sminus_unit=sminus_unit,
+        lift_mode=COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
+    )
+
+
 def build_native_local_span_step(
     row: Dict[str, Any], sample_id: int, coordinate_rule: str
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -885,20 +939,25 @@ def build_native_local_span_step(
                 COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
                 COORDINATE_RULE_RELATION_AFFINE_LIFT_V3,
                 COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+                COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
             ):
                 relation = (
-                    build_relation_affine_lift_coordinates_v4
-                    if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V4
+                    build_relation_affine_lift_coordinates_v5
+                    if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V5
                     else (
-                        build_relation_affine_lift_coordinates_v3
-                        if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V3
+                        build_relation_affine_lift_coordinates_v4
+                        if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V4
                         else (
-                            build_relation_affine_lift_coordinates_v2
-                            if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V2
+                            build_relation_affine_lift_coordinates_v3
+                            if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V3
                             else (
-                                build_relation_affine_lift_coordinates_v1
-                                if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1
-                                else build_relation_affine_lift_coordinates
+                                build_relation_affine_lift_coordinates_v2
+                                if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V2
+                                else (
+                                    build_relation_affine_lift_coordinates_v1
+                                    if coordinate_rule == COORDINATE_RULE_RELATION_AFFINE_LIFT_V1
+                                    else build_relation_affine_lift_coordinates
+                                )
                             )
                         )
                     )
@@ -1204,6 +1263,7 @@ def raw_span_path_key(row: Dict[str, Any]) -> Optional[str]:
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V2,
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V3,
         COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+        COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
     ):
         return None
     boundary_outcome = str(row.get("boundary_outcome") or "")

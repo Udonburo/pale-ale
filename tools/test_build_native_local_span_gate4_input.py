@@ -197,6 +197,49 @@ class RelationAffineLiftTests(unittest.TestCase):
         self.assertFalse(result["raw_span_axis_available"])
         self.assertAlmostEqual(result["raw_span_modulation_alpha"], 0.0)
 
+    def test_relation_affine_v5_caps_delta_z_not_final_z(self) -> None:
+        with mock.patch.object(boundary_builder, "clamped_cosine", return_value=1.0):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v5(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(
+            result["basis_sources"],
+            ["d1", "d2_residual", "signed_angle_profile_origin_span_delta_capped"],
+        )
+        self.assertTrue(result["raw_span_axis_available"])
+        self.assertAlmostEqual(
+            result["raw_span_modulation_alpha"], boundary_builder.RAW_SPAN_MODULATION_ALPHA_V5
+        )
+        base_z = result["relation_plane_height_signed"]
+        delta_cap = (
+            abs(result["relation_plane_height_signed"])
+            * boundary_builder.RAW_SPAN_DELTA_Z_CAP_MULTIPLIER_V5
+        )
+        self.assertAlmostEqual(abs(result["coords_sminus"][2] - base_z), delta_cap)
+        self.assertLessEqual(abs(result["coords_v"][2] - base_z), delta_cap + 1e-9)
+        self.assertLessEqual(abs(result["coords_splus"][2] - base_z), delta_cap + 1e-9)
+
+    def test_relation_affine_v5_falls_back_to_v0_when_raw_axis_missing(self) -> None:
+        with mock.patch.object(
+            boundary_builder,
+            "build_origin_span_e3_axis",
+            return_value=(None, 0, False, None, 0.0),
+        ):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v5(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(result["basis_sources"], ["d1", "d2_residual", "signed_angle_profile"])
+        self.assertFalse(result["raw_span_axis_available"])
+        self.assertAlmostEqual(result["raw_span_modulation_alpha"], 0.0)
+
     def test_raw_span_path_key_distinguishes_modulated_fallback_and_failure(self) -> None:
         self.assertEqual(
             boundary_builder.raw_span_path_key(
@@ -242,6 +285,16 @@ class RelationAffineLiftTests(unittest.TestCase):
             boundary_builder.raw_span_path_key(
                 {
                     "coordinate_rule_id": boundary_builder.COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+                    "boundary_outcome": "materialized_rank3",
+                    "raw_span_axis_available": True,
+                }
+            ),
+            "modulated",
+        )
+        self.assertEqual(
+            boundary_builder.raw_span_path_key(
+                {
+                    "coordinate_rule_id": boundary_builder.COORDINATE_RULE_RELATION_AFFINE_LIFT_V5,
                     "boundary_outcome": "materialized_rank3",
                     "raw_span_axis_available": True,
                 }
