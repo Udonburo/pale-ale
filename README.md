@@ -38,6 +38,11 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
 - [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md): Gate3 local rotor geometry
 - [`SPEC.internal.draft.md`](SPEC.internal.draft.md): internal identity / Gate4 / research positioning
 - [`docs/gate4_feature_contract_draft.md`](docs/gate4_feature_contract_draft.md): Gate4 feature-sink contract draft
+- [`06_GATE6_LOCAL_DESIGN_MEMO.md`](06_GATE6_LOCAL_DESIGN_MEMO.md): Gate6 observation redesign memo
+- [`07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md`](07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md): Gate6-A gauge and construction policy
+- [`08_GATE6A_ARTIFACT_SCHEMA.md`](08_GATE6A_ARTIFACT_SCHEMA.md): Gate6-A native object artifact contract
+- [`09_GATE6_FIRST_BENCHMARK_PLAN.md`](09_GATE6_FIRST_BENCHMARK_PLAN.md): Gate6-A first benchmark discipline
+- [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
 - `tools/`, `docs/`, `attestations/`: experimental pipelines, CFA utilities, and evidence artifacts
 
 ## Gate Architecture

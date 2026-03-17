@@ -42,7 +42,7 @@ SURFACE_COLUMNS = {
     ],
 }
 
-MANIFEST_MATCH_FIELDS = (
+TRUE_FIXED_MANIFEST_MATCH_FIELDS = (
     "spec_version",
     "spec_hash_blake3",
     "method_id",
@@ -51,8 +51,14 @@ MANIFEST_MATCH_FIELDS = (
     "model_revision",
     "seed",
     "perm_r",
+)
+
+BOUNDARY_IDENTITY_FIELDS = (
+    "proj_id",
     "splus_def_id",
     "sminus_def_id",
+    "boundary_origin",
+    "compatibility_schema_id",
 )
 
 
@@ -150,9 +156,9 @@ def encode_for_compare(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=True)
 
 
-def manifest_mismatches(run_rows: Sequence[Dict[str, Any]]) -> List[str]:
+def manifest_mismatches(run_rows: Sequence[Dict[str, Any]], fields: Sequence[str]) -> List[str]:
     mismatches: List[str] = []
-    for field in MANIFEST_MATCH_FIELDS:
+    for field in fields:
         encoded_values = {
             encode_for_compare(row["manifest"].get(field))
             for row in run_rows
@@ -214,6 +220,16 @@ def render_loop_row_coverage_detail(run_rows: Sequence[Dict[str, Any]]) -> str:
     )
 
 
+def render_boundary_identity_detail(run_rows: Sequence[Dict[str, Any]], fields: Sequence[str]) -> str:
+    chunks: List[str] = []
+    for field in fields:
+        field_values = ", ".join(
+            f"{row['label']}={encode_for_compare(row['manifest'].get(field))}" for row in run_rows
+        )
+        chunks.append(f"{field}[{field_values}]")
+    return "; ".join(chunks)
+
+
 def build_run_row(spec: Dict[str, str], surface: str) -> Dict[str, Any]:
     gate5_out = resolve_repo_path(spec["gate5_out"])
     input_path = resolve_repo_path(spec["input"])
@@ -256,12 +272,18 @@ def build_run_row(spec: Dict[str, str], surface: str) -> Dict[str, Any]:
     row["boundary_fallback_rows"] = None
     if boundary_manifest is not None:
         outcome_counts = boundary_manifest.get("boundary_outcome_counts", {})
+        rank_local_counts = boundary_manifest.get("rank_local_counts", {})
         path_counts = boundary_manifest.get("raw_span_path_counts", {})
-        row["boundary_materialized_rank3"] = int(outcome_counts.get("materialized_rank3", 0))
-        row["boundary_sign_unstable"] = int(outcome_counts.get("sign_unstable", 0))
-        row["boundary_raw_span_axis_collapse"] = int(
-            outcome_counts.get("raw_span_axis_collapse", 0)
-        )
+        if outcome_counts:
+            row["boundary_materialized_rank3"] = int(outcome_counts.get("materialized_rank3", 0))
+            row["boundary_sign_unstable"] = int(outcome_counts.get("sign_unstable", 0))
+            row["boundary_raw_span_axis_collapse"] = int(
+                outcome_counts.get("raw_span_axis_collapse", 0)
+            )
+        elif rank_local_counts:
+            row["boundary_materialized_rank3"] = int(rank_local_counts.get("3", 0))
+            row["boundary_sign_unstable"] = 0
+            row["boundary_raw_span_axis_collapse"] = 0
         if path_counts:
             row["boundary_modulated_rows"] = int(path_counts.get("modulated", 0))
             row["boundary_fallback_rows"] = int(path_counts.get("fallback_materialized", 0))
@@ -273,7 +295,8 @@ def build_run_row(spec: Dict[str, str], surface: str) -> Dict[str, Any]:
 def build_markdown(surface: str, run_rows: Sequence[Dict[str, Any]]) -> str:
     baseline_ids = run_rows[0]["sample_ids"]
     exact_sample_match = all(row["sample_ids"] == baseline_ids for row in run_rows[1:])
-    manifest_field_mismatches = manifest_mismatches(run_rows)
+    fixed_field_mismatches = manifest_mismatches(run_rows, TRUE_FIXED_MANIFEST_MATCH_FIELDS)
+    boundary_identity_drift_fields = manifest_mismatches(run_rows, BOUNDARY_IDENTITY_FIELDS)
     missing_boundary_manifests = missing_boundary_manifest_labels(run_rows)
     if missing_boundary_manifests:
         raise ValueError(
@@ -306,12 +329,19 @@ def build_markdown(surface: str, run_rows: Sequence[Dict[str, Any]]) -> str:
         "",
         f"- exact_sample_ids_match: {'PASS' if exact_sample_match else 'FAIL'} "
         f"(n={len(run_rows[0]['sample_ids'])}, sample_id_sha256={common_digest})",
-        f"- gate5_fixed_fields_match: {'PASS' if not manifest_field_mismatches else 'FAIL'} "
-        f"(fields={','.join(MANIFEST_MATCH_FIELDS)})",
+        f"- gate5_fixed_fields_match: {'PASS' if not fixed_field_mismatches else 'FAIL'} "
+        f"(fields={','.join(TRUE_FIXED_MANIFEST_MATCH_FIELDS)})",
         f"- loop_row_coverage_match: {'PASS' if coverage_match else 'FAIL'}",
+        f"- boundary_identity_drift: {'YES' if boundary_identity_drift_fields else 'NO'} "
+        f"(fields={','.join(BOUNDARY_IDENTITY_FIELDS)})",
     ]
-    if manifest_field_mismatches:
-        lines.append(f"- gate5_fixed_fields_mismatch_detail: {', '.join(manifest_field_mismatches)}")
+    if fixed_field_mismatches:
+        lines.append(f"- gate5_fixed_fields_mismatch_detail: {', '.join(fixed_field_mismatches)}")
+    if boundary_identity_drift_fields:
+        lines.append(
+            "- boundary_identity_drift_detail: "
+            + render_boundary_identity_detail(run_rows, boundary_identity_drift_fields)
+        )
     if not coverage_match:
         lines.append(f"- loop_row_coverage_detail: {render_loop_row_coverage_detail(run_rows)}")
     lines.append(
