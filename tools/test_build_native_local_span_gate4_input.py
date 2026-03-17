@@ -118,6 +118,85 @@ class RelationAffineLiftTests(unittest.TestCase):
         self.assertFalse(result["raw_span_axis_available"])
         self.assertAlmostEqual(result["raw_span_modulation_alpha"], 0.0)
 
+    def test_relation_ambiguity_gate_uses_half_spread(self) -> None:
+        self.assertAlmostEqual(boundary_builder.relation_ambiguity_gate([0.9, -0.9, 0.0]), 0.1)
+        self.assertAlmostEqual(boundary_builder.relation_ambiguity_gate([0.5, 0.5, 0.5]), 1.0)
+
+    def test_relation_affine_v3_materializes_with_gated_modulation(self) -> None:
+        with mock.patch.object(boundary_builder, "relation_ambiguity_gate", return_value=0.5):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v3(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(
+            result["basis_sources"],
+            ["d1", "d2_residual", "signed_angle_profile_origin_span_modulation_gated"],
+        )
+        self.assertTrue(result["raw_span_axis_available"])
+        self.assertAlmostEqual(
+            result["raw_span_modulation_alpha"],
+            boundary_builder.RAW_SPAN_MODULATION_ALPHA_V3 * 0.5,
+        )
+
+    def test_relation_affine_v3_falls_back_to_v0_when_raw_axis_missing(self) -> None:
+        with mock.patch.object(
+            boundary_builder,
+            "build_origin_span_e3_axis",
+            return_value=(None, 0, False, None, 0.0),
+        ):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v3(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(result["basis_sources"], ["d1", "d2_residual", "signed_angle_profile"])
+        self.assertFalse(result["raw_span_axis_available"])
+        self.assertAlmostEqual(result["raw_span_modulation_alpha"], 0.0)
+
+    def test_relation_affine_v4_caps_final_z_amplitude(self) -> None:
+        with mock.patch.object(boundary_builder, "clamped_cosine", return_value=1.0):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v4(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(
+            result["basis_sources"],
+            ["d1", "d2_residual", "signed_angle_profile_origin_span_modulation_capped"],
+        )
+        self.assertTrue(result["raw_span_axis_available"])
+        self.assertAlmostEqual(
+            result["raw_span_modulation_alpha"], boundary_builder.RAW_SPAN_MODULATION_ALPHA_V4
+        )
+        z_cap = abs(result["relation_plane_height_signed"]) * boundary_builder.RAW_SPAN_Z_CAP_MULTIPLIER_V4
+        self.assertAlmostEqual(abs(result["coords_sminus"][2]), z_cap)
+        self.assertLessEqual(abs(result["coords_v"][2]), z_cap + 1e-9)
+        self.assertLessEqual(abs(result["coords_splus"][2]), z_cap + 1e-9)
+
+    def test_relation_affine_v4_falls_back_to_v0_when_raw_axis_missing(self) -> None:
+        with mock.patch.object(
+            boundary_builder,
+            "build_origin_span_e3_axis",
+            return_value=(None, 0, False, None, 0.0),
+        ):
+            result = boundary_builder.build_relation_affine_lift_coordinates_v4(
+                [0.0, 0.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+            )
+
+        self.assertEqual(result["boundary_outcome"], "materialized_rank3")
+        self.assertEqual(result["basis_sources"], ["d1", "d2_residual", "signed_angle_profile"])
+        self.assertFalse(result["raw_span_axis_available"])
+        self.assertAlmostEqual(result["raw_span_modulation_alpha"], 0.0)
+
     def test_raw_span_path_key_distinguishes_modulated_fallback_and_failure(self) -> None:
         self.assertEqual(
             boundary_builder.raw_span_path_key(
@@ -148,6 +227,26 @@ class RelationAffineLiftTests(unittest.TestCase):
                 }
             ),
             "axis_unavailable_nonmaterialized",
+        )
+        self.assertEqual(
+            boundary_builder.raw_span_path_key(
+                {
+                    "coordinate_rule_id": boundary_builder.COORDINATE_RULE_RELATION_AFFINE_LIFT_V3,
+                    "boundary_outcome": "materialized_rank3",
+                    "raw_span_axis_available": False,
+                }
+            ),
+            "fallback_materialized",
+        )
+        self.assertEqual(
+            boundary_builder.raw_span_path_key(
+                {
+                    "coordinate_rule_id": boundary_builder.COORDINATE_RULE_RELATION_AFFINE_LIFT_V4,
+                    "boundary_outcome": "materialized_rank3",
+                    "raw_span_axis_available": True,
+                }
+            ),
+            "modulated",
         )
 
 

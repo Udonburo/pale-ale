@@ -170,6 +170,18 @@ or the modulation-only follow-up:
 python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine_v2 --coordinate-rule local_relation_affine_lift_v2
 ```
 
+or the gated-modulation follow-up:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine_v3 --coordinate-rule local_relation_affine_lift_v3
+```
+
+or the capped-modulation follow-up:
+
+```powershell
+python tools/build_native_local_span_gate4_input.py --samples-root runs/seam_gate5_native_source/samples --all-samples --out-dir runs/seam_gate5_relation_affine_v4 --coordinate-rule local_relation_affine_lift_v4
+```
+
 These builders emit:
 
 - `gate4_input.json`
@@ -183,6 +195,8 @@ Notes:
 - `local_relation_affine_lift_v0` is the first relation-first candidate: it emits a canonical triangle chart with a signed angle-profile lift derived only from the local `V/S+/S-` relation.
 - `local_relation_affine_lift_v1` keeps the same relation chart but replaces the lift axis with a midrange-centered raw origin-span `e3`, so it restores one raw-span degree of freedom without changing the comparator or step-local contract.
 - `local_relation_affine_lift_v2` keeps the v0 relation chart and angle-profile lift, then applies a small midrange-centered origin-span `e3` modulation when that raw axis is stable and otherwise falls back to v0 behavior.
+- `local_relation_affine_lift_v3` keeps the v2 modulation/fallback structure but gates the raw-span modulation strength by relation-angle spread, so highly decisive local relation charts stay closer to v0 while ambiguous ones still receive raw-span help.
+- `local_relation_affine_lift_v4` keeps the v2 modulation/fallback structure but caps final `z` amplitude to the v0 relation-height envelope, so modulation can help while extreme out-of-envelope lift is clipped.
 
 ## 7) Dead-Zone Diagnosis
 
