@@ -1,0 +1,76 @@
+# Gate6-A Workflow
+
+Gate6-A builds a native local observation object from raw hidden-space triplets and then reuses the existing Gate5 triad-loop runner through a transient adapter.
+
+Canonical artifacts:
+
+- `manifest.json`
+- `step_index.jsonl`
+- `native_object_arrays.npz`
+- `compatibility_input.json`
+- `checksums.json`
+- `gate5_boundary_input_provenance.json` in downstream Gate5 reruns
+
+Important:
+
+- `compatibility_input.json` is the canonical compatibility lane
+- it uses `compat_vectors.{V_local8,Splus_local8,Sminus_local8}`
+- it intentionally does not reuse legacy `V_8d` / `Splus_8d` / `Sminus_8d` names
+- `tools/run_gate5_spike.py` can consume this file directly and will materialize a temporary Gate4-shaped adapter only for the Gate5 CLI call
+- `manifest.json` includes `rank_local_counts` plus a scorecard-compatible `boundary_outcome_counts` summary
+- downstream Gate5 reruns persist canonical provenance in both `manifest.json` and `gate5_boundary_input_provenance.json`
+
+## 1) Build Gate6-A artifacts on CFA native-raw samples
+
+```powershell
+python tools/build_gate6_native_local_span.py --samples-root runs/cfa_batch_primaryE_native_raw/samples --all-samples --out-dir runs/gate6_cfa_full
+```
+
+## 2) Build Gate6-A artifacts on Seam native-raw samples
+
+```powershell
+python tools/build_gate6_native_local_span.py --samples-root runs/gate5_seam_64e2e_native_raw/samples --all-samples --out-dir runs/gate6_seam_full
+```
+
+## 3) Run the fixed Gate5 triad loop on Gate6-A compatibility input
+
+For CFA:
+
+```powershell
+python tools/run_gate5_spike.py --input runs/gate6_cfa_full/compatibility_input.json --out-dir runs/gate5_cfa_gate6a_v0 --run-id gate5_cfa_gate6a_v0 --dataset-revision-id cfa_gate6a_v0 --cfa-jsonl data/cfa/cfa_v1.jsonl
+```
+
+For Seam:
+
+```powershell
+python tools/run_gate5_spike.py --input runs/gate6_seam_full/compatibility_input.json --out-dir runs/gate5_seam_gate6a_v0 --run-id gate5_seam_gate6a_v0 --dataset-revision-id seam_gate6a_v0 --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --evaluation-mode-id unsupervised_v1
+```
+
+## 4) Build a standing scorecard against the FWHT baseline
+
+For CFA:
+
+```powershell
+python tools/build_gate5_boundary_scorecard.py --surface cfa --out runs/gate6_cfa_boundary_standing.md --csv-out runs/gate6_cfa_boundary_standing.csv --run "label=fwht_baseline;gate5_out=runs/gate5_cfa_spike;input=runs/gate5_cfa_ingestion/gate4_input.json" --run "label=gate6a_v0;gate5_out=runs/gate5_cfa_gate6a_v0;input=runs/gate6_cfa_full/compatibility_input.json;boundary_manifest=runs/gate6_cfa_full/manifest.json"
+```
+
+For Seam:
+
+```powershell
+python tools/build_gate5_boundary_scorecard.py --surface seam --out runs/gate6_seam_boundary_standing.md --csv-out runs/gate6_seam_boundary_standing.csv --run "label=fwht_baseline;gate5_out=runs/gate5_seam_64e2e/gate5_out;input=runs/gate5_seam_64e2e/gate4_prep/gate4_input.json" --run "label=gate6a_v0;gate5_out=runs/gate5_seam_gate6a_v0;input=runs/gate6_seam_full/compatibility_input.json;boundary_manifest=runs/gate6_seam_full/manifest.json"
+```
+
+## 5) Minimal helper regression
+
+```powershell
+python -m py_compile tools/build_gate6_native_local_span.py tools/test_build_gate6_native_local_span.py tools/run_gate5_spike.py
+python tools/test_build_gate6_native_local_span.py
+```
+
+These tests cover:
+
+- sign tie-break
+- rank drop
+- reconstruction
+- rerun determinism
+- legacy-name non-reuse in the canonical compatibility artifact

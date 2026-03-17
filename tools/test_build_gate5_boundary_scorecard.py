@@ -302,6 +302,67 @@ def main() -> int:
         )
         assert completed.returncode != 0
         assert "boundary_manifest is required for non-baseline runs: origin_v2" in completed.stderr
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp = Path(tmp_dir)
+        input_payload = {"samples": [{"sample_id": 1}, {"sample_id": 3}]}
+
+        fwht_out = build_gate5_run(
+            tmp,
+            "fwht",
+            "CFA",
+            "fwht_pad_pow2_take8_v1",
+            input_payload,
+            "- global_auprc_F: 0.181275",
+        )
+        gate6_out = build_gate5_run(
+            tmp,
+            "gate6",
+            "CFA",
+            "gate6_native_local_span_local8_v1",
+            input_payload,
+            "- global_auprc_F: 0.137833",
+        )
+        gate6_gate5_manifest_path = gate6_out / "manifest.json"
+        gate6_gate5_manifest = json.loads(gate6_gate5_manifest_path.read_text(encoding="utf-8"))
+        gate6_gate5_manifest["splus_def_id"] = "gate6_local_span_coord_splus_v1"
+        gate6_gate5_manifest["sminus_def_id"] = "gate6_local_span_coord_sminus_v1"
+        gate6_gate5_manifest["boundary_origin"] = "gate6_native_local_span_local8_v1"
+        gate6_gate5_manifest["compatibility_schema_id"] = "gate6_local8_compat_input_v1"
+        write_json(gate6_gate5_manifest_path, gate6_gate5_manifest)
+        gate6_manifest = {
+            "samples_root": "runs/cfa_batch_primaryE_native_raw/samples",
+            "sample_ids": [1, 3],
+            "rank_local_counts": {
+                "3": 2,
+            },
+        }
+        write_json(tmp / "gate6" / "manifest.json", gate6_manifest)
+
+        completed = run_scorecard(
+            tmp,
+            [
+                "--run",
+                f"label=fwht;gate5_out={fwht_out};input={tmp / 'fwht' / 'gate4_input.json'}",
+                "--run",
+                (
+                    f"label=gate6a_v0;gate5_out={gate6_out};input={tmp / 'gate6' / 'gate4_input.json'};"
+                    f"boundary_manifest={tmp / 'gate6' / 'manifest.json'}"
+                ),
+            ],
+        )
+        if completed.returncode != 0:
+            raise SystemExit(
+                f"scorecard command failed rc={completed.returncode}\n"
+                f"stdout:\n{completed.stdout}\n"
+                f"stderr:\n{completed.stderr}"
+            )
+
+        scorecard = (tmp / "scorecard.md").read_text(encoding="utf-8")
+        assert "gate5_fixed_fields_match: PASS" in scorecard
+        assert "boundary_identity_drift: YES" in scorecard
+        assert "boundary_identity_drift_detail:" in scorecard
+        assert "| gate6a_v0 | gate6_native_local_span_local8_v1 | 2 | 0 | 2 | 0 | 0 |  |  | 0.137833 |" in scorecard
     return 0
 
 
