@@ -41,3 +41,4 @@ tmp/
 
 # Local-only verbose triality batch artifacts
 attestations/triality/cfa_batch/
+attestations/triality/*_cfa_batch_*_report.txt
