@@ -156,3 +156,9 @@ That means:
 - research north star remains Gate6 `gate6h`
 - dynamic research candidate remains Gate7 `gate7c`
 - next expansion should be a benchmark-broadening workstream, not aggregation rescue
+
+That benchmark constitution workstream begins in:
+
+- [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md)
+- [`14_GATE8_CONFLICT_TAXONOMY.md`](14_GATE8_CONFLICT_TAXONOMY.md)
+- [`15_GATE8_LABEL_AND_PROVENANCE_RULES.md`](15_GATE8_LABEL_AND_PROVENANCE_RULES.md)
