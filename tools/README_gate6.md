@@ -20,6 +20,12 @@ Important:
 - `manifest.json` includes `rank_local_counts` plus a scorecard-compatible `boundary_outcome_counts` summary
 - downstream Gate5 reruns persist canonical provenance in both `manifest.json` and `gate5_boundary_input_provenance.json`
 
+Gate6-B smoke:
+
+- `tools/run_gate6_native_object_consumer.py` reads only `manifest.json`, `step_index.jsonl`, and `native_object_arrays.npz`
+- it does not consume `compatibility_input.json`
+- it builds an object-native edge-plane holonomy consumer directly from `coords_local` and `gram_raw`
+
 ## 1) Build Gate6-A artifacts on CFA native-raw samples
 
 ```powershell
@@ -74,3 +80,31 @@ These tests cover:
 - reconstruction
 - rerun determinism
 - legacy-name non-reuse in the canonical compatibility artifact
+
+## 6) Run the object-native Gate6-B consumer smoke
+
+For CFA smoke:
+
+```powershell
+python tools/run_gate6_native_object_consumer.py --gate6-dir runs/gate6_cfa_smoke --out-dir runs/gate6b_cfa_smoke --run-id gate6b_cfa_smoke
+```
+
+For Seam smoke:
+
+```powershell
+python tools/run_gate6_native_object_consumer.py --gate6-dir runs/gate6_seam_smoke --out-dir runs/gate6b_seam_smoke --run-id gate6b_seam_smoke
+```
+
+For full matched Gate6 native objects:
+
+```powershell
+python tools/run_gate6_native_object_consumer.py --gate6-dir runs/gate6_cfa_full --out-dir runs/gate6b_cfa_full --run-id gate6b_cfa_full
+python tools/run_gate6_native_object_consumer.py --gate6-dir runs/gate6_seam_full --out-dir runs/gate6b_seam_full --run-id gate6b_seam_full
+```
+
+The primary metric is `edge_plane_loop_projective_chordal_v1`.
+It is built from the holonomy of the three edge-plane normals:
+
+- `span(V, Splus)`
+- `span(Splus, Sminus)`
+- `span(Sminus, V)`
