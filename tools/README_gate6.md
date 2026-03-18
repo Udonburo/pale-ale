@@ -25,6 +25,8 @@ Gate6-B smoke:
 - `tools/run_gate6_native_object_consumer.py` reads only `manifest.json`, `step_index.jsonl`, and `native_object_arrays.npz`
 - it does not consume `compatibility_input.json`
 - it builds an object-native edge-plane holonomy consumer directly from `coords_local` and `gram_raw`
+- `tools/run_gate6_sigma_gram_consumer.py` reads `gram_raw` and `singular_values` directly
+- it builds a spectral-gap-weighted consumer without using `compat_local8`
 
 ## 1) Build Gate6-A artifacts on CFA native-raw samples
 
@@ -140,3 +142,42 @@ Headline vocabulary is aligned with Gate5:
 - `mean_top10_inflation_*_vs_clean_p90`
 
 Rows with `loop_outcome != none` are deterministically skipped from pair statistics.
+
+## 8) Run the sigma/gram object-native consumer
+
+This consumer uses the existing `score_F_gram_loop_v1` as a base invariant and weights it by the
+local singular-spectrum gap:
+
+- `sigma_gap_rel_v1 = max(0, sigma2 / sigma1 - sigma3 / sigma1)`
+- `sigma_gap_weighted_gram_loop_v1 = score_F_gram_loop_v1 * sigma_gap_rel_v1`
+
+For CFA:
+
+```powershell
+python tools/run_gate6_sigma_gram_consumer.py --gate6-dir runs/gate6_cfa_full --out-dir runs/gate6e_cfa_full --run-id gate6e_cfa_full
+```
+
+For Seam:
+
+```powershell
+python tools/run_gate6_sigma_gram_consumer.py --gate6-dir runs/gate6_seam_full --out-dir runs/gate6e_seam_full --run-id gate6e_seam_full
+```
+
+Outputs:
+
+- `manifest.json`
+- `gate6e_token_telemetry.csv`
+- `gate6e_sample_summary.csv`
+- `gate6e_aggregate_summary.md`
+- `checksums.json`
+
+## 9) Evaluate sigma/gram Seam pairs
+
+```powershell
+python tools/evaluate_gate6_native_object_seam_pairs.py --token-csv runs/gate6e_seam_full/gate6e_token_telemetry.csv --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --out-dir runs/gate6e_seam_pairs_full --run-id gate6e_seam_pairs_full --primary-metric sigma_gap_weighted_gram_loop_v1 --guardrail-metric score_F_gram_loop_v1 --artifact-prefix gate6e_seam
+```
+
+This keeps the same pair evaluator and report schema, but compares:
+
+- primary: `sigma_gap_weighted_gram_loop_v1`
+- guardrail: `score_F_gram_loop_v1`
