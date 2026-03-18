@@ -1,50 +1,56 @@
 Gate8 execution summary
 date=2026-03-19
-repo_relative_workstream=Gate8 execution + scale-up
+repo_relative_workstream=Gate8 execution + qfix scale-up
 
 tracked_docs:
 - 17_GATE8A_EXECUTION_AND_SCALEUP.md
 - tools/README_gate8.md
+- 15_GATE8_LABEL_AND_PROVENANCE_RULES.md
 
 commands:
-- python -B -m py_compile tools/evaluate_gate8_standing.py tools/run_gate8_candidate_batch.py tools/run_gate8_scaleup.py tools/test_evaluate_gate8_standing.py tools/test_run_gate8_candidate_batch.py tools/test_run_gate8_scaleup.py
-- python tools/test_evaluate_gate8_standing.py
+- python -B -m py_compile tools/generate_gate8_semiclosed_conflict.py tools/materialize_gate8_semiclosed_conflict.py tools/run_gate8_candidate_batch.py tools/evaluate_gate8_standing.py tools/test_generate_gate8_semiclosed_conflict.py tools/test_materialize_gate8_semiclosed_conflict.py tools/test_run_gate8_candidate_batch.py tools/test_evaluate_gate8_standing.py tools/test_run_gate8_scaleup.py
+- python tools/test_generate_gate8_semiclosed_conflict.py
+- python tools/test_materialize_gate8_semiclosed_conflict.py
 - python tools/test_run_gate8_candidate_batch.py
+- python tools/test_evaluate_gate8_standing.py
 - python tools/test_run_gate8_scaleup.py
-- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8a_generation_smoke --out-dir runs/gate8a_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B
-- python tools/run_gate8_scaleup.py --run-prefix gate8b_128r --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
+- python tools/run_gate8_scaleup.py --run-prefix gate8e_128r_qfix --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
+- python tools/run_gate8_scaleup.py --run-prefix gate8f_200r_qfix --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B
 
-smoke_artifacts:
-- runs/gate8a_candidate_execution/manifest.json
-  sha256=c0d62d966a18477e10e3e04a1acf49e221780ab3a5e0ef2b6539280bd60d6b9f
-- runs/gate8a_candidate_execution/candidate_summary.csv
-  sha256=2f5bc9dc49288d9d56393725461234bfd21fea59ab4e058c3ad39585f522360b
+qfix_artifacts:
+- runs/gate8e_128r_qfix_candidate_execution/manifest.json
+  sha256=2229e158e81405e52fd471abb3d8fcc79538f52a314e3c4c07d24b05eba96733
+- runs/gate8e_128r_qfix_candidate_execution/candidate_summary.csv
+  sha256=210263275d9d49b5542bf2b3f8d9081fd58bb365a3438e753d994eeffb46cbcf
+- runs/gate8f_200r_qfix_candidate_execution/manifest.json
+  sha256=4fe45fa7467482cf1dca90a2d8579af7bd9c4156056a1bfbcea2d59011fac89f
+- runs/gate8f_200r_qfix_candidate_execution/candidate_summary.csv
+  sha256=e6620cdca846486d7e08428b7bd93a92c2f599e187f1cac390a5a0ab3e4cbf1c
 
-scaleup_artifacts:
-- runs/gate8b_128r_candidate_execution/manifest.json
-  sha256=112ea369b73dbb7b1a81e58a50c8fb27e2ff98a21a85103743c4a7da5b4fc776
-- runs/gate8b_128r_candidate_execution/candidate_summary.csv
-  sha256=d83790a430762dbebc35d0a8f4f73a86e04083073facc34df04d6da2eafbd303
+binding:
+- qfix manifests bind code_git_commit=364bde228be04b80917345d368983b95352e4f2a
+- quietness_pairing_rule=shared_world_id_v1
 
-smoke_read:
-- gate7c direct_global_auprc=0.389995 > F=0.285101
-- gate7c distributed_global_auprc=0.200154 > F=0.166861
-- quietness did not collapse
-
-scaleup_read:
+qfix_128_read:
 - gate7c direct_global_auprc=0.318939 > F=0.306034
-- gate7c distributed_global_auprc=0.178790 > F=0.173201
-- F still better mean_delta_p90=-0.013795 vs gate7c=-0.005628
-- gate7c better mean_top10_inflation=2.343750 vs F=2.593750
+- gate7c distributed_global_auprc=0.179488 > F=0.169906
+- F still better mean_delta_p90=-0.020208 vs gate7c=-0.007069
+- gate7c better mean_top10_inflation=1.906250 vs F=2.031250
+
+qfix_200_read:
+- gate7c direct_global_auprc=0.316612 > F=0.300950
+- gate7c distributed_global_auprc=0.167865 > F=0.160062
+- F still better mean_delta_p90=-0.021322 vs gate7c=-0.006514
+- gate7c better mean_top10_inflation=1.980000 vs F=2.060000
 
 interpretation:
-- gate7c revival persists under 128-row scale-up
-- margin narrows relative to smoke
-- dynamic regime dependence now looks persistent, but still caveated
+- the old pre-qfix quietness claim is withdrawn
+- gate7c conflict-side revival persists under the corrected same-world quietness court
+- the revival is not explained away by the old quietness bug
+- quietness is now cleaner to read, but still not fully adjudicated in gate7c's favor
 - candidate freeze, evaluator freeze, and aggregation ban remain intact
 
 caveats:
-- gate8a smoke is not final standing
+- pre-qfix quietness outputs are historical only and should not be used for outward claims
 - gate7c uses transition labels; F/gate6f/gate6h use token labels
-- quietness survives, but quietness leadership is not yet settled
-- gate7c reachability quietness remains the roughest bucket at 128 rows
+- quietness is unresolved, not won

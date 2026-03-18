@@ -6,10 +6,12 @@ Date: 2026-03-19
 
 ## 0. Scope
 
-This file records the first two Gate8 execution-stage reads:
+This file records the corrected Gate8 execution read after the quietness-court repair.
 
-- `gate8a_candidate_execution`: 16-row smoke
-- `gate8b_128r_candidate_execution`: 128-row scale-up
+The active evidence package is now:
+
+- `gate8e_128r_qfix_candidate_execution`: 128-row same-world quietness court
+- `gate8f_200r_qfix_candidate_execution`: 200-row same-world quietness court
 
 The fixed comparison set remained:
 
@@ -21,72 +23,76 @@ The fixed comparison set remained:
 No new candidate was introduced.
 No aggregation was introduced.
 
-## 1. What Was Added
+## 1. Court Correction
 
-Gate8 now has an execution path, not only a benchmark scaffold.
+The earlier Gate8 execution path had a real quietness flaw.
 
-New tooling:
+Its quietness pairs matched:
+
+- `clean_support`
+- `surface_noisy_clean`
+
+only by `world_type` and occurrence order.
+
+That was not a valid same-world negative control.
+
+So the old quietness sentence:
+
+- `quietness did not collapse`
+
+is withdrawn as a tracked claim.
+
+The corrected court now requires:
+
+- shared `world_id`
+- distinct `rendering_id`
+- pairing rule `shared_world_id_v1`
+
+This fixes the quietness readout to mean:
+
+- same underlying world
+- different surface realization
+
+rather than:
+
+- merely same coarse world type
+- different world instance
+
+## 2. What Was Added
+
+Gate8 now has:
+
+- fixed-set execution
+- corrected same-world quietness controls
+- scale-up evidence through 200 rows
+
+New tooling and contract tightening live in:
 
 - `tools/run_gate8_candidate_batch.py`
 - `tools/evaluate_gate8_standing.py`
 - `tools/run_gate8_scaleup.py`
+- `15_GATE8_LABEL_AND_PROVENANCE_RULES.md`
 
-The execution path now covers:
+## 3. Corrected Read
 
-1. teacher-forced extraction on Gate8 answer targets
-2. defect-span label materialization
-3. Gate6 native local-span build
-4. fixed-candidate execution
-5. Gate8 conflict-cell and quietness evaluation
+Under the corrected same-world quietness court:
 
-## 2. Smoke Read (`gate8a`)
+- `gate7c` still leads `F` on both conflict cells
+- this remains true at both 128 and 200 rows
+- `gate6f` and `gate6h` remain clearly behind
 
-On the 16-row smoke:
+But quietness is still not fully won:
 
-- `gate7c` became the strongest conflict candidate
-- it exceeded `F` on both conflict cells
-- quietness did not collapse
-
-This was the first run where `gate7c` looked less like a merely mixed dynamic line and more like a candidate whose standing improves in retrieval-conflict geometry.
-
-## 3. Scale-Up Read (`gate8b_128r`)
-
-The 128-row run is the first real check against smoke fluke.
-
-Headline read:
-
-- `gate7c` still leads `F` on both conflict cells by `global_auprc`
-- the margin is narrower than in smoke
-- `F` still has slightly better `mean_delta_p90`
-- `gate7c` has better `mean_top10_inflation`
-- `gate6f` and `gate6h` remain clearly behind on this benchmark
+- `F` remains better on `mean_delta_p90`
+- `gate7c` remains better on `mean_top10_inflation`
 
 So the correct sentence is:
 
-- `gate7c` revival persists under scale-up, but as a narrowed standing-improvement signal, not yet a decisive universal reversal
+- `gate7c` conflict-side revival persists under the corrected court, while quietness remains cleaner than before but still unresolved
 
 ## 4. Current Numerical Read
 
-### 4.1 `gate8a` smoke
-
-Direct contradiction:
-
-- `gate7c global_auprc = 0.389995`
-- `F global_auprc = 0.285101`
-
-Distributed incompatibility:
-
-- `gate7c global_auprc = 0.200154`
-- `F global_auprc = 0.166861`
-
-Quietness:
-
-- `F mean_delta_p90 = -0.043442`
-- `gate7c mean_delta_p90 = -0.009812`
-- `F mean_top10_inflation = 2.250000`
-- `gate7c mean_top10_inflation = 2.250000`
-
-### 4.2 `gate8b_128r` scale-up
+### 4.1 `gate8e_128r_qfix`
 
 Direct contradiction:
 
@@ -95,23 +101,45 @@ Direct contradiction:
 
 Distributed incompatibility:
 
-- `gate7c global_auprc = 0.178790`
-- `F global_auprc = 0.173201`
+- `gate7c global_auprc = 0.179488`
+- `F global_auprc = 0.169906`
 
 Quietness:
 
-- `F mean_delta_p90 = -0.013795`
-- `gate7c mean_delta_p90 = -0.005628`
-- `F mean_top10_inflation = 2.593750`
-- `gate7c mean_top10_inflation = 2.343750`
+- `F mean_delta_p90 = -0.020208`
+- `gate7c mean_delta_p90 = -0.007069`
+- `F mean_top10_inflation = 2.031250`
+- `gate7c mean_top10_inflation = 1.906250`
+
+### 4.2 `gate8f_200r_qfix`
+
+Direct contradiction:
+
+- `gate7c global_auprc = 0.316612`
+- `F global_auprc = 0.300950`
+
+Distributed incompatibility:
+
+- `gate7c global_auprc = 0.167865`
+- `F global_auprc = 0.160062`
+
+Quietness:
+
+- `F mean_delta_p90 = -0.021322`
+- `gate7c mean_delta_p90 = -0.006514`
+- `F mean_top10_inflation = 2.060000`
+- `gate7c mean_top10_inflation = 1.980000`
 
 ## 5. Caveats
 
 These caveats remain active and should be stated explicitly in any external readout.
 
-### 5.1 Smoke is not final standing
+### 5.1 Pre-qfix quietness is historical only
 
-The 16-row run was evidence of reversal pressure, not proof of stable replacement.
+The old 16-row and pre-qfix 128-row quietness claims should not be used as current evidence.
+
+Their conflict-side direction is still historically interesting.
+Their quietness court is not valid enough for tracked outward claims.
 
 ### 5.2 Label granularity is not identical
 
@@ -122,16 +150,15 @@ This is regime-consistent with Gate7, but it is not same-granularity comparison.
 
 ### 5.3 Quietness winner is still not settled
 
-At 128 rows:
+Under the corrected court:
 
-- `gate7c` does not collapse on quietness
-- but it does not cleanly dominate `F`
-- the `reachability` bucket is still the roughest quietness surface
+- `gate7c` is no longer being protected by the old pairing confound
+- but it still does not cleanly dominate `F`
 
 So the right claim is:
 
-- quietness survives
-- quietness leadership does not yet transfer
+- quietness is better adjudicated
+- quietness leadership still does not transfer
 
 ## 6. Decision
 
@@ -141,14 +168,17 @@ The current decision should remain disciplined:
 - do not reopen the evaluator
 - do not introduce aggregation rescue
 
-The next responsible move is:
+What is now earned:
 
-- scale Gate8 further under the same fixed set
-- test whether `gate7c` keeps conflict-cell standing advantage
-- test whether quietness remains non-collapsed at larger `n`
+- the `gate7c` conflict-side revival does not depend on the old quietness bug
+
+What is not yet earned:
+
+- a full quietness victory claim
+- a settled dynamic mainline replacement claim
 
 ## 7. Working Sentence
 
-The best short sentence after the first scale-up is:
+The best short sentence after the quietness-court correction is:
 
-- `Gate8 no longer reads as a smoke-only revival for gate7c; it now reads as a persistent but still caveated dynamic standing gain under retrieval-conflict geometry.`
+- `Under the corrected same-world quietness court, gate7c retains a persistent conflict-side standing gain through 200 rows, while quietness remains non-collapsed in some respects but still unresolved overall.`
