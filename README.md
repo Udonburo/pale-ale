@@ -45,8 +45,13 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
 - [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md): Gate6 standing snapshot and closeout outcome
 - [`11_GATE7_PROGRESSION_LEAK_SMOKE.md`](11_GATE7_PROGRESSION_LEAK_SMOKE.md): first Gate7 dynamic projector-motif smoke
 - [`12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md): Gate7 dynamic motif comparison outcome
+- [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md): Gate8 benchmark constitution
+- [`14_GATE8_CONFLICT_TAXONOMY.md`](14_GATE8_CONFLICT_TAXONOMY.md): Gate8 semi-closed conflict taxonomy
+- [`15_GATE8_LABEL_AND_PROVENANCE_RULES.md`](15_GATE8_LABEL_AND_PROVENANCE_RULES.md): Gate8 label and provenance contract
+- [`16_GATE8_GENERATION_STAGE_SMOKE.md`](16_GATE8_GENERATION_STAGE_SMOKE.md): Gate8 first materialized generation-stage smoke
 - [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
 - [`tools/README_gate7.md`](tools/README_gate7.md): Gate7 progression-leak smoke workflow
+- [`tools/README_gate8.md`](tools/README_gate8.md): Gate8 benchmark skeleton workflow
 - `tools/run_gate6_native_object_consumer.py`: Gate6-B object-native edge-plane holonomy smoke consumer
 - `tools/run_gate6_sigma_gram_consumer.py`: Gate6 object-native sigma/gram consumer from `gram_raw` and `singular_values`
 - `tools/run_gate6_sigma_gram_consumer_v2.py`: tail-aware sigma/gram consumer that reweights `F` by spectral gap and tail retention
@@ -226,6 +231,8 @@ MSRV: Rust 1.65+
 - Design stricter post-CFA validation regimes (for example CFA v2 or non-synthetic benchmarks)
 - Carry Gate6 in a two-layer form: `gate6f` as operational candidate, `gate6h` as pure object-native north star
 - Keep Gate7 as dynamic motif comparison only, and do not unlock field aggregation until seam-tail discipline is actually cleared
+- Start Gate8 from benchmark constitution and conflict taxonomy before any large semi-closed generation batch
+- Keep Gate8 generation-stage smoke strictly at benchmark materialization until the four-layer contract is fully auditable
 
 ## License
 
