@@ -42,7 +42,10 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
 - [`07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md`](07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md): Gate6-A gauge and construction policy
 - [`08_GATE6A_ARTIFACT_SCHEMA.md`](08_GATE6A_ARTIFACT_SCHEMA.md): Gate6-A native object artifact contract
 - [`09_GATE6_FIRST_BENCHMARK_PLAN.md`](09_GATE6_FIRST_BENCHMARK_PLAN.md): Gate6-A first benchmark discipline
+- [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md): Gate6 standing snapshot and closeout outcome
+- [`11_GATE7_PROGRESSION_LEAK_SMOKE.md`](11_GATE7_PROGRESSION_LEAK_SMOKE.md): first Gate7 dynamic projector-motif smoke
 - [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
+- [`tools/README_gate7.md`](tools/README_gate7.md): Gate7 progression-leak smoke workflow
 - `tools/run_gate6_native_object_consumer.py`: Gate6-B object-native edge-plane holonomy smoke consumer
 - `tools/run_gate6_sigma_gram_consumer.py`: Gate6 object-native sigma/gram consumer from `gram_raw` and `singular_values`
 - `tools/run_gate6_sigma_gram_consumer_v2.py`: tail-aware sigma/gram consumer that reweights `F` by spectral gap and tail retention
@@ -220,7 +223,8 @@ MSRV: Rust 1.65+
 
 - Freeze the Gate4 feature-sink contract only after research-facing freeze triggers are met
 - Design stricter post-CFA validation regimes (for example CFA v2 or non-synthetic benchmarks)
-- Test transport / holonomy-style Gate5 experiments without collapsing Gate4's scope as a sink
+- Carry Gate6 in a two-layer form: `gate6f` as operational candidate, `gate6h` as pure object-native north star
+- Start the next dynamic object-native workstream from projector progression leakage and only add field aggregation after that motif proves out
 
 ## License
 

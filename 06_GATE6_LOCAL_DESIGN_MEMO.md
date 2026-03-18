@@ -241,3 +241,23 @@ Its current working label is `Gate6-A`.
 
 This document does not pre-freeze later names such as `Gate7` or `Gate8`.
 If the observation-redesign workstream hardens into a new canonical stage, that broader naming update must be made explicitly across the architecture docs.
+
+## 11. Current Standing Snapshot
+
+The empirical standing of the Gate6 workstream is now fixed separately in:
+
+- [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md)
+
+The architecture-level consequence is:
+
+- the repo now carries an `operational candidate`
+- and a separate `research north star`
+
+These do not need to be the same consumer.
+
+At the current snapshot:
+
+- operational candidate = `gate6f`
+- research north star = `gate6h`
+
+This is the intended reading until a later workstream either unifies them or explicitly replaces one of them.
