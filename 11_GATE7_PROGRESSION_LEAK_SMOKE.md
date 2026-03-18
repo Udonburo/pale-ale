@@ -123,3 +123,7 @@ Recommended focus:
 
 - another projector-native progression motif that tries to preserve the quietness gains in `mean_delta_max` and `iqr_normalized_delta_max`
 - while reducing the current `p90` and `top10_inflation` regression
+
+Subsequent bake-off outcome is now recorded in:
+
+- [`12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
