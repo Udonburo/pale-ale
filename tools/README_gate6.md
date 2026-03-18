@@ -181,3 +181,29 @@ This keeps the same pair evaluator and report schema, but compares:
 
 - primary: `sigma_gap_weighted_gram_loop_v1`
 - guardrail: `score_F_gram_loop_v1`
+
+## 10) Run the tail-aware sigma/gram v2 consumer
+
+This v2 line keeps the same object-native inputs but changes the weighting law to:
+
+- `sigma_gap_rel_v1 = max(0, sigma2 / sigma1 - sigma3 / sigma1)`
+- `sigma_tailkeep_rel_v2 = max(0, 1 - sigma3 / sigma1)`
+- `sigma_gap_tailkeep_weighted_gram_loop_v2 = score_F_gram_loop_v1 * sigma_gap_rel_v1 * sigma_tailkeep_rel_v2`
+
+For CFA:
+
+```powershell
+python tools/run_gate6_sigma_gram_consumer_v2.py --gate6-dir runs/gate6_cfa_full --out-dir runs/gate6f_cfa_full --run-id gate6f_cfa_full
+```
+
+For Seam:
+
+```powershell
+python tools/run_gate6_sigma_gram_consumer_v2.py --gate6-dir runs/gate6_seam_full --out-dir runs/gate6f_seam_full --run-id gate6f_seam_full
+```
+
+Then evaluate Seam pairs:
+
+```powershell
+python tools/evaluate_gate6_native_object_seam_pairs.py --token-csv runs/gate6f_seam_full/gate6f_token_telemetry.csv --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --out-dir runs/gate6f_seam_pairs_full --run-id gate6f_seam_pairs_full --primary-metric sigma_gap_tailkeep_weighted_gram_loop_v2 --guardrail-metric score_F_gram_loop_v1 --artifact-prefix gate6f_seam
+```
