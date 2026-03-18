@@ -33,6 +33,13 @@ In conflict cells, multiple `target_id` variants should usually share:
 - a stable `world_id`
 - and, unless the benchmark is explicitly testing rendering variation, the same `rendering_id`
 
+For quietness controls, `clean_support` and `surface_noisy_clean` should usually share:
+
+- the same `world_id`
+- different `rendering_id` values
+
+That is the minimum same-world negative control needed to measure surface-noise quietness without world-difficulty confound.
+
 No layer may silently overwrite another.
 
 ## 2. Required Sample-Level Fields

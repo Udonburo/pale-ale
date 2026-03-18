@@ -79,6 +79,7 @@ HEADLINE_METRICS: Sequence[str] = (
 )
 
 RELATION_TYPES: Sequence[str] = ("genealogy", "temporal", "reachability")
+QUIETNESS_CELLS = ("clean_support", "surface_noisy_clean")
 
 
 def parse_args() -> argparse.Namespace:
@@ -236,10 +237,22 @@ def build_target_plan(samples_per_cell: int) -> Dict[str, Any]:
     }
 
 
+def world_slot_count(samples_per_cell: int, target_types: Sequence[str]) -> int:
+    return (samples_per_cell + len(target_types) - 1) // len(target_types)
+
+
 def build_sample_index(samples_per_cell: int) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     sample_counter = 0
-    for cell_index, cell in enumerate(CELL_DEFS):
+    cell_by_id = {str(cell["cell_id"]): cell for cell in CELL_DEFS}
+    quiet_world_count = samples_per_cell
+    direct_world_offset = quiet_world_count
+    direct_world_count = world_slot_count(
+        samples_per_cell,
+        cell_by_id["direct_contradiction"]["default_answer_target_types"],
+    )
+    distributed_world_offset = direct_world_offset + direct_world_count
+    for cell in CELL_DEFS:
         cell_id = str(cell["cell_id"])
         target_types = list(cell["default_answer_target_types"])
         n_target_types = len(target_types)
@@ -247,13 +260,23 @@ def build_sample_index(samples_per_cell: int) -> List[Dict[str, Any]]:
             target_variant_index = i % n_target_types
             world_slot_index = i // n_target_types
             answer_target_type = target_types[target_variant_index]
-            world_ordinal = cell_index * samples_per_cell + world_slot_index
+            if cell_id in QUIETNESS_CELLS:
+                world_id = f"quiet_support_world_{world_slot_index:03d}"
+                world_ordinal = world_slot_index
+            elif cell_id == "direct_contradiction":
+                world_id = f"{cell_id}_world_{world_slot_index:03d}"
+                world_ordinal = direct_world_offset + world_slot_index
+            elif cell_id == "distributed_incompatibility":
+                world_id = f"{cell_id}_world_{world_slot_index:03d}"
+                world_ordinal = distributed_world_offset + world_slot_index
+            else:
+                raise ValueError(f"Unsupported cell_id: {cell_id}")
             sample_counter += 1
             rows.append(
                 {
                     "sample_id": f"gate8_plan_{sample_counter:05d}",
                     "cell_id": cell_id,
-                    "world_id": f"{cell_id}_world_{world_slot_index:03d}",
+                    "world_id": world_id,
                     "world_ordinal": int(world_ordinal),
                     "world_type": str(RELATION_TYPES[world_ordinal % len(RELATION_TYPES)]),
                     "rendering_id": f"{cell_id}_render_{world_slot_index:03d}",

@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_VERSION = "gate8_candidate_batch_v1"
 METHOD_ID = "gate8_candidate_batch_v1"
-QUIETNESS_PAIRING_RULE = "world_type_occurrence_index_v1"
+QUIETNESS_PAIRING_RULE = "shared_world_id_v1"
 DEFAULT_TOPK = 128
 DEFAULT_SEED = 7
 FIXED_CANDIDATES = (
@@ -138,45 +138,49 @@ def quietness_pair_bindings(
     benchmark_rows: Sequence[Dict[str, Any]],
 ) -> Tuple[Dict[str, str], List[Dict[str, Any]]]:
     quiet_cells = ("clean_support", "surface_noisy_clean")
-    grouped: Dict[Tuple[str, str], List[str]] = defaultdict(list)
-    benchmark_lookup: Dict[str, Dict[str, Any]] = {}
+    grouped: Dict[str, Dict[str, Dict[str, Any]]] = defaultdict(dict)
     for row in benchmark_rows:
-        benchmark_sample_id = str(row["sample_id"])
-        benchmark_lookup[benchmark_sample_id] = row
         cell_id = str(row["cell_id"])
         if cell_id not in quiet_cells:
             continue
         if str(row["answer_target_type"]) != "consistent_answer":
             continue
-        grouped[(cell_id, str(row["world_type"]))].append(benchmark_sample_id)
+        world_id = str(row["world_id"])
+        if cell_id in grouped[world_id]:
+            raise ValueError(
+                f"duplicate quietness row for world_id={world_id} cell_id={cell_id}"
+            )
+        grouped[world_id][cell_id] = row
 
     out_bindings: Dict[str, str] = {}
     pair_rows: List[Dict[str, Any]] = []
-    all_world_types = sorted({world_type for _cell_id, world_type in grouped.keys()})
-    for world_type in all_world_types:
-        clean_ids = sorted(grouped.get(("clean_support", world_type), []))
-        noisy_ids = sorted(grouped.get(("surface_noisy_clean", world_type), []))
-        if len(clean_ids) != len(noisy_ids):
+    for world_id in sorted(grouped):
+        pair_binding = grouped[world_id]
+        clean_row = pair_binding.get("clean_support")
+        noisy_row = pair_binding.get("surface_noisy_clean")
+        if clean_row is None or noisy_row is None:
             raise ValueError(
-                f"quietness pairing mismatch for world_type={world_type}: "
-                f"{len(clean_ids)} clean vs {len(noisy_ids)} noisy"
+                f"quietness pairing requires shared clean/noisy rows for world_id={world_id}"
             )
-        for occurrence_index, (clean_id, noisy_id) in enumerate(zip(clean_ids, noisy_ids)):
-            pair_id = f"quiet_pair_{world_type}_{occurrence_index:03d}"
-            out_bindings[clean_id] = pair_id
-            out_bindings[noisy_id] = pair_id
-            pair_rows.append(
-                {
-                    "quietness_pair_id": pair_id,
-                    "pairing_rule": QUIETNESS_PAIRING_RULE,
-                    "world_type": world_type,
-                    "occurrence_index": occurrence_index,
-                    "clean_benchmark_sample_id": clean_id,
-                    "clean_world_id": str(benchmark_lookup[clean_id]["world_id"]),
-                    "surface_noisy_benchmark_sample_id": noisy_id,
-                    "surface_noisy_world_id": str(benchmark_lookup[noisy_id]["world_id"]),
-                }
-            )
+        if str(clean_row["world_id"]) != str(noisy_row["world_id"]):
+            raise ValueError(f"quietness pair world_id mismatch for world_id={world_id}")
+        pair_id = f"quiet_pair_{world_id}"
+        clean_id = str(clean_row["sample_id"])
+        noisy_id = str(noisy_row["sample_id"])
+        out_bindings[clean_id] = pair_id
+        out_bindings[noisy_id] = pair_id
+        pair_rows.append(
+            {
+                "quietness_pair_id": pair_id,
+                "pairing_rule": QUIETNESS_PAIRING_RULE,
+                "world_id": world_id,
+                "world_type": str(clean_row["world_type"]),
+                "clean_benchmark_sample_id": clean_id,
+                "clean_rendering_id": str(clean_row["rendering_id"]),
+                "surface_noisy_benchmark_sample_id": noisy_id,
+                "surface_noisy_rendering_id": str(noisy_row["rendering_id"]),
+            }
+        )
     return out_bindings, pair_rows
 
 

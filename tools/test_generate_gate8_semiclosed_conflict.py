@@ -86,6 +86,17 @@ class Gate8SemiclosedConflictSkeletonTests(unittest.TestCase):
             )
             self.assertEqual(len({row["world_type"] for row in direct_rows}), 1)
 
+            clean_rows = [row for row in sample_rows if row["cell_id"] == "clean_support"]
+            noisy_rows = [row for row in sample_rows if row["cell_id"] == "surface_noisy_clean"]
+            self.assertEqual(
+                {row["world_id"] for row in clean_rows},
+                {row["world_id"] for row in noisy_rows},
+            )
+            self.assertNotEqual(
+                {row["rendering_id"] for row in clean_rows},
+                {row["rendering_id"] for row in noisy_rows},
+            )
+
     def test_generator_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:
             tmp_dir = Path(tmp_dir_str)

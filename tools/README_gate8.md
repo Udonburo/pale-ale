@@ -124,8 +124,8 @@ The runner performs:
 Quietness pairing is fixed deterministically as:
 
 - `clean_support` <-> `surface_noisy_clean`
-- matched by `world_type`
-- then by occurrence index within each `world_type`
+- matched by shared `world_id`
+- with distinct `rendering_id` values inside that same world control
 
 Artifacts include:
 

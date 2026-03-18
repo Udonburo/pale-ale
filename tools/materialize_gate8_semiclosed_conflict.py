@@ -470,7 +470,6 @@ def materialize_rows(
             "world_id": sample["world_id"],
             "world_ordinal": world_ordinal,
             "world_type": spec.world_type,
-            "cell_id": cell_id,
             "entity_a": a,
             "entity_b": b,
             "entity_c": c,

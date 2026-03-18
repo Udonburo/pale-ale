@@ -32,7 +32,7 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertEqual(manifest["provenance_binding_mode"], "realized_artifacts")
             self.assertEqual(manifest["n_samples_total"], 8)
             self.assertEqual(len(sample_index_rows), 8)
-            self.assertEqual(len(world_truth_rows), 6)
+            self.assertEqual(len(world_truth_rows), 4)
             self.assertEqual(len(rendering_rows), 6)
             self.assertEqual(len(target_rows), 8)
             self.assertEqual(len(benchmark_rows), 8)
@@ -65,6 +65,14 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertEqual(noisy_clean["retrieval_conflict_chunk_ids"], [])
             self.assertEqual(noisy_clean["label_span_conflict"], [])
             self.assertEqual(noisy_clean["label_span_defect"], [])
+
+            clean_world_ids = {
+                row["world_id"] for row in sample_index_rows if row["cell_id"] == "clean_support"
+            }
+            noisy_world_ids = {
+                row["world_id"] for row in sample_index_rows if row["cell_id"] == "surface_noisy_clean"
+            }
+            self.assertEqual(clean_world_ids, noisy_world_ids)
 
     def test_materializer_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:

@@ -23,7 +23,7 @@ DEFAULT_TOPK = 10
 CONFLICT_CELLS = ("direct_contradiction", "distributed_incompatibility")
 QUIET_CLEAN_CELL = "clean_support"
 QUIET_PERTURBED_CELL = "surface_noisy_clean"
-QUIETNESS_PAIRING_RULE = "world_type_occurrence_index_v1"
+QUIETNESS_PAIRING_RULE = "shared_world_id_v1"
 
 
 def parse_args() -> argparse.Namespace:
