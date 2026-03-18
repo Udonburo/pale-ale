@@ -207,3 +207,29 @@ Then evaluate Seam pairs:
 ```powershell
 python tools/evaluate_gate6_native_object_seam_pairs.py --token-csv runs/gate6f_seam_full/gate6f_token_telemetry.csv --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --out-dir runs/gate6f_seam_pairs_full --run-id gate6f_seam_pairs_full --primary-metric sigma_gap_tailkeep_weighted_gram_loop_v2 --guardrail-metric score_F_gram_loop_v1 --artifact-prefix gate6f_seam
 ```
+
+## 11) Run the pure sigma object-native consumer
+
+This line removes `F` from the primary score entirely. It uses only the singular-spectrum object:
+
+- `sigma_gap_rel_v1 = max(0, sigma2 / sigma1 - sigma3 / sigma1)`
+- `sigma_tailkeep_rel_v1 = max(0, 1 - sigma3 / sigma1)`
+- `sigma_gap_tailkeep_object_v1 = sigma_gap_rel_v1 * sigma_tailkeep_rel_v1`
+
+For CFA:
+
+```powershell
+python tools/run_gate6_sigma_object_consumer.py --gate6-dir runs/gate6_cfa_full --out-dir runs/gate6g_cfa_full --run-id gate6g_cfa_full
+```
+
+For Seam:
+
+```powershell
+python tools/run_gate6_sigma_object_consumer.py --gate6-dir runs/gate6_seam_full --out-dir runs/gate6g_seam_full --run-id gate6g_seam_full
+```
+
+Then evaluate Seam pairs:
+
+```powershell
+python tools/evaluate_gate6_native_object_seam_pairs.py --token-csv runs/gate6g_seam_full/gate6g_token_telemetry.csv --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --out-dir runs/gate6g_seam_pairs_full --run-id gate6g_seam_pairs_full --primary-metric sigma_gap_tailkeep_object_v1 --guardrail-metric score_F_gram_loop_v1 --artifact-prefix gate6g_seam
+```
