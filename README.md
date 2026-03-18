@@ -44,6 +44,10 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
 - [`09_GATE6_FIRST_BENCHMARK_PLAN.md`](09_GATE6_FIRST_BENCHMARK_PLAN.md): Gate6-A first benchmark discipline
 - [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
 - `tools/run_gate6_native_object_consumer.py`: Gate6-B object-native edge-plane holonomy smoke consumer
+- `tools/run_gate6_sigma_gram_consumer.py`: Gate6 object-native sigma/gram consumer from `gram_raw` and `singular_values`
+- `tools/run_gate6_sigma_gram_consumer_v2.py`: tail-aware sigma/gram consumer that reweights `F` by spectral gap and tail retention
+- `tools/run_gate6_sigma_object_consumer.py`: pure object-native sigma consumer that uses only singular-spectrum structure
+- `tools/run_gate6_sigma_object_consumer_v2.py`: pure object-native sigma consumer with sqrt-gap weighting for quieter Seam behavior
 - `tools/`, `docs/`, `attestations/`: experimental pipelines, CFA utilities, and evidence artifacts
 
 ## Gate Architecture
