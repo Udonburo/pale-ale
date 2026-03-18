@@ -17,6 +17,8 @@ It only proves that the Gate8 constitution can be materialized into explicit:
 - answer target
 - token/span labels
 
+with target variation separated from world / rendering variation when the taxonomy calls for shared support.
+
 without collapsing the four-layer contract.
 
 ## 1. Why This Stage Exists

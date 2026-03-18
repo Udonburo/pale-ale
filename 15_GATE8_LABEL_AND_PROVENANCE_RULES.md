@@ -26,6 +26,13 @@ Meaning:
 - `target_id` identifies the answer behavior being evaluated
 - `sample_id` identifies the concrete benchmark row
 
+Target variation should not force a new world by default.
+
+In conflict cells, multiple `target_id` variants should usually share:
+
+- a stable `world_id`
+- and, unless the benchmark is explicitly testing rendering variation, the same `rendering_id`
+
 No layer may silently overwrite another.
 
 ## 2. Required Sample-Level Fields
@@ -35,6 +42,8 @@ Every sample must carry at least:
 - `sample_id`
 - `cell_id`
 - `world_id`
+- `world_ordinal`
+- `world_type`
 - `rendering_id`
 - `target_id`
 - `answer_target_type`
@@ -43,6 +52,8 @@ Every sample must carry at least:
 - `retrieval_chunk_ids`
 - `retrieval_conflict_chunk_ids`
 - `retrieval_support_chunk_ids`
+
+`world_ordinal` and `world_type` are the minimum stable construction fields when later generation depends on synthetic world realization.
 
 ## 3. Required Token Or Span Labels
 

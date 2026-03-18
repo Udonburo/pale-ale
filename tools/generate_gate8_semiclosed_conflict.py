@@ -78,6 +78,8 @@ HEADLINE_METRICS: Sequence[str] = (
     "mean_top10_inflation",
 )
 
+RELATION_TYPES: Sequence[str] = ("genealogy", "temporal", "reachability")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -152,6 +154,8 @@ def build_label_contract() -> Dict[str, Any]:
             "sample_id",
             "cell_id",
             "world_id",
+            "world_ordinal",
+            "world_type",
             "rendering_id",
             "target_id",
             "answer_target_type",
@@ -184,6 +188,8 @@ def build_world_plan(samples_per_cell: int) -> Dict[str, Any]:
         "binding_status": "constitution_only_placeholder",
         "world_generation_mode": "not_materialized",
         "samples_per_cell": samples_per_cell,
+        "world_slot_rule": "target variants may share stable world slots",
+        "world_type_cycle": list(RELATION_TYPES),
         "cell_ids": [str(cell["cell_id"]) for cell in CELL_DEFS],
         "notes": (
             "Placeholder world specification plan for constitution-stage provenance binding. "
@@ -199,6 +205,7 @@ def build_rendering_plan(samples_per_cell: int) -> Dict[str, Any]:
         "binding_status": "constitution_only_placeholder",
         "rendering_generation_mode": "not_materialized",
         "samples_per_cell": samples_per_cell,
+        "rendering_slot_rule": "target variants may share stable rendering slots",
         "cell_ids": [str(cell["cell_id"]) for cell in CELL_DEFS],
         "notes": (
             "Placeholder retrieval rendering plan for constitution-stage provenance binding. "
@@ -232,19 +239,25 @@ def build_target_plan(samples_per_cell: int) -> Dict[str, Any]:
 def build_sample_index(samples_per_cell: int) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     sample_counter = 0
-    for cell in CELL_DEFS:
+    for cell_index, cell in enumerate(CELL_DEFS):
         cell_id = str(cell["cell_id"])
         target_types = list(cell["default_answer_target_types"])
+        n_target_types = len(target_types)
         for i in range(samples_per_cell):
-            answer_target_type = target_types[i % len(target_types)]
+            target_variant_index = i % n_target_types
+            world_slot_index = i // n_target_types
+            answer_target_type = target_types[target_variant_index]
+            world_ordinal = cell_index * samples_per_cell + world_slot_index
             sample_counter += 1
             rows.append(
                 {
                     "sample_id": f"gate8_plan_{sample_counter:05d}",
                     "cell_id": cell_id,
-                    "world_id": f"{cell_id}_world_{i:03d}",
-                    "rendering_id": f"{cell_id}_render_{i:03d}",
-                    "target_id": f"{cell_id}_{answer_target_type}_{i:03d}",
+                    "world_id": f"{cell_id}_world_{world_slot_index:03d}",
+                    "world_ordinal": int(world_ordinal),
+                    "world_type": str(RELATION_TYPES[world_ordinal % len(RELATION_TYPES)]),
+                    "rendering_id": f"{cell_id}_render_{world_slot_index:03d}",
+                    "target_id": f"{cell_id}_{answer_target_type}_{world_slot_index:03d}",
                     "answer_target_type": answer_target_type,
                     "is_conflict_intended": bool(cell["is_conflict_intended"]),
                     "is_surface_noise_only": bool(cell["is_surface_noise_only"]),

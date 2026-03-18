@@ -32,8 +32,8 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertEqual(manifest["provenance_binding_mode"], "realized_artifacts")
             self.assertEqual(manifest["n_samples_total"], 8)
             self.assertEqual(len(sample_index_rows), 8)
-            self.assertEqual(len(world_truth_rows), 8)
-            self.assertEqual(len(rendering_rows), 8)
+            self.assertEqual(len(world_truth_rows), 6)
+            self.assertEqual(len(rendering_rows), 6)
             self.assertEqual(len(target_rows), 8)
             self.assertEqual(len(benchmark_rows), 8)
             self.assertNotEqual(
@@ -54,6 +54,12 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertGreater(len(direct_bad["label_span_conflict"]), 0)
             self.assertGreater(len(direct_bad["label_span_defect"]), 0)
             self.assertGreater(sum(token["label_token"] for token in direct_bad["label_token"]), 0)
+
+            direct_sample_rows = [
+                row for row in sample_index_rows if row["cell_id"] == "direct_contradiction"
+            ]
+            self.assertEqual(len({row["world_id"] for row in direct_sample_rows}), 1)
+            self.assertEqual(len({row["rendering_id"] for row in direct_sample_rows}), 1)
 
             noisy_clean = next(row for row in benchmark_rows if row["cell_id"] == "surface_noisy_clean")
             self.assertEqual(noisy_clean["retrieval_conflict_chunk_ids"], [])

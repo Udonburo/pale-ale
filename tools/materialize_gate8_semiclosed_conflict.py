@@ -334,23 +334,28 @@ def build_prompt(chunks: Sequence[Dict[str, Any]], question: str) -> str:
     return "\n".join(lines)
 
 
-def build_world_plan(sample_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def build_world_plan(world_truth_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    world_type_counts: Dict[str, int] = {}
+    for row in world_truth_rows:
+        world_type = str(row["world_type"])
+        world_type_counts[world_type] = world_type_counts.get(world_type, 0) + 1
     return {
         "schema_version": WORLD_PLAN_SCHEMA_VERSION,
         "stage": GENERATION_STAGE,
         "binding_status": "materialized",
         "world_types": list(RELATION_TYPES),
-        "n_worlds_total": len(sample_rows),
-        "world_construction_rule": "deterministic relation triples with optional ledger split",
+        "n_worlds_total": len(world_truth_rows),
+        "world_type_counts": world_type_counts,
+        "world_construction_rule": "deterministic relation triples keyed by stable world_id/world_ordinal",
     }
 
 
-def build_rendering_plan(sample_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def build_rendering_plan(rendering_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     return {
         "schema_version": RENDERING_PLAN_SCHEMA_VERSION,
         "stage": GENERATION_STAGE,
         "binding_status": "materialized",
-        "n_renderings_total": len(sample_rows),
+        "n_renderings_total": len(rendering_rows),
         "cell_rendering_rules": {
             "clean_support": "support + support + support summary",
             "direct_contradiction": "support + support + explicit contradiction",
@@ -360,13 +365,13 @@ def build_rendering_plan(sample_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any
     }
 
 
-def build_target_plan(sample_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
-    target_types = sorted({str(row["answer_target_type"]) for row in sample_rows})
+def build_target_plan(target_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    target_types = sorted({str(row["answer_target_type"]) for row in target_rows})
     return {
         "schema_version": TARGET_PLAN_SCHEMA_VERSION,
         "stage": GENERATION_STAGE,
         "binding_status": "materialized",
-        "n_targets_total": len(sample_rows),
+        "n_targets_total": len(target_rows),
         "answer_target_types": target_types,
         "target_rule": "deterministic answer templates with explicit span labels",
     }
@@ -444,58 +449,73 @@ def materialize_rows(
     List[Dict[str, Any]],
     List[Dict[str, Any]],
 ]:
-    world_truth_rows: List[Dict[str, Any]] = []
-    rendering_rows: List[Dict[str, Any]] = []
+    world_truth_by_id: Dict[str, Dict[str, Any]] = {}
+    rendering_by_id: Dict[str, Dict[str, Any]] = {}
     target_rows: List[Dict[str, Any]] = []
     sample_index_rows: List[Dict[str, Any]] = []
     benchmark_rows: List[Dict[str, Any]] = []
 
-    for ordinal, sample in enumerate(sample_rows):
+    for sample in sample_rows:
         cell_id = str(sample["cell_id"])
-        world_type = RELATION_TYPES[ordinal % len(RELATION_TYPES)]
-        a, b, c = build_entities(seed=seed, ordinal=ordinal)
+        world_type = str(sample["world_type"])
+        world_ordinal = int(sample["world_ordinal"])
+        a, b, c = build_entities(seed=seed, ordinal=world_ordinal)
         spec = build_relation_spec(world_type, a, b, c)
         chunks, support_chunk_indexes, conflict_chunk_indexes = build_rendering(cell_id, spec)
         chunk_ids = [f"{sample['sample_id']}_chunk_{idx:02d}" for idx in range(len(chunks))]
         prompt = build_prompt(chunks, spec.question)
         answer_payload = build_answer_payload(cell_id, str(sample["answer_target_type"]), spec)
 
-        world_truth_rows.append(
-            {
-                "world_id": sample["world_id"],
-                "world_type": spec.world_type,
-                "cell_id": cell_id,
-                "entity_a": a,
-                "entity_b": b,
-                "entity_c": c,
-                "fact_1": spec.fact_1,
-                "fact_2": spec.fact_2,
-                "support_claim": spec.support_claim,
-                "wrong_claim": spec.wrong_claim,
-                "distributed_block_claim": spec.distributed_block_claim,
-                "question": spec.question,
-            }
-        )
+        world_truth_row = {
+            "world_id": sample["world_id"],
+            "world_ordinal": world_ordinal,
+            "world_type": spec.world_type,
+            "cell_id": cell_id,
+            "entity_a": a,
+            "entity_b": b,
+            "entity_c": c,
+            "fact_1": spec.fact_1,
+            "fact_2": spec.fact_2,
+            "support_claim": spec.support_claim,
+            "wrong_claim": spec.wrong_claim,
+            "distributed_block_claim": spec.distributed_block_claim,
+            "question": spec.question,
+        }
+        existing_world = world_truth_by_id.get(str(sample["world_id"]))
+        if existing_world is None:
+            world_truth_by_id[str(sample["world_id"])] = world_truth_row
+        elif existing_world != world_truth_row:
+            raise ValueError(f"Inconsistent world construction for world_id={sample['world_id']}")
 
-        rendering_rows.append(
-            {
-                "rendering_id": sample["rendering_id"],
-                "sample_id": sample["sample_id"],
-                "cell_id": cell_id,
-                "retrieval_chunks": [
-                    {"chunk_id": chunk_ids[idx], "role": chunk["role"], "text": chunk["text"]}
-                    for idx, chunk in enumerate(chunks)
-                ],
-                "retrieval_support_chunk_ids": [chunk_ids[idx] for idx in support_chunk_indexes],
-                "retrieval_conflict_chunk_ids": [chunk_ids[idx] for idx in conflict_chunk_indexes],
-                "prompt": prompt,
-            }
-        )
+        rendering_row = {
+            "rendering_id": sample["rendering_id"],
+            "world_id": sample["world_id"],
+            "cell_id": cell_id,
+            "retrieval_chunks": [
+                {"chunk_id": f"{sample['rendering_id']}_chunk_{idx:02d}", "role": chunk["role"], "text": chunk["text"]}
+                for idx, chunk in enumerate(chunks)
+            ],
+            "retrieval_support_chunk_ids": [
+                f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in support_chunk_indexes
+            ],
+            "retrieval_conflict_chunk_ids": [
+                f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in conflict_chunk_indexes
+            ],
+            "prompt": prompt,
+        }
+        existing_rendering = rendering_by_id.get(str(sample["rendering_id"]))
+        if existing_rendering is None:
+            rendering_by_id[str(sample["rendering_id"])] = rendering_row
+        elif existing_rendering != rendering_row:
+            raise ValueError(
+                f"Inconsistent rendering construction for rendering_id={sample['rendering_id']}"
+            )
 
         target_rows.append(
             {
                 "target_id": sample["target_id"],
-                "sample_id": sample["sample_id"],
+                "world_id": sample["world_id"],
+                "rendering_id": sample["rendering_id"],
                 "answer_target_type": sample["answer_target_type"],
                 "answer_text": answer_payload["answer_text"],
                 "label_span_support": answer_payload["label_span_support"],
@@ -515,9 +535,17 @@ def materialize_rows(
                 "answer_target_type": sample["answer_target_type"],
                 "is_conflict_intended": sample["is_conflict_intended"],
                 "is_surface_noise_only": sample["is_surface_noise_only"],
-                "retrieval_chunk_ids": list(chunk_ids),
-                "retrieval_conflict_chunk_ids": [chunk_ids[idx] for idx in conflict_chunk_indexes],
-                "retrieval_support_chunk_ids": [chunk_ids[idx] for idx in support_chunk_indexes],
+                "world_ordinal": world_ordinal,
+                "world_type": world_type,
+                "retrieval_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in range(len(chunks))
+                ],
+                "retrieval_conflict_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in conflict_chunk_indexes
+                ],
+                "retrieval_support_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in support_chunk_indexes
+                ],
                 "status": "materialized",
             }
         )
@@ -532,9 +560,17 @@ def materialize_rows(
                 "answer_target_type": sample["answer_target_type"],
                 "is_conflict_intended": sample["is_conflict_intended"],
                 "is_surface_noise_only": sample["is_surface_noise_only"],
-                "retrieval_chunk_ids": list(chunk_ids),
-                "retrieval_conflict_chunk_ids": [chunk_ids[idx] for idx in conflict_chunk_indexes],
-                "retrieval_support_chunk_ids": [chunk_ids[idx] for idx in support_chunk_indexes],
+                "world_ordinal": world_ordinal,
+                "world_type": world_type,
+                "retrieval_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in range(len(chunks))
+                ],
+                "retrieval_conflict_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in conflict_chunk_indexes
+                ],
+                "retrieval_support_chunk_ids": [
+                    f"{sample['rendering_id']}_chunk_{idx:02d}" for idx in support_chunk_indexes
+                ],
                 "prompt": prompt,
                 "answer_text": answer_payload["answer_text"],
                 "label_token": answer_payload["label_token"],
@@ -545,6 +581,11 @@ def materialize_rows(
             }
         )
 
+    world_truth_rows = sorted(world_truth_by_id.values(), key=lambda row: str(row["world_id"]))
+    rendering_rows = sorted(rendering_by_id.values(), key=lambda row: str(row["rendering_id"]))
+    target_rows = sorted(target_rows, key=lambda row: str(row["target_id"]))
+    sample_index_rows = sorted(sample_index_rows, key=lambda row: str(row["sample_id"]))
+    benchmark_rows = sorted(benchmark_rows, key=lambda row: str(row["sample_id"]))
     return world_truth_rows, rendering_rows, target_rows, sample_index_rows, benchmark_rows
 
 
@@ -556,7 +597,10 @@ def main() -> int:
 
     conflict_plan = read_json(constitution_dir / DEFAULT_CONFLICT_PLAN)
     label_contract = read_json(constitution_dir / DEFAULT_LABEL_CONTRACT)
-    sample_rows = read_jsonl(constitution_dir / DEFAULT_SAMPLE_INDEX)
+    sample_rows = sorted(
+        read_jsonl(constitution_dir / DEFAULT_SAMPLE_INDEX),
+        key=lambda row: str(row["sample_id"]),
+    )
 
     world_truth_rows, rendering_rows, target_rows, sample_index_rows, benchmark_rows = materialize_rows(
         sample_rows,
@@ -578,9 +622,9 @@ def main() -> int:
 
     write_json(conflict_plan_path, conflict_plan)
     write_json(label_contract_path, label_contract)
-    write_json(world_plan_path, build_world_plan(sample_rows))
-    write_json(rendering_plan_path, build_rendering_plan(sample_rows))
-    write_json(target_plan_path, build_target_plan(sample_rows))
+    write_json(world_plan_path, build_world_plan(world_truth_rows))
+    write_json(rendering_plan_path, build_rendering_plan(rendering_rows))
+    write_json(target_plan_path, build_target_plan(target_rows))
     write_jsonl(sample_index_path, sample_index_rows)
     write_jsonl(world_truth_path, world_truth_rows)
     write_jsonl(renderings_path, rendering_rows)

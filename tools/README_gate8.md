@@ -37,6 +37,7 @@ It only emits a deterministic scaffold for:
 - the four-cell conflict taxonomy
 - the fixed comparison set
 - planned sample rows with stable IDs
+- stable world/rendering slots that can be shared across target variants
 - label/provenance contract binding
 - constitution-only placeholder bindings for world / rendering / target plans
 

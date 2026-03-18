@@ -42,7 +42,10 @@ class Gate8SemiclosedConflictSkeletonTests(unittest.TestCase):
             rendering_plan = json.loads((out_dir / "rendering_plan.json").read_text(encoding="utf-8"))
             target_plan = json.loads((out_dir / "target_plan.json").read_text(encoding="utf-8"))
             checksums = json.loads((out_dir / "checksums.json").read_text(encoding="utf-8"))
-            sample_rows = (out_dir / "sample_index.jsonl").read_text(encoding="utf-8").strip().splitlines()
+            sample_rows = [
+                json.loads(line)
+                for line in (out_dir / "sample_index.jsonl").read_text(encoding="utf-8").strip().splitlines()
+            ]
 
             self.assertEqual(manifest["run_id"], "gate8_test")
             self.assertEqual(manifest["generation_stage"], "constitution_scaffold")
@@ -72,6 +75,16 @@ class Gate8SemiclosedConflictSkeletonTests(unittest.TestCase):
             self.assertEqual(checksums["rendering_plan_json"], self._sha256(out_dir / "rendering_plan.json"))
             self.assertEqual(checksums["target_plan_json"], self._sha256(out_dir / "target_plan.json"))
             self.assertEqual(len(sample_rows), 8)
+
+            direct_rows = [row for row in sample_rows if row["cell_id"] == "direct_contradiction"]
+            self.assertEqual(len(direct_rows), 2)
+            self.assertEqual({row["world_id"] for row in direct_rows}, {"direct_contradiction_world_000"})
+            self.assertEqual({row["rendering_id"] for row in direct_rows}, {"direct_contradiction_render_000"})
+            self.assertEqual(
+                {row["answer_target_type"] for row in direct_rows},
+                {"consistent_answer", "conflict_following_wrong_answer"},
+            )
+            self.assertEqual(len({row["world_type"] for row in direct_rows}), 1)
 
     def test_generator_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:
