@@ -85,3 +85,78 @@ It only materializes the four benchmark layers:
 - token/span labels
 
 under the fixed Gate8 constitution.
+
+## 6) Run the fixed Gate8 candidate batch
+
+```powershell
+python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8a_generation_smoke --out-dir runs/gate8a_candidate_execution --device auto
+```
+
+This execution stage keeps the Gate8 constitution frozen:
+
+- candidate set remains `F / gate6f / gate6h / gate7c`
+- evaluator vocabulary remains:
+  - `global_auprc`
+  - `mean_sample_auprc`
+  - `hit@10`
+  - `first_hit_distance`
+  - `mean_delta_max`
+  - `mean_delta_p90`
+  - `mean_iqr_normalized_delta_max`
+  - `mean_top10_inflation`
+- aggregation remains banned
+
+The runner performs:
+
+1. teacher-forcing extraction for each Gate8 benchmark row
+2. defect-span label materialization into `labels.jsonl`
+3. Gate6 native local span build
+4. fixed-candidate consumers:
+   - `gate6f`
+   - `gate6h`
+   - `gate7c`
+5. Gate8 standing evaluation for:
+   - `score_F_gram_loop_v1`
+   - `sigma_gap_tailkeep_weighted_gram_loop_v2`
+   - `sigma_sqrtgap_tailkeep_object_v2`
+   - `progression_anisotropic_closure_v3`
+
+Quietness pairing is fixed deterministically as:
+
+- `clean_support` <-> `surface_noisy_clean`
+- matched by `world_type`
+- then by occurrence index within each `world_type`
+
+Artifacts include:
+
+- `sample_registry.jsonl`
+- `quietness_pairs.jsonl`
+- `candidate_summary.csv`
+- `gate8a_standing_summary.md`
+- per-candidate evaluation reports under `evaluations/`
+
+## 7) One-shot Gate8 scale-up
+
+If the constitution and fixed-set execution path are already accepted, use the one-shot runner:
+
+```powershell
+python tools/run_gate8_scaleup.py --run-prefix gate8b_128r --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
+```
+
+This produces:
+
+- `runs/gate8b_128r_constitution/`
+- `runs/gate8b_128r_benchmark/`
+- `runs/gate8b_128r_candidate_execution/`
+
+With `samples-per-cell=32`, Gate8 materializes:
+
+- `4 cells`
+- `32 rows per cell`
+- `128 total benchmark rows`
+
+Use `--skip-execution` when only the larger benchmark generation is needed:
+
+```powershell
+python tools/run_gate8_scaleup.py --run-prefix gate8b_128r --samples-per-cell 32 --skip-execution
+```

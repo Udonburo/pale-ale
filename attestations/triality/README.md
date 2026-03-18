@@ -11,6 +11,7 @@ Key files:
 - `batch/YYYY-MM-DD_eval_hf{idx}_primaryE.txt`: per-index holdout eval reports.
 - `YYYY-MM-DD_manifest_index.md`: commit-scope manifest with commands, SHA256s, and validation summary.
 - `YYYY-MM-DD_cfa_batch_primaryE_report.txt`: CFA preregistered batch aggregate report.
+- `YYYY-MM-DD_gate8_execution_scaleup_summary.txt`: compact Gate8 execution/scale-up attestation with commands, hashes, and headline standing read.
 - `case_study/index.md`: representative-set case-study manifest.
 - `case_study/representative_set_summary.md`: top/median/bottom local-metric summary.
 
