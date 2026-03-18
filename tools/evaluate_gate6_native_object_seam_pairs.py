@@ -24,8 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SCHEMA_VERSION = "gate6_native_object_seam_pairs_v1"
 METHOD_ID = "gate6_native_object_seam_pairs_v1"
-PRIMARY_METRIC = "edge_plane_loop_projective_chordal_v1"
-GUARDRAIL_METRIC = "score_F_gram_loop_v1"
+DEFAULT_PRIMARY_METRIC = "edge_plane_loop_projective_chordal_v1"
+DEFAULT_GUARDRAIL_METRIC = "score_F_gram_loop_v1"
+DEFAULT_ARTIFACT_PREFIX = "gate6b_seam"
 DEFAULT_TOPK = 10
 
 
@@ -41,6 +42,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--run-id", default="")
     parser.add_argument("--topk", type=int, default=DEFAULT_TOPK)
+    parser.add_argument("--primary-metric", default=DEFAULT_PRIMARY_METRIC)
+    parser.add_argument("--guardrail-metric", default=DEFAULT_GUARDRAIL_METRIC)
+    parser.add_argument("--artifact-prefix", default=DEFAULT_ARTIFACT_PREFIX)
     return parser.parse_args()
 
 
@@ -130,6 +134,8 @@ def build_pair_rows(
     token_rows: Sequence[Dict[str, str]],
     seam_rows: Sequence[Dict[str, Any]],
     topk: int,
+    guardrail_metric: str,
+    primary_metric: str,
 ) -> List[Dict[str, Any]]:
     grouped = grouped_token_rows(token_rows)
     pairs: Dict[int, Dict[str, Dict[str, Any]]] = defaultdict(dict)
@@ -150,15 +156,15 @@ def build_pair_rows(
         if not clean_rows or not perturbed_rows:
             continue
 
-        clean_guardrail = sample_metric_stats(clean_rows, GUARDRAIL_METRIC)
-        pert_guardrail = sample_metric_stats(perturbed_rows, GUARDRAIL_METRIC)
-        clean_primary = sample_metric_stats(clean_rows, PRIMARY_METRIC)
-        pert_primary = sample_metric_stats(perturbed_rows, PRIMARY_METRIC)
+        clean_guardrail = sample_metric_stats(clean_rows, guardrail_metric)
+        pert_guardrail = sample_metric_stats(perturbed_rows, guardrail_metric)
+        clean_primary = sample_metric_stats(clean_rows, primary_metric)
+        pert_primary = sample_metric_stats(perturbed_rows, primary_metric)
         clean_guardrail_p90 = clean_guardrail["p90"]
         clean_primary_p90 = clean_primary["p90"]
 
-        guardrail_top = metric_topk_rows(perturbed_rows, GUARDRAIL_METRIC, topk)
-        primary_top = metric_topk_rows(perturbed_rows, PRIMARY_METRIC, topk)
+        guardrail_top = metric_topk_rows(perturbed_rows, guardrail_metric, topk)
+        primary_top = metric_topk_rows(perturbed_rows, primary_metric, topk)
 
         pair_rows.append(
             {
@@ -166,33 +172,33 @@ def build_pair_rows(
                 "family": str(perturbed["perturbation_family"]),
                 "clean_sample_id": int(clean["sample_id"]),
                 "perturbed_sample_id": int(perturbed["sample_id"]),
-                "delta_max_f_gram": delta(pert_guardrail["max"], clean_guardrail["max"]),
-                "delta_max_edge_plane": delta(pert_primary["max"], clean_primary["max"]),
-                "delta_p90_f_gram": delta(pert_guardrail["p90"], clean_guardrail["p90"]),
-                "delta_p90_edge_plane": delta(pert_primary["p90"], clean_primary["p90"]),
-                "delta_mean_f_gram": delta(pert_guardrail["mean"], clean_guardrail["mean"]),
-                "delta_mean_edge_plane": delta(pert_primary["mean"], clean_primary["mean"]),
-                "iqr_normalized_delta_max_f_gram": robust_normalize(
+                "delta_max_guardrail": delta(pert_guardrail["max"], clean_guardrail["max"]),
+                "delta_max_primary": delta(pert_primary["max"], clean_primary["max"]),
+                "delta_p90_guardrail": delta(pert_guardrail["p90"], clean_guardrail["p90"]),
+                "delta_p90_primary": delta(pert_primary["p90"], clean_primary["p90"]),
+                "delta_mean_guardrail": delta(pert_guardrail["mean"], clean_guardrail["mean"]),
+                "delta_mean_primary": delta(pert_primary["mean"], clean_primary["mean"]),
+                "iqr_normalized_delta_max_guardrail": robust_normalize(
                     delta(pert_guardrail["max"], clean_guardrail["max"]),
                     clean_guardrail["iqr"],
                 ),
-                "iqr_normalized_delta_max_edge_plane": robust_normalize(
+                "iqr_normalized_delta_max_primary": robust_normalize(
                     delta(pert_primary["max"], clean_primary["max"]),
                     clean_primary["iqr"],
                 ),
-                "topk_inflation_f_gram": None
+                "topk_inflation_guardrail": None
                 if clean_guardrail_p90 is None
                 else sum(
                     1
                     for row in guardrail_top
-                    if float(parse_float(row.get(GUARDRAIL_METRIC))) >= float(clean_guardrail_p90)
+                    if float(parse_float(row.get(guardrail_metric))) >= float(clean_guardrail_p90)
                 ),
-                "topk_inflation_edge_plane": None
+                "topk_inflation_primary": None
                 if clean_primary_p90 is None
                 else sum(
                     1
                     for row in primary_top
-                    if float(parse_float(row.get(PRIMARY_METRIC))) >= float(clean_primary_p90)
+                    if float(parse_float(row.get(primary_metric))) >= float(clean_primary_p90)
                 ),
             }
         )
@@ -216,61 +222,61 @@ def summarize_families(pair_rows: Sequence[Dict[str, Any]], topk: int) -> List[D
             {
                 "family": family,
                 "n_pairs": len(family_rows),
-                "mean_delta_max_f_gram": mean(
-                    row["delta_max_f_gram"] for row in family_rows if row["delta_max_f_gram"] is not None
+                "mean_delta_max_guardrail": mean(
+                    row["delta_max_guardrail"] for row in family_rows if row["delta_max_guardrail"] is not None
                 ),
-                "mean_delta_max_edge_plane": mean(
-                    row["delta_max_edge_plane"]
+                "mean_delta_max_primary": mean(
+                    row["delta_max_primary"]
                     for row in family_rows
-                    if row["delta_max_edge_plane"] is not None
+                    if row["delta_max_primary"] is not None
                 ),
-                "mean_delta_p90_f_gram": mean(
-                    row["delta_p90_f_gram"] for row in family_rows if row["delta_p90_f_gram"] is not None
+                "mean_delta_p90_guardrail": mean(
+                    row["delta_p90_guardrail"] for row in family_rows if row["delta_p90_guardrail"] is not None
                 ),
-                "mean_delta_p90_edge_plane": mean(
-                    row["delta_p90_edge_plane"]
+                "mean_delta_p90_primary": mean(
+                    row["delta_p90_primary"]
                     for row in family_rows
-                    if row["delta_p90_edge_plane"] is not None
+                    if row["delta_p90_primary"] is not None
                 ),
-                "mean_delta_mean_f_gram": mean(
-                    row["delta_mean_f_gram"] for row in family_rows if row["delta_mean_f_gram"] is not None
+                "mean_delta_mean_guardrail": mean(
+                    row["delta_mean_guardrail"] for row in family_rows if row["delta_mean_guardrail"] is not None
                 ),
-                "mean_delta_mean_edge_plane": mean(
-                    row["delta_mean_edge_plane"]
+                "mean_delta_mean_primary": mean(
+                    row["delta_mean_primary"]
                     for row in family_rows
-                    if row["delta_mean_edge_plane"] is not None
+                    if row["delta_mean_primary"] is not None
                 ),
-                "mean_iqr_normalized_delta_max_f_gram": mean(
-                    row["iqr_normalized_delta_max_f_gram"]
+                "mean_iqr_normalized_delta_max_guardrail": mean(
+                    row["iqr_normalized_delta_max_guardrail"]
                     for row in family_rows
-                    if row["iqr_normalized_delta_max_f_gram"] is not None
+                    if row["iqr_normalized_delta_max_guardrail"] is not None
                 ),
-                "mean_iqr_normalized_delta_max_edge_plane": mean(
-                    row["iqr_normalized_delta_max_edge_plane"]
+                "mean_iqr_normalized_delta_max_primary": mean(
+                    row["iqr_normalized_delta_max_primary"]
                     for row in family_rows
-                    if row["iqr_normalized_delta_max_edge_plane"] is not None
+                    if row["iqr_normalized_delta_max_primary"] is not None
                 ),
-                f"mean_top{topk}_inflation_f_gram": mean(
-                    row["topk_inflation_f_gram"] for row in family_rows if row["topk_inflation_f_gram"] is not None
+                f"mean_top{topk}_inflation_guardrail": mean(
+                    row["topk_inflation_guardrail"] for row in family_rows if row["topk_inflation_guardrail"] is not None
                 ),
-                f"mean_top{topk}_inflation_edge_plane": mean(
-                    row["topk_inflation_edge_plane"]
+                f"mean_top{topk}_inflation_primary": mean(
+                    row["topk_inflation_primary"]
                     for row in family_rows
-                    if row["topk_inflation_edge_plane"] is not None
+                    if row["topk_inflation_primary"] is not None
                 ),
-                "edge_plane_better_delta_max_count": sum(
+                "primary_better_delta_max_count": sum(
                     1
                     for row in family_rows
-                    if row["delta_max_f_gram"] is not None
-                    and row["delta_max_edge_plane"] is not None
-                    and float(row["delta_max_edge_plane"]) < float(row["delta_max_f_gram"])
+                    if row["delta_max_guardrail"] is not None
+                    and row["delta_max_primary"] is not None
+                    and float(row["delta_max_primary"]) < float(row["delta_max_guardrail"])
                 ),
-                "edge_plane_better_delta_p90_count": sum(
+                "primary_better_delta_p90_count": sum(
                     1
                     for row in family_rows
-                    if row["delta_p90_f_gram"] is not None
-                    and row["delta_p90_edge_plane"] is not None
-                    and float(row["delta_p90_edge_plane"]) < float(row["delta_p90_f_gram"])
+                    if row["delta_p90_guardrail"] is not None
+                    and row["delta_p90_primary"] is not None
+                    and float(row["delta_p90_primary"]) < float(row["delta_p90_guardrail"])
                 ),
             }
         )
@@ -287,14 +293,16 @@ def build_report(
     run_id: str,
     pair_rows: Sequence[Dict[str, Any]],
     topk: int,
+    guardrail_metric: str,
+    primary_metric: str,
 ) -> str:
     representative: List[Tuple[float, int, str]] = []
     for row in pair_rows:
-        if row["delta_max_f_gram"] is None or row["delta_max_edge_plane"] is None:
+        if row["delta_max_guardrail"] is None or row["delta_max_primary"] is None:
             continue
         representative.append(
             (
-                float(row["delta_max_f_gram"]) - float(row["delta_max_edge_plane"]),
+                float(row["delta_max_guardrail"]) - float(row["delta_max_primary"]),
                 int(row["pair_id"]),
                 str(row["family"]),
             )
@@ -309,17 +317,17 @@ def build_report(
         "",
         "## Paired Quietness Summary",
         "",
-        f"- mean_delta_max_{GUARDRAIL_METRIC}: {render_float(mean(row['delta_max_f_gram'] for row in pair_rows if row['delta_max_f_gram'] is not None))}",
-        f"- mean_delta_max_{PRIMARY_METRIC}: {render_float(mean(row['delta_max_edge_plane'] for row in pair_rows if row['delta_max_edge_plane'] is not None))}",
-        f"- mean_delta_p90_{GUARDRAIL_METRIC}: {render_float(mean(row['delta_p90_f_gram'] for row in pair_rows if row['delta_p90_f_gram'] is not None))}",
-        f"- mean_delta_p90_{PRIMARY_METRIC}: {render_float(mean(row['delta_p90_edge_plane'] for row in pair_rows if row['delta_p90_edge_plane'] is not None))}",
-        f"- mean_iqr_normalized_delta_max_{GUARDRAIL_METRIC}: {render_float(mean(row['iqr_normalized_delta_max_f_gram'] for row in pair_rows if row['iqr_normalized_delta_max_f_gram'] is not None))}",
-        f"- mean_iqr_normalized_delta_max_{PRIMARY_METRIC}: {render_float(mean(row['iqr_normalized_delta_max_edge_plane'] for row in pair_rows if row['iqr_normalized_delta_max_edge_plane'] is not None))}",
+        f"- mean_delta_max_{guardrail_metric}: {render_float(mean(row['delta_max_guardrail'] for row in pair_rows if row['delta_max_guardrail'] is not None))}",
+        f"- mean_delta_max_{primary_metric}: {render_float(mean(row['delta_max_primary'] for row in pair_rows if row['delta_max_primary'] is not None))}",
+        f"- mean_delta_p90_{guardrail_metric}: {render_float(mean(row['delta_p90_guardrail'] for row in pair_rows if row['delta_p90_guardrail'] is not None))}",
+        f"- mean_delta_p90_{primary_metric}: {render_float(mean(row['delta_p90_primary'] for row in pair_rows if row['delta_p90_primary'] is not None))}",
+        f"- mean_iqr_normalized_delta_max_{guardrail_metric}: {render_float(mean(row['iqr_normalized_delta_max_guardrail'] for row in pair_rows if row['iqr_normalized_delta_max_guardrail'] is not None))}",
+        f"- mean_iqr_normalized_delta_max_{primary_metric}: {render_float(mean(row['iqr_normalized_delta_max_primary'] for row in pair_rows if row['iqr_normalized_delta_max_primary'] is not None))}",
         "",
         "## Spike Inflation",
         "",
-        f"- mean_top{topk}_inflation_{GUARDRAIL_METRIC}_vs_clean_p90: {render_float(mean(row['topk_inflation_f_gram'] for row in pair_rows if row['topk_inflation_f_gram'] is not None))}",
-        f"- mean_top{topk}_inflation_{PRIMARY_METRIC}_vs_clean_p90: {render_float(mean(row['topk_inflation_edge_plane'] for row in pair_rows if row['topk_inflation_edge_plane'] is not None))}",
+        f"- mean_top{topk}_inflation_{guardrail_metric}_vs_clean_p90: {render_float(mean(row['topk_inflation_guardrail'] for row in pair_rows if row['topk_inflation_guardrail'] is not None))}",
+        f"- mean_top{topk}_inflation_{primary_metric}_vs_clean_p90: {render_float(mean(row['topk_inflation_primary'] for row in pair_rows if row['topk_inflation_primary'] is not None))}",
         "",
         "## Representative Pairs",
         "",
@@ -329,7 +337,7 @@ def build_report(
     else:
         for delta_gap, pair_id, family in representative[:5]:
             lines.append(
-                f"- pair_id={pair_id} family={family} delta_max_{GUARDRAIL_METRIC}_minus_{PRIMARY_METRIC}={render_float(delta_gap)}"
+                f"- pair_id={pair_id} family={family} delta_max_{guardrail_metric}_minus_{primary_metric}={render_float(delta_gap)}"
             )
     lines.extend(
         [
@@ -348,13 +356,17 @@ def build_manifest(
     seam_jsonl_path: Path,
     pair_rows: Sequence[Dict[str, Any]],
     topk: int,
+    guardrail_metric: str,
+    primary_metric: str,
+    artifact_prefix: str,
 ) -> Dict[str, Any]:
     return {
         "run_id": run_id,
         "schema_version": SCHEMA_VERSION,
         "method_id": METHOD_ID,
-        "primary_metric_id": PRIMARY_METRIC,
-        "guardrail_metric_id": GUARDRAIL_METRIC,
+        "primary_metric_id": primary_metric,
+        "guardrail_metric_id": guardrail_metric,
+        "artifact_prefix": artifact_prefix,
         "token_csv_path": repo_relative_or_posix(token_csv_path),
         "token_csv_sha256": sha256_file(token_csv_path),
         "seam_jsonl_path": repo_relative_or_posix(seam_jsonl_path),
@@ -382,18 +394,42 @@ def main() -> int:
     seam_jsonl_path = (REPO_ROOT / args.seam_jsonl).resolve()
     out_dir = (REPO_ROOT / args.out_dir).resolve()
     run_id = args.run_id or out_dir.name
+    primary_metric = str(args.primary_metric)
+    guardrail_metric = str(args.guardrail_metric)
+    artifact_prefix = str(args.artifact_prefix)
 
     token_rows = read_csv(token_csv_path)
     seam_rows = read_jsonl(seam_jsonl_path)
-    pair_rows = build_pair_rows(token_rows, seam_rows, topk=args.topk)
+    pair_rows = build_pair_rows(
+        token_rows,
+        seam_rows,
+        topk=args.topk,
+        guardrail_metric=guardrail_metric,
+        primary_metric=primary_metric,
+    )
     family_rows = summarize_families(pair_rows, topk=args.topk)
-    report = build_report(run_id, pair_rows, topk=args.topk)
-    manifest = build_manifest(run_id, token_csv_path, seam_jsonl_path, pair_rows, topk=args.topk)
+    report = build_report(
+        run_id,
+        pair_rows,
+        topk=args.topk,
+        guardrail_metric=guardrail_metric,
+        primary_metric=primary_metric,
+    )
+    manifest = build_manifest(
+        run_id,
+        token_csv_path,
+        seam_jsonl_path,
+        pair_rows,
+        topk=args.topk,
+        guardrail_metric=guardrail_metric,
+        primary_metric=primary_metric,
+        artifact_prefix=artifact_prefix,
+    )
 
     manifest_path = out_dir / "manifest.json"
-    pair_summary_path = out_dir / "gate6b_seam_pair_summary.csv"
-    family_summary_path = out_dir / "gate6b_seam_family_summary.csv"
-    report_path = out_dir / "gate6b_seam_report.md"
+    pair_summary_path = out_dir / f"{artifact_prefix}_pair_summary.csv"
+    family_summary_path = out_dir / f"{artifact_prefix}_family_summary.csv"
+    report_path = out_dir / f"{artifact_prefix}_report.md"
     checksums_path = out_dir / "checksums.json"
 
     write_json(manifest_path, manifest)
@@ -404,16 +440,16 @@ def main() -> int:
             "family",
             "clean_sample_id",
             "perturbed_sample_id",
-            "delta_max_f_gram",
-            "delta_max_edge_plane",
-            "delta_p90_f_gram",
-            "delta_p90_edge_plane",
-            "delta_mean_f_gram",
-            "delta_mean_edge_plane",
-            "iqr_normalized_delta_max_f_gram",
-            "iqr_normalized_delta_max_edge_plane",
-            "topk_inflation_f_gram",
-            "topk_inflation_edge_plane",
+            "delta_max_guardrail",
+            "delta_max_primary",
+            "delta_p90_guardrail",
+            "delta_p90_primary",
+            "delta_mean_guardrail",
+            "delta_mean_primary",
+            "iqr_normalized_delta_max_guardrail",
+            "iqr_normalized_delta_max_primary",
+            "topk_inflation_guardrail",
+            "topk_inflation_primary",
         ],
         rows=pair_rows,
     )
@@ -422,18 +458,18 @@ def main() -> int:
         fieldnames=[
             "family",
             "n_pairs",
-            "mean_delta_max_f_gram",
-            "mean_delta_max_edge_plane",
-            "mean_delta_p90_f_gram",
-            "mean_delta_p90_edge_plane",
-            "mean_delta_mean_f_gram",
-            "mean_delta_mean_edge_plane",
-            "mean_iqr_normalized_delta_max_f_gram",
-            "mean_iqr_normalized_delta_max_edge_plane",
-            f"mean_top{args.topk}_inflation_f_gram",
-            f"mean_top{args.topk}_inflation_edge_plane",
-            "edge_plane_better_delta_max_count",
-            "edge_plane_better_delta_p90_count",
+            "mean_delta_max_guardrail",
+            "mean_delta_max_primary",
+            "mean_delta_p90_guardrail",
+            "mean_delta_p90_primary",
+            "mean_delta_mean_guardrail",
+            "mean_delta_mean_primary",
+            "mean_iqr_normalized_delta_max_guardrail",
+            "mean_iqr_normalized_delta_max_primary",
+            f"mean_top{args.topk}_inflation_guardrail",
+            f"mean_top{args.topk}_inflation_primary",
+            "primary_better_delta_max_count",
+            "primary_better_delta_p90_count",
         ],
         rows=family_rows,
     )
