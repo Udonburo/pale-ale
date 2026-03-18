@@ -48,6 +48,7 @@ ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
 - [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md): Gate8 benchmark constitution
 - [`14_GATE8_CONFLICT_TAXONOMY.md`](14_GATE8_CONFLICT_TAXONOMY.md): Gate8 semi-closed conflict taxonomy
 - [`15_GATE8_LABEL_AND_PROVENANCE_RULES.md`](15_GATE8_LABEL_AND_PROVENANCE_RULES.md): Gate8 label and provenance contract
+- [`16_GATE8_GENERATION_STAGE_SMOKE.md`](16_GATE8_GENERATION_STAGE_SMOKE.md): Gate8 first materialized generation-stage smoke
 - [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
 - [`tools/README_gate7.md`](tools/README_gate7.md): Gate7 progression-leak smoke workflow
 - [`tools/README_gate8.md`](tools/README_gate8.md): Gate8 benchmark skeleton workflow
@@ -231,6 +232,7 @@ MSRV: Rust 1.65+
 - Carry Gate6 in a two-layer form: `gate6f` as operational candidate, `gate6h` as pure object-native north star
 - Keep Gate7 as dynamic motif comparison only, and do not unlock field aggregation until seam-tail discipline is actually cleared
 - Start Gate8 from benchmark constitution and conflict taxonomy before any large semi-closed generation batch
+- Keep Gate8 generation-stage smoke strictly at benchmark materialization until the four-layer contract is fully auditable
 
 ## License
 

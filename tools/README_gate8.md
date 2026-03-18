@@ -50,3 +50,37 @@ It does not yet:
 - run any Gate6 or Gate7 candidate
 
 Those belong to the next generation stage, after the constitution is accepted.
+
+## 4) Materialize the first Gate8 generation-stage smoke
+
+```powershell
+python tools/materialize_gate8_semiclosed_conflict.py --constitution-dir runs/gate8_constitution_skeleton --out-dir runs/gate8a_generation_smoke --run-id gate8a_generation_smoke
+```
+
+Outputs:
+
+- `manifest.json`
+- `conflict_plan.json`
+- `label_contract.json`
+- `world_plan.json`
+- `rendering_plan.json`
+- `target_plan.json`
+- `sample_index.jsonl`
+- `world_truth.jsonl`
+- `retrieval_renderings.jsonl`
+- `answer_targets.jsonl`
+- `benchmark_rows.jsonl`
+- `checksums.json`
+
+## 5) What the generation-stage smoke does
+
+The generation-stage smoke still does not run candidate metrics.
+
+It only materializes the four benchmark layers:
+
+- world truth
+- retrieval rendering
+- answer target
+- token/span labels
+
+under the fixed Gate8 constitution.

@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""Regression tests for Gate8 semi-closed conflict materialization."""
+
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
+    def test_materializer_emits_expected_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_str:
+            tmp_dir = Path(tmp_dir_str)
+            constitution_dir = tmp_dir / "constitution"
+            out_dir = tmp_dir / "materialized"
+            self._run_scaffold(constitution_dir, samples_per_cell=2)
+            self._run_materializer(constitution_dir, out_dir)
+
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            sample_index_rows = self._read_jsonl(out_dir / "sample_index.jsonl")
+            world_truth_rows = self._read_jsonl(out_dir / "world_truth.jsonl")
+            rendering_rows = self._read_jsonl(out_dir / "retrieval_renderings.jsonl")
+            target_rows = self._read_jsonl(out_dir / "answer_targets.jsonl")
+            benchmark_rows = self._read_jsonl(out_dir / "benchmark_rows.jsonl")
+
+            self.assertEqual(manifest["generation_stage"], "materialized_generation")
+            self.assertEqual(manifest["provenance_binding_mode"], "realized_artifacts")
+            self.assertEqual(manifest["n_samples_total"], 8)
+            self.assertEqual(len(sample_index_rows), 8)
+            self.assertEqual(len(world_truth_rows), 8)
+            self.assertEqual(len(rendering_rows), 8)
+            self.assertEqual(len(target_rows), 8)
+            self.assertEqual(len(benchmark_rows), 8)
+            self.assertNotEqual(
+                manifest["sample_index_sha256"],
+                manifest["benchmark_rows_sha256"],
+            )
+            self.assertEqual(
+                manifest["constitution_manifest_sha256"],
+                self._sha256(constitution_dir / "manifest.json"),
+            )
+
+            direct_bad = next(
+                row
+                for row in benchmark_rows
+                if row["cell_id"] == "direct_contradiction"
+                and row["answer_target_type"] == "conflict_following_wrong_answer"
+            )
+            self.assertGreater(len(direct_bad["label_span_conflict"]), 0)
+            self.assertGreater(len(direct_bad["label_span_defect"]), 0)
+            self.assertGreater(sum(token["label_token"] for token in direct_bad["label_token"]), 0)
+
+            noisy_clean = next(row for row in benchmark_rows if row["cell_id"] == "surface_noisy_clean")
+            self.assertEqual(noisy_clean["retrieval_conflict_chunk_ids"], [])
+            self.assertEqual(noisy_clean["label_span_conflict"], [])
+            self.assertEqual(noisy_clean["label_span_defect"], [])
+
+    def test_materializer_is_deterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_str:
+            tmp_dir = Path(tmp_dir_str)
+            constitution_dir = tmp_dir / "constitution"
+            out_a = tmp_dir / "out_a"
+            out_b = tmp_dir / "out_b"
+            self._run_scaffold(constitution_dir, samples_per_cell=2)
+            self._run_materializer(constitution_dir, out_a)
+            self._run_materializer(constitution_dir, out_b)
+
+            for filename in (
+                "manifest.json",
+                "world_plan.json",
+                "rendering_plan.json",
+                "target_plan.json",
+                "sample_index.jsonl",
+                "world_truth.jsonl",
+                "retrieval_renderings.jsonl",
+                "answer_targets.jsonl",
+                "benchmark_rows.jsonl",
+                "checksums.json",
+            ):
+                self.assertEqual(
+                    (out_a / filename).read_text(encoding="utf-8"),
+                    (out_b / filename).read_text(encoding="utf-8"),
+                )
+
+    def _run_scaffold(self, out_dir: Path, samples_per_cell: int) -> None:
+        script = REPO_ROOT / "tools" / "generate_gate8_semiclosed_conflict.py"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--out-dir",
+                str(out_dir),
+                "--run-id",
+                "gate8_constitution_test",
+                "--samples-per-cell",
+                str(samples_per_cell),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def _run_materializer(self, constitution_dir: Path, out_dir: Path) -> None:
+        script = REPO_ROOT / "tools" / "materialize_gate8_semiclosed_conflict.py"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--constitution-dir",
+                str(constitution_dir),
+                "--out-dir",
+                str(out_dir),
+                "--run-id",
+                "gate8_materialized_test",
+                "--seed",
+                "11",
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    @staticmethod
+    def _read_jsonl(path: Path) -> list[dict]:
+        rows = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+        return rows
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        import hashlib
+
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+if __name__ == "__main__":
+    unittest.main()
