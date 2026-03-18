@@ -108,3 +108,35 @@ It is built from the holonomy of the three edge-plane normals:
 - `span(V, Splus)`
 - `span(Splus, Sminus)`
 - `span(Sminus, V)`
+
+## 7) Evaluate object-native Seam pairs directly
+
+This evaluator does not use `compat_local8`.
+It reads the Gate6-B token telemetry and the existing Seam pair definition, then emits
+Gate5-style quietness headlines for:
+
+- `edge_plane_loop_projective_chordal_v1`
+- `score_F_gram_loop_v1`
+
+Run:
+
+```powershell
+python tools/evaluate_gate6_native_object_seam_pairs.py --token-csv runs/gate6b_seam_full/gate6b_token_telemetry.csv --seam-jsonl runs/gate5_seam_64e2e/seam_v0.jsonl --out-dir runs/gate6b_seam_pairs_full --run-id gate6b_seam_pairs_full
+```
+
+Outputs:
+
+- `manifest.json`
+- `gate6b_seam_pair_summary.csv`
+- `gate6b_seam_family_summary.csv`
+- `gate6b_seam_report.md`
+- `checksums.json`
+
+Headline vocabulary is aligned with Gate5:
+
+- `mean_delta_max_*`
+- `mean_delta_p90_*`
+- `mean_iqr_normalized_delta_max_*`
+- `mean_top10_inflation_*_vs_clean_p90`
+
+Rows with `loop_outcome != none` are deterministically skipped from pair statistics.
