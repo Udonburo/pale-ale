@@ -196,6 +196,53 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         self.assertAlmostEqual(float(rows[0]["mean_sample_mean_leakage_only"]), 0.03, places=10)
         self.assertAlmostEqual(float(rows[0]["mean_sample_mean_closure_defect"]), 0.0025, places=10)
 
+    def test_bridge_report_carries_failure_read(self):
+        report = batch.build_rotation_leakage_bridge_report(
+            run_id="gate8_bridge_test",
+            per_sample_rows=[{"sample_id": 1}],
+            by_cell_rows=[
+                {
+                    "cell_id": "surface_noisy_clean",
+                    "n_samples": 1,
+                    "n_transition_rows_valid": 10,
+                    "mean_sample_mean_rotation_only": 0.6,
+                    "mean_sample_mean_leakage_only": 0.3,
+                    "mean_sample_mean_closure_defect": 0.5,
+                    "mean_sample_p90_rotation_only": 0.7,
+                    "mean_sample_p90_leakage_only": 0.4,
+                    "mean_sample_p90_closure_defect": 0.61,
+                },
+                {
+                    "cell_id": "direct_contradiction",
+                    "n_samples": 1,
+                    "n_transition_rows_valid": 10,
+                    "mean_sample_mean_rotation_only": 0.54,
+                    "mean_sample_mean_leakage_only": 0.25,
+                    "mean_sample_mean_closure_defect": 0.51,
+                    "mean_sample_p90_rotation_only": 0.64,
+                    "mean_sample_p90_leakage_only": 0.39,
+                    "mean_sample_p90_closure_defect": 0.59,
+                },
+                {
+                    "cell_id": "distributed_incompatibility",
+                    "n_samples": 1,
+                    "n_transition_rows_valid": 10,
+                    "mean_sample_mean_rotation_only": 0.57,
+                    "mean_sample_mean_leakage_only": 0.31,
+                    "mean_sample_mean_closure_defect": 0.50,
+                    "mean_sample_p90_rotation_only": 0.65,
+                    "mean_sample_p90_leakage_only": 0.53,
+                    "mean_sample_p90_closure_defect": 0.62,
+                },
+            ],
+        )
+
+        self.assertIn("## Failure Read", report)
+        self.assertIn("highest mean is surface_noisy_clean=0.600000", report)
+        self.assertIn("lowest mean is direct_contradiction=0.250000", report)
+        self.assertIn("highest p90 is distributed_incompatibility=0.620000, runner-up is surface_noisy_clean=0.610000", report)
+        self.assertIn("bridge v1 should be read as an explanatory-cut failure", report)
+
 
 if __name__ == "__main__":
     raise SystemExit(unittest.main())

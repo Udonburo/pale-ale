@@ -776,6 +776,33 @@ def build_rotation_leakage_bridge_report(
     per_sample_rows: Sequence[Dict[str, Any]],
     by_cell_rows: Sequence[Dict[str, Any]],
 ) -> str:
+    by_cell_ordered = list(by_cell_rows)
+    rotation_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_mean_rotation_only"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_mean_rotation_only"]),
+        reverse=True,
+    )
+    leakage_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_mean_leakage_only"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_mean_leakage_only"]),
+    )
+    closure_p90_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_p90_closure_defect"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_p90_closure_defect"]),
+        reverse=True,
+    )
     lines = [
         "# Gate8 Rotation/Leakage Bridge Diagnostics",
         "",
@@ -795,12 +822,53 @@ def build_rotation_leakage_bridge_report(
         "",
         f"- n_samples_total: {len(per_sample_rows)}",
         f"- n_cells_total: {len(by_cell_rows)}",
+    ]
+    if rotation_ranked and leakage_ranked and closure_p90_ranked:
+        closure_runner_up = (
+            None
+            if len(closure_p90_ranked) < 2
+            else closure_p90_ranked[1]
+        )
+        lines.extend(
+            [
+                "",
+                "## Failure Read",
+                "",
+                (
+                    "- rotation_only does not isolate conflict cells: "
+                    f"highest mean is {rotation_ranked[0]['cell_id']}="
+                    f"{float(rotation_ranked[0]['mean_sample_mean_rotation_only']):.6f}"
+                ),
+                (
+                    "- leakage_only does not behave like a clean-negative-friendly span-escape cut: "
+                    f"lowest mean is {leakage_ranked[0]['cell_id']}="
+                    f"{float(leakage_ranked[0]['mean_sample_mean_leakage_only']):.6f}"
+                ),
+                (
+                    "- closure_defect does not cleanly isolate distributed incompatibility: "
+                    f"highest p90 is {closure_p90_ranked[0]['cell_id']}="
+                    f"{float(closure_p90_ranked[0]['mean_sample_p90_closure_defect']):.6f}"
+                    + (
+                        ""
+                        if closure_runner_up is None
+                        else (
+                            f", runner-up is {closure_runner_up['cell_id']}="
+                            f"{float(closure_runner_up['mean_sample_p90_closure_defect']):.6f}"
+                        )
+                    )
+                ),
+                "- bridge v1 should be read as an explanatory-cut failure, not as a validated separation.",
+            ]
+        )
+    lines.extend(
+        [
         "",
         "## Cell Aggregates",
         "",
         "| cell_id | n_samples | n_transition_rows_valid | mean_sample_mean_rotation_only | mean_sample_mean_leakage_only | mean_sample_mean_closure_defect | mean_sample_p90_rotation_only | mean_sample_p90_leakage_only | mean_sample_p90_closure_defect |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
-    ]
+        ]
+    )
     for row in by_cell_rows:
         lines.append(
             "| "
