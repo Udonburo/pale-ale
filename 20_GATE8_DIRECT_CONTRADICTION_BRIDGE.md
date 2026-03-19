@@ -1,6 +1,6 @@
 # Gate8 Direct Contradiction Bridge
 
-Status: spec-only draft
+Status: spec fixed, first burn recorded
 Role: diagnostic bridge v3 spec, not standing spec
 Date: 2026-03-20
 
@@ -248,4 +248,38 @@ This bridge is ready for implementation only if:
 - falsifiers are written before code
 - the non-promotion rule remains explicit
 
-Until then, this remains spec-only.
+## 13. First Burn
+
+Runs:
+
+- `gate8m_128r_direct_contradiction_bridge_execution`
+- `gate8n_200r_direct_contradiction_bridge_execution`
+
+Primary read:
+
+- standing remains unchanged; this bridge stays diagnostic-only
+- `dual_anchor_contradiction_gap` does not materially separate `consistent_answer` from `conflict_following_wrong_answer`
+- the split remains near zero at both scales rather than producing a clear conflict-side shift for the wrong-answer branch
+
+Observed 128-row summary:
+
+- `consistent_answer mean_dual_anchor_contradiction_gap = -0.000017`
+- `conflict_following_wrong_answer mean_dual_anchor_contradiction_gap = 0.000055`
+- separation = `0.000072`
+
+Observed 200-row summary:
+
+- `consistent_answer mean_dual_anchor_contradiction_gap = 0.000850`
+- `conflict_following_wrong_answer mean_dual_anchor_contradiction_gap = 0.001168`
+- separation = `0.000317`
+
+Hygiene read:
+
+- support and conflict anchor coverage remain non-collapsed in both splits
+- so the failure is not best described as simple anchor disappearance
+
+Current conclusion:
+
+- this bridge does not clear its own falsifier bar
+- `direct_contradiction` on the current boundary is still not legible as dual-anchor closure preference
+- Gate8 therefore remains `standing strong, bridge unresolved`, with this v3 bridge added to the negative ledger rather than promoted
