@@ -86,6 +86,7 @@ Gate8 now has:
 - scale-up evidence through 200 rows
 - explicit mixed-granularity court threading across constitution, materialization, execution, and per-candidate evaluation
 - diagnostic-only bridge outputs for `rotation_only`, `leakage_only`, and `closure_defect`
+- artifact-level bridge failure read in the emitted diagnostic report itself
 
 New tooling and contract tightening live in:
 
@@ -218,6 +219,7 @@ That earns:
 
 - a falsifiable bridge surface on the fixed court
 - manifest-bound diagnostic outputs beside the standing artifacts
+- diagnostic reports that explicitly state what bridge v1 failed to separate
 
 That does not earn:
 

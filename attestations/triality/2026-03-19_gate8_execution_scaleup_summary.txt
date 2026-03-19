@@ -25,15 +25,19 @@ bridge_artifacts:
   sha256=6e9f7310bf0ca683892baddc194c682eb16203a43597f24c244a0f61fd12dfa3
 - runs/gate8i_128r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
   sha256=ff05fd4e037da8316c28a0d7baff7542cc6d50ae8a6aed9d795af54229caad46
+- runs/gate8i_128r_bridge_candidate_execution/diagnostics/rotation_leakage_bridge_report.md
+  sha256=22ffa11e13a2901ab4c5491da19e152a6d50d118e235efe39174281ac0dad41d
 - runs/gate8j_200r_bridge_candidate_execution/manifest.json
-  sha256=e9ef1282fc56b565889d44c245dffab1b7aee366efeed8d74cd1506e99f35210
+  sha256=342d577e6b22b0bd248265ac54d6eb6a92e650e12b7e95533f0892d8b0eabf69
 - runs/gate8j_200r_bridge_candidate_execution/candidate_summary.csv
   sha256=fb6cdd2deb388a5a38ddb47dec4be08c85d4d1428d5f06e191d7437ca77e0eb6
 - runs/gate8j_200r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
   sha256=7115b4a4bed2b21de11dde0bd315c89cdfad5c321ec03ded38646209c32107cf
+- runs/gate8j_200r_bridge_candidate_execution/diagnostics/rotation_leakage_bridge_report.md
+  sha256=9daf2cd2f97c53ba2cf56491bf909f7ab3fad016fb1c0c43d8a543807ba57f96
 
 binding:
-- bridge manifests bind code_git_commit=517d81b8dcc5b1ab2994c8d6e3d164d51dc6783e
+- bridge manifests bind code_git_commit=d13cddbb64546a450cedf0f8fa741c50b4e3aede
 - quietness_pairing_rule=shared_world_id_v1
 - candidate_granularity_status=mixed_candidate_label_granularity_v1
 - diagnostic_bridge.method_id=gate8_rotation_leakage_bridge_v1
@@ -68,6 +72,7 @@ interpretation:
 - the bridge rerun does not change the numerical standing read
 - mixed-granularity caveat remains explicit in the artifacts
 - diagnostic bridge outputs are now real execution artifacts rather than doctrine-only placeholders
+- rotation_leakage_bridge_report.md now carries the negative read inside the artifact itself
 - the first bridge read does not cleanly separate lawful seam motion from conflict defect
 - direct_contradiction unexpectedly has the lowest mean leakage_only in both reruns
 - distributed_incompatibility shows only a weak closure_defect p90 edge over surface_noisy_clean
