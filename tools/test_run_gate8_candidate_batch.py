@@ -354,6 +354,194 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         self.assertIn("highest mean support_reanchor_cost is surface_noisy_clean=0.210000", report)
         self.assertIn("highest p90 support_conditioned_closure is direct_contradiction=0.510000", report)
 
+    def test_dual_anchor_contradiction_gap_prefers_support_anchor_when_support_closes_better(self):
+        support_anchor = batch.build_support_anchor_object(
+            [
+                {
+                    "V_raw_native": [1.0, 0.0, 0.0, 0.0],
+                    "Splus_raw_native": [1.0, 0.0, 0.0, 0.0],
+                    "Sminus_raw_native": [1.0, 0.0, 0.0, 0.0],
+                }
+            ]
+        )
+        conflict_anchor = batch.build_support_anchor_object(
+            [
+                {
+                    "V_raw_native": [0.0, 1.0, 0.0, 0.0],
+                    "Splus_raw_native": [0.0, 1.0, 0.0, 0.0],
+                    "Sminus_raw_native": [0.0, 1.0, 0.0, 0.0],
+                }
+            ]
+        )
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        current_basis[:, 1] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 1] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.5, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0 / np.sqrt(2.0)
+        next_coords[1, 0] = 1.0 / np.sqrt(2.0)
+
+        metrics = batch.compute_dual_anchor_contradiction_gap_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=2,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=2,
+            support_anchor_basis=np.asarray(support_anchor["basis"], dtype=np.float64),
+            support_anchor_rank=int(support_anchor["rank_local"]),
+            conflict_anchor_basis=np.asarray(conflict_anchor["basis"], dtype=np.float64),
+            conflict_anchor_rank=int(conflict_anchor["rank_local"]),
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["support_anchor_coverage"]), 0.5, places=10)
+        self.assertAlmostEqual(float(metrics["conflict_anchor_coverage"]), 0.5, places=10)
+        self.assertAlmostEqual(float(metrics["dual_anchor_contradiction_gap"]), -0.9375, places=10)
+
+    def test_dual_anchor_contradiction_gap_prefers_conflict_anchor_when_conflict_closes_better(self):
+        support_anchor = batch.build_support_anchor_object(
+            [
+                {
+                    "V_raw_native": [1.0, 0.0, 0.0, 0.0],
+                    "Splus_raw_native": [1.0, 0.0, 0.0, 0.0],
+                    "Sminus_raw_native": [1.0, 0.0, 0.0, 0.0],
+                }
+            ]
+        )
+        conflict_anchor = batch.build_support_anchor_object(
+            [
+                {
+                    "V_raw_native": [0.0, 1.0, 0.0, 0.0],
+                    "Splus_raw_native": [0.0, 1.0, 0.0, 0.0],
+                    "Sminus_raw_native": [0.0, 1.0, 0.0, 0.0],
+                }
+            ]
+        )
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        current_basis[:, 1] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 1] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.5, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0 / np.sqrt(2.0)
+        next_coords[1, 0] = 1.0 / np.sqrt(2.0)
+
+        metrics = batch.compute_dual_anchor_contradiction_gap_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=2,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=2,
+            support_anchor_basis=np.asarray(support_anchor["basis"], dtype=np.float64),
+            support_anchor_rank=int(support_anchor["rank_local"]),
+            conflict_anchor_basis=np.asarray(conflict_anchor["basis"], dtype=np.float64),
+            conflict_anchor_rank=int(conflict_anchor["rank_local"]),
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["support_anchor_coverage"]), 0.5, places=10)
+        self.assertAlmostEqual(float(metrics["conflict_anchor_coverage"]), 0.5, places=10)
+        self.assertAlmostEqual(float(metrics["dual_anchor_contradiction_gap"]), 0.9375, places=10)
+
+    def test_direct_contradiction_bridge_groups_by_answer_target_type(self):
+        rows = batch.build_direct_contradiction_by_answer_target_rows(
+            [
+                {
+                    "answer_target_type": "consistent_answer",
+                    "n_transition_rows_total": 4,
+                    "n_transition_rows_gap_valid": 4,
+                    "n_transition_rows_missing": 0,
+                    "mean_support_anchor_coverage": 0.8,
+                    "mean_conflict_anchor_coverage": 0.6,
+                    "mean_dual_anchor_contradiction_gap": -0.2,
+                    "p90_dual_anchor_contradiction_gap": -0.1,
+                },
+                {
+                    "answer_target_type": "conflict_following_wrong_answer",
+                    "n_transition_rows_total": 5,
+                    "n_transition_rows_gap_valid": 5,
+                    "n_transition_rows_missing": 0,
+                    "mean_support_anchor_coverage": 0.5,
+                    "mean_conflict_anchor_coverage": 0.7,
+                    "mean_dual_anchor_contradiction_gap": 0.3,
+                    "p90_dual_anchor_contradiction_gap": 0.4,
+                },
+                {
+                    "answer_target_type": "conflict_following_wrong_answer",
+                    "n_transition_rows_total": 3,
+                    "n_transition_rows_gap_valid": 2,
+                    "n_transition_rows_missing": 1,
+                    "mean_support_anchor_coverage": 0.4,
+                    "mean_conflict_anchor_coverage": 0.8,
+                    "mean_dual_anchor_contradiction_gap": 0.1,
+                    "p90_dual_anchor_contradiction_gap": 0.2,
+                },
+            ]
+        )
+
+        self.assertEqual([row["answer_target_type"] for row in rows], [
+            "conflict_following_wrong_answer",
+            "consistent_answer",
+        ])
+        wrong_row = rows[0]
+        self.assertEqual(wrong_row["n_samples"], 2)
+        self.assertEqual(wrong_row["n_transition_rows_gap_valid"], 7)
+        self.assertAlmostEqual(
+            float(wrong_row["mean_sample_mean_dual_anchor_contradiction_gap"]),
+            0.2,
+            places=10,
+        )
+        consistent_row = rows[1]
+        self.assertEqual(consistent_row["n_samples"], 1)
+        self.assertAlmostEqual(
+            float(consistent_row["mean_sample_mean_dual_anchor_contradiction_gap"]),
+            -0.2,
+            places=10,
+        )
+
+    def test_direct_contradiction_bridge_report_carries_split_read(self):
+        report = batch.build_direct_contradiction_bridge_report(
+            run_id="gate8_direct_bridge_test",
+            per_sample_rows=[{"sample_id": 1}, {"sample_id": 2}],
+            by_answer_target_rows=[
+                {
+                    "answer_target_type": "consistent_answer",
+                    "n_samples": 1,
+                    "n_transition_rows_gap_valid": 8,
+                    "mean_sample_mean_support_anchor_coverage": 0.81,
+                    "mean_sample_mean_conflict_anchor_coverage": 0.55,
+                    "mean_sample_mean_dual_anchor_contradiction_gap": -0.22,
+                    "mean_sample_p90_dual_anchor_contradiction_gap": -0.10,
+                },
+                {
+                    "answer_target_type": "conflict_following_wrong_answer",
+                    "n_samples": 1,
+                    "n_transition_rows_gap_valid": 8,
+                    "mean_sample_mean_support_anchor_coverage": 0.49,
+                    "mean_sample_mean_conflict_anchor_coverage": 0.72,
+                    "mean_sample_mean_dual_anchor_contradiction_gap": 0.31,
+                    "mean_sample_p90_dual_anchor_contradiction_gap": 0.45,
+                },
+            ],
+        )
+
+        self.assertIn("## First Read", report)
+        self.assertIn("consistent_answer mean dual_anchor_contradiction_gap = -0.220000", report)
+        self.assertIn(
+            "conflict_following_wrong_answer mean dual_anchor_contradiction_gap = 0.310000",
+            report,
+        )
+        self.assertIn("separation (wrong-answer minus consistent-answer) = 0.530000", report)
+
 
 if __name__ == "__main__":
     raise SystemExit(unittest.main())

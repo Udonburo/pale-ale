@@ -81,9 +81,19 @@ SUPPORT_BRIDGE_DOC_PATH = "19_GATE8_SUPPORT_CLOSURE_BRIDGE.md"
 SUPPORT_BRIDGE_PER_SAMPLE_FILENAME = "support_closure_per_sample.csv"
 SUPPORT_BRIDGE_BY_CELL_FILENAME = "support_closure_by_cell.csv"
 SUPPORT_BRIDGE_REPORT_FILENAME = "support_closure_bridge_report.md"
+DIRECT_BRIDGE_METHOD_ID = "gate8_direct_contradiction_bridge_v3"
+DIRECT_BRIDGE_STATUS = "diagnostic_only"
+DIRECT_BRIDGE_SOURCE_CANDIDATE_ID = "gate7c"
+DIRECT_BRIDGE_DOC_PATH = "20_GATE8_DIRECT_CONTRADICTION_BRIDGE.md"
+DIRECT_BRIDGE_PER_SAMPLE_FILENAME = "direct_contradiction_dual_anchor_per_sample.csv"
+DIRECT_BRIDGE_BY_TARGET_FILENAME = "direct_contradiction_dual_anchor_by_answer_target.csv"
+DIRECT_BRIDGE_REPORT_FILENAME = "direct_contradiction_dual_anchor_report.md"
 SUPPORT_ANCHOR_TARGET_FILENAME = "support_anchor.txt"
 SUPPORT_ANCHOR_TRIPLETS_FILENAME = "support_anchor_triplets.ndjson"
 SUPPORT_ANCHOR_META_FILENAME = "support_anchor_meta.json"
+CONFLICT_ANCHOR_TARGET_FILENAME = "conflict_anchor.txt"
+CONFLICT_ANCHOR_TRIPLETS_FILENAME = "conflict_anchor_triplets.ndjson"
+CONFLICT_ANCHOR_META_FILENAME = "conflict_anchor_meta.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -213,25 +223,38 @@ def build_orthogonal_projector(
     return basis_slice @ basis_slice.T
 
 
+def build_claim_lookup(
+    world_truth_rows: Sequence[Dict[str, Any]],
+    field_name: str,
+) -> Dict[str, str]:
+    claim_by_world_id: Dict[str, str] = {}
+    for row in world_truth_rows:
+        world_id = str(row.get("world_id") or "")
+        claim = str(row.get(field_name) or "").strip()
+        if not world_id:
+            raise ValueError("world_truth row missing world_id")
+        if not claim:
+            raise ValueError(f"world_truth row missing {field_name} for world_id={world_id}")
+        existing = claim_by_world_id.get(world_id)
+        if existing is not None and existing != claim:
+            raise ValueError(f"inconsistent {field_name} for world_id={world_id}")
+        claim_by_world_id[world_id] = claim
+    return claim_by_world_id
+
+
 def build_support_claim_lookup(
     world_truth_rows: Sequence[Dict[str, Any]],
 ) -> Dict[str, str]:
-    support_claim_by_world_id: Dict[str, str] = {}
-    for row in world_truth_rows:
-        world_id = str(row.get("world_id") or "")
-        support_claim = str(row.get("support_claim") or "").strip()
-        if not world_id:
-            raise ValueError("world_truth row missing world_id")
-        if not support_claim:
-            raise ValueError(f"world_truth row missing support_claim for world_id={world_id}")
-        existing = support_claim_by_world_id.get(world_id)
-        if existing is not None and existing != support_claim:
-            raise ValueError(f"inconsistent support_claim for world_id={world_id}")
-        support_claim_by_world_id[world_id] = support_claim
-    return support_claim_by_world_id
+    return build_claim_lookup(world_truth_rows, "support_claim")
 
 
-def build_support_anchor_object(
+def build_wrong_claim_lookup(
+    world_truth_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, str]:
+    return build_claim_lookup(world_truth_rows, "wrong_claim")
+
+
+def build_anchor_object(
     anchor_triplet_rows: Sequence[Dict[str, Any]],
 ) -> Dict[str, Any]:
     if not anchor_triplet_rows:
@@ -264,6 +287,12 @@ def build_support_anchor_object(
         "n_anchor_steps": len(anchor_triplet_rows),
         "n_anchor_columns": len(columns),
     }
+
+
+def build_support_anchor_object(
+    anchor_triplet_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    return build_anchor_object(anchor_triplet_rows)
 
 
 def compute_support_closure_bridge_metrics(
@@ -377,6 +406,76 @@ def compute_support_closure_bridge_metrics(
         "support_anchor_coverage": support_anchor_coverage,
         "support_reanchor_cost": support_reanchor_cost,
         "support_conditioned_closure": support_conditioned_closure,
+    }
+
+
+def compute_dual_anchor_contradiction_gap_metrics(
+    current_basis: np.ndarray,
+    current_singular_values: np.ndarray,
+    current_rank: int,
+    next_basis: np.ndarray,
+    next_singular_values: np.ndarray,
+    next_coords_local: np.ndarray,
+    next_rank: int,
+    support_anchor_basis: np.ndarray,
+    support_anchor_rank: int,
+    conflict_anchor_basis: np.ndarray,
+    conflict_anchor_rank: int,
+) -> Dict[str, Any]:
+    support_metrics = compute_support_closure_bridge_metrics(
+        current_basis=current_basis,
+        current_singular_values=current_singular_values,
+        current_rank=current_rank,
+        next_basis=next_basis,
+        next_singular_values=next_singular_values,
+        next_coords_local=next_coords_local,
+        next_rank=next_rank,
+        anchor_basis=support_anchor_basis,
+        anchor_rank=support_anchor_rank,
+    )
+    conflict_metrics = compute_support_closure_bridge_metrics(
+        current_basis=current_basis,
+        current_singular_values=current_singular_values,
+        current_rank=current_rank,
+        next_basis=next_basis,
+        next_singular_values=next_singular_values,
+        next_coords_local=next_coords_local,
+        next_rank=next_rank,
+        anchor_basis=conflict_anchor_basis,
+        anchor_rank=conflict_anchor_rank,
+    )
+
+    support_closure = support_metrics["support_conditioned_closure"]
+    conflict_closure = conflict_metrics["support_conditioned_closure"]
+    if support_closure is None:
+        return {
+            "bridge_outcome": f"support_{support_metrics['bridge_outcome']}",
+            "support_anchor_coverage": support_metrics["support_anchor_coverage"],
+            "conflict_anchor_coverage": conflict_metrics["support_anchor_coverage"],
+            "dual_anchor_contradiction_gap": None,
+        }
+    if conflict_closure is None:
+        return {
+            "bridge_outcome": f"conflict_{conflict_metrics['bridge_outcome']}",
+            "support_anchor_coverage": support_metrics["support_anchor_coverage"],
+            "conflict_anchor_coverage": conflict_metrics["support_anchor_coverage"],
+            "dual_anchor_contradiction_gap": None,
+        }
+
+    contradiction_gap = float(support_closure) - float(conflict_closure)
+    if not np.isfinite(contradiction_gap):
+        return {
+            "bridge_outcome": "invalid_dual_anchor_contradiction_gap",
+            "support_anchor_coverage": support_metrics["support_anchor_coverage"],
+            "conflict_anchor_coverage": conflict_metrics["support_anchor_coverage"],
+            "dual_anchor_contradiction_gap": None,
+        }
+
+    return {
+        "bridge_outcome": "none",
+        "support_anchor_coverage": support_metrics["support_anchor_coverage"],
+        "conflict_anchor_coverage": conflict_metrics["support_anchor_coverage"],
+        "dual_anchor_contradiction_gap": contradiction_gap,
     }
 
 
@@ -649,6 +748,7 @@ def materialize_samples(
     registry_rows: Sequence[Dict[str, Any]],
     samples_root: Path,
     support_claim_by_world_id: Dict[str, str],
+    wrong_claim_by_world_id: Dict[str, str],
     model_id: str,
     model_revision: Optional[str],
     tokenizer: Any,
@@ -656,12 +756,13 @@ def materialize_samples(
     device: Any,
     topk: int,
     seed: int,
-) -> Tuple[List[Dict[str, Any]], Dict[int, Dict[str, Any]]]:
+) -> Tuple[List[Dict[str, Any]], Dict[int, Dict[str, Any]], Dict[int, Dict[str, Any]]]:
     registry_by_benchmark_id = {
         str(row["benchmark_sample_id"]): row for row in registry_rows
     }
     extraction_rows: List[Dict[str, Any]] = []
     support_anchor_objects: Dict[int, Dict[str, Any]] = {}
+    conflict_anchor_objects: Dict[int, Dict[str, Any]] = {}
     for benchmark_row in sorted(benchmark_rows, key=lambda row: str(row["sample_id"])):
         benchmark_sample_id = str(benchmark_row["sample_id"])
         registry_row = registry_by_benchmark_id[benchmark_sample_id]
@@ -669,6 +770,7 @@ def materialize_samples(
         sample_dir = samples_root / f"sample_{execution_sample_id:06d}"
         sample_dir.mkdir(parents=True, exist_ok=True)
 
+        cell_id = str(benchmark_row["cell_id"])
         prompt = str(benchmark_row["prompt"])
         answer_text = str(benchmark_row["answer_text"])
         prompt_path = sample_dir / "prompt.txt"
@@ -680,6 +782,9 @@ def materialize_samples(
         support_anchor_path = sample_dir / SUPPORT_ANCHOR_TARGET_FILENAME
         support_anchor_triplets_path = sample_dir / SUPPORT_ANCHOR_TRIPLETS_FILENAME
         support_anchor_meta_path = sample_dir / SUPPORT_ANCHOR_META_FILENAME
+        conflict_anchor_path = sample_dir / CONFLICT_ANCHOR_TARGET_FILENAME
+        conflict_anchor_triplets_path = sample_dir / CONFLICT_ANCHOR_TRIPLETS_FILENAME
+        conflict_anchor_meta_path = sample_dir / CONFLICT_ANCHOR_META_FILENAME
 
         write_text(prompt_path, prompt)
         write_text(answer_path, answer_text)
@@ -726,7 +831,7 @@ def materialize_samples(
                 topk=int(triplet_meta["topk_effective"])
             ),
             "benchmark_sample_id": benchmark_sample_id,
-            "cell_id": str(benchmark_row["cell_id"]),
+            "cell_id": cell_id,
             "world_type": str(benchmark_row["world_type"]),
             "answer_target_type": str(benchmark_row["answer_target_type"]),
         }
@@ -803,11 +908,95 @@ def materialize_samples(
         )
         support_anchor_object["support_anchor_triplets_sha256"] = support_anchor_ndjson_sha
         support_anchor_objects[execution_sample_id] = support_anchor_object
+        conflict_anchor_object: Optional[Dict[str, Any]] = None
+        conflict_anchor_triplet_rows: Sequence[Dict[str, Any]] = ()
+        conflict_anchor_mode_details: Optional[Dict[str, Any]] = None
+        if cell_id == "direct_contradiction":
+            wrong_claim = str(wrong_claim_by_world_id.get(world_id) or "").strip()
+            if not wrong_claim:
+                raise ValueError(f"missing wrong_claim for world_id={world_id}")
+            write_text(conflict_anchor_path, wrong_claim)
+            conflict_anchor_triplet_rows, conflict_anchor_triplet_meta = (
+                extractor.run_teacher_forcing_extraction(
+                    prompt=prompt,
+                    target_answer=wrong_claim,
+                    model=model,
+                    tokenizer=tokenizer,
+                    device=device,
+                    topk=topk,
+                    emit_native_raw=True,
+                )
+            )
+            conflict_anchor_ndjson_sha = extractor.write_ndjson(
+                conflict_anchor_triplets_path,
+                conflict_anchor_triplet_rows,
+            )
+            conflict_anchor_mode_details = conflict_anchor_triplet_meta["mode_details"]
+            write_json(
+                conflict_anchor_meta_path,
+                {
+                    "model_id": model_id,
+                    "model_revision": model_revision,
+                    "seed": int(seed),
+                    "topk_requested": int(topk),
+                    "topk_effective": int(conflict_anchor_triplet_meta["topk_effective"]),
+                    "native_raw_emitted": True,
+                    "native_raw_schema_id": extractor.RAW_NATIVE_SCHEMA_ID,
+                    "prompt_sha256": sha256_bytes(prompt.encode("utf-8")),
+                    "target_answer_sha256": sha256_bytes(wrong_claim.encode("utf-8")),
+                    "output_ndjson_sha256": conflict_anchor_ndjson_sha,
+                    "output_ndjson_path": conflict_anchor_triplets_path.as_posix(),
+                    "device": str(device),
+                    "deterministic_requested": True,
+                    "n_steps_written": len(conflict_anchor_triplet_rows),
+                    "extraction_mode": conflict_anchor_mode_details.get("mode"),
+                    "alignment_method": conflict_anchor_mode_details.get("alignment_method"),
+                    "target_token_count_expected": conflict_anchor_mode_details.get(
+                        "target_token_count_expected"
+                    ),
+                    "target_token_count_extracted": conflict_anchor_mode_details.get(
+                        "target_token_count_extracted"
+                    ),
+                    "exact_token_match_ratio": conflict_anchor_mode_details.get(
+                        "exact_token_match_ratio"
+                    ),
+                    "target_token_indices_count": conflict_anchor_mode_details.get(
+                        "target_token_indices_count"
+                    ),
+                    "target_only_token_count": conflict_anchor_mode_details.get(
+                        "target_only_token_count"
+                    ),
+                    "boundary_merge_token_delta": conflict_anchor_mode_details.get(
+                        "boundary_merge_token_delta"
+                    ),
+                    "bos_prepended_for_teacher_forcing": conflict_anchor_mode_details.get(
+                        "bos_prepended_for_teacher_forcing"
+                    ),
+                    "proj_id": extractor.PROJ_ID,
+                    "splus_def_id": extractor.SPLUS_DEF_ID,
+                    "sminus_def_id": extractor.SMINUS_DEF_ID_TEMPLATE.format(
+                        topk=int(conflict_anchor_triplet_meta["topk_effective"])
+                    ),
+                    "benchmark_sample_id": benchmark_sample_id,
+                    "world_id": world_id,
+                    "wrong_claim": wrong_claim,
+                },
+            )
+            conflict_anchor_object = build_anchor_object(conflict_anchor_triplet_rows)
+            conflict_anchor_object["wrong_claim"] = wrong_claim
+            conflict_anchor_object["exact_token_match_ratio"] = float(
+                conflict_anchor_mode_details["exact_token_match_ratio"]
+            )
+            conflict_anchor_object["conflict_anchor_triplets_path"] = repo_relative_or_posix(
+                conflict_anchor_triplets_path
+            )
+            conflict_anchor_object["conflict_anchor_triplets_sha256"] = conflict_anchor_ndjson_sha
+            conflict_anchor_objects[execution_sample_id] = conflict_anchor_object
         extraction_rows.append(
             {
                 "execution_sample_id": execution_sample_id,
                 "benchmark_sample_id": benchmark_sample_id,
-                "cell_id": str(benchmark_row["cell_id"]),
+                "cell_id": cell_id,
                 "world_type": str(benchmark_row["world_type"]),
                 "answer_target_type": str(benchmark_row["answer_target_type"]),
                 "n_steps_written": len(triplet_rows),
@@ -818,11 +1007,20 @@ def materialize_samples(
                 "support_anchor_exact_token_match_ratio": float(
                     support_anchor_mode_details["exact_token_match_ratio"]
                 ),
+                "conflict_anchor_steps": None
+                if conflict_anchor_object is None
+                else len(conflict_anchor_triplet_rows),
+                "conflict_anchor_rank": None
+                if conflict_anchor_object is None
+                else int(conflict_anchor_object["rank_local"]),
+                "conflict_anchor_exact_token_match_ratio": None
+                if conflict_anchor_mode_details is None
+                else float(conflict_anchor_mode_details["exact_token_match_ratio"]),
                 "quietness_pair_id": str(registry_row.get("quietness_pair_id") or ""),
                 "sample_dir": repo_relative_or_posix(sample_dir),
             }
         )
-    return extraction_rows, support_anchor_objects
+    return extraction_rows, support_anchor_objects, conflict_anchor_objects
 
 
 def build_candidate_summary(
@@ -1553,6 +1751,335 @@ def build_standing_report(
     return "\n".join(lines) + "\n"
 
 
+def build_direct_contradiction_transition_rows(
+    step_rows: Sequence[Dict[str, Any]],
+    arrays: Dict[str, np.ndarray],
+    sample_registry_rows: Sequence[Dict[str, Any]],
+    support_anchor_objects: Dict[int, Dict[str, Any]],
+    conflict_anchor_objects: Dict[int, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    direct_registry_by_sample_id = {
+        int(row["execution_sample_id"]): row
+        for row in sample_registry_rows
+        if str(row["cell_id"]) == "direct_contradiction"
+    }
+    grouped: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in step_rows:
+        sample_id = int(row["sample_id"])
+        if sample_id in direct_registry_by_sample_id:
+            grouped[sample_id].append(row)
+    for rows in grouped.values():
+        rows.sort(key=lambda row: int(row["step"]))
+
+    transition_rows: List[Dict[str, Any]] = []
+    for sample_id in sorted(direct_registry_by_sample_id):
+        registry_row = direct_registry_by_sample_id[sample_id]
+        rows = grouped.get(sample_id, [])
+        support_anchor_object = support_anchor_objects.get(sample_id)
+        conflict_anchor_object = conflict_anchor_objects.get(sample_id)
+        for idx, step_row in enumerate(rows[:-1]):
+            next_row = rows[idx + 1]
+            if support_anchor_object is None and conflict_anchor_object is None:
+                bridge_metrics = {
+                    "bridge_outcome": "missing_dual_anchor",
+                    "support_anchor_coverage": None,
+                    "conflict_anchor_coverage": None,
+                    "dual_anchor_contradiction_gap": None,
+                }
+            elif support_anchor_object is None:
+                bridge_metrics = {
+                    "bridge_outcome": "missing_support_anchor",
+                    "support_anchor_coverage": None,
+                    "conflict_anchor_coverage": None,
+                    "dual_anchor_contradiction_gap": None,
+                }
+            elif conflict_anchor_object is None:
+                bridge_metrics = {
+                    "bridge_outcome": "missing_conflict_anchor",
+                    "support_anchor_coverage": None,
+                    "conflict_anchor_coverage": None,
+                    "dual_anchor_contradiction_gap": None,
+                }
+            else:
+                current_row_index = int(step_row["array_row_index"])
+                next_row_index = int(next_row["array_row_index"])
+                bridge_metrics = compute_dual_anchor_contradiction_gap_metrics(
+                    current_basis=np.asarray(arrays["basis"][current_row_index], dtype=np.float64),
+                    current_singular_values=np.asarray(
+                        arrays["singular_values"][current_row_index],
+                        dtype=np.float64,
+                    ),
+                    current_rank=int(arrays["rank_local"][current_row_index]),
+                    next_basis=np.asarray(arrays["basis"][next_row_index], dtype=np.float64),
+                    next_singular_values=np.asarray(
+                        arrays["singular_values"][next_row_index],
+                        dtype=np.float64,
+                    ),
+                    next_coords_local=np.asarray(
+                        arrays["coords_local"][next_row_index],
+                        dtype=np.float64,
+                    ),
+                    next_rank=int(arrays["rank_local"][next_row_index]),
+                    support_anchor_basis=np.asarray(
+                        support_anchor_object["basis"],
+                        dtype=np.float64,
+                    ),
+                    support_anchor_rank=int(support_anchor_object["rank_local"]),
+                    conflict_anchor_basis=np.asarray(
+                        conflict_anchor_object["basis"],
+                        dtype=np.float64,
+                    ),
+                    conflict_anchor_rank=int(conflict_anchor_object["rank_local"]),
+                )
+            transition_rows.append(
+                {
+                    "execution_sample_id": sample_id,
+                    "benchmark_sample_id": str(registry_row["benchmark_sample_id"]),
+                    "answer_target_type": str(registry_row["answer_target_type"]),
+                    "step": int(step_row["step"]),
+                    "token_text": str(step_row["token_text"]),
+                    "label_transition": max(int(step_row["label_token"]), int(next_row["label_token"])),
+                    "bridge_outcome": str(bridge_metrics["bridge_outcome"]),
+                    "support_anchor_coverage": bridge_metrics["support_anchor_coverage"],
+                    "conflict_anchor_coverage": bridge_metrics["conflict_anchor_coverage"],
+                    "dual_anchor_contradiction_gap": bridge_metrics["dual_anchor_contradiction_gap"],
+                }
+            )
+    return transition_rows
+
+
+def build_direct_contradiction_per_sample_rows(
+    sample_registry_rows: Sequence[Dict[str, Any]],
+    transition_rows: Sequence[Dict[str, Any]],
+    support_anchor_objects: Dict[int, Dict[str, Any]],
+    conflict_anchor_objects: Dict[int, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    transitions_by_sample: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in transition_rows:
+        transitions_by_sample[int(row["execution_sample_id"])].append(row)
+
+    sample_rows: List[Dict[str, Any]] = []
+    direct_registry_rows = [
+        row for row in sample_registry_rows if str(row["cell_id"]) == "direct_contradiction"
+    ]
+    for registry_row in sorted(
+        direct_registry_rows,
+        key=lambda row: int(row["execution_sample_id"]),
+    ):
+        execution_sample_id = int(registry_row["execution_sample_id"])
+        rows = sorted(
+            transitions_by_sample.get(execution_sample_id, []),
+            key=lambda row: int(row["step"]),
+        )
+        support_anchor_object = support_anchor_objects.get(execution_sample_id)
+        conflict_anchor_object = conflict_anchor_objects.get(execution_sample_id)
+        support_coverage_values = [
+            float(row["support_anchor_coverage"])
+            for row in rows
+            if row["support_anchor_coverage"] is not None
+        ]
+        conflict_coverage_values = [
+            float(row["conflict_anchor_coverage"])
+            for row in rows
+            if row["conflict_anchor_coverage"] is not None
+        ]
+        gap_values = [
+            float(row["dual_anchor_contradiction_gap"])
+            for row in rows
+            if row["dual_anchor_contradiction_gap"] is not None
+        ]
+        sample_rows.append(
+            {
+                "execution_sample_id": execution_sample_id,
+                "benchmark_sample_id": str(registry_row["benchmark_sample_id"]),
+                "cell_id": str(registry_row["cell_id"]),
+                "world_id": str(registry_row["world_id"]),
+                "rendering_id": str(registry_row["rendering_id"]),
+                "target_id": str(registry_row["target_id"]),
+                "world_type": str(registry_row["world_type"]),
+                "answer_target_type": str(registry_row["answer_target_type"]),
+                "support_anchor_rank": None
+                if support_anchor_object is None
+                else int(support_anchor_object["rank_local"]),
+                "support_anchor_steps": None
+                if support_anchor_object is None
+                else int(support_anchor_object["n_anchor_steps"]),
+                "support_anchor_exact_token_match_ratio": None
+                if support_anchor_object is None
+                else float(support_anchor_object["exact_token_match_ratio"]),
+                "conflict_anchor_rank": None
+                if conflict_anchor_object is None
+                else int(conflict_anchor_object["rank_local"]),
+                "conflict_anchor_steps": None
+                if conflict_anchor_object is None
+                else int(conflict_anchor_object["n_anchor_steps"]),
+                "conflict_anchor_exact_token_match_ratio": None
+                if conflict_anchor_object is None
+                else float(conflict_anchor_object["exact_token_match_ratio"]),
+                "n_transition_rows_total": len(rows),
+                "n_transition_rows_support_anchor_valid": len(support_coverage_values),
+                "n_transition_rows_conflict_anchor_valid": len(conflict_coverage_values),
+                "n_transition_rows_gap_valid": len(gap_values),
+                "n_transition_rows_missing": len(rows) - len(gap_values),
+                "positive_transition_count": sum(int(row["label_transition"]) for row in rows),
+                "mean_support_anchor_coverage": mean_or_none(support_coverage_values),
+                "p90_support_anchor_coverage": percentile(support_coverage_values, 90.0),
+                "mean_conflict_anchor_coverage": mean_or_none(conflict_coverage_values),
+                "p90_conflict_anchor_coverage": percentile(conflict_coverage_values, 90.0),
+                "mean_dual_anchor_contradiction_gap": mean_or_none(gap_values),
+                "p90_dual_anchor_contradiction_gap": percentile(gap_values, 90.0),
+                "max_dual_anchor_contradiction_gap": None
+                if not gap_values
+                else float(max(gap_values)),
+            }
+        )
+    return sample_rows
+
+
+def build_direct_contradiction_by_answer_target_rows(
+    per_sample_rows: Sequence[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in per_sample_rows:
+        grouped[str(row["answer_target_type"])].append(row)
+
+    target_rows: List[Dict[str, Any]] = []
+    for answer_target_type in sorted(grouped):
+        rows = grouped[answer_target_type]
+        target_rows.append(
+            {
+                "answer_target_type": answer_target_type,
+                "n_samples": len(rows),
+                "n_transition_rows_total": sum(int(row["n_transition_rows_total"]) for row in rows),
+                "n_transition_rows_gap_valid": sum(
+                    int(row["n_transition_rows_gap_valid"]) for row in rows
+                ),
+                "n_transition_rows_missing": sum(int(row["n_transition_rows_missing"]) for row in rows),
+                "mean_sample_mean_support_anchor_coverage": mean_or_none(
+                    [
+                        float(row["mean_support_anchor_coverage"])
+                        for row in rows
+                        if row["mean_support_anchor_coverage"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_mean_conflict_anchor_coverage": mean_or_none(
+                    [
+                        float(row["mean_conflict_anchor_coverage"])
+                        for row in rows
+                        if row["mean_conflict_anchor_coverage"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_mean_dual_anchor_contradiction_gap": mean_or_none(
+                    [
+                        float(row["mean_dual_anchor_contradiction_gap"])
+                        for row in rows
+                        if row["mean_dual_anchor_contradiction_gap"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_p90_dual_anchor_contradiction_gap": mean_or_none(
+                    [
+                        float(row["p90_dual_anchor_contradiction_gap"])
+                        for row in rows
+                        if row["p90_dual_anchor_contradiction_gap"] not in (None, "")
+                    ]
+                ),
+            }
+        )
+    return target_rows
+
+
+def build_direct_contradiction_bridge_report(
+    run_id: str,
+    per_sample_rows: Sequence[Dict[str, Any]],
+    by_answer_target_rows: Sequence[Dict[str, Any]],
+) -> str:
+    by_target = {
+        str(row["answer_target_type"]): row for row in by_answer_target_rows
+    }
+    consistent_row = by_target.get("consistent_answer")
+    wrong_row = by_target.get("conflict_following_wrong_answer")
+
+    lines = [
+        "# Gate8 Direct Contradiction Dual-Anchor Diagnostics",
+        "",
+        f"run_id: {run_id}",
+        f"method_id: {DIRECT_BRIDGE_METHOD_ID}",
+        f"status: {DIRECT_BRIDGE_STATUS}",
+        f"source_candidate_id: {DIRECT_BRIDGE_SOURCE_CANDIDATE_ID}",
+        f"bridge_doc: {DIRECT_BRIDGE_DOC_PATH}",
+        "",
+        "## Scope",
+        "",
+        "- direct_contradiction only",
+        "- answer_target_type split is preserved from the start",
+        "- dual_anchor_contradiction_gap is the single primary read",
+        "- support_anchor_coverage and conflict_anchor_coverage remain hygiene diagnostics only",
+        "- fixed standing court remains unchanged",
+        "",
+        f"- n_samples_total: {len(per_sample_rows)}",
+        f"- n_answer_target_types_total: {len(by_answer_target_rows)}",
+    ]
+    if (
+        consistent_row is not None
+        and wrong_row is not None
+        and consistent_row["mean_sample_mean_dual_anchor_contradiction_gap"] not in (None, "")
+        and wrong_row["mean_sample_mean_dual_anchor_contradiction_gap"] not in (None, "")
+    ):
+        consistent_gap = float(consistent_row["mean_sample_mean_dual_anchor_contradiction_gap"])
+        wrong_gap = float(wrong_row["mean_sample_mean_dual_anchor_contradiction_gap"])
+        separation = wrong_gap - consistent_gap
+        lines.extend(
+            [
+                "",
+                "## First Read",
+                "",
+                f"- consistent_answer mean dual_anchor_contradiction_gap = {consistent_gap:.6f}",
+                (
+                    "- conflict_following_wrong_answer mean dual_anchor_contradiction_gap = "
+                    f"{wrong_gap:.6f}"
+                ),
+                (
+                    "- separation (wrong-answer minus consistent-answer) = "
+                    f"{separation:.6f}"
+                ),
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## By Answer Target",
+            "",
+            "| answer_target_type | n_samples | n_transition_rows_gap_valid | mean_sample_mean_support_anchor_coverage | mean_sample_mean_conflict_anchor_coverage | mean_sample_mean_dual_anchor_contradiction_gap | mean_sample_p90_dual_anchor_contradiction_gap |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in by_answer_target_rows:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["answer_target_type"]),
+                    str(row["n_samples"]),
+                    str(row["n_transition_rows_gap_valid"]),
+                    ""
+                    if row["mean_sample_mean_support_anchor_coverage"] in (None, "")
+                    else f"{float(row['mean_sample_mean_support_anchor_coverage']):.6f}",
+                    ""
+                    if row["mean_sample_mean_conflict_anchor_coverage"] in (None, "")
+                    else f"{float(row['mean_sample_mean_conflict_anchor_coverage']):.6f}",
+                    ""
+                    if row["mean_sample_mean_dual_anchor_contradiction_gap"] in (None, "")
+                    else f"{float(row['mean_sample_mean_dual_anchor_contradiction_gap']):.6f}",
+                    ""
+                    if row["mean_sample_p90_dual_anchor_contradiction_gap"] in (None, "")
+                    else f"{float(row['mean_sample_p90_dual_anchor_contradiction_gap']):.6f}",
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     args = parse_args()
     repo_root = REPO_ROOT
@@ -1580,14 +2107,17 @@ def main() -> int:
     support_bridge_per_sample_path = diagnostics_dir / SUPPORT_BRIDGE_PER_SAMPLE_FILENAME
     support_bridge_by_cell_path = diagnostics_dir / SUPPORT_BRIDGE_BY_CELL_FILENAME
     support_bridge_report_path = diagnostics_dir / SUPPORT_BRIDGE_REPORT_FILENAME
+    direct_bridge_per_sample_path = diagnostics_dir / DIRECT_BRIDGE_PER_SAMPLE_FILENAME
+    direct_bridge_by_target_path = diagnostics_dir / DIRECT_BRIDGE_BY_TARGET_FILENAME
+    direct_bridge_report_path = diagnostics_dir / DIRECT_BRIDGE_REPORT_FILENAME
     checksums_path = out_dir / "checksums.json"
 
     benchmark_manifest = read_json(benchmark_dir / "manifest.json")
     validate_benchmark_manifest(benchmark_manifest)
     benchmark_rows = read_jsonl(benchmark_dir / "benchmark_rows.jsonl")
-    support_claim_by_world_id = build_support_claim_lookup(
-        read_jsonl(benchmark_dir / "world_truth.jsonl")
-    )
+    world_truth_rows = read_jsonl(benchmark_dir / "world_truth.jsonl")
+    support_claim_by_world_id = build_support_claim_lookup(world_truth_rows)
+    wrong_claim_by_world_id = build_wrong_claim_lookup(world_truth_rows)
     if args.sample_limit is not None:
         benchmark_rows = sorted(benchmark_rows, key=lambda row: str(row["sample_id"]))[: args.sample_limit]
     sample_registry_rows, quietness_pair_rows = build_sample_registry(benchmark_rows)
@@ -1602,11 +2132,12 @@ def main() -> int:
         device=device,
     )
 
-    extraction_rows, support_anchor_objects = materialize_samples(
+    extraction_rows, support_anchor_objects, conflict_anchor_objects = materialize_samples(
         benchmark_rows=benchmark_rows,
         registry_rows=sample_registry_rows,
         samples_root=samples_root,
         support_claim_by_world_id=support_claim_by_world_id,
+        wrong_claim_by_world_id=wrong_claim_by_world_id,
         model_id=model_id,
         model_revision=model_revision,
         tokenizer=tokenizer,
@@ -1811,6 +2342,78 @@ def main() -> int:
             by_cell_rows=support_bridge_by_cell_rows,
         ),
     )
+    direct_bridge_transition_rows = build_direct_contradiction_transition_rows(
+        step_rows=gate6_step_rows,
+        arrays=gate6_arrays,
+        sample_registry_rows=sample_registry_rows,
+        support_anchor_objects=support_anchor_objects,
+        conflict_anchor_objects=conflict_anchor_objects,
+    )
+    direct_bridge_per_sample_rows = build_direct_contradiction_per_sample_rows(
+        sample_registry_rows=sample_registry_rows,
+        transition_rows=direct_bridge_transition_rows,
+        support_anchor_objects=support_anchor_objects,
+        conflict_anchor_objects=conflict_anchor_objects,
+    )
+    direct_bridge_by_target_rows = build_direct_contradiction_by_answer_target_rows(
+        direct_bridge_per_sample_rows
+    )
+    write_csv(
+        direct_bridge_per_sample_path,
+        (
+            "execution_sample_id",
+            "benchmark_sample_id",
+            "cell_id",
+            "world_id",
+            "rendering_id",
+            "target_id",
+            "world_type",
+            "answer_target_type",
+            "support_anchor_rank",
+            "support_anchor_steps",
+            "support_anchor_exact_token_match_ratio",
+            "conflict_anchor_rank",
+            "conflict_anchor_steps",
+            "conflict_anchor_exact_token_match_ratio",
+            "n_transition_rows_total",
+            "n_transition_rows_support_anchor_valid",
+            "n_transition_rows_conflict_anchor_valid",
+            "n_transition_rows_gap_valid",
+            "n_transition_rows_missing",
+            "positive_transition_count",
+            "mean_support_anchor_coverage",
+            "p90_support_anchor_coverage",
+            "mean_conflict_anchor_coverage",
+            "p90_conflict_anchor_coverage",
+            "mean_dual_anchor_contradiction_gap",
+            "p90_dual_anchor_contradiction_gap",
+            "max_dual_anchor_contradiction_gap",
+        ),
+        direct_bridge_per_sample_rows,
+    )
+    write_csv(
+        direct_bridge_by_target_path,
+        (
+            "answer_target_type",
+            "n_samples",
+            "n_transition_rows_total",
+            "n_transition_rows_gap_valid",
+            "n_transition_rows_missing",
+            "mean_sample_mean_support_anchor_coverage",
+            "mean_sample_mean_conflict_anchor_coverage",
+            "mean_sample_mean_dual_anchor_contradiction_gap",
+            "mean_sample_p90_dual_anchor_contradiction_gap",
+        ),
+        direct_bridge_by_target_rows,
+    )
+    write_text(
+        direct_bridge_report_path,
+        build_direct_contradiction_bridge_report(
+            run_id=run_id,
+            per_sample_rows=direct_bridge_per_sample_rows,
+            by_answer_target_rows=direct_bridge_by_target_rows,
+        ),
+    )
 
     for candidate in FIXED_CANDIDATES:
         run_subprocess(
@@ -1915,6 +2518,18 @@ def main() -> int:
                 "report_path": repo_relative_or_posix(support_bridge_report_path),
                 "report_sha256": sha256_file(support_bridge_report_path),
             },
+            "direct_contradiction_bridge": {
+                "method_id": DIRECT_BRIDGE_METHOD_ID,
+                "status": DIRECT_BRIDGE_STATUS,
+                "source_candidate_id": DIRECT_BRIDGE_SOURCE_CANDIDATE_ID,
+                "doc_path": repo_relative_or_posix(repo_root / DIRECT_BRIDGE_DOC_PATH),
+                "per_sample_path": repo_relative_or_posix(direct_bridge_per_sample_path),
+                "per_sample_sha256": sha256_file(direct_bridge_per_sample_path),
+                "by_answer_target_path": repo_relative_or_posix(direct_bridge_by_target_path),
+                "by_answer_target_sha256": sha256_file(direct_bridge_by_target_path),
+                "report_path": repo_relative_or_posix(direct_bridge_report_path),
+                "report_sha256": sha256_file(direct_bridge_report_path),
+            },
             "model_id": model_id,
             "model_revision": model_revision,
             "device": str(device),
@@ -1948,6 +2563,15 @@ def main() -> int:
             ),
             repo_relative_or_posix(support_bridge_report_path): sha256_file(
                 support_bridge_report_path
+            ),
+            repo_relative_or_posix(direct_bridge_per_sample_path): sha256_file(
+                direct_bridge_per_sample_path
+            ),
+            repo_relative_or_posix(direct_bridge_by_target_path): sha256_file(
+                direct_bridge_by_target_path
+            ),
+            repo_relative_or_posix(direct_bridge_report_path): sha256_file(
+                direct_bridge_report_path
             ),
         },
     )
