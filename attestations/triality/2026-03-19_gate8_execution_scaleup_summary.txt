@@ -7,6 +7,7 @@ tracked_docs:
 - tools/README_gate8.md
 - 15_GATE8_LABEL_AND_PROVENANCE_RULES.md
 - 18_GATE8_ROTATION_LEAKAGE_BRIDGE.md
+- 19_GATE8_SUPPORT_CLOSURE_BRIDGE.md
 
 commands:
 - python -B -m py_compile tools/generate_gate8_semiclosed_conflict.py tools/materialize_gate8_semiclosed_conflict.py tools/run_gate8_candidate_batch.py tools/evaluate_gate8_standing.py tools/test_generate_gate8_semiclosed_conflict.py tools/test_materialize_gate8_semiclosed_conflict.py tools/test_run_gate8_candidate_batch.py tools/test_evaluate_gate8_standing.py tools/test_run_gate8_scaleup.py
@@ -84,3 +85,7 @@ caveats:
 - mixed-granularity is explicit, not cured
 - bridge diagnostics are baked, but not yet cleanly won
 - no promote/replace conclusion is earned from the current bridge read
+
+next_move_if_any:
+- spec-only bridge v2
+- no further rescue inside bridge v1

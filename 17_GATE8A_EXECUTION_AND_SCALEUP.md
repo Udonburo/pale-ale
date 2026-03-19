@@ -247,6 +247,11 @@ What is not yet earned:
 - a settled dynamic mainline replacement claim
 - a clean bridge-level explanation of Seam-tail burden
 
+The next move, if any, should therefore be:
+
+- spec-only `bridge v2`
+- no further rescue inside `bridge v1`
+
 ## 7. Working Sentence
 
 The best short sentence after the bridge rerun is:

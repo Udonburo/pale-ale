@@ -1,8 +1,8 @@
 # Gate8 Rotation Leakage Bridge
 
-Status: draft skeleton
-Role: diagnostic bridge spec, not standing spec
-Date: 2026-03-19
+Status: closed clean negative
+Role: archived diagnostic bridge spec, not standing spec
+Date: 2026-03-20
 
 ## 0. Purpose
 
@@ -248,3 +248,27 @@ This bridge phase is complete only if:
 - the outputs stay diagnostic-only
 
 Until then, this workstream is still doctrine without a proper bridge.
+
+## 13. Closeout
+
+`bridge v1` is now closed on real Gate8 execution artifacts.
+
+What survived:
+
+- fixed-court standing did not move
+- `gate7c` conflict-side revival still survives at 128 and 200 rows
+- bridge outputs stayed diagnostic-only and artifact-bound
+
+What failed:
+
+- `rotation_only` did not isolate conflict cells
+- `leakage_only` did not behave like a clean-negative-friendly span-escape cut
+- `closure_defect` did not cleanly separate `distributed_incompatibility` from `surface_noisy_clean`
+
+So the closeout sentence is:
+
+- `rotation/leakage/closure_defect v1` is not an adequate explanatory cut for the fixed Gate8 court
+
+The next move, if any, is not rescue inside this bridge.
+
+The next move is a separate spec-only bridge proposal with a narrower first-class object.
