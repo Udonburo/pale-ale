@@ -193,6 +193,16 @@ def projector_gap(
     return float(np.clip(1.0 - (overlap_trace / denom), 0.0, 1.0))
 
 
+def build_orthogonal_projector(
+    basis: np.ndarray,
+    rank_local: int,
+) -> Optional[np.ndarray]:
+    if rank_local <= 0:
+        return None
+    basis_slice = np.asarray(basis[:, :rank_local], dtype=np.float64)
+    return basis_slice @ basis_slice.T
+
+
 def compute_rotation_leakage_bridge_metrics(
     current_basis: np.ndarray,
     current_singular_values: np.ndarray,
@@ -202,6 +212,18 @@ def compute_rotation_leakage_bridge_metrics(
     next_coords_local: np.ndarray,
     next_rank: int,
 ) -> Dict[str, Any]:
+    current_projector = build_orthogonal_projector(
+        current_basis,
+        current_rank,
+    )
+    if current_projector is None:
+        return {
+            "bridge_outcome": "invalid_current_projector",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
     current_operator = gate7c_consumer.build_anisotropic_operator(
         current_basis,
         current_singular_values,
@@ -251,14 +273,17 @@ def compute_rotation_leakage_bridge_metrics(
             "closure_defect": None,
         }
 
+    projected_current = current_projector @ next_v
     current_applied = current_operator @ next_v
     closure_applied = next_operator @ current_applied
     next_norm_sq = float(np.dot(next_v, next_v))
+    projected_norm_sq = float(np.dot(projected_current, projected_current))
     current_norm_sq = float(np.dot(current_applied, current_applied))
     closure_norm_sq = float(np.dot(closure_applied, closure_applied))
     if (
         not np.isfinite(next_norm_sq)
         or next_norm_sq <= 1e-12
+        or not np.isfinite(projected_norm_sq)
         or not np.isfinite(current_norm_sq)
         or not np.isfinite(closure_norm_sq)
     ):
@@ -269,10 +294,10 @@ def compute_rotation_leakage_bridge_metrics(
             "closure_defect": None,
         }
 
-    current_energy_ratio = float(np.clip(current_norm_sq / next_norm_sq, 0.0, 1.0))
+    projector_energy_ratio = float(np.clip(projected_norm_sq / next_norm_sq, 0.0, 1.0))
     closure_energy_ratio = float(np.clip(closure_norm_sq / next_norm_sq, 0.0, 1.0))
-    leakage_only = float(np.clip(1.0 - current_energy_ratio, 0.0, 1.0))
-    closure_defect = float(np.clip(current_energy_ratio - closure_energy_ratio, 0.0, 1.0))
+    leakage_only = float(np.clip(1.0 - projector_energy_ratio, 0.0, 1.0))
+    closure_defect = float(np.clip(projector_energy_ratio - closure_energy_ratio, 0.0, 1.0))
     return {
         "bridge_outcome": "none",
         "rotation_only": rotation_only,
@@ -765,8 +790,8 @@ def build_rotation_leakage_bridge_report(
         "- fixed standing court remains unchanged",
         "- diagnostics are emitted beside standing outputs, not inside them",
         "- rotation_only measures consecutive local-frame projector gap",
-        "- leakage_only measures energy lost when the next state is passed through the current anisotropic frame",
-        "- closure_defect measures additional loss after surviving the current frame and re-entering the next frame",
+        "- leakage_only measures energy outside the current unweighted local span before anisotropic weighting",
+        "- closure_defect measures residual loss after span survival under the current dynamic law and next-frame re-entry",
         "",
         f"- n_samples_total: {len(per_sample_rows)}",
         f"- n_cells_total: {len(by_cell_rows)}",

@@ -100,7 +100,7 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         self.assertAlmostEqual(float(metrics["leakage_only"]), 0.0, places=10)
         self.assertAlmostEqual(float(metrics["closure_defect"]), 0.0, places=10)
 
-    def test_bridge_metrics_split_leakage_and_closure_defect(self):
+    def test_bridge_metrics_keep_in_span_anisotropic_loss_out_of_leakage(self):
         current_basis = np.zeros((4, 3), dtype=np.float64)
         next_basis = np.zeros((4, 3), dtype=np.float64)
         current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
@@ -124,8 +124,32 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
 
         self.assertEqual(metrics["bridge_outcome"], "none")
         self.assertAlmostEqual(float(metrics["rotation_only"]), 0.0, places=10)
-        self.assertAlmostEqual(float(metrics["leakage_only"]), 0.75, places=10)
-        self.assertAlmostEqual(float(metrics["closure_defect"]), 0.1875, places=10)
+        self.assertAlmostEqual(float(metrics["leakage_only"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["closure_defect"]), 0.9375, places=10)
+
+    def test_bridge_metrics_mark_orthogonal_escape_as_leakage(self):
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.0, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0
+
+        metrics = batch.compute_rotation_leakage_bridge_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=1,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=1,
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["rotation_only"]), 1.0, places=10)
+        self.assertAlmostEqual(float(metrics["leakage_only"]), 1.0, places=10)
+        self.assertAlmostEqual(float(metrics["closure_defect"]), 0.0, places=10)
 
     def test_bridge_cell_aggregate_groups_sample_rows(self):
         per_sample_rows = [
