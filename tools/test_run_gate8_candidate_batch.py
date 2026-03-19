@@ -3,6 +3,8 @@
 
 import unittest
 
+import numpy as np
+
 import run_gate8_candidate_batch as batch
 
 
@@ -73,6 +75,102 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         ]
         with self.assertRaisesRegex(ValueError, "quietness pairing requires shared clean/noisy rows"):
             batch.build_sample_registry(benchmark_rows)
+
+    def test_bridge_metrics_are_zero_for_identity_transition(self):
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.0, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0
+
+        metrics = batch.compute_rotation_leakage_bridge_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=1,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=1,
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["rotation_only"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["leakage_only"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["closure_defect"]), 0.0, places=10)
+
+    def test_bridge_metrics_split_leakage_and_closure_defect(self):
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        current_basis[:, 1] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 1] = np.asarray([0.0, 1.0, 0.0, 0.0], dtype=np.float64)
+        current_singular_values = np.asarray([1.0, 0.5, 0.0], dtype=np.float64)
+        next_singular_values = np.asarray([1.0, 0.5, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[1, 0] = 1.0
+
+        metrics = batch.compute_rotation_leakage_bridge_metrics(
+            current_basis=current_basis,
+            current_singular_values=current_singular_values,
+            current_rank=2,
+            next_basis=next_basis,
+            next_singular_values=next_singular_values,
+            next_coords_local=next_coords,
+            next_rank=2,
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["rotation_only"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["leakage_only"]), 0.75, places=10)
+        self.assertAlmostEqual(float(metrics["closure_defect"]), 0.1875, places=10)
+
+    def test_bridge_cell_aggregate_groups_sample_rows(self):
+        per_sample_rows = [
+            {
+                "cell_id": "clean_support",
+                "n_transition_rows_total": 4,
+                "n_transition_rows_valid": 4,
+                "n_transition_rows_missing": 0,
+                "mean_rotation_only": 0.1,
+                "p90_rotation_only": 0.2,
+                "max_rotation_only": 0.3,
+                "mean_leakage_only": 0.01,
+                "p90_leakage_only": 0.02,
+                "max_leakage_only": 0.03,
+                "mean_closure_defect": 0.001,
+                "p90_closure_defect": 0.002,
+                "max_closure_defect": 0.003,
+            },
+            {
+                "cell_id": "clean_support",
+                "n_transition_rows_total": 6,
+                "n_transition_rows_valid": 5,
+                "n_transition_rows_missing": 1,
+                "mean_rotation_only": 0.3,
+                "p90_rotation_only": 0.4,
+                "max_rotation_only": 0.5,
+                "mean_leakage_only": 0.05,
+                "p90_leakage_only": 0.06,
+                "max_leakage_only": 0.07,
+                "mean_closure_defect": 0.004,
+                "p90_closure_defect": 0.005,
+                "max_closure_defect": 0.006,
+            },
+        ]
+
+        rows = batch.build_rotation_leakage_by_cell_rows(per_sample_rows)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["cell_id"], "clean_support")
+        self.assertEqual(rows[0]["n_transition_rows_total"], 10)
+        self.assertEqual(rows[0]["n_transition_rows_valid"], 9)
+        self.assertEqual(rows[0]["n_transition_rows_missing"], 1)
+        self.assertAlmostEqual(float(rows[0]["mean_sample_mean_rotation_only"]), 0.2, places=10)
+        self.assertAlmostEqual(float(rows[0]["mean_sample_mean_leakage_only"]), 0.03, places=10)
+        self.assertAlmostEqual(float(rows[0]["mean_sample_mean_closure_defect"]), 0.0025, places=10)
 
 
 if __name__ == "__main__":

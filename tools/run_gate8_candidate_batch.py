@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -11,10 +12,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
+
 from aggregate_gate5_spike import read_csv, write_csv
 import build_gate6_native_local_span as gate6_builder
 import extract_triality_triplets as extractor
 import labels_from_cfa_spans as cfa_labels
+import run_gate7_progression_anisotropic_consumer_v3 as gate7c_consumer
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +67,13 @@ GRANULARITY_COURT_NOTE = (
     "Gate8 fixed standing is regime-consistent but not same-granularity: "
     "F/gate6f/gate6h use label_token while gate7c uses label_transition."
 )
+BRIDGE_METHOD_ID = "gate8_rotation_leakage_bridge_v1"
+BRIDGE_STATUS = "diagnostic_only"
+BRIDGE_SOURCE_CANDIDATE_ID = "gate7c"
+BRIDGE_DOC_PATH = "18_GATE8_ROTATION_LEAKAGE_BRIDGE.md"
+BRIDGE_PER_SAMPLE_FILENAME = "rotation_leakage_per_sample.csv"
+BRIDGE_BY_CELL_FILENAME = "rotation_leakage_by_cell.csv"
+BRIDGE_REPORT_FILENAME = "rotation_leakage_bridge_report.md"
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,6 +158,127 @@ def fixed_candidate_contract_rows() -> List[Dict[str, str]]:
         }
         for entry in FIXED_CANDIDATES
     ]
+
+
+def percentile(values: Sequence[float], q: float) -> Optional[float]:
+    if not values:
+        return None
+    if q < 0.0 or q > 100.0:
+        raise ValueError(f"percentile q must be in [0, 100], got {q}")
+    arr = sorted(float(value) for value in values)
+    rank = int(math.ceil((q / 100.0) * len(arr))) - 1
+    rank = max(0, min(rank, len(arr) - 1))
+    return float(arr[rank])
+
+
+def mean_or_none(values: Sequence[float]) -> Optional[float]:
+    if not values:
+        return None
+    return float(sum(float(value) for value in values) / float(len(values)))
+
+
+def projector_gap(
+    current_basis: np.ndarray,
+    current_rank: int,
+    next_basis: np.ndarray,
+    next_rank: int,
+) -> Optional[float]:
+    if current_rank <= 0 or next_rank <= 0:
+        return None
+    current_slice = np.asarray(current_basis[:, :current_rank], dtype=np.float64)
+    next_slice = np.asarray(next_basis[:, :next_rank], dtype=np.float64)
+    overlap_matrix = current_slice.T @ next_slice
+    overlap_trace = float(np.sum(np.square(overlap_matrix)))
+    denom = float(max(1, min(current_rank, next_rank)))
+    return float(np.clip(1.0 - (overlap_trace / denom), 0.0, 1.0))
+
+
+def compute_rotation_leakage_bridge_metrics(
+    current_basis: np.ndarray,
+    current_singular_values: np.ndarray,
+    current_rank: int,
+    next_basis: np.ndarray,
+    next_singular_values: np.ndarray,
+    next_coords_local: np.ndarray,
+    next_rank: int,
+) -> Dict[str, Any]:
+    current_operator = gate7c_consumer.build_anisotropic_operator(
+        current_basis,
+        current_singular_values,
+        current_rank,
+    )
+    if current_operator is None:
+        return {
+            "bridge_outcome": "invalid_current_operator",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
+    next_operator = gate7c_consumer.build_anisotropic_operator(
+        next_basis,
+        next_singular_values,
+        next_rank,
+    )
+    if next_operator is None:
+        return {
+            "bridge_outcome": "invalid_next_operator",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
+    next_v = gate7c_consumer.reconstruct_v(next_basis, next_coords_local, next_rank)
+    if next_v is None:
+        return {
+            "bridge_outcome": "invalid_next_vector",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
+    rotation_only = projector_gap(
+        current_basis=current_basis,
+        current_rank=current_rank,
+        next_basis=next_basis,
+        next_rank=next_rank,
+    )
+    if rotation_only is None:
+        return {
+            "bridge_outcome": "invalid_projector_gap",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
+    current_applied = current_operator @ next_v
+    closure_applied = next_operator @ current_applied
+    next_norm_sq = float(np.dot(next_v, next_v))
+    current_norm_sq = float(np.dot(current_applied, current_applied))
+    closure_norm_sq = float(np.dot(closure_applied, closure_applied))
+    if (
+        not np.isfinite(next_norm_sq)
+        or next_norm_sq <= 1e-12
+        or not np.isfinite(current_norm_sq)
+        or not np.isfinite(closure_norm_sq)
+    ):
+        return {
+            "bridge_outcome": "invalid_bridge_energy",
+            "rotation_only": None,
+            "leakage_only": None,
+            "closure_defect": None,
+        }
+
+    current_energy_ratio = float(np.clip(current_norm_sq / next_norm_sq, 0.0, 1.0))
+    closure_energy_ratio = float(np.clip(closure_norm_sq / next_norm_sq, 0.0, 1.0))
+    leakage_only = float(np.clip(1.0 - current_energy_ratio, 0.0, 1.0))
+    closure_defect = float(np.clip(current_energy_ratio - closure_energy_ratio, 0.0, 1.0))
+    return {
+        "bridge_outcome": "none",
+        "rotation_only": rotation_only,
+        "leakage_only": leakage_only,
+        "closure_defect": closure_defect,
+    }
 
 
 def validate_benchmark_manifest(manifest: Dict[str, Any]) -> None:
@@ -467,6 +599,204 @@ def build_candidate_summary(
     return summary_rows
 
 
+def build_rotation_leakage_transition_rows(
+    step_rows: Sequence[Dict[str, Any]],
+    arrays: Dict[str, np.ndarray],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in step_rows:
+        grouped[int(row["sample_id"])].append(row)
+    for rows in grouped.values():
+        rows.sort(key=lambda row: int(row["step"]))
+
+    transition_rows: List[Dict[str, Any]] = []
+    for sample_id in sorted(grouped):
+        rows = grouped[sample_id]
+        for idx, step_row in enumerate(rows[:-1]):
+            next_row = rows[idx + 1]
+            current_row_index = int(step_row["array_row_index"])
+            next_row_index = int(next_row["array_row_index"])
+            bridge_metrics = compute_rotation_leakage_bridge_metrics(
+                current_basis=np.asarray(arrays["basis"][current_row_index], dtype=np.float64),
+                current_singular_values=np.asarray(
+                    arrays["singular_values"][current_row_index],
+                    dtype=np.float64,
+                ),
+                current_rank=int(arrays["rank_local"][current_row_index]),
+                next_basis=np.asarray(arrays["basis"][next_row_index], dtype=np.float64),
+                next_singular_values=np.asarray(
+                    arrays["singular_values"][next_row_index],
+                    dtype=np.float64,
+                ),
+                next_coords_local=np.asarray(arrays["coords_local"][next_row_index], dtype=np.float64),
+                next_rank=int(arrays["rank_local"][next_row_index]),
+            )
+            transition_rows.append(
+                {
+                    "execution_sample_id": int(step_row["sample_id"]),
+                    "step": int(step_row["step"]),
+                    "token_text": str(step_row["token_text"]),
+                    "label_transition": max(int(step_row["label_token"]), int(next_row["label_token"])),
+                    "bridge_outcome": str(bridge_metrics["bridge_outcome"]),
+                    "rotation_only": bridge_metrics["rotation_only"],
+                    "leakage_only": bridge_metrics["leakage_only"],
+                    "closure_defect": bridge_metrics["closure_defect"],
+                }
+            )
+    return transition_rows
+
+
+def build_rotation_leakage_per_sample_rows(
+    sample_registry_rows: Sequence[Dict[str, Any]],
+    transition_rows: Sequence[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    transitions_by_sample: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in transition_rows:
+        transitions_by_sample[int(row["execution_sample_id"])].append(row)
+
+    sample_rows: List[Dict[str, Any]] = []
+    for registry_row in sorted(
+        sample_registry_rows,
+        key=lambda row: int(row["execution_sample_id"]),
+    ):
+        execution_sample_id = int(registry_row["execution_sample_id"])
+        rows = sorted(
+            transitions_by_sample.get(execution_sample_id, []),
+            key=lambda row: int(row["step"]),
+        )
+        valid_rows = [row for row in rows if row["bridge_outcome"] == "none"]
+        rotation_values = [float(row["rotation_only"]) for row in valid_rows if row["rotation_only"] is not None]
+        leakage_values = [float(row["leakage_only"]) for row in valid_rows if row["leakage_only"] is not None]
+        closure_values = [float(row["closure_defect"]) for row in valid_rows if row["closure_defect"] is not None]
+        sample_rows.append(
+            {
+                "execution_sample_id": execution_sample_id,
+                "benchmark_sample_id": str(registry_row["benchmark_sample_id"]),
+                "cell_id": str(registry_row["cell_id"]),
+                "world_id": str(registry_row["world_id"]),
+                "rendering_id": str(registry_row["rendering_id"]),
+                "target_id": str(registry_row["target_id"]),
+                "world_type": str(registry_row["world_type"]),
+                "answer_target_type": str(registry_row["answer_target_type"]),
+                "quietness_pair_id": str(registry_row.get("quietness_pair_id") or ""),
+                "n_transition_rows_total": len(rows),
+                "n_transition_rows_valid": len(valid_rows),
+                "n_transition_rows_missing": len(rows) - len(valid_rows),
+                "positive_transition_count": sum(int(row["label_transition"]) for row in rows),
+                "mean_rotation_only": mean_or_none(rotation_values),
+                "p90_rotation_only": percentile(rotation_values, 90.0),
+                "max_rotation_only": None if not rotation_values else float(max(rotation_values)),
+                "mean_leakage_only": mean_or_none(leakage_values),
+                "p90_leakage_only": percentile(leakage_values, 90.0),
+                "max_leakage_only": None if not leakage_values else float(max(leakage_values)),
+                "mean_closure_defect": mean_or_none(closure_values),
+                "p90_closure_defect": percentile(closure_values, 90.0),
+                "max_closure_defect": None if not closure_values else float(max(closure_values)),
+            }
+        )
+    return sample_rows
+
+
+def build_rotation_leakage_by_cell_rows(
+    per_sample_rows: Sequence[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in per_sample_rows:
+        grouped[str(row["cell_id"])].append(row)
+
+    cell_rows: List[Dict[str, Any]] = []
+    for cell_id in sorted(grouped):
+        rows = grouped[cell_id]
+        cell_rows.append(
+            {
+                "cell_id": cell_id,
+                "n_samples": len(rows),
+                "n_transition_rows_total": sum(int(row["n_transition_rows_total"]) for row in rows),
+                "n_transition_rows_valid": sum(int(row["n_transition_rows_valid"]) for row in rows),
+                "n_transition_rows_missing": sum(int(row["n_transition_rows_missing"]) for row in rows),
+                "mean_sample_mean_rotation_only": mean_or_none(
+                    [float(row["mean_rotation_only"]) for row in rows if row["mean_rotation_only"] not in (None, "")]
+                ),
+                "mean_sample_p90_rotation_only": mean_or_none(
+                    [float(row["p90_rotation_only"]) for row in rows if row["p90_rotation_only"] not in (None, "")]
+                ),
+                "mean_sample_max_rotation_only": mean_or_none(
+                    [float(row["max_rotation_only"]) for row in rows if row["max_rotation_only"] not in (None, "")]
+                ),
+                "mean_sample_mean_leakage_only": mean_or_none(
+                    [float(row["mean_leakage_only"]) for row in rows if row["mean_leakage_only"] not in (None, "")]
+                ),
+                "mean_sample_p90_leakage_only": mean_or_none(
+                    [float(row["p90_leakage_only"]) for row in rows if row["p90_leakage_only"] not in (None, "")]
+                ),
+                "mean_sample_max_leakage_only": mean_or_none(
+                    [float(row["max_leakage_only"]) for row in rows if row["max_leakage_only"] not in (None, "")]
+                ),
+                "mean_sample_mean_closure_defect": mean_or_none(
+                    [float(row["mean_closure_defect"]) for row in rows if row["mean_closure_defect"] not in (None, "")]
+                ),
+                "mean_sample_p90_closure_defect": mean_or_none(
+                    [float(row["p90_closure_defect"]) for row in rows if row["p90_closure_defect"] not in (None, "")]
+                ),
+                "mean_sample_max_closure_defect": mean_or_none(
+                    [float(row["max_closure_defect"]) for row in rows if row["max_closure_defect"] not in (None, "")]
+                ),
+            }
+        )
+    return cell_rows
+
+
+def build_rotation_leakage_bridge_report(
+    run_id: str,
+    per_sample_rows: Sequence[Dict[str, Any]],
+    by_cell_rows: Sequence[Dict[str, Any]],
+) -> str:
+    lines = [
+        "# Gate8 Rotation/Leakage Bridge Diagnostics",
+        "",
+        f"run_id: {run_id}",
+        f"method_id: {BRIDGE_METHOD_ID}",
+        f"status: {BRIDGE_STATUS}",
+        f"source_candidate_id: {BRIDGE_SOURCE_CANDIDATE_ID}",
+        f"bridge_doc: {BRIDGE_DOC_PATH}",
+        "",
+        "## Scope",
+        "",
+        "- fixed standing court remains unchanged",
+        "- diagnostics are emitted beside standing outputs, not inside them",
+        "- rotation_only measures consecutive local-frame projector gap",
+        "- leakage_only measures energy lost when the next state is passed through the current anisotropic frame",
+        "- closure_defect measures additional loss after surviving the current frame and re-entering the next frame",
+        "",
+        f"- n_samples_total: {len(per_sample_rows)}",
+        f"- n_cells_total: {len(by_cell_rows)}",
+        "",
+        "## Cell Aggregates",
+        "",
+        "| cell_id | n_samples | n_transition_rows_valid | mean_sample_mean_rotation_only | mean_sample_mean_leakage_only | mean_sample_mean_closure_defect | mean_sample_p90_rotation_only | mean_sample_p90_leakage_only | mean_sample_p90_closure_defect |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for row in by_cell_rows:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["cell_id"]),
+                    str(row["n_samples"]),
+                    str(row["n_transition_rows_valid"]),
+                    "" if row["mean_sample_mean_rotation_only"] in (None, "") else f"{float(row['mean_sample_mean_rotation_only']):.6f}",
+                    "" if row["mean_sample_mean_leakage_only"] in (None, "") else f"{float(row['mean_sample_mean_leakage_only']):.6f}",
+                    "" if row["mean_sample_mean_closure_defect"] in (None, "") else f"{float(row['mean_sample_mean_closure_defect']):.6f}",
+                    "" if row["mean_sample_p90_rotation_only"] in (None, "") else f"{float(row['mean_sample_p90_rotation_only']):.6f}",
+                    "" if row["mean_sample_p90_leakage_only"] in (None, "") else f"{float(row['mean_sample_p90_leakage_only']):.6f}",
+                    "" if row["mean_sample_p90_closure_defect"] in (None, "") else f"{float(row['mean_sample_p90_closure_defect']):.6f}",
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def granularity_buckets() -> Dict[str, List[str]]:
     grouped: Dict[str, List[str]] = defaultdict(list)
     for candidate in FIXED_CANDIDATES:
@@ -560,12 +890,16 @@ def main() -> int:
     gate6h_dir = out_dir / "gate6h"
     gate7c_dir = out_dir / "gate7c"
     evaluations_root = out_dir / "evaluations"
+    diagnostics_dir = out_dir / "diagnostics"
     manifest_path = out_dir / "manifest.json"
     sample_registry_path = out_dir / "sample_registry.jsonl"
     quietness_pairs_path = out_dir / "quietness_pairs.jsonl"
     extraction_results_path = out_dir / "extraction_results.jsonl"
     summary_csv_path = out_dir / "candidate_summary.csv"
     report_path = out_dir / "gate8a_standing_summary.md"
+    bridge_per_sample_path = diagnostics_dir / BRIDGE_PER_SAMPLE_FILENAME
+    bridge_by_cell_path = diagnostics_dir / BRIDGE_BY_CELL_FILENAME
+    bridge_report_path = diagnostics_dir / BRIDGE_REPORT_FILENAME
     checksums_path = out_dir / "checksums.json"
 
     benchmark_manifest = read_json(benchmark_dir / "manifest.json")
@@ -645,6 +979,80 @@ def main() -> int:
             "--run-id",
             f"{run_id}_gate7c",
         ]
+        )
+
+    gate6_step_rows = gate7c_consumer.load_rows(gate6_dir / gate7c_consumer.DEFAULT_STEP_INDEX)
+    with np.load(gate6_dir / gate7c_consumer.DEFAULT_ARRAYS) as npz_handle:
+        gate6_arrays = {
+            "basis": np.asarray(npz_handle["basis"], dtype=np.float64),
+            "coords_local": np.asarray(npz_handle["coords_local"], dtype=np.float64),
+            "singular_values": np.asarray(npz_handle["singular_values"], dtype=np.float64),
+            "rank_local": np.asarray(npz_handle["rank_local"], dtype=np.int64),
+        }
+    bridge_transition_rows = build_rotation_leakage_transition_rows(
+        step_rows=gate6_step_rows,
+        arrays=gate6_arrays,
+    )
+    bridge_per_sample_rows = build_rotation_leakage_per_sample_rows(
+        sample_registry_rows=sample_registry_rows,
+        transition_rows=bridge_transition_rows,
+    )
+    bridge_by_cell_rows = build_rotation_leakage_by_cell_rows(bridge_per_sample_rows)
+    write_csv(
+        bridge_per_sample_path,
+        (
+            "execution_sample_id",
+            "benchmark_sample_id",
+            "cell_id",
+            "world_id",
+            "rendering_id",
+            "target_id",
+            "world_type",
+            "answer_target_type",
+            "quietness_pair_id",
+            "n_transition_rows_total",
+            "n_transition_rows_valid",
+            "n_transition_rows_missing",
+            "positive_transition_count",
+            "mean_rotation_only",
+            "p90_rotation_only",
+            "max_rotation_only",
+            "mean_leakage_only",
+            "p90_leakage_only",
+            "max_leakage_only",
+            "mean_closure_defect",
+            "p90_closure_defect",
+            "max_closure_defect",
+        ),
+        bridge_per_sample_rows,
+    )
+    write_csv(
+        bridge_by_cell_path,
+        (
+            "cell_id",
+            "n_samples",
+            "n_transition_rows_total",
+            "n_transition_rows_valid",
+            "n_transition_rows_missing",
+            "mean_sample_mean_rotation_only",
+            "mean_sample_p90_rotation_only",
+            "mean_sample_max_rotation_only",
+            "mean_sample_mean_leakage_only",
+            "mean_sample_p90_leakage_only",
+            "mean_sample_max_leakage_only",
+            "mean_sample_mean_closure_defect",
+            "mean_sample_p90_closure_defect",
+            "mean_sample_max_closure_defect",
+        ),
+        bridge_by_cell_rows,
+    )
+    write_text(
+        bridge_report_path,
+        build_rotation_leakage_bridge_report(
+            run_id=run_id,
+            per_sample_rows=bridge_per_sample_rows,
+            by_cell_rows=bridge_by_cell_rows,
+        ),
     )
 
     for candidate in FIXED_CANDIDATES:
@@ -726,6 +1134,18 @@ def main() -> int:
             "extraction_results_sha256": sha256_file(extraction_results_path),
             "candidate_summary_path": repo_relative_or_posix(summary_csv_path),
             "candidate_summary_sha256": sha256_file(summary_csv_path),
+            "diagnostic_bridge": {
+                "method_id": BRIDGE_METHOD_ID,
+                "status": BRIDGE_STATUS,
+                "source_candidate_id": BRIDGE_SOURCE_CANDIDATE_ID,
+                "doc_path": repo_relative_or_posix(repo_root / BRIDGE_DOC_PATH),
+                "per_sample_path": repo_relative_or_posix(bridge_per_sample_path),
+                "per_sample_sha256": sha256_file(bridge_per_sample_path),
+                "by_cell_path": repo_relative_or_posix(bridge_by_cell_path),
+                "by_cell_sha256": sha256_file(bridge_by_cell_path),
+                "report_path": repo_relative_or_posix(bridge_report_path),
+                "report_sha256": sha256_file(bridge_report_path),
+            },
             "model_id": model_id,
             "model_revision": model_revision,
             "device": str(device),
@@ -748,6 +1168,9 @@ def main() -> int:
             "extraction_results.jsonl": sha256_file(extraction_results_path),
             "candidate_summary.csv": sha256_file(summary_csv_path),
             "gate8a_standing_summary.md": sha256_file(report_path),
+            repo_relative_or_posix(bridge_per_sample_path): sha256_file(bridge_per_sample_path),
+            repo_relative_or_posix(bridge_by_cell_path): sha256_file(bridge_by_cell_path),
+            repo_relative_or_posix(bridge_report_path): sha256_file(bridge_report_path),
         },
     )
     return 0
