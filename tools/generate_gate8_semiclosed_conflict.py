@@ -61,10 +61,34 @@ CELL_DEFS: Sequence[Dict[str, Any]] = (
 )
 
 CANDIDATE_SET: Sequence[Dict[str, str]] = (
-    {"role": "legacy_guardrail", "metric_id": "score_F_gram_loop_v1"},
-    {"role": "operational_candidate", "metric_id": "sigma_gap_tailkeep_weighted_gram_loop_v2"},
-    {"role": "research_north_star", "metric_id": "sigma_sqrtgap_tailkeep_object_v2"},
-    {"role": "dynamic_candidate", "metric_id": "progression_anisotropic_closure_v3"},
+    {
+        "candidate_id": "F",
+        "role": "legacy_guardrail",
+        "metric_id": "score_F_gram_loop_v1",
+        "label_key": "label_token",
+        "label_granularity": "token",
+    },
+    {
+        "candidate_id": "gate6f",
+        "role": "operational_candidate",
+        "metric_id": "sigma_gap_tailkeep_weighted_gram_loop_v2",
+        "label_key": "label_token",
+        "label_granularity": "token",
+    },
+    {
+        "candidate_id": "gate6h",
+        "role": "research_north_star",
+        "metric_id": "sigma_sqrtgap_tailkeep_object_v2",
+        "label_key": "label_token",
+        "label_granularity": "token",
+    },
+    {
+        "candidate_id": "gate7c",
+        "role": "dynamic_candidate",
+        "metric_id": "progression_anisotropic_closure_v3",
+        "label_key": "label_transition",
+        "label_granularity": "transition",
+    },
 )
 
 HEADLINE_METRICS: Sequence[str] = (
@@ -80,6 +104,11 @@ HEADLINE_METRICS: Sequence[str] = (
 
 RELATION_TYPES: Sequence[str] = ("genealogy", "temporal", "reachability")
 QUIETNESS_CELLS = ("clean_support", "surface_noisy_clean")
+GRANULARITY_COURT_STATUS = "mixed_candidate_label_granularity_v1"
+GRANULARITY_COURT_NOTE = (
+    "Gate8 fixed standing is regime-consistent but not same-granularity: "
+    "F/gate6f/gate6h use label_token while gate7c uses label_transition."
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -142,6 +171,8 @@ def build_conflict_plan(samples_per_cell: int) -> Dict[str, Any]:
         "samples_per_cell": samples_per_cell,
         "cells": list(CELL_DEFS),
         "candidate_set": list(CANDIDATE_SET),
+        "candidate_granularity_status": GRANULARITY_COURT_STATUS,
+        "candidate_granularity_note": GRANULARITY_COURT_NOTE,
         "headline_metrics": list(HEADLINE_METRICS),
         "aggregation_ban": True,
         "purpose": "standing preservation under more natural conflict geometry",
@@ -172,12 +203,21 @@ def build_label_contract() -> Dict[str, Any]:
             "label_span_support",
             "label_span_defect",
         ],
+        "required_candidate_fields": [
+            "candidate_id",
+            "role",
+            "metric_id",
+            "label_key",
+            "label_granularity",
+        ],
         "layer_separation": [
             "world truth",
             "retrieval rendering",
             "answer target",
             "defect span labeling",
         ],
+        "candidate_granularity_status": GRANULARITY_COURT_STATUS,
+        "candidate_granularity_note": GRANULARITY_COURT_NOTE,
         "candidate_freeze": list(CANDIDATE_SET),
     }
 
@@ -311,6 +351,8 @@ def build_manifest(
         "n_cells_total": len(CELL_DEFS),
         "n_samples_total": n_samples_total,
         "candidate_set": list(CANDIDATE_SET),
+        "candidate_granularity_status": GRANULARITY_COURT_STATUS,
+        "candidate_granularity_note": GRANULARITY_COURT_NOTE,
         "headline_metrics": list(HEADLINE_METRICS),
         "aggregation_ban": True,
         "semi_closed_layers": [

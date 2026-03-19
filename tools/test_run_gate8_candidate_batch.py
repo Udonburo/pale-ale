@@ -7,6 +7,18 @@ import run_gate8_candidate_batch as batch
 
 
 class RunGate8CandidateBatchTest(unittest.TestCase):
+    def test_fixed_candidate_contract_tracks_granularity(self):
+        contract_rows = batch.fixed_candidate_contract_rows()
+        self.assertEqual(
+            [row["candidate_id"] for row in contract_rows],
+            ["F", "gate6f", "gate6h", "gate7c"],
+        )
+        self.assertEqual(
+            [row["label_granularity"] for row in contract_rows],
+            ["token", "token", "token", "transition"],
+        )
+        self.assertEqual(contract_rows[-1]["label_key"], "label_transition")
+
     def test_quietness_pair_bindings_require_shared_worlds(self):
         benchmark_rows = [
             {"sample_id": "a", "cell_id": "clean_support", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r0"},

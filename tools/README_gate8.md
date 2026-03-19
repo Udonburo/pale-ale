@@ -121,6 +121,12 @@ The runner performs:
    - `sigma_sqrtgap_tailkeep_object_v2`
    - `progression_anisotropic_closure_v3`
 
+The fixed court is also emitted with explicit label-granularity provenance:
+
+- `F`, `gate6f`, and `gate6h` use `label_token` / `token`
+- `gate7c` uses `label_transition` / `transition`
+- execution artifacts must state that this is regime-consistent but not same-granularity
+
 Quietness pairing is fixed deterministically as:
 
 - `clean_support` <-> `surface_noisy_clean`
@@ -134,6 +140,10 @@ Artifacts include:
 - `candidate_summary.csv`
 - `gate8a_standing_summary.md`
 - per-candidate evaluation reports under `evaluations/`
+
+`candidate_summary.csv`, execution `manifest.json`, and per-candidate evaluation manifests now carry
+candidate-level `label_key` / `label_granularity` metadata so the Gate8 standing court cannot silently
+forget the `transition vs token` caveat.
 
 ## 7) One-shot Gate8 scale-up
 

@@ -27,28 +27,41 @@ DEFAULT_SEED = 7
 FIXED_CANDIDATES = (
     {
         "candidate_id": "F",
+        "role": "legacy_guardrail",
         "metric_id": "score_F_gram_loop_v1",
         "label_key": "label_token",
+        "label_granularity": "token",
         "token_csv_relpath": "gate6f/gate6f_token_telemetry.csv",
     },
     {
         "candidate_id": "gate6f",
+        "role": "operational_candidate",
         "metric_id": "sigma_gap_tailkeep_weighted_gram_loop_v2",
         "label_key": "label_token",
+        "label_granularity": "token",
         "token_csv_relpath": "gate6f/gate6f_token_telemetry.csv",
     },
     {
         "candidate_id": "gate6h",
+        "role": "research_north_star",
         "metric_id": "sigma_sqrtgap_tailkeep_object_v2",
         "label_key": "label_token",
+        "label_granularity": "token",
         "token_csv_relpath": "gate6h/gate6h_token_telemetry.csv",
     },
     {
         "candidate_id": "gate7c",
+        "role": "dynamic_candidate",
         "metric_id": "progression_anisotropic_closure_v3",
         "label_key": "label_transition",
+        "label_granularity": "transition",
         "token_csv_relpath": "gate7c/gate7c_token_telemetry.csv",
     },
+)
+GRANULARITY_COURT_STATUS = "mixed_candidate_label_granularity_v1"
+GRANULARITY_COURT_NOTE = (
+    "Gate8 fixed standing is regime-consistent but not same-granularity: "
+    "F/gate6f/gate6h use label_token while gate7c uses label_transition."
 )
 
 
@@ -123,13 +136,41 @@ def fixed_candidate_ids() -> List[str]:
     return [entry["metric_id"] for entry in FIXED_CANDIDATES]
 
 
+def fixed_candidate_contract_rows() -> List[Dict[str, str]]:
+    return [
+        {
+            "candidate_id": str(entry["candidate_id"]),
+            "role": str(entry["role"]),
+            "metric_id": str(entry["metric_id"]),
+            "label_key": str(entry["label_key"]),
+            "label_granularity": str(entry["label_granularity"]),
+        }
+        for entry in FIXED_CANDIDATES
+    ]
+
+
 def validate_benchmark_manifest(manifest: Dict[str, Any]) -> None:
-    candidate_ids = [entry["metric_id"] for entry in manifest.get("candidate_set", [])]
+    candidate_rows = list(manifest.get("candidate_set", []))
+    candidate_ids = [entry["metric_id"] for entry in candidate_rows]
     if candidate_ids != fixed_candidate_ids():
         raise ValueError(
             "benchmark candidate_set does not match frozen Gate8 set: "
             f"{candidate_ids!r} != {fixed_candidate_ids()!r}"
         )
+    required_fields = {"candidate_id", "role", "metric_id", "label_key", "label_granularity"}
+    if candidate_rows and all(required_fields.issubset(entry) for entry in candidate_rows):
+        normalized = [
+            {
+                "candidate_id": str(entry["candidate_id"]),
+                "role": str(entry["role"]),
+                "metric_id": str(entry["metric_id"]),
+                "label_key": str(entry["label_key"]),
+                "label_granularity": str(entry["label_granularity"]),
+            }
+            for entry in candidate_rows
+        ]
+        if normalized != fixed_candidate_contract_rows():
+            raise ValueError("benchmark candidate_set metadata does not match frozen Gate8 contract")
     if not bool(manifest.get("aggregation_ban", False)):
         raise ValueError("Gate8 execution requires aggregation_ban=true in benchmark manifest")
 
@@ -390,6 +431,8 @@ def build_candidate_summary(
         summary_rows.append(
             {
                 "candidate_id": candidate["candidate_id"],
+                "label_key": candidate["label_key"],
+                "label_granularity": candidate["label_granularity"],
                 "metric_id": candidate["metric_id"],
                 "direct_global_auprc": None if direct is None else direct.get("global_auprc"),
                 "direct_mean_sample_auprc": None
@@ -424,6 +467,13 @@ def build_candidate_summary(
     return summary_rows
 
 
+def granularity_buckets() -> Dict[str, List[str]]:
+    grouped: Dict[str, List[str]] = defaultdict(list)
+    for candidate in FIXED_CANDIDATES:
+        grouped[str(candidate["label_granularity"])].append(str(candidate["candidate_id"]))
+    return {key: sorted(value) for key, value in grouped.items()}
+
+
 def build_standing_report(
     run_id: str,
     benchmark_manifest: Dict[str, Any],
@@ -443,11 +493,12 @@ def build_standing_report(
         f"n_samples_total: {len(sample_registry_rows)}",
         f"n_quietness_pairs: {sum(1 for row in sample_registry_rows if row.get('quietness_pair_id')) // 2}",
         f"quietness_pairing_rule: {QUIETNESS_PAIRING_RULE}",
+        f"candidate_granularity_status: {GRANULARITY_COURT_STATUS}",
         "",
         "## Candidate Summary",
         "",
-        "| candidate_id | direct_global_auprc | direct_mean_sample_auprc | direct_mean_hit@10 | distributed_global_auprc | distributed_mean_sample_auprc | distributed_mean_hit@10 | quiet_mean_delta_p90 | quiet_mean_top10_inflation |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| candidate_id | label_granularity | direct_global_auprc | direct_mean_sample_auprc | direct_mean_hit@10 | distributed_global_auprc | distributed_mean_sample_auprc | distributed_mean_hit@10 | quiet_mean_delta_p90 | quiet_mean_top10_inflation |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in candidate_summary_rows:
         lines.append(
@@ -455,6 +506,7 @@ def build_standing_report(
             + " | ".join(
                 [
                     str(row["candidate_id"]),
+                    str(row["label_granularity"]),
                     "" if row["direct_global_auprc"] in (None, "") else f"{float(row['direct_global_auprc']):.6f}",
                     "" if row["direct_mean_sample_auprc"] in (None, "") else f"{float(row['direct_mean_sample_auprc']):.6f}",
                     "" if row["direct_mean_hit_at_10"] in (None, "") else f"{float(row['direct_mean_hit_at_10']):.6f}",
@@ -467,6 +519,18 @@ def build_standing_report(
             )
             + " |"
         )
+    buckets = granularity_buckets()
+    lines.extend(
+        [
+            "",
+            "## Label Granularity Court",
+            "",
+            f"- status: {GRANULARITY_COURT_STATUS}",
+            f"- note: {GRANULARITY_COURT_NOTE}",
+            f"- token candidates: {', '.join(buckets.get('token', []))}",
+            f"- transition candidates: {', '.join(buckets.get('transition', []))}",
+        ]
+    )
     if extraction_rows:
         min_match = min(float(row["exact_token_match_ratio"]) for row in extraction_rows)
         min_coverage = min(float(row["label_coverage_ratio"]) for row in extraction_rows)
@@ -602,6 +666,8 @@ def main() -> int:
                 candidate["metric_id"],
                 "--label-key",
                 candidate["label_key"],
+                "--label-granularity",
+                candidate["label_granularity"],
                 "--topk",
                 "10",
             ]
@@ -612,6 +678,8 @@ def main() -> int:
         summary_csv_path,
         (
             "candidate_id",
+            "label_key",
+            "label_granularity",
             "metric_id",
             "direct_global_auprc",
             "direct_mean_sample_auprc",
@@ -664,10 +732,9 @@ def main() -> int:
             "topk_requested": int(args.topk),
             "seed": int(args.seed),
             "quietness_pairing_rule": QUIETNESS_PAIRING_RULE,
-            "candidate_set": [
-                {"candidate_id": row["candidate_id"], "metric_id": row["metric_id"]}
-                for row in candidate_summary_rows
-            ],
+            "candidate_granularity_status": GRANULARITY_COURT_STATUS,
+            "candidate_granularity_note": GRANULARITY_COURT_NOTE,
+            "candidate_set": fixed_candidate_contract_rows(),
             "code_git_commit": gate6_builder.current_git_commit(),
             "n_samples_total": len(sample_registry_rows),
         },

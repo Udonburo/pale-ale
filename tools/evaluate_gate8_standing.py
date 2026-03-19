@@ -40,6 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--metric-id", required=True)
     parser.add_argument("--label-key", default="label_token")
+    parser.add_argument("--label-granularity", choices=("token", "transition"), default="token")
     parser.add_argument("--topk", type=int, default=DEFAULT_TOPK)
     return parser.parse_args()
 
@@ -328,6 +329,7 @@ def build_report(
     candidate_id: str,
     metric_id: str,
     label_key: str,
+    label_granularity: str,
     conflict_rows: Sequence[Dict[str, Any]],
     quietness_rows: Sequence[Dict[str, Any]],
     topk: int,
@@ -339,6 +341,7 @@ def build_report(
         f"candidate_id: {candidate_id}",
         f"metric_id: {metric_id}",
         f"label_key: {label_key}",
+        f"label_granularity: {label_granularity}",
         f"quietness_pairing_rule: {QUIETNESS_PAIRING_RULE}",
         "",
         "## Conflict Cells",
@@ -395,6 +398,7 @@ def build_manifest(
     candidate_id: str,
     metric_id: str,
     label_key: str,
+    label_granularity: str,
     sample_registry_path: Path,
     token_csv_path: Path,
     topk: int,
@@ -408,6 +412,7 @@ def build_manifest(
         "candidate_id": candidate_id,
         "metric_id": metric_id,
         "label_key": label_key,
+        "label_granularity": label_granularity,
         "topk": int(topk),
         "conflict_cells": list(CONFLICT_CELLS),
         "quiet_clean_cell": QUIET_CLEAN_CELL,
@@ -467,6 +472,7 @@ def main() -> int:
         candidate_id=args.candidate_id,
         metric_id=args.metric_id,
         label_key=args.label_key,
+        label_granularity=args.label_granularity,
         sample_registry_path=sample_registry_path,
         token_csv_path=token_csv_path,
         topk=args.topk,
@@ -478,6 +484,7 @@ def main() -> int:
         candidate_id=args.candidate_id,
         metric_id=args.metric_id,
         label_key=args.label_key,
+        label_granularity=args.label_granularity,
         conflict_rows=conflict_summary_rows,
         quietness_rows=quietness_summary_rows,
         topk=args.topk,

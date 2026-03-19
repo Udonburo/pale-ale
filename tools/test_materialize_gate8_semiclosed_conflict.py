@@ -31,6 +31,9 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertEqual(manifest["generation_stage"], "materialized_generation")
             self.assertEqual(manifest["provenance_binding_mode"], "realized_artifacts")
             self.assertEqual(manifest["n_samples_total"], 8)
+            self.assertEqual(
+                manifest["candidate_granularity_status"], "mixed_candidate_label_granularity_v1"
+            )
             self.assertEqual(len(sample_index_rows), 8)
             self.assertEqual(len(world_truth_rows), 4)
             self.assertEqual(len(rendering_rows), 6)

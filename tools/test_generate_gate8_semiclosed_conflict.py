@@ -59,9 +59,21 @@ class Gate8SemiclosedConflictSkeletonTests(unittest.TestCase):
             self.assertEqual(manifest["n_cells_total"], 4)
             self.assertEqual(manifest["n_samples_total"], 8)
             self.assertTrue(manifest["aggregation_ban"])
+            self.assertEqual(
+                manifest["candidate_granularity_status"], "mixed_candidate_label_granularity_v1"
+            )
             self.assertEqual(conflict_plan["samples_per_cell"], 2)
             self.assertEqual(len(conflict_plan["cells"]), 4)
+            self.assertEqual(
+                [row["label_granularity"] for row in conflict_plan["candidate_set"]],
+                ["token", "token", "token", "transition"],
+            )
+            self.assertEqual(
+                [row["label_key"] for row in conflict_plan["candidate_set"]],
+                ["label_token", "label_token", "label_token", "label_transition"],
+            )
             self.assertEqual(len(label_contract["required_sample_fields"]) >= 8, True)
+            self.assertIn("required_candidate_fields", label_contract)
             self.assertEqual(world_plan["binding_status"], "constitution_only_placeholder")
             self.assertEqual(rendering_plan["binding_status"], "constitution_only_placeholder")
             self.assertEqual(target_plan["binding_status"], "constitution_only_placeholder")

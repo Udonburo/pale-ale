@@ -148,6 +148,8 @@ class EvaluateGate8StandingTest(unittest.TestCase):
                 "gate6f",
                 "--metric-id",
                 "candidate_metric",
+                "--label-granularity",
+                "transition",
             ]
             with mock.patch("sys.argv", args):
                 self.assertEqual(evaluator.main(), 0)
@@ -164,6 +166,12 @@ class EvaluateGate8StandingTest(unittest.TestCase):
             self.assertAlmostEqual(float(quiet_all["mean_delta_max"]), 0.2, places=10)
             self.assertAlmostEqual(float(quiet_all["mean_delta_p90"]), 0.2, places=10)
             self.assertAlmostEqual(float(quiet_all["mean_top10_inflation"]), 2.0, places=10)
+
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["label_key"], "label_token")
+            self.assertEqual(manifest["label_granularity"], "transition")
+            report = (out_dir / "report.md").read_text(encoding="utf-8")
+            self.assertIn("label_granularity: transition", report)
 
 
 if __name__ == "__main__":

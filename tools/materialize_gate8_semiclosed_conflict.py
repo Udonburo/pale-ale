@@ -403,6 +403,8 @@ def build_manifest(
         "n_cells_total": len(conflict_plan["cells"]),
         "n_samples_total": n_samples_total,
         "candidate_set": conflict_plan["candidate_set"],
+        "candidate_granularity_status": conflict_plan["candidate_granularity_status"],
+        "candidate_granularity_note": conflict_plan["candidate_granularity_note"],
         "headline_metrics": conflict_plan["headline_metrics"],
         "aggregation_ban": True,
         "semi_closed_layers": label_contract["layer_separation"],

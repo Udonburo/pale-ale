@@ -165,9 +165,17 @@ This invalidity belongs to the benchmark, not to the candidate model.
 
 Gate8 provenance must record that the benchmark was designed for the fixed comparison set:
 
-- `score_F_gram_loop_v1`
-- `sigma_gap_tailkeep_weighted_gram_loop_v2`
-- `sigma_sqrtgap_tailkeep_object_v2`
-- `progression_anisotropic_closure_v3`
+- `F` / `score_F_gram_loop_v1` / `label_token` / `token`
+- `gate6f` / `sigma_gap_tailkeep_weighted_gram_loop_v2` / `label_token` / `token`
+- `gate6h` / `sigma_sqrtgap_tailkeep_object_v2` / `label_token` / `token`
+- `gate7c` / `progression_anisotropic_closure_v3` / `label_transition` / `transition`
+
+This freeze is intentionally mixed-granularity.
+
+That is allowed only if the benchmark and execution artifacts state it explicitly as a court caveat:
+
+- the comparison is regime-consistent
+- the comparison is not same-granularity
+- `gate7c` must never be silently presented as if it were scored on the same label surface as the token candidates
 
 This is part of the experiment definition.
