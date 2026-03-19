@@ -1,6 +1,6 @@
 Gate8 execution summary
 date=2026-03-19
-repo_relative_workstream=Gate8 execution + qfix scale-up
+repo_relative_workstream=Gate8 execution + qfix scale-up + granularity threading
 
 tracked_docs:
 - 17_GATE8A_EXECUTION_AND_SCALEUP.md
@@ -14,39 +14,42 @@ commands:
 - python tools/test_run_gate8_candidate_batch.py
 - python tools/test_evaluate_gate8_standing.py
 - python tools/test_run_gate8_scaleup.py
-- python tools/run_gate8_scaleup.py --run-prefix gate8e_128r_qfix --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
-- python tools/run_gate8_scaleup.py --run-prefix gate8f_200r_qfix --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B
+- python tools/run_gate8_scaleup.py --run-prefix gate8g_128r_granularity --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
+- python tools/run_gate8_scaleup.py --run-prefix gate8h_200r_granularity --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B
 
-qfix_artifacts:
-- runs/gate8e_128r_qfix_candidate_execution/manifest.json
-  sha256=2229e158e81405e52fd471abb3d8fcc79538f52a314e3c4c07d24b05eba96733
-- runs/gate8e_128r_qfix_candidate_execution/candidate_summary.csv
-  sha256=210263275d9d49b5542bf2b3f8d9081fd58bb365a3438e753d994eeffb46cbcf
-- runs/gate8f_200r_qfix_candidate_execution/manifest.json
-  sha256=4fe45fa7467482cf1dca90a2d8579af7bd9c4156056a1bfbcea2d59011fac89f
-- runs/gate8f_200r_qfix_candidate_execution/candidate_summary.csv
-  sha256=e6620cdca846486d7e08428b7bd93a92c2f599e187f1cac390a5a0ab3e4cbf1c
+granularity_artifacts:
+- runs/gate8g_128r_granularity_candidate_execution/manifest.json
+  sha256=d92f35e7aa9639fb967f99d6b32d32da9e654dc1695f10a09ebf409557b1493e
+- runs/gate8g_128r_granularity_candidate_execution/candidate_summary.csv
+  sha256=6e9f7310bf0ca683892baddc194c682eb16203a43597f24c244a0f61fd12dfa3
+- runs/gate8h_200r_granularity_candidate_execution/manifest.json
+  sha256=328de2039f6d83bfae98e78fddada7b281dd74c11c1cb2e49df57906b148e1d9
+- runs/gate8h_200r_granularity_candidate_execution/candidate_summary.csv
+  sha256=fb6cdd2deb388a5a38ddb47dec4be08c85d4d1428d5f06e191d7437ca77e0eb6
 
 binding:
-- qfix manifests bind code_git_commit=364bde228be04b80917345d368983b95352e4f2a
+- granularity manifests bind code_git_commit=31acf4b2d6ba2bf85956f370c46df20345eac966
 - quietness_pairing_rule=shared_world_id_v1
+- candidate_granularity_status=mixed_candidate_label_granularity_v1
 
-qfix_128_read:
+granularity_128_read:
 - gate7c direct_global_auprc=0.318939 > F=0.306034
 - gate7c distributed_global_auprc=0.179488 > F=0.169906
 - F still better mean_delta_p90=-0.020208 vs gate7c=-0.007069
 - gate7c better mean_top10_inflation=1.906250 vs F=2.031250
 
-qfix_200_read:
+granularity_200_read:
 - gate7c direct_global_auprc=0.316612 > F=0.300950
 - gate7c distributed_global_auprc=0.167865 > F=0.160062
 - F still better mean_delta_p90=-0.021322 vs gate7c=-0.006514
 - gate7c better mean_top10_inflation=1.980000 vs F=2.060000
 
 interpretation:
-- the old pre-qfix quietness claim is withdrawn
+- the old pre-qfix quietness claim remains withdrawn
 - gate7c conflict-side revival persists under the corrected same-world quietness court
 - the revival is not explained away by the old quietness bug
+- the granularity-threading rerun does not change the numerical standing read
+- mixed-granularity caveat is now carried by the artifacts themselves instead of only by handoff prose
 - quietness is now cleaner to read, but still not fully adjudicated in gate7c's favor
 - candidate freeze, evaluator freeze, and aggregation ban remain intact
 
@@ -54,3 +57,4 @@ caveats:
 - pre-qfix quietness outputs are historical only and should not be used for outward claims
 - gate7c uses transition labels; F/gate6f/gate6h use token labels
 - quietness is unresolved, not won
+- mixed-granularity is explicit, not cured

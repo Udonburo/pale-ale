@@ -6,12 +6,13 @@ Date: 2026-03-19
 
 ## 0. Scope
 
-This file records the corrected Gate8 execution read after the quietness-court repair.
+This file records the corrected Gate8 execution read after the quietness-court repair
+and the mixed-granularity court threading update.
 
 The active evidence package is now:
 
-- `gate8e_128r_qfix_candidate_execution`: 128-row same-world quietness court
-- `gate8f_200r_qfix_candidate_execution`: 200-row same-world quietness court
+- `gate8g_128r_granularity_candidate_execution`: 128-row same-world quietness court with explicit mixed-granularity artifacts
+- `gate8h_200r_granularity_candidate_execution`: 200-row same-world quietness court with explicit mixed-granularity artifacts
 
 The fixed comparison set remained:
 
@@ -58,6 +59,18 @@ rather than:
 - merely same coarse world type
 - different world instance
 
+The fixed standing court also now carries explicit mixed-granularity metadata:
+
+- per-candidate `candidate_id`
+- per-candidate `role`
+- per-candidate `label_key`
+- per-candidate `label_granularity`
+- run-level status `mixed_candidate_label_granularity_v1`
+
+That does not remove the caveat.
+
+It makes the caveat impossible to silently drop from the artifacts.
+
 ## 2. What Was Added
 
 Gate8 now has:
@@ -65,6 +78,7 @@ Gate8 now has:
 - fixed-set execution
 - corrected same-world quietness controls
 - scale-up evidence through 200 rows
+- explicit mixed-granularity court threading across constitution, materialization, execution, and per-candidate evaluation
 
 New tooling and contract tightening live in:
 
@@ -80,6 +94,7 @@ Under the corrected same-world quietness court:
 - `gate7c` still leads `F` on both conflict cells
 - this remains true at both 128 and 200 rows
 - `gate6f` and `gate6h` remain clearly behind
+- the numerical standing read is unchanged by the granularity-threading rerun
 
 But quietness is still not fully won:
 
@@ -92,7 +107,7 @@ So the correct sentence is:
 
 ## 4. Current Numerical Read
 
-### 4.1 `gate8e_128r_qfix`
+### 4.1 `gate8g_128r_granularity`
 
 Direct contradiction:
 
@@ -111,7 +126,7 @@ Quietness:
 - `F mean_top10_inflation = 2.031250`
 - `gate7c mean_top10_inflation = 1.906250`
 
-### 4.2 `gate8f_200r_qfix`
+### 4.2 `gate8h_200r_granularity`
 
 Direct contradiction:
 
@@ -148,6 +163,13 @@ Their quietness court is not valid enough for tracked outward claims.
 
 This is regime-consistent with Gate7, but it is not same-granularity comparison.
 
+This caveat is now carried explicitly in:
+
+- constitution artifacts
+- materialized benchmark manifests
+- execution manifests
+- per-candidate evaluation manifests and reports
+
 ### 5.3 Quietness winner is still not settled
 
 Under the corrected court:
@@ -181,4 +203,4 @@ What is not yet earned:
 
 The best short sentence after the quietness-court correction is:
 
-- `Under the corrected same-world quietness court, gate7c retains a persistent conflict-side standing gain through 200 rows, while quietness remains non-collapsed in some respects but still unresolved overall.`
+- `Under the corrected same-world quietness court and explicit mixed-granularity standing metadata, gate7c retains a persistent conflict-side standing gain through 200 rows, while quietness remains non-collapsed in some respects but still unresolved overall.`
