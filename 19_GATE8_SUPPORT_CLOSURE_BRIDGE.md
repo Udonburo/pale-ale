@@ -1,6 +1,6 @@
 # Gate8 Support-Conditioned Closure Bridge
 
-Status: spec-only draft
+Status: spec fixed, first burn complete
 Role: diagnostic bridge v2 spec, not standing spec
 Date: 2026-03-20
 
@@ -227,4 +227,21 @@ This bridge phase is ready for implementation only if:
 - the four cell expectations are frozen up front
 - the falsifiers are written before code
 
-Until then, this remains spec-only.
+The spec is now fixed, and the first diagnostic burn has been executed on:
+
+- `gate8k_128r_support_closure_candidate_execution`
+- `gate8l_200r_support_closure_candidate_execution`
+
+That first burn should be read narrowly:
+
+- standing stayed unchanged
+- `distributed_incompatibility` became the lowest-coverage / highest-reanchor / highest-closure-tail cell
+- `clean_support` and `surface_noisy_clean` remained close to each other
+- but `direct_contradiction` did not rise on `support_conditioned_closure`
+
+So the bridge is now implemented but not won.
+
+It should currently be read as:
+
+- a partial explanatory cut that sharpens distributed incompatibility
+- not yet a closure-centric contradiction read that survives both conflict cells

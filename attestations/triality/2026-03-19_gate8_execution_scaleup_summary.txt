@@ -1,6 +1,6 @@
 Gate8 execution summary
-date=2026-03-19
-repo_relative_workstream=Gate8 execution + qfix scale-up + granularity threading + bridge rerun
+date=2026-03-20
+repo_relative_workstream=Gate8 execution + qfix scale-up + granularity threading + bridge rerun + support/closure bridge burn
 
 tracked_docs:
 - 17_GATE8A_EXECUTION_AND_SCALEUP.md
@@ -16,67 +16,73 @@ commands:
 - python tools/test_run_gate8_candidate_batch.py
 - python tools/test_evaluate_gate8_standing.py
 - python tools/test_run_gate8_scaleup.py
-- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8g_128r_granularity_benchmark --out-dir runs/gate8i_128r_bridge_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
-- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8h_200r_granularity_benchmark --out-dir runs/gate8j_200r_bridge_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
+- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8g_128r_granularity_benchmark --out-dir runs/gate8k_128r_support_closure_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
+- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8h_200r_granularity_benchmark --out-dir runs/gate8l_200r_support_closure_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
 
 bridge_artifacts:
-- runs/gate8i_128r_bridge_candidate_execution/manifest.json
-  sha256=7d34a77026bb93ae6a60ed5a804f8b491a26ec74f7b52a3223f7bdf5cf7b3ed7
-- runs/gate8i_128r_bridge_candidate_execution/candidate_summary.csv
+- runs/gate8k_128r_support_closure_candidate_execution/manifest.json
+  sha256=bab77800f7c3c8c9ff882a6fe5de4e6cf8a6b7c08b3f2fa050ad0ba4ee4abb8c
+- runs/gate8k_128r_support_closure_candidate_execution/candidate_summary.csv
   sha256=6e9f7310bf0ca683892baddc194c682eb16203a43597f24c244a0f61fd12dfa3
-- runs/gate8i_128r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
+- runs/gate8k_128r_support_closure_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
   sha256=ff05fd4e037da8316c28a0d7baff7542cc6d50ae8a6aed9d795af54229caad46
-- runs/gate8i_128r_bridge_candidate_execution/diagnostics/rotation_leakage_bridge_report.md
-  sha256=22ffa11e13a2901ab4c5491da19e152a6d50d118e235efe39174281ac0dad41d
-- runs/gate8j_200r_bridge_candidate_execution/manifest.json
-  sha256=342d577e6b22b0bd248265ac54d6eb6a92e650e12b7e95533f0892d8b0eabf69
-- runs/gate8j_200r_bridge_candidate_execution/candidate_summary.csv
+- runs/gate8k_128r_support_closure_candidate_execution/diagnostics/support_closure_by_cell.csv
+  sha256=16fae7f2d8a1bf45bb13736611e4327b48047704df16d17ce70e93a534400d8e
+- runs/gate8k_128r_support_closure_candidate_execution/diagnostics/support_closure_bridge_report.md
+  sha256=ea85f19be88942011aef7dd14f957e1a88123d4ec911e25d4e92806ea9822faf
+- runs/gate8l_200r_support_closure_candidate_execution/manifest.json
+  sha256=d70d22c0dc24d2e5253e605d86d4583c3d581423ce974ad4d251d12114adc847
+- runs/gate8l_200r_support_closure_candidate_execution/candidate_summary.csv
   sha256=fb6cdd2deb388a5a38ddb47dec4be08c85d4d1428d5f06e191d7437ca77e0eb6
-- runs/gate8j_200r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
+- runs/gate8l_200r_support_closure_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
   sha256=7115b4a4bed2b21de11dde0bd315c89cdfad5c321ec03ded38646209c32107cf
-- runs/gate8j_200r_bridge_candidate_execution/diagnostics/rotation_leakage_bridge_report.md
-  sha256=9daf2cd2f97c53ba2cf56491bf909f7ab3fad016fb1c0c43d8a543807ba57f96
+- runs/gate8l_200r_support_closure_candidate_execution/diagnostics/support_closure_by_cell.csv
+  sha256=d825258bf6cecf64b0485c012dd7612b89a7768d901879b01a41a64e5ae13d0d
+- runs/gate8l_200r_support_closure_candidate_execution/diagnostics/support_closure_bridge_report.md
+  sha256=2839d3ca77e68e438d3bec7d1517e92134ac5168067122d55d04a475596ab848
 
 binding:
-- bridge manifests bind code_git_commit=d13cddbb64546a450cedf0f8fa741c50b4e3aede
+- support/closure manifests bind code_git_commit=2eb6a79fcb0bdbd28c979b630e39c254976b74da
 - quietness_pairing_rule=shared_world_id_v1
 - candidate_granularity_status=mixed_candidate_label_granularity_v1
 - diagnostic_bridge.method_id=gate8_rotation_leakage_bridge_v1
 - diagnostic_bridge.status=diagnostic_only
+- support_closure_bridge.method_id=gate8_support_closure_bridge_v2
+- support_closure_bridge.status=diagnostic_only
 
-bridge_128_standing_read:
+support_closure_128_standing_read:
 - gate7c direct_global_auprc=0.318939 > F=0.306034
 - gate7c distributed_global_auprc=0.179488 > F=0.169906
 - F still better mean_delta_p90=-0.020208 vs gate7c=-0.007069
 - gate7c better mean_top10_inflation=1.906250 vs F=2.031250
 
-bridge_128_diagnostic_read:
-- rotation_only mean stays high across all cells; surface_noisy_clean=0.597033 is highest, direct_contradiction=0.545732 is lowest
-- leakage_only mean is lowest on direct_contradiction=0.253358; clean_support/surface_noisy_clean/distributed_incompatibility cluster around 0.298567-0.309070
-- closure_defect mean stays broad at 0.499022-0.519938
-- distributed_incompatibility has the highest closure_defect p90=0.608549 but surface_noisy_clean remains close at 0.606212
+support_closure_128_diagnostic_read:
+- standing is unchanged from the bridge-v1 execution surface
+- distributed_incompatibility is the lowest-coverage cell at 0.655203
+- distributed_incompatibility is the highest-reanchor cell at 0.588949
+- distributed_incompatibility has the highest support_conditioned_closure p90=0.927918
+- direct_contradiction mean_support_conditioned_closure=0.764955 stays below clean_support=0.798421 and surface_noisy_clean=0.798094
 
-bridge_200_standing_read:
+support_closure_200_standing_read:
 - gate7c direct_global_auprc=0.316612 > F=0.300950
 - gate7c distributed_global_auprc=0.167865 > F=0.160062
 - F still better mean_delta_p90=-0.021322 vs gate7c=-0.006514
 - gate7c better mean_top10_inflation=1.980000 vs F=2.060000
 
-bridge_200_diagnostic_read:
-- rotation_only mean stays high across all cells; surface_noisy_clean=0.597114 is highest, direct_contradiction=0.545658 is lowest
-- leakage_only mean is again lowest on direct_contradiction=0.252066; clean_support/surface_noisy_clean/distributed_incompatibility sit at 0.299787-0.307476
-- closure_defect mean stays broad at 0.500191-0.519174
-- distributed_incompatibility has the highest closure_defect p90=0.609673 but surface_noisy_clean remains close at 0.607331
+support_closure_200_diagnostic_read:
+- standing is unchanged from the bridge-v1 execution surface
+- distributed_incompatibility is again the lowest-coverage cell at 0.653657
+- distributed_incompatibility is again the highest-reanchor cell at 0.591002
+- distributed_incompatibility has the highest support_conditioned_closure p90=0.924696
+- direct_contradiction mean_support_conditioned_closure=0.763350 stays below clean_support=0.798916 and surface_noisy_clean=0.798365
 
 interpretation:
 - gate7c conflict-side revival persists under the corrected same-world quietness court
-- the bridge rerun does not change the numerical standing read
+- the support/closure burn does not change the numerical standing read
 - mixed-granularity caveat remains explicit in the artifacts
 - diagnostic bridge outputs are now real execution artifacts rather than doctrine-only placeholders
-- rotation_leakage_bridge_report.md now carries the negative read inside the artifact itself
-- the first bridge read does not cleanly separate lawful seam motion from conflict defect
-- direct_contradiction unexpectedly has the lowest mean leakage_only in both reruns
-- distributed_incompatibility shows only a weak closure_defect p90 edge over surface_noisy_clean
+- bridge v1 remains a clean negative and is preserved as such
+- bridge v2 yields a partial/mixed read: distributed_incompatibility sharpens, but direct_contradiction does not survive support conditioning as closure-first burden
 - candidate freeze, evaluator freeze, aggregation ban, and diagnostic-only separation remain intact
 
 caveats:
@@ -84,8 +90,10 @@ caveats:
 - quietness is unresolved, not won
 - mixed-granularity is explicit, not cured
 - bridge diagnostics are baked, but not yet cleanly won
+- bridge v2 is not a full explanatory settlement because direct_contradiction fails the closure-centric expectation
 - no promote/replace conclusion is earned from the current bridge read
 
 next_move_if_any:
-- spec-only bridge v2
-- no further rescue inside bridge v1
+- do not rescue bridge v1
+- do not promote bridge v2
+- if another bridge is tried later, start from the direct-vs-distributed split that v2 failed to unify
