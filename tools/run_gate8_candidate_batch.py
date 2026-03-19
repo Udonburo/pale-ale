@@ -74,6 +74,16 @@ BRIDGE_DOC_PATH = "18_GATE8_ROTATION_LEAKAGE_BRIDGE.md"
 BRIDGE_PER_SAMPLE_FILENAME = "rotation_leakage_per_sample.csv"
 BRIDGE_BY_CELL_FILENAME = "rotation_leakage_by_cell.csv"
 BRIDGE_REPORT_FILENAME = "rotation_leakage_bridge_report.md"
+SUPPORT_BRIDGE_METHOD_ID = "gate8_support_closure_bridge_v2"
+SUPPORT_BRIDGE_STATUS = "diagnostic_only"
+SUPPORT_BRIDGE_SOURCE_CANDIDATE_ID = "gate7c"
+SUPPORT_BRIDGE_DOC_PATH = "19_GATE8_SUPPORT_CLOSURE_BRIDGE.md"
+SUPPORT_BRIDGE_PER_SAMPLE_FILENAME = "support_closure_per_sample.csv"
+SUPPORT_BRIDGE_BY_CELL_FILENAME = "support_closure_by_cell.csv"
+SUPPORT_BRIDGE_REPORT_FILENAME = "support_closure_bridge_report.md"
+SUPPORT_ANCHOR_TARGET_FILENAME = "support_anchor.txt"
+SUPPORT_ANCHOR_TRIPLETS_FILENAME = "support_anchor_triplets.ndjson"
+SUPPORT_ANCHOR_META_FILENAME = "support_anchor_meta.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -201,6 +211,173 @@ def build_orthogonal_projector(
         return None
     basis_slice = np.asarray(basis[:, :rank_local], dtype=np.float64)
     return basis_slice @ basis_slice.T
+
+
+def build_support_claim_lookup(
+    world_truth_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, str]:
+    support_claim_by_world_id: Dict[str, str] = {}
+    for row in world_truth_rows:
+        world_id = str(row.get("world_id") or "")
+        support_claim = str(row.get("support_claim") or "").strip()
+        if not world_id:
+            raise ValueError("world_truth row missing world_id")
+        if not support_claim:
+            raise ValueError(f"world_truth row missing support_claim for world_id={world_id}")
+        existing = support_claim_by_world_id.get(world_id)
+        if existing is not None and existing != support_claim:
+            raise ValueError(f"inconsistent support_claim for world_id={world_id}")
+        support_claim_by_world_id[world_id] = support_claim
+    return support_claim_by_world_id
+
+
+def build_support_anchor_object(
+    anchor_triplet_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    if not anchor_triplet_rows:
+        raise ValueError("support anchor triplets are empty")
+
+    columns: List[np.ndarray] = []
+    for row in anchor_triplet_rows:
+        for key in gate6_builder.RAW_KEYS:
+            raw = gate6_builder.load_raw_vector(row, key)
+            normalized, _norm = gate6_builder.normalize_raw_vector(raw)
+            columns.append(normalized)
+    construction = np.stack(columns, axis=1)
+    u_matrix, singular_values, _vt = np.linalg.svd(construction, full_matrices=False)
+
+    basis = np.zeros((construction.shape[0], gate6_builder.LOCAL_DIM_MAX), dtype=np.float64)
+    singular_values_padded = np.zeros(gate6_builder.LOCAL_DIM_MAX, dtype=np.float64)
+    take = min(gate6_builder.LOCAL_DIM_MAX, singular_values.shape[0])
+    singular_values_padded[:take] = singular_values[:take]
+    sigma_1 = float(singular_values_padded[0]) if singular_values_padded.size else 0.0
+    rank_cutoff = max(gate6_builder.TAU_RANK_ABS, gate6_builder.TAU_RANK_REL * sigma_1)
+    rank_local = int(np.sum(singular_values_padded >= rank_cutoff))
+    for axis_idx in range(rank_local):
+        fixed_column, _flipped, _anchor_index = gate6_builder.sign_fix_column(u_matrix[:, axis_idx])
+        basis[:, axis_idx] = fixed_column
+
+    return {
+        "basis": basis,
+        "singular_values": singular_values_padded,
+        "rank_local": rank_local,
+        "n_anchor_steps": len(anchor_triplet_rows),
+        "n_anchor_columns": len(columns),
+    }
+
+
+def compute_support_closure_bridge_metrics(
+    current_basis: np.ndarray,
+    current_singular_values: np.ndarray,
+    current_rank: int,
+    next_basis: np.ndarray,
+    next_singular_values: np.ndarray,
+    next_coords_local: np.ndarray,
+    next_rank: int,
+    anchor_basis: np.ndarray,
+    anchor_rank: int,
+) -> Dict[str, Any]:
+    anchor_projector = build_orthogonal_projector(anchor_basis, anchor_rank)
+    if anchor_projector is None:
+        return {
+            "bridge_outcome": "invalid_support_anchor",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    current_operator = gate7c_consumer.build_anisotropic_operator(
+        current_basis,
+        current_singular_values,
+        current_rank,
+    )
+    if current_operator is None:
+        return {
+            "bridge_outcome": "invalid_current_operator",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    next_operator = gate7c_consumer.build_anisotropic_operator(
+        next_basis,
+        next_singular_values,
+        next_rank,
+    )
+    if next_operator is None:
+        return {
+            "bridge_outcome": "invalid_next_operator",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    next_v = gate7c_consumer.reconstruct_v(next_basis, next_coords_local, next_rank)
+    if next_v is None:
+        return {
+            "bridge_outcome": "invalid_next_vector",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    support_reanchor_cost = projector_gap(
+        current_basis=next_basis,
+        current_rank=next_rank,
+        next_basis=anchor_basis,
+        next_rank=anchor_rank,
+    )
+    if support_reanchor_cost is None:
+        return {
+            "bridge_outcome": "invalid_support_reanchor_cost",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    anchored_v = anchor_projector @ next_v
+    next_norm_sq = float(np.dot(next_v, next_v))
+    anchored_norm_sq = float(np.dot(anchored_v, anchored_v))
+    if (
+        not np.isfinite(next_norm_sq)
+        or next_norm_sq <= 1e-12
+        or not np.isfinite(anchored_norm_sq)
+    ):
+        return {
+            "bridge_outcome": "invalid_support_anchor_energy",
+            "support_anchor_coverage": None,
+            "support_reanchor_cost": None,
+            "support_conditioned_closure": None,
+        }
+
+    support_anchor_coverage = float(np.clip(anchored_norm_sq / next_norm_sq, 0.0, 1.0))
+    if anchored_norm_sq <= 1e-12:
+        return {
+            "bridge_outcome": "insufficient_support_anchor_overlap",
+            "support_anchor_coverage": support_anchor_coverage,
+            "support_reanchor_cost": support_reanchor_cost,
+            "support_conditioned_closure": None,
+        }
+
+    current_applied = current_operator @ anchored_v
+    closure_applied = next_operator @ current_applied
+    closure_norm_sq = float(np.dot(closure_applied, closure_applied))
+    if not np.isfinite(closure_norm_sq):
+        return {
+            "bridge_outcome": "invalid_support_closure_energy",
+            "support_anchor_coverage": support_anchor_coverage,
+            "support_reanchor_cost": support_reanchor_cost,
+            "support_conditioned_closure": None,
+        }
+
+    support_conditioned_ratio = float(np.clip(closure_norm_sq / anchored_norm_sq, 0.0, 1.0))
+    support_conditioned_closure = float(np.clip(1.0 - support_conditioned_ratio, 0.0, 1.0))
+    return {
+        "bridge_outcome": "none",
+        "support_anchor_coverage": support_anchor_coverage,
+        "support_reanchor_cost": support_reanchor_cost,
+        "support_conditioned_closure": support_conditioned_closure,
+    }
 
 
 def compute_rotation_leakage_bridge_metrics(
@@ -471,6 +648,7 @@ def materialize_samples(
     benchmark_rows: Sequence[Dict[str, Any]],
     registry_rows: Sequence[Dict[str, Any]],
     samples_root: Path,
+    support_claim_by_world_id: Dict[str, str],
     model_id: str,
     model_revision: Optional[str],
     tokenizer: Any,
@@ -478,11 +656,12 @@ def materialize_samples(
     device: Any,
     topk: int,
     seed: int,
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Dict[int, Dict[str, Any]]]:
     registry_by_benchmark_id = {
         str(row["benchmark_sample_id"]): row for row in registry_rows
     }
     extraction_rows: List[Dict[str, Any]] = []
+    support_anchor_objects: Dict[int, Dict[str, Any]] = {}
     for benchmark_row in sorted(benchmark_rows, key=lambda row: str(row["sample_id"])):
         benchmark_sample_id = str(benchmark_row["sample_id"])
         registry_row = registry_by_benchmark_id[benchmark_sample_id]
@@ -498,6 +677,9 @@ def materialize_samples(
         meta_path = sample_dir / "meta.json"
         labels_path = sample_dir / "labels.jsonl"
         benchmark_row_path = sample_dir / "benchmark_row.json"
+        support_anchor_path = sample_dir / SUPPORT_ANCHOR_TARGET_FILENAME
+        support_anchor_triplets_path = sample_dir / SUPPORT_ANCHOR_TRIPLETS_FILENAME
+        support_anchor_meta_path = sample_dir / SUPPORT_ANCHOR_META_FILENAME
 
         write_text(prompt_path, prompt)
         write_text(answer_path, answer_text)
@@ -554,6 +736,73 @@ def materialize_samples(
             triplet_rows=triplet_rows,
             labels_path=labels_path,
         )
+        world_id = str(benchmark_row["world_id"])
+        support_claim = str(support_claim_by_world_id.get(world_id) or "").strip()
+        if not support_claim:
+            raise ValueError(f"missing support_claim for world_id={world_id}")
+        write_text(support_anchor_path, support_claim)
+        support_anchor_triplet_rows, support_anchor_triplet_meta = extractor.run_teacher_forcing_extraction(
+            prompt=prompt,
+            target_answer=support_claim,
+            model=model,
+            tokenizer=tokenizer,
+            device=device,
+            topk=topk,
+            emit_native_raw=True,
+        )
+        support_anchor_ndjson_sha = extractor.write_ndjson(
+            support_anchor_triplets_path,
+            support_anchor_triplet_rows,
+        )
+        support_anchor_mode_details = support_anchor_triplet_meta["mode_details"]
+        write_json(
+            support_anchor_meta_path,
+            {
+                "model_id": model_id,
+                "model_revision": model_revision,
+                "seed": int(seed),
+                "topk_requested": int(topk),
+                "topk_effective": int(support_anchor_triplet_meta["topk_effective"]),
+                "native_raw_emitted": True,
+                "native_raw_schema_id": extractor.RAW_NATIVE_SCHEMA_ID,
+                "prompt_sha256": sha256_bytes(prompt.encode("utf-8")),
+                "target_answer_sha256": sha256_bytes(support_claim.encode("utf-8")),
+                "output_ndjson_sha256": support_anchor_ndjson_sha,
+                "output_ndjson_path": support_anchor_triplets_path.as_posix(),
+                "device": str(device),
+                "deterministic_requested": True,
+                "n_steps_written": len(support_anchor_triplet_rows),
+                "extraction_mode": support_anchor_mode_details.get("mode"),
+                "alignment_method": support_anchor_mode_details.get("alignment_method"),
+                "target_token_count_expected": support_anchor_mode_details.get("target_token_count_expected"),
+                "target_token_count_extracted": support_anchor_mode_details.get("target_token_count_extracted"),
+                "exact_token_match_ratio": support_anchor_mode_details.get("exact_token_match_ratio"),
+                "target_token_indices_count": support_anchor_mode_details.get("target_token_indices_count"),
+                "target_only_token_count": support_anchor_mode_details.get("target_only_token_count"),
+                "boundary_merge_token_delta": support_anchor_mode_details.get("boundary_merge_token_delta"),
+                "bos_prepended_for_teacher_forcing": support_anchor_mode_details.get(
+                    "bos_prepended_for_teacher_forcing"
+                ),
+                "proj_id": extractor.PROJ_ID,
+                "splus_def_id": extractor.SPLUS_DEF_ID,
+                "sminus_def_id": extractor.SMINUS_DEF_ID_TEMPLATE.format(
+                    topk=int(support_anchor_triplet_meta["topk_effective"])
+                ),
+                "benchmark_sample_id": benchmark_sample_id,
+                "world_id": world_id,
+                "support_claim": support_claim,
+            },
+        )
+        support_anchor_object = build_support_anchor_object(support_anchor_triplet_rows)
+        support_anchor_object["support_claim"] = support_claim
+        support_anchor_object["exact_token_match_ratio"] = float(
+            support_anchor_mode_details["exact_token_match_ratio"]
+        )
+        support_anchor_object["support_anchor_triplets_path"] = repo_relative_or_posix(
+            support_anchor_triplets_path
+        )
+        support_anchor_object["support_anchor_triplets_sha256"] = support_anchor_ndjson_sha
+        support_anchor_objects[execution_sample_id] = support_anchor_object
         extraction_rows.append(
             {
                 "execution_sample_id": execution_sample_id,
@@ -564,11 +813,16 @@ def materialize_samples(
                 "n_steps_written": len(triplet_rows),
                 "exact_token_match_ratio": float(meta_payload["exact_token_match_ratio"]),
                 "label_coverage_ratio": float(labels_meta["final_alignment_coverage_ratio"]),
+                "support_anchor_steps": len(support_anchor_triplet_rows),
+                "support_anchor_rank": int(support_anchor_object["rank_local"]),
+                "support_anchor_exact_token_match_ratio": float(
+                    support_anchor_mode_details["exact_token_match_ratio"]
+                ),
                 "quietness_pair_id": str(registry_row.get("quietness_pair_id") or ""),
                 "sample_dir": repo_relative_or_posix(sample_dir),
             }
         )
-    return extraction_rows
+    return extraction_rows, support_anchor_objects
 
 
 def build_candidate_summary(
@@ -890,6 +1144,336 @@ def build_rotation_leakage_bridge_report(
     return "\n".join(lines) + "\n"
 
 
+def build_support_closure_transition_rows(
+    step_rows: Sequence[Dict[str, Any]],
+    arrays: Dict[str, np.ndarray],
+    support_anchor_objects: Dict[int, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in step_rows:
+        grouped[int(row["sample_id"])].append(row)
+    for rows in grouped.values():
+        rows.sort(key=lambda row: int(row["step"]))
+
+    transition_rows: List[Dict[str, Any]] = []
+    for sample_id in sorted(grouped):
+        rows = grouped[sample_id]
+        anchor_object = support_anchor_objects.get(sample_id)
+        for idx, step_row in enumerate(rows[:-1]):
+            next_row = rows[idx + 1]
+            bridge_metrics: Dict[str, Any]
+            if anchor_object is None:
+                bridge_metrics = {
+                    "bridge_outcome": "missing_support_anchor",
+                    "support_anchor_coverage": None,
+                    "support_reanchor_cost": None,
+                    "support_conditioned_closure": None,
+                }
+            else:
+                current_row_index = int(step_row["array_row_index"])
+                next_row_index = int(next_row["array_row_index"])
+                bridge_metrics = compute_support_closure_bridge_metrics(
+                    current_basis=np.asarray(arrays["basis"][current_row_index], dtype=np.float64),
+                    current_singular_values=np.asarray(
+                        arrays["singular_values"][current_row_index],
+                        dtype=np.float64,
+                    ),
+                    current_rank=int(arrays["rank_local"][current_row_index]),
+                    next_basis=np.asarray(arrays["basis"][next_row_index], dtype=np.float64),
+                    next_singular_values=np.asarray(
+                        arrays["singular_values"][next_row_index],
+                        dtype=np.float64,
+                    ),
+                    next_coords_local=np.asarray(
+                        arrays["coords_local"][next_row_index],
+                        dtype=np.float64,
+                    ),
+                    next_rank=int(arrays["rank_local"][next_row_index]),
+                    anchor_basis=np.asarray(anchor_object["basis"], dtype=np.float64),
+                    anchor_rank=int(anchor_object["rank_local"]),
+                )
+            transition_rows.append(
+                {
+                    "execution_sample_id": int(step_row["sample_id"]),
+                    "step": int(step_row["step"]),
+                    "token_text": str(step_row["token_text"]),
+                    "label_transition": max(int(step_row["label_token"]), int(next_row["label_token"])),
+                    "bridge_outcome": str(bridge_metrics["bridge_outcome"]),
+                    "support_anchor_coverage": bridge_metrics["support_anchor_coverage"],
+                    "support_reanchor_cost": bridge_metrics["support_reanchor_cost"],
+                    "support_conditioned_closure": bridge_metrics["support_conditioned_closure"],
+                }
+            )
+    return transition_rows
+
+
+def build_support_closure_per_sample_rows(
+    sample_registry_rows: Sequence[Dict[str, Any]],
+    transition_rows: Sequence[Dict[str, Any]],
+    support_anchor_objects: Dict[int, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    transitions_by_sample: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for row in transition_rows:
+        transitions_by_sample[int(row["execution_sample_id"])].append(row)
+
+    sample_rows: List[Dict[str, Any]] = []
+    for registry_row in sorted(
+        sample_registry_rows,
+        key=lambda row: int(row["execution_sample_id"]),
+    ):
+        execution_sample_id = int(registry_row["execution_sample_id"])
+        rows = sorted(
+            transitions_by_sample.get(execution_sample_id, []),
+            key=lambda row: int(row["step"]),
+        )
+        anchor_object = support_anchor_objects.get(execution_sample_id)
+        coverage_values = [
+            float(row["support_anchor_coverage"])
+            for row in rows
+            if row["support_anchor_coverage"] is not None
+        ]
+        reanchor_values = [
+            float(row["support_reanchor_cost"])
+            for row in rows
+            if row["support_reanchor_cost"] is not None
+        ]
+        closure_values = [
+            float(row["support_conditioned_closure"])
+            for row in rows
+            if row["support_conditioned_closure"] is not None
+        ]
+        sample_rows.append(
+            {
+                "execution_sample_id": execution_sample_id,
+                "benchmark_sample_id": str(registry_row["benchmark_sample_id"]),
+                "cell_id": str(registry_row["cell_id"]),
+                "world_id": str(registry_row["world_id"]),
+                "rendering_id": str(registry_row["rendering_id"]),
+                "target_id": str(registry_row["target_id"]),
+                "world_type": str(registry_row["world_type"]),
+                "answer_target_type": str(registry_row["answer_target_type"]),
+                "quietness_pair_id": str(registry_row.get("quietness_pair_id") or ""),
+                "support_anchor_rank": None if anchor_object is None else int(anchor_object["rank_local"]),
+                "support_anchor_steps": None if anchor_object is None else int(anchor_object["n_anchor_steps"]),
+                "support_anchor_exact_token_match_ratio": None
+                if anchor_object is None
+                else float(anchor_object["exact_token_match_ratio"]),
+                "n_transition_rows_total": len(rows),
+                "n_transition_rows_anchor_valid": len(coverage_values),
+                "n_transition_rows_closure_valid": len(closure_values),
+                "n_transition_rows_missing": len(rows) - len(coverage_values),
+                "positive_transition_count": sum(int(row["label_transition"]) for row in rows),
+                "mean_support_anchor_coverage": mean_or_none(coverage_values),
+                "p90_support_anchor_coverage": percentile(coverage_values, 90.0),
+                "max_support_anchor_coverage": None if not coverage_values else float(max(coverage_values)),
+                "mean_support_reanchor_cost": mean_or_none(reanchor_values),
+                "p90_support_reanchor_cost": percentile(reanchor_values, 90.0),
+                "max_support_reanchor_cost": None if not reanchor_values else float(max(reanchor_values)),
+                "mean_support_conditioned_closure": mean_or_none(closure_values),
+                "p90_support_conditioned_closure": percentile(closure_values, 90.0),
+                "max_support_conditioned_closure": None
+                if not closure_values
+                else float(max(closure_values)),
+            }
+        )
+    return sample_rows
+
+
+def build_support_closure_by_cell_rows(
+    per_sample_rows: Sequence[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for row in per_sample_rows:
+        grouped[str(row["cell_id"])].append(row)
+
+    cell_rows: List[Dict[str, Any]] = []
+    for cell_id in sorted(grouped):
+        rows = grouped[cell_id]
+        cell_rows.append(
+            {
+                "cell_id": cell_id,
+                "n_samples": len(rows),
+                "n_transition_rows_total": sum(int(row["n_transition_rows_total"]) for row in rows),
+                "n_transition_rows_anchor_valid": sum(
+                    int(row["n_transition_rows_anchor_valid"]) for row in rows
+                ),
+                "n_transition_rows_closure_valid": sum(
+                    int(row["n_transition_rows_closure_valid"]) for row in rows
+                ),
+                "n_transition_rows_missing": sum(int(row["n_transition_rows_missing"]) for row in rows),
+                "mean_support_anchor_rank": mean_or_none(
+                    [
+                        float(row["support_anchor_rank"])
+                        for row in rows
+                        if row["support_anchor_rank"] not in (None, "")
+                    ]
+                ),
+                "mean_support_anchor_steps": mean_or_none(
+                    [
+                        float(row["support_anchor_steps"])
+                        for row in rows
+                        if row["support_anchor_steps"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_mean_support_anchor_coverage": mean_or_none(
+                    [
+                        float(row["mean_support_anchor_coverage"])
+                        for row in rows
+                        if row["mean_support_anchor_coverage"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_p90_support_anchor_coverage": mean_or_none(
+                    [
+                        float(row["p90_support_anchor_coverage"])
+                        for row in rows
+                        if row["p90_support_anchor_coverage"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_mean_support_reanchor_cost": mean_or_none(
+                    [
+                        float(row["mean_support_reanchor_cost"])
+                        for row in rows
+                        if row["mean_support_reanchor_cost"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_p90_support_reanchor_cost": mean_or_none(
+                    [
+                        float(row["p90_support_reanchor_cost"])
+                        for row in rows
+                        if row["p90_support_reanchor_cost"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_mean_support_conditioned_closure": mean_or_none(
+                    [
+                        float(row["mean_support_conditioned_closure"])
+                        for row in rows
+                        if row["mean_support_conditioned_closure"] not in (None, "")
+                    ]
+                ),
+                "mean_sample_p90_support_conditioned_closure": mean_or_none(
+                    [
+                        float(row["p90_support_conditioned_closure"])
+                        for row in rows
+                        if row["p90_support_conditioned_closure"] not in (None, "")
+                    ]
+                ),
+            }
+        )
+    return cell_rows
+
+
+def build_support_closure_bridge_report(
+    run_id: str,
+    per_sample_rows: Sequence[Dict[str, Any]],
+    by_cell_rows: Sequence[Dict[str, Any]],
+) -> str:
+    by_cell_ordered = list(by_cell_rows)
+    coverage_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_mean_support_anchor_coverage"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_mean_support_anchor_coverage"]),
+    )
+    reanchor_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_mean_support_reanchor_cost"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_mean_support_reanchor_cost"]),
+        reverse=True,
+    )
+    closure_ranked = sorted(
+        [
+            row
+            for row in by_cell_ordered
+            if row["mean_sample_p90_support_conditioned_closure"] not in (None, "")
+        ],
+        key=lambda row: float(row["mean_sample_p90_support_conditioned_closure"]),
+        reverse=True,
+    )
+    lines = [
+        "# Gate8 Support/Closure Bridge Diagnostics",
+        "",
+        f"run_id: {run_id}",
+        f"method_id: {SUPPORT_BRIDGE_METHOD_ID}",
+        f"status: {SUPPORT_BRIDGE_STATUS}",
+        f"source_candidate_id: {SUPPORT_BRIDGE_SOURCE_CANDIDATE_ID}",
+        f"bridge_doc: {SUPPORT_BRIDGE_DOC_PATH}",
+        "",
+        "## Scope",
+        "",
+        "- fixed standing court remains unchanged",
+        "- support-conditioned re-anchoring is treated as computational precondition, not as a competing candidate story",
+        "- support_anchor_coverage measures next-state energy captured by the support-claim anchor span",
+        "- support_reanchor_cost measures projector-gap burden between the next local frame and the support-claim anchor span",
+        "- support_conditioned_closure measures residual non-closure after projecting the next-state into the support anchor and transporting it through the current/next anisotropic operators",
+        "",
+        f"- n_samples_total: {len(per_sample_rows)}",
+        f"- n_cells_total: {len(by_cell_rows)}",
+    ]
+    if coverage_ranked and reanchor_ranked and closure_ranked:
+        lines.extend(
+            [
+                "",
+                "## First Read",
+                "",
+                (
+                    "- lowest mean support_anchor_coverage is "
+                    f"{coverage_ranked[0]['cell_id']}="
+                    f"{float(coverage_ranked[0]['mean_sample_mean_support_anchor_coverage']):.6f}"
+                ),
+                (
+                    "- highest mean support_reanchor_cost is "
+                    f"{reanchor_ranked[0]['cell_id']}="
+                    f"{float(reanchor_ranked[0]['mean_sample_mean_support_reanchor_cost']):.6f}"
+                ),
+                (
+                    "- highest p90 support_conditioned_closure is "
+                    f"{closure_ranked[0]['cell_id']}="
+                    f"{float(closure_ranked[0]['mean_sample_p90_support_conditioned_closure']):.6f}"
+                ),
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Cell Aggregates",
+            "",
+            "| cell_id | n_samples | n_transition_rows_anchor_valid | n_transition_rows_closure_valid | mean_sample_mean_support_anchor_coverage | mean_sample_mean_support_reanchor_cost | mean_sample_mean_support_conditioned_closure | mean_sample_p90_support_conditioned_closure |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in by_cell_rows:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(row["cell_id"]),
+                    str(row["n_samples"]),
+                    str(row["n_transition_rows_anchor_valid"]),
+                    str(row["n_transition_rows_closure_valid"]),
+                    ""
+                    if row["mean_sample_mean_support_anchor_coverage"] in (None, "")
+                    else f"{float(row['mean_sample_mean_support_anchor_coverage']):.6f}",
+                    ""
+                    if row["mean_sample_mean_support_reanchor_cost"] in (None, "")
+                    else f"{float(row['mean_sample_mean_support_reanchor_cost']):.6f}",
+                    ""
+                    if row["mean_sample_mean_support_conditioned_closure"] in (None, "")
+                    else f"{float(row['mean_sample_mean_support_conditioned_closure']):.6f}",
+                    ""
+                    if row["mean_sample_p90_support_conditioned_closure"] in (None, "")
+                    else f"{float(row['mean_sample_p90_support_conditioned_closure']):.6f}",
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 def granularity_buckets() -> Dict[str, List[str]]:
     grouped: Dict[str, List[str]] = defaultdict(list)
     for candidate in FIXED_CANDIDATES:
@@ -993,11 +1577,17 @@ def main() -> int:
     bridge_per_sample_path = diagnostics_dir / BRIDGE_PER_SAMPLE_FILENAME
     bridge_by_cell_path = diagnostics_dir / BRIDGE_BY_CELL_FILENAME
     bridge_report_path = diagnostics_dir / BRIDGE_REPORT_FILENAME
+    support_bridge_per_sample_path = diagnostics_dir / SUPPORT_BRIDGE_PER_SAMPLE_FILENAME
+    support_bridge_by_cell_path = diagnostics_dir / SUPPORT_BRIDGE_BY_CELL_FILENAME
+    support_bridge_report_path = diagnostics_dir / SUPPORT_BRIDGE_REPORT_FILENAME
     checksums_path = out_dir / "checksums.json"
 
     benchmark_manifest = read_json(benchmark_dir / "manifest.json")
     validate_benchmark_manifest(benchmark_manifest)
     benchmark_rows = read_jsonl(benchmark_dir / "benchmark_rows.jsonl")
+    support_claim_by_world_id = build_support_claim_lookup(
+        read_jsonl(benchmark_dir / "world_truth.jsonl")
+    )
     if args.sample_limit is not None:
         benchmark_rows = sorted(benchmark_rows, key=lambda row: str(row["sample_id"]))[: args.sample_limit]
     sample_registry_rows, quietness_pair_rows = build_sample_registry(benchmark_rows)
@@ -1012,10 +1602,11 @@ def main() -> int:
         device=device,
     )
 
-    extraction_rows = materialize_samples(
+    extraction_rows, support_anchor_objects = materialize_samples(
         benchmark_rows=benchmark_rows,
         registry_rows=sample_registry_rows,
         samples_root=samples_root,
+        support_claim_by_world_id=support_claim_by_world_id,
         model_id=model_id,
         model_revision=model_revision,
         tokenizer=tokenizer,
@@ -1147,6 +1738,79 @@ def main() -> int:
             by_cell_rows=bridge_by_cell_rows,
         ),
     )
+    support_bridge_transition_rows = build_support_closure_transition_rows(
+        step_rows=gate6_step_rows,
+        arrays=gate6_arrays,
+        support_anchor_objects=support_anchor_objects,
+    )
+    support_bridge_per_sample_rows = build_support_closure_per_sample_rows(
+        sample_registry_rows=sample_registry_rows,
+        transition_rows=support_bridge_transition_rows,
+        support_anchor_objects=support_anchor_objects,
+    )
+    support_bridge_by_cell_rows = build_support_closure_by_cell_rows(
+        support_bridge_per_sample_rows
+    )
+    write_csv(
+        support_bridge_per_sample_path,
+        (
+            "execution_sample_id",
+            "benchmark_sample_id",
+            "cell_id",
+            "world_id",
+            "rendering_id",
+            "target_id",
+            "world_type",
+            "answer_target_type",
+            "quietness_pair_id",
+            "support_anchor_rank",
+            "support_anchor_steps",
+            "support_anchor_exact_token_match_ratio",
+            "n_transition_rows_total",
+            "n_transition_rows_anchor_valid",
+            "n_transition_rows_closure_valid",
+            "n_transition_rows_missing",
+            "positive_transition_count",
+            "mean_support_anchor_coverage",
+            "p90_support_anchor_coverage",
+            "max_support_anchor_coverage",
+            "mean_support_reanchor_cost",
+            "p90_support_reanchor_cost",
+            "max_support_reanchor_cost",
+            "mean_support_conditioned_closure",
+            "p90_support_conditioned_closure",
+            "max_support_conditioned_closure",
+        ),
+        support_bridge_per_sample_rows,
+    )
+    write_csv(
+        support_bridge_by_cell_path,
+        (
+            "cell_id",
+            "n_samples",
+            "n_transition_rows_total",
+            "n_transition_rows_anchor_valid",
+            "n_transition_rows_closure_valid",
+            "n_transition_rows_missing",
+            "mean_support_anchor_rank",
+            "mean_support_anchor_steps",
+            "mean_sample_mean_support_anchor_coverage",
+            "mean_sample_p90_support_anchor_coverage",
+            "mean_sample_mean_support_reanchor_cost",
+            "mean_sample_p90_support_reanchor_cost",
+            "mean_sample_mean_support_conditioned_closure",
+            "mean_sample_p90_support_conditioned_closure",
+        ),
+        support_bridge_by_cell_rows,
+    )
+    write_text(
+        support_bridge_report_path,
+        build_support_closure_bridge_report(
+            run_id=run_id,
+            per_sample_rows=support_bridge_per_sample_rows,
+            by_cell_rows=support_bridge_by_cell_rows,
+        ),
+    )
 
     for candidate in FIXED_CANDIDATES:
         run_subprocess(
@@ -1239,6 +1903,18 @@ def main() -> int:
                 "report_path": repo_relative_or_posix(bridge_report_path),
                 "report_sha256": sha256_file(bridge_report_path),
             },
+            "support_closure_bridge": {
+                "method_id": SUPPORT_BRIDGE_METHOD_ID,
+                "status": SUPPORT_BRIDGE_STATUS,
+                "source_candidate_id": SUPPORT_BRIDGE_SOURCE_CANDIDATE_ID,
+                "doc_path": repo_relative_or_posix(repo_root / SUPPORT_BRIDGE_DOC_PATH),
+                "per_sample_path": repo_relative_or_posix(support_bridge_per_sample_path),
+                "per_sample_sha256": sha256_file(support_bridge_per_sample_path),
+                "by_cell_path": repo_relative_or_posix(support_bridge_by_cell_path),
+                "by_cell_sha256": sha256_file(support_bridge_by_cell_path),
+                "report_path": repo_relative_or_posix(support_bridge_report_path),
+                "report_sha256": sha256_file(support_bridge_report_path),
+            },
             "model_id": model_id,
             "model_revision": model_revision,
             "device": str(device),
@@ -1264,6 +1940,15 @@ def main() -> int:
             repo_relative_or_posix(bridge_per_sample_path): sha256_file(bridge_per_sample_path),
             repo_relative_or_posix(bridge_by_cell_path): sha256_file(bridge_by_cell_path),
             repo_relative_or_posix(bridge_report_path): sha256_file(bridge_report_path),
+            repo_relative_or_posix(support_bridge_per_sample_path): sha256_file(
+                support_bridge_per_sample_path
+            ),
+            repo_relative_or_posix(support_bridge_by_cell_path): sha256_file(
+                support_bridge_by_cell_path
+            ),
+            repo_relative_or_posix(support_bridge_report_path): sha256_file(
+                support_bridge_report_path
+            ),
         },
     )
     return 0

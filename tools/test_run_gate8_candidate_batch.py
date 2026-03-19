@@ -243,6 +243,117 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         self.assertIn("highest p90 is distributed_incompatibility=0.620000, runner-up is surface_noisy_clean=0.610000", report)
         self.assertIn("bridge v1 should be read as an explanatory-cut failure", report)
 
+    def test_support_closure_bridge_metrics_are_zero_for_aligned_anchor(self):
+        anchor_triplets = [
+            {
+                "V_raw_native": [1.0, 0.0, 0.0, 0.0],
+                "Splus_raw_native": [1.0, 0.0, 0.0, 0.0],
+                "Sminus_raw_native": [1.0, 0.0, 0.0, 0.0],
+            }
+        ]
+        anchor_object = batch.build_support_anchor_object(anchor_triplets)
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.0, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0
+
+        metrics = batch.compute_support_closure_bridge_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=1,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=1,
+            anchor_basis=np.asarray(anchor_object["basis"], dtype=np.float64),
+            anchor_rank=int(anchor_object["rank_local"]),
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "none")
+        self.assertAlmostEqual(float(metrics["support_anchor_coverage"]), 1.0, places=10)
+        self.assertAlmostEqual(float(metrics["support_reanchor_cost"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["support_conditioned_closure"]), 0.0, places=10)
+
+    def test_support_closure_bridge_metrics_flag_missing_anchor_overlap(self):
+        anchor_triplets = [
+            {
+                "V_raw_native": [0.0, 1.0, 0.0, 0.0],
+                "Splus_raw_native": [0.0, 1.0, 0.0, 0.0],
+                "Sminus_raw_native": [0.0, 1.0, 0.0, 0.0],
+            }
+        ]
+        anchor_object = batch.build_support_anchor_object(anchor_triplets)
+        current_basis = np.zeros((4, 3), dtype=np.float64)
+        next_basis = np.zeros((4, 3), dtype=np.float64)
+        current_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        next_basis[:, 0] = np.asarray([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
+        singular_values = np.asarray([1.0, 0.0, 0.0], dtype=np.float64)
+        next_coords = np.zeros((3, 3), dtype=np.float64)
+        next_coords[0, 0] = 1.0
+
+        metrics = batch.compute_support_closure_bridge_metrics(
+            current_basis=current_basis,
+            current_singular_values=singular_values,
+            current_rank=1,
+            next_basis=next_basis,
+            next_singular_values=singular_values,
+            next_coords_local=next_coords,
+            next_rank=1,
+            anchor_basis=np.asarray(anchor_object["basis"], dtype=np.float64),
+            anchor_rank=int(anchor_object["rank_local"]),
+        )
+
+        self.assertEqual(metrics["bridge_outcome"], "insufficient_support_anchor_overlap")
+        self.assertAlmostEqual(float(metrics["support_anchor_coverage"]), 0.0, places=10)
+        self.assertAlmostEqual(float(metrics["support_reanchor_cost"]), 1.0, places=10)
+        self.assertIsNone(metrics["support_conditioned_closure"])
+
+    def test_support_closure_bridge_report_carries_first_read(self):
+        report = batch.build_support_closure_bridge_report(
+            run_id="gate8_support_bridge_test",
+            per_sample_rows=[{"sample_id": 1}],
+            by_cell_rows=[
+                {
+                    "cell_id": "clean_support",
+                    "n_samples": 1,
+                    "n_transition_rows_anchor_valid": 10,
+                    "n_transition_rows_closure_valid": 10,
+                    "mean_sample_mean_support_anchor_coverage": 0.90,
+                    "mean_sample_mean_support_reanchor_cost": 0.10,
+                    "mean_sample_mean_support_conditioned_closure": 0.12,
+                    "mean_sample_p90_support_conditioned_closure": 0.20,
+                },
+                {
+                    "cell_id": "surface_noisy_clean",
+                    "n_samples": 1,
+                    "n_transition_rows_anchor_valid": 10,
+                    "n_transition_rows_closure_valid": 10,
+                    "mean_sample_mean_support_anchor_coverage": 0.82,
+                    "mean_sample_mean_support_reanchor_cost": 0.21,
+                    "mean_sample_mean_support_conditioned_closure": 0.15,
+                    "mean_sample_p90_support_conditioned_closure": 0.24,
+                },
+                {
+                    "cell_id": "direct_contradiction",
+                    "n_samples": 1,
+                    "n_transition_rows_anchor_valid": 10,
+                    "n_transition_rows_closure_valid": 10,
+                    "mean_sample_mean_support_anchor_coverage": 0.88,
+                    "mean_sample_mean_support_reanchor_cost": 0.18,
+                    "mean_sample_mean_support_conditioned_closure": 0.36,
+                    "mean_sample_p90_support_conditioned_closure": 0.51,
+                },
+            ],
+        )
+
+        self.assertIn("## First Read", report)
+        self.assertIn("lowest mean support_anchor_coverage is surface_noisy_clean=0.820000", report)
+        self.assertIn("highest mean support_reanchor_cost is surface_noisy_clean=0.210000", report)
+        self.assertIn("highest p90 support_conditioned_closure is direct_contradiction=0.510000", report)
+
 
 if __name__ == "__main__":
     raise SystemExit(unittest.main())
