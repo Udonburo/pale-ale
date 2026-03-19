@@ -1,11 +1,12 @@
 Gate8 execution summary
 date=2026-03-19
-repo_relative_workstream=Gate8 execution + qfix scale-up + granularity threading
+repo_relative_workstream=Gate8 execution + qfix scale-up + granularity threading + bridge rerun
 
 tracked_docs:
 - 17_GATE8A_EXECUTION_AND_SCALEUP.md
 - tools/README_gate8.md
 - 15_GATE8_LABEL_AND_PROVENANCE_RULES.md
+- 18_GATE8_ROTATION_LEAKAGE_BRIDGE.md
 
 commands:
 - python -B -m py_compile tools/generate_gate8_semiclosed_conflict.py tools/materialize_gate8_semiclosed_conflict.py tools/run_gate8_candidate_batch.py tools/evaluate_gate8_standing.py tools/test_generate_gate8_semiclosed_conflict.py tools/test_materialize_gate8_semiclosed_conflict.py tools/test_run_gate8_candidate_batch.py tools/test_evaluate_gate8_standing.py tools/test_run_gate8_scaleup.py
@@ -14,47 +15,67 @@ commands:
 - python tools/test_run_gate8_candidate_batch.py
 - python tools/test_evaluate_gate8_standing.py
 - python tools/test_run_gate8_scaleup.py
-- python tools/run_gate8_scaleup.py --run-prefix gate8g_128r_granularity --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B
-- python tools/run_gate8_scaleup.py --run-prefix gate8h_200r_granularity --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B
+- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8g_128r_granularity_benchmark --out-dir runs/gate8i_128r_bridge_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
+- python tools/run_gate8_candidate_batch.py --benchmark-dir runs/gate8h_200r_granularity_benchmark --out-dir runs/gate8j_200r_bridge_candidate_execution --device cpu --model-id Qwen/Qwen2.5-0.5B --topk 128 --seed 7
 
-granularity_artifacts:
-- runs/gate8g_128r_granularity_candidate_execution/manifest.json
-  sha256=d92f35e7aa9639fb967f99d6b32d32da9e654dc1695f10a09ebf409557b1493e
-- runs/gate8g_128r_granularity_candidate_execution/candidate_summary.csv
+bridge_artifacts:
+- runs/gate8i_128r_bridge_candidate_execution/manifest.json
+  sha256=7d34a77026bb93ae6a60ed5a804f8b491a26ec74f7b52a3223f7bdf5cf7b3ed7
+- runs/gate8i_128r_bridge_candidate_execution/candidate_summary.csv
   sha256=6e9f7310bf0ca683892baddc194c682eb16203a43597f24c244a0f61fd12dfa3
-- runs/gate8h_200r_granularity_candidate_execution/manifest.json
-  sha256=328de2039f6d83bfae98e78fddada7b281dd74c11c1cb2e49df57906b148e1d9
-- runs/gate8h_200r_granularity_candidate_execution/candidate_summary.csv
+- runs/gate8i_128r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
+  sha256=ff05fd4e037da8316c28a0d7baff7542cc6d50ae8a6aed9d795af54229caad46
+- runs/gate8j_200r_bridge_candidate_execution/manifest.json
+  sha256=e9ef1282fc56b565889d44c245dffab1b7aee366efeed8d74cd1506e99f35210
+- runs/gate8j_200r_bridge_candidate_execution/candidate_summary.csv
   sha256=fb6cdd2deb388a5a38ddb47dec4be08c85d4d1428d5f06e191d7437ca77e0eb6
+- runs/gate8j_200r_bridge_candidate_execution/diagnostics/rotation_leakage_by_cell.csv
+  sha256=7115b4a4bed2b21de11dde0bd315c89cdfad5c321ec03ded38646209c32107cf
 
 binding:
-- granularity manifests bind code_git_commit=31acf4b2d6ba2bf85956f370c46df20345eac966
+- bridge manifests bind code_git_commit=517d81b8dcc5b1ab2994c8d6e3d164d51dc6783e
 - quietness_pairing_rule=shared_world_id_v1
 - candidate_granularity_status=mixed_candidate_label_granularity_v1
+- diagnostic_bridge.method_id=gate8_rotation_leakage_bridge_v1
+- diagnostic_bridge.status=diagnostic_only
 
-granularity_128_read:
+bridge_128_standing_read:
 - gate7c direct_global_auprc=0.318939 > F=0.306034
 - gate7c distributed_global_auprc=0.179488 > F=0.169906
 - F still better mean_delta_p90=-0.020208 vs gate7c=-0.007069
 - gate7c better mean_top10_inflation=1.906250 vs F=2.031250
 
-granularity_200_read:
+bridge_128_diagnostic_read:
+- rotation_only mean stays high across all cells; surface_noisy_clean=0.597033 is highest, direct_contradiction=0.545732 is lowest
+- leakage_only mean is lowest on direct_contradiction=0.253358; clean_support/surface_noisy_clean/distributed_incompatibility cluster around 0.298567-0.309070
+- closure_defect mean stays broad at 0.499022-0.519938
+- distributed_incompatibility has the highest closure_defect p90=0.608549 but surface_noisy_clean remains close at 0.606212
+
+bridge_200_standing_read:
 - gate7c direct_global_auprc=0.316612 > F=0.300950
 - gate7c distributed_global_auprc=0.167865 > F=0.160062
 - F still better mean_delta_p90=-0.021322 vs gate7c=-0.006514
 - gate7c better mean_top10_inflation=1.980000 vs F=2.060000
 
+bridge_200_diagnostic_read:
+- rotation_only mean stays high across all cells; surface_noisy_clean=0.597114 is highest, direct_contradiction=0.545658 is lowest
+- leakage_only mean is again lowest on direct_contradiction=0.252066; clean_support/surface_noisy_clean/distributed_incompatibility sit at 0.299787-0.307476
+- closure_defect mean stays broad at 0.500191-0.519174
+- distributed_incompatibility has the highest closure_defect p90=0.609673 but surface_noisy_clean remains close at 0.607331
+
 interpretation:
-- the old pre-qfix quietness claim remains withdrawn
 - gate7c conflict-side revival persists under the corrected same-world quietness court
-- the revival is not explained away by the old quietness bug
-- the granularity-threading rerun does not change the numerical standing read
-- mixed-granularity caveat is now carried by the artifacts themselves instead of only by handoff prose
-- quietness is now cleaner to read, but still not fully adjudicated in gate7c's favor
-- candidate freeze, evaluator freeze, and aggregation ban remain intact
+- the bridge rerun does not change the numerical standing read
+- mixed-granularity caveat remains explicit in the artifacts
+- diagnostic bridge outputs are now real execution artifacts rather than doctrine-only placeholders
+- the first bridge read does not cleanly separate lawful seam motion from conflict defect
+- direct_contradiction unexpectedly has the lowest mean leakage_only in both reruns
+- distributed_incompatibility shows only a weak closure_defect p90 edge over surface_noisy_clean
+- candidate freeze, evaluator freeze, aggregation ban, and diagnostic-only separation remain intact
 
 caveats:
-- pre-qfix quietness outputs are historical only and should not be used for outward claims
 - gate7c uses transition labels; F/gate6f/gate6h use token labels
 - quietness is unresolved, not won
 - mixed-granularity is explicit, not cured
+- bridge diagnostics are baked, but not yet cleanly won
+- no promote/replace conclusion is earned from the current bridge read
