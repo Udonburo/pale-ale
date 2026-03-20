@@ -127,7 +127,6 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
             model_revision="rev",
         )
         self.assertIn("rendering_family_id: briefing_v1", report)
-
     def test_bridge_metrics_are_zero_for_identity_transition(self):
         current_basis = np.zeros((4, 3), dtype=np.float64)
         next_basis = np.zeros((4, 3), dtype=np.float64)
