@@ -608,6 +608,30 @@ def validate_benchmark_manifest(manifest: Dict[str, Any]) -> None:
         raise ValueError("Gate8 execution requires aggregation_ban=true in benchmark manifest")
 
 
+def resolve_execution_rendering_family_id(
+    benchmark_manifest: Dict[str, Any],
+    sample_registry_rows: Sequence[Dict[str, Any]],
+) -> str:
+    manifest_family_id = str(benchmark_manifest.get("rendering_family_id") or "")
+    if manifest_family_id:
+        return manifest_family_id
+    observed_family_ids = sorted(
+        {
+            str(row.get("rendering_family_id") or "")
+            for row in sample_registry_rows
+            if str(row.get("rendering_family_id") or "")
+        }
+    )
+    if len(observed_family_ids) > 1:
+        raise ValueError(
+            "execution sample registry carries multiple rendering_family_id values: "
+            f"{observed_family_ids!r}"
+        )
+    if observed_family_ids:
+        return observed_family_ids[0]
+    return ""
+
+
 def quietness_pair_bindings(
     benchmark_rows: Sequence[Dict[str, Any]],
 ) -> Tuple[Dict[str, str], List[Dict[str, Any]]]:
@@ -638,6 +662,16 @@ def quietness_pair_bindings(
             )
         if str(clean_row["world_id"]) != str(noisy_row["world_id"]):
             raise ValueError(f"quietness pair world_id mismatch for world_id={world_id}")
+        clean_family_id = str(clean_row.get("rendering_family_id") or "")
+        noisy_family_id = str(noisy_row.get("rendering_family_id") or "")
+        if (
+            clean_family_id
+            and noisy_family_id
+            and clean_family_id != noisy_family_id
+        ):
+            raise ValueError(
+                f"quietness pair rendering_family_id mismatch for world_id={world_id}"
+            )
         pair_id = f"quiet_pair_{world_id}"
         clean_id = str(clean_row["sample_id"])
         noisy_id = str(noisy_row["sample_id"])
@@ -649,6 +683,7 @@ def quietness_pair_bindings(
                 "pairing_rule": QUIETNESS_PAIRING_RULE,
                 "world_id": world_id,
                 "world_type": str(clean_row["world_type"]),
+                "rendering_family_id": clean_family_id or noisy_family_id,
                 "clean_benchmark_sample_id": clean_id,
                 "clean_rendering_id": str(clean_row["rendering_id"]),
                 "surface_noisy_benchmark_sample_id": noisy_id,
@@ -674,6 +709,7 @@ def build_sample_registry(
                 "execution_sample_id": execution_sample_id,
                 "benchmark_sample_id": benchmark_sample_id,
                 "cell_id": str(row["cell_id"]),
+                "rendering_family_id": str(row.get("rendering_family_id") or ""),
                 "world_id": str(row["world_id"]),
                 "rendering_id": str(row["rendering_id"]),
                 "target_id": str(row["target_id"]),
@@ -832,6 +868,7 @@ def materialize_samples(
             ),
             "benchmark_sample_id": benchmark_sample_id,
             "cell_id": cell_id,
+            "rendering_family_id": str(benchmark_row.get("rendering_family_id") or ""),
             "world_type": str(benchmark_row["world_type"]),
             "answer_target_type": str(benchmark_row["answer_target_type"]),
         }
@@ -997,6 +1034,7 @@ def materialize_samples(
                 "execution_sample_id": execution_sample_id,
                 "benchmark_sample_id": benchmark_sample_id,
                 "cell_id": cell_id,
+                "rendering_family_id": str(benchmark_row.get("rendering_family_id") or ""),
                 "world_type": str(benchmark_row["world_type"]),
                 "answer_target_type": str(benchmark_row["answer_target_type"]),
                 "n_steps_written": len(triplet_rows),
@@ -1682,6 +1720,7 @@ def granularity_buckets() -> Dict[str, List[str]]:
 def build_standing_report(
     run_id: str,
     benchmark_manifest: Dict[str, Any],
+    rendering_family_id: str,
     sample_registry_rows: Sequence[Dict[str, Any]],
     extraction_rows: Sequence[Dict[str, Any]],
     candidate_summary_rows: Sequence[Dict[str, Any]],
@@ -1693,6 +1732,7 @@ def build_standing_report(
         "",
         f"run_id: {run_id}",
         f"benchmark_run_id: {benchmark_manifest.get('run_id', '')}",
+        f"rendering_family_id: {rendering_family_id}",
         f"model_id: {model_id}",
         f"model_revision: {model_revision or ''}",
         f"n_samples_total: {len(sample_registry_rows)}",
@@ -2121,6 +2161,10 @@ def main() -> int:
     if args.sample_limit is not None:
         benchmark_rows = sorted(benchmark_rows, key=lambda row: str(row["sample_id"]))[: args.sample_limit]
     sample_registry_rows, quietness_pair_rows = build_sample_registry(benchmark_rows)
+    rendering_family_id = resolve_execution_rendering_family_id(
+        benchmark_manifest=benchmark_manifest,
+        sample_registry_rows=sample_registry_rows,
+    )
     write_jsonl(sample_registry_path, sample_registry_rows)
     write_jsonl(quietness_pairs_path, quietness_pair_rows)
 
@@ -2467,6 +2511,7 @@ def main() -> int:
     report = build_standing_report(
         run_id=run_id,
         benchmark_manifest=benchmark_manifest,
+        rendering_family_id=rendering_family_id,
         sample_registry_rows=sample_registry_rows,
         extraction_rows=extraction_rows,
         candidate_summary_rows=candidate_summary_rows,
@@ -2484,6 +2529,7 @@ def main() -> int:
             "benchmark_dir": repo_relative_or_posix(benchmark_dir),
             "benchmark_manifest_path": repo_relative_or_posix(benchmark_dir / "manifest.json"),
             "benchmark_manifest_sha256": sha256_file(benchmark_dir / "manifest.json"),
+            "rendering_family_id": rendering_family_id,
             "benchmark_rows_path": repo_relative_or_posix(benchmark_dir / "benchmark_rows.jsonl"),
             "benchmark_rows_sha256": sha256_file(benchmark_dir / "benchmark_rows.jsonl"),
             "sample_registry_path": repo_relative_or_posix(sample_registry_path),

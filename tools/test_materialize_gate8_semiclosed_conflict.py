@@ -30,6 +30,7 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
 
             self.assertEqual(manifest["generation_stage"], "materialized_generation")
             self.assertEqual(manifest["provenance_binding_mode"], "realized_artifacts")
+            self.assertEqual(manifest["rendering_family_id"], "archive_v1")
             self.assertEqual(manifest["n_samples_total"], 8)
             self.assertEqual(
                 manifest["candidate_granularity_status"], "mixed_candidate_label_granularity_v1"
@@ -63,6 +64,7 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             ]
             self.assertEqual(len({row["world_id"] for row in direct_sample_rows}), 1)
             self.assertEqual(len({row["rendering_id"] for row in direct_sample_rows}), 1)
+            self.assertEqual({row["rendering_family_id"] for row in direct_sample_rows}, {"archive_v1"})
 
             noisy_clean = next(row for row in benchmark_rows if row["cell_id"] == "surface_noisy_clean")
             self.assertEqual(noisy_clean["retrieval_conflict_chunk_ids"], [])
@@ -76,6 +78,37 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
                 row["world_id"] for row in sample_index_rows if row["cell_id"] == "surface_noisy_clean"
             }
             self.assertEqual(clean_world_ids, noisy_world_ids)
+
+    def test_materializer_supports_briefing_rendering_family(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_str:
+            tmp_dir = Path(tmp_dir_str)
+            constitution_dir = tmp_dir / "constitution"
+            out_dir = tmp_dir / "materialized"
+            self._run_scaffold(constitution_dir, samples_per_cell=2, rendering_family="briefing_v1")
+            self._run_materializer(constitution_dir, out_dir)
+
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            rendering_plan = json.loads((out_dir / "rendering_plan.json").read_text(encoding="utf-8"))
+            rendering_rows = self._read_jsonl(out_dir / "retrieval_renderings.jsonl")
+            benchmark_rows = self._read_jsonl(out_dir / "benchmark_rows.jsonl")
+
+            self.assertEqual(manifest["rendering_family_id"], "briefing_v1")
+            self.assertEqual(rendering_plan["rendering_family_id"], "briefing_v1")
+            self.assertEqual({row["rendering_family_id"] for row in rendering_rows}, {"briefing_v1"})
+            self.assertEqual({row["rendering_family_id"] for row in benchmark_rows}, {"briefing_v1"})
+            self.assertTrue(
+                str(rendering_rows[0]["prompt"]).startswith("Briefing packets:")
+            )
+            all_chunk_text = "\n".join(
+                str(chunk["text"])
+                for row in rendering_rows
+                for chunk in row["retrieval_chunks"]
+            )
+            all_answer_text = "\n".join(str(row["answer_text"]) for row in benchmark_rows)
+            self.assertIn("Packet alpha reports:", all_chunk_text)
+            self.assertIn("Counter-brief:", all_chunk_text)
+            self.assertIn("Given the briefing packets,", all_answer_text)
+            self.assertIn("Given the counter-brief,", all_answer_text)
 
     def test_materializer_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:
@@ -104,7 +137,12 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
                     (out_b / filename).read_text(encoding="utf-8"),
                 )
 
-    def _run_scaffold(self, out_dir: Path, samples_per_cell: int) -> None:
+    def _run_scaffold(
+        self,
+        out_dir: Path,
+        samples_per_cell: int,
+        rendering_family: str = "archive_v1",
+    ) -> None:
         script = REPO_ROOT / "tools" / "generate_gate8_semiclosed_conflict.py"
         completed = subprocess.run(
             [
@@ -116,6 +154,8 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
                 "gate8_constitution_test",
                 "--samples-per-cell",
                 str(samples_per_cell),
+                "--rendering-family",
+                rendering_family,
             ],
             cwd=str(REPO_ROOT),
             capture_output=True,

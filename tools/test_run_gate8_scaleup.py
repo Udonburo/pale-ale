@@ -24,12 +24,15 @@ class RunGate8ScaleupTest(unittest.TestCase):
             "cpu",
             "--model-id",
             "Qwen/Qwen2.5-0.5B",
+            "--rendering-family",
+            "briefing_v1",
         ]
         with mock.patch("sys.argv", args), mock.patch.object(scaleup, "run_subprocess", fake_run):
             self.assertEqual(scaleup.main(), 0)
 
         self.assertEqual(len(observed), 3)
         self.assertIn("generate_gate8_semiclosed_conflict.py", observed[0][1])
+        self.assertIn("briefing_v1", observed[0])
         self.assertIn("materialize_gate8_semiclosed_conflict.py", observed[1][1])
         self.assertIn("run_gate8_candidate_batch.py", observed[2][1])
 

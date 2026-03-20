@@ -27,6 +27,20 @@ DEFAULT_RENDERING_PLAN = "rendering_plan.json"
 DEFAULT_TARGET_PLAN = "target_plan.json"
 DEFAULT_SAMPLE_INDEX = "sample_index.jsonl"
 DEFAULT_CHECKSUMS = "checksums.json"
+DEFAULT_RENDERING_FAMILY_ID = "archive_v1"
+
+RENDERING_FAMILY_DEFS: Sequence[Dict[str, str]] = (
+    {
+        "rendering_family_id": "archive_v1",
+        "role": "baseline_family",
+        "description": "Archive-note phrasing with literal support/conflict memo packaging.",
+    },
+    {
+        "rendering_family_id": "briefing_v1",
+        "role": "generalization_family",
+        "description": "Briefing-packet phrasing with reordered memo presentation under the same taxonomy.",
+    },
+)
 
 
 CELL_DEFS: Sequence[Dict[str, Any]] = (
@@ -121,6 +135,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--run-id", default="")
     parser.add_argument("--samples-per-cell", type=int, default=8)
+    parser.add_argument(
+        "--rendering-family",
+        default=DEFAULT_RENDERING_FAMILY_ID,
+        choices=tuple(entry["rendering_family_id"] for entry in RENDERING_FAMILY_DEFS),
+    )
     return parser.parse_args()
 
 
@@ -165,10 +184,12 @@ def current_git_commit() -> str:
     return ""
 
 
-def build_conflict_plan(samples_per_cell: int) -> Dict[str, Any]:
+def build_conflict_plan(samples_per_cell: int, rendering_family_id: str) -> Dict[str, Any]:
     return {
         "schema_version": TAXONOMY_SCHEMA_VERSION,
         "samples_per_cell": samples_per_cell,
+        "rendering_family_id": rendering_family_id,
+        "rendering_family_defs": list(RENDERING_FAMILY_DEFS),
         "cells": list(CELL_DEFS),
         "candidate_set": list(CANDIDATE_SET),
         "candidate_granularity_status": GRANULARITY_COURT_STATUS,
@@ -185,6 +206,7 @@ def build_label_contract() -> Dict[str, Any]:
         "required_sample_fields": [
             "sample_id",
             "cell_id",
+            "rendering_family_id",
             "world_id",
             "world_ordinal",
             "world_type",
@@ -239,13 +261,14 @@ def build_world_plan(samples_per_cell: int) -> Dict[str, Any]:
     }
 
 
-def build_rendering_plan(samples_per_cell: int) -> Dict[str, Any]:
+def build_rendering_plan(samples_per_cell: int, rendering_family_id: str) -> Dict[str, Any]:
     return {
         "schema_version": RENDERING_PLAN_SCHEMA_VERSION,
         "stage": GENERATION_STAGE,
         "binding_status": "constitution_only_placeholder",
         "rendering_generation_mode": "not_materialized",
         "samples_per_cell": samples_per_cell,
+        "rendering_family_id": rendering_family_id,
         "rendering_slot_rule": "target variants may share stable rendering slots",
         "cell_ids": [str(cell["cell_id"]) for cell in CELL_DEFS],
         "notes": (
@@ -281,7 +304,7 @@ def world_slot_count(samples_per_cell: int, target_types: Sequence[str]) -> int:
     return (samples_per_cell + len(target_types) - 1) // len(target_types)
 
 
-def build_sample_index(samples_per_cell: int) -> List[Dict[str, Any]]:
+def build_sample_index(samples_per_cell: int, rendering_family_id: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     sample_counter = 0
     cell_by_id = {str(cell["cell_id"]): cell for cell in CELL_DEFS}
@@ -316,10 +339,13 @@ def build_sample_index(samples_per_cell: int) -> List[Dict[str, Any]]:
                 {
                     "sample_id": f"gate8_plan_{sample_counter:05d}",
                     "cell_id": cell_id,
+                    "rendering_family_id": rendering_family_id,
                     "world_id": world_id,
                     "world_ordinal": int(world_ordinal),
                     "world_type": str(RELATION_TYPES[world_ordinal % len(RELATION_TYPES)]),
-                    "rendering_id": f"{cell_id}_render_{world_slot_index:03d}",
+                    "rendering_id": (
+                        f"{rendering_family_id}_{cell_id}_render_{world_slot_index:03d}"
+                    ),
                     "target_id": f"{cell_id}_{answer_target_type}_{world_slot_index:03d}",
                     "answer_target_type": answer_target_type,
                     "is_conflict_intended": bool(cell["is_conflict_intended"]),
@@ -337,6 +363,7 @@ def build_manifest(
     run_id: str,
     samples_per_cell: int,
     n_samples_total: int,
+    rendering_family_id: str,
     world_plan_path: Path,
     rendering_plan_path: Path,
     target_plan_path: Path,
@@ -348,6 +375,7 @@ def build_manifest(
         "generation_stage": GENERATION_STAGE,
         "provenance_binding_mode": "constitution_only_placeholders",
         "samples_per_cell": samples_per_cell,
+        "rendering_family_id": rendering_family_id,
         "n_cells_total": len(CELL_DEFS),
         "n_samples_total": n_samples_total,
         "candidate_set": list(CANDIDATE_SET),
@@ -387,6 +415,7 @@ def main() -> int:
     out_dir = (REPO_ROOT / args.out_dir).resolve()
     run_id = args.run_id or out_dir.name
     samples_per_cell = int(args.samples_per_cell)
+    rendering_family_id = str(args.rendering_family)
     if samples_per_cell < 1:
         raise SystemExit("--samples-per-cell must be >= 1")
 
@@ -399,12 +428,12 @@ def main() -> int:
     sample_index_path = out_dir / DEFAULT_SAMPLE_INDEX
     checksums_path = out_dir / DEFAULT_CHECKSUMS
 
-    conflict_plan = build_conflict_plan(samples_per_cell)
+    conflict_plan = build_conflict_plan(samples_per_cell, rendering_family_id)
     label_contract = build_label_contract()
     world_plan = build_world_plan(samples_per_cell)
-    rendering_plan = build_rendering_plan(samples_per_cell)
+    rendering_plan = build_rendering_plan(samples_per_cell, rendering_family_id)
     target_plan = build_target_plan(samples_per_cell)
-    sample_rows = build_sample_index(samples_per_cell)
+    sample_rows = build_sample_index(samples_per_cell, rendering_family_id)
     write_json(conflict_plan_path, conflict_plan)
     write_json(label_contract_path, label_contract)
     write_json(world_plan_path, world_plan)
@@ -414,6 +443,7 @@ def main() -> int:
         run_id,
         samples_per_cell,
         len(sample_rows),
+        rendering_family_id,
         world_plan_path,
         rendering_plan_path,
         target_plan_path,
