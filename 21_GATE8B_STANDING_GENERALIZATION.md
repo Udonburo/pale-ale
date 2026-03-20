@@ -1,8 +1,8 @@
 # Gate8B Standing Generalization
 
-Status: spec fixed, first rendering-family implementation landed
+Status: first-pass implementation complete, full burn executed
 Role: post-Gate8 standing portability spec, not bridge spec
-Date: 2026-03-20
+Date: 2026-03-21
 
 ## 0. Why This Exists
 
@@ -205,11 +205,13 @@ At most, it earns:
 
 - the right to say that the current `gate7c revival` survives one controlled rendering-family shift under a frozen court
 
-## 11. Implementation Gate
+## 11. Implementation State
 
-No code should be written for Gate8B until this spec is accepted.
+Gate8B v0 is no longer pre-implementation.
 
-Implementation is allowed only if:
+The first-pass implementation has already landed and the full burn has already been executed.
+
+What remains fixed is the admissibility condition that made the implementation legal:
 
 - the candidate set is explicitly frozen
 - the evaluator freeze is explicit
@@ -217,7 +219,7 @@ Implementation is allowed only if:
 - the new addition is one template/rendering family only
 - the falsifiers are written first
 
-Until then, this remains spec-only.
+Further code in this workstream is only admissible if it preserves those constraints.
 
 ## 12. Implementation Note
 
@@ -255,3 +257,47 @@ It does not settle the Gate8B scientific read.
 The real question remains:
 
 - does `gate7c revival` survive a proper regime-shift evaluation under the new family
+
+## 13. Full Burn And Current Read
+
+That question has now been tested on the first controlled rendering-family shift.
+
+The full first-pass execution runs are:
+
+- `runs/gate8o_128r_briefing_constitution`
+- `runs/gate8o_128r_briefing_benchmark`
+- `runs/gate8o_128r_briefing_candidate_execution`
+- `runs/gate8p_200r_briefing_constitution`
+- `runs/gate8p_200r_briefing_benchmark`
+- `runs/gate8p_200r_briefing_candidate_execution`
+
+These runs bind:
+
+- `rendering_family_id = briefing_v1`
+- `code_git_commit = 7567e2d`
+
+The first-pass read is not hypothetical anymore.
+
+At both 128 rows and 200 rows:
+
+- `gate7c` remains ahead of `F` on direct contradiction
+- `gate7c` remains ahead of `F` on distributed incompatibility
+- `gate7c` is quieter than `F` on `mean_delta_p90`
+- `gate7c` is quieter than `F` on `mean_top10_inflation`
+
+So the earned first-pass sentence is:
+
+- the current `gate7c revival` survives one controlled rendering-family shift under a frozen court
+
+This still does not earn:
+
+- candidate promotion
+- replacement of `F`
+- bridge success
+- field aggregation
+- a claim of general regime invariance
+
+The current state is therefore:
+
+- Gate8A remains the corrected-court / unresolved-bridge record
+- Gate8B first pass is now an executed portability read, not a speculative branch

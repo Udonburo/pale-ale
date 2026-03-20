@@ -4,6 +4,12 @@ Status: Tracked execution snapshot
 Role: Tracked standing snapshot / execution-stage handoff
 Date: 2026-03-20
 
+Gate8B first-pass portability evidence is now tracked separately in:
+
+- `22_GATE8B_EXECUTION_AND_PORTABILITY.md`
+
+This file remains the Gate8A corrected-court / unresolved-bridge snapshot.
+
 ## 0. Scope
 
 This file records the corrected Gate8 execution read after the quietness-court repair,

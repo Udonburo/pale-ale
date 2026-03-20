@@ -1,0 +1,70 @@
+Gate8B standing generalization summary
+date=2026-03-21
+repo_relative_workstream=Gate8B first-pass portability read under one controlled rendering-family shift
+
+tracked_docs:
+- 21_GATE8B_STANDING_GENERALIZATION.md
+- 22_GATE8B_EXECUTION_AND_PORTABILITY.md
+- 17_GATE8A_EXECUTION_AND_SCALEUP.md
+- tools/README_gate8.md
+
+commands:
+- python -B -m py_compile tools/generate_gate8_semiclosed_conflict.py tools/materialize_gate8_semiclosed_conflict.py tools/run_gate8_scaleup.py tools/run_gate8_candidate_batch.py tools/test_generate_gate8_semiclosed_conflict.py tools/test_materialize_gate8_semiclosed_conflict.py tools/test_run_gate8_scaleup.py tools/test_run_gate8_candidate_batch.py tools/test_evaluate_gate8_standing.py
+- python tools/test_generate_gate8_semiclosed_conflict.py
+- python tools/test_materialize_gate8_semiclosed_conflict.py
+- python tools/test_run_gate8_scaleup.py
+- python tools/test_run_gate8_candidate_batch.py
+- python tools/test_evaluate_gate8_standing.py
+- python tools/run_gate8_scaleup.py --run-prefix gate8o_128r_briefing --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B --rendering-family briefing_v1
+- python tools/run_gate8_scaleup.py --run-prefix gate8p_200r_briefing --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B --rendering-family briefing_v1
+
+tracked_artifacts:
+- runs/gate8o_128r_briefing_candidate_execution/manifest.json
+  sha256=062c14088bba83980f2cd39c726ee38af5a5b01b0b3c89db5453d4be3cb9d2fa
+- runs/gate8o_128r_briefing_candidate_execution/candidate_summary.csv
+  sha256=6360c4f3ecabdf42857e6abe8653667e1012ba22ffa1980df8d3e3ea5f4c831f
+- runs/gate8o_128r_briefing_candidate_execution/gate8a_standing_summary.md
+  sha256=a6deae3174e73b138894b81f1962399c7eef8466e30091686e774a8f822123da
+- runs/gate8p_200r_briefing_candidate_execution/manifest.json
+  sha256=eb5b87344c1a3e0cc33df2c507fb026b2bf6310295c113e30a309d5018f1e0cc
+- runs/gate8p_200r_briefing_candidate_execution/candidate_summary.csv
+  sha256=89abaff82e2b26f67505a03f97d8775eb6edf4ceacb61aa3342ca92eae3c67b8
+- runs/gate8p_200r_briefing_candidate_execution/gate8a_standing_summary.md
+  sha256=e7f658570b2cb0171e5a3c94530fe653de7e10a710aa7b5714ca3866f09ef334
+
+binding:
+- gate8o manifest binds rendering_family_id=briefing_v1
+- gate8p manifest binds rendering_family_id=briefing_v1
+- gate8o manifest binds code_git_commit=7567e2d28a69c2c484f08f3d3ff051d93babf750
+- gate8p manifest binds code_git_commit=7567e2d28a69c2c484f08f3d3ff051d93babf750
+- execution reports carry rendering_family_id=briefing_v1
+- quietness handoff rows carry rendering_family_id=briefing_v1
+
+gate8o_128_read:
+- gate7c direct_global_auprc=0.204235 > F=0.185301
+- gate7c distributed_global_auprc=0.196939 > F=0.188251
+- gate7c quiet_mean_delta_p90=-0.004292 < F=0.009822
+- gate7c quiet_mean_top10_inflation=2.468750 < F=2.781250
+
+gate8p_200_read:
+- gate7c direct_global_auprc=0.203008 > F=0.183225
+- gate7c distributed_global_auprc=0.185937 > F=0.174681
+- gate7c quiet_mean_delta_p90=-0.004840 < F=0.011861
+- gate7c quiet_mean_top10_inflation=2.360000 < F=2.940000
+
+interpretation:
+- the first controlled rendering-family shift preserves the current gate7c revival
+- the revival is therefore less likely to be local to the original Gate8 rendering package
+- this is a portability read, not an explanation win
+- bridge diagnostics remain diagnostic-only and unresolved
+- no candidate promotion or field aggregation claim is earned
+
+caveats:
+- only one new rendering family has been tested
+- mixed-granularity caveat remains active
+- bridge failure history still stands
+- the current read is stronger than Gate8A on portability, not on explanation
+
+next_move_if_any:
+- either stop cleanly and record Gate8B first pass as succeeded
+- or take one more tightly-scoped regime shift without changing candidate set, evaluator, or aggregation rules
