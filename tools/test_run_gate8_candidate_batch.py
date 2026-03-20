@@ -23,10 +23,10 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
 
     def test_quietness_pair_bindings_require_shared_worlds(self):
         benchmark_rows = [
-            {"sample_id": "a", "cell_id": "clean_support", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r0"},
-            {"sample_id": "b", "cell_id": "surface_noisy_clean", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r1"},
-            {"sample_id": "c", "cell_id": "clean_support", "world_type": "temporal", "answer_target_type": "consistent_answer", "world_id": "w1", "rendering_id": "r2"},
-            {"sample_id": "d", "cell_id": "surface_noisy_clean", "world_type": "temporal", "answer_target_type": "consistent_answer", "world_id": "w1", "rendering_id": "r3"},
+            {"sample_id": "a", "cell_id": "clean_support", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r0", "rendering_family_id": "briefing_v1"},
+            {"sample_id": "b", "cell_id": "surface_noisy_clean", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r1", "rendering_family_id": "briefing_v1"},
+            {"sample_id": "c", "cell_id": "clean_support", "world_type": "temporal", "answer_target_type": "consistent_answer", "world_id": "w1", "rendering_id": "r2", "rendering_family_id": "briefing_v1"},
+            {"sample_id": "d", "cell_id": "surface_noisy_clean", "world_type": "temporal", "answer_target_type": "consistent_answer", "world_id": "w1", "rendering_id": "r3", "rendering_family_id": "briefing_v1"},
         ]
         mapping, pair_rows = batch.quietness_pair_bindings(benchmark_rows)
         self.assertEqual(mapping["a"], "quiet_pair_w0")
@@ -34,9 +34,18 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         self.assertEqual(mapping["c"], "quiet_pair_w1")
         self.assertEqual(mapping["d"], "quiet_pair_w1")
         self.assertEqual(pair_rows[0]["world_id"], "w0")
+        self.assertEqual(pair_rows[0]["rendering_family_id"], "briefing_v1")
         self.assertEqual(pair_rows[0]["clean_rendering_id"], "r0")
         self.assertEqual(pair_rows[0]["surface_noisy_rendering_id"], "r1")
         self.assertEqual(len(pair_rows), 2)
+
+    def test_quietness_pair_bindings_reject_rendering_family_mismatch(self):
+        benchmark_rows = [
+            {"sample_id": "a", "cell_id": "clean_support", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r0", "rendering_family_id": "archive_v1"},
+            {"sample_id": "b", "cell_id": "surface_noisy_clean", "world_type": "genealogy", "answer_target_type": "consistent_answer", "world_id": "w0", "rendering_id": "r1", "rendering_family_id": "briefing_v1"},
+        ]
+        with self.assertRaisesRegex(ValueError, "rendering_family_id mismatch"):
+            batch.quietness_pair_bindings(benchmark_rows)
 
     def test_quietness_pair_bindings_reject_missing_same_world_partner(self):
         benchmark_rows = [
@@ -75,6 +84,49 @@ class RunGate8CandidateBatchTest(unittest.TestCase):
         ]
         with self.assertRaisesRegex(ValueError, "quietness pairing requires shared clean/noisy rows"):
             batch.build_sample_registry(benchmark_rows)
+
+    def test_resolve_execution_rendering_family_id_prefers_manifest(self):
+        family_id = batch.resolve_execution_rendering_family_id(
+            benchmark_manifest={"rendering_family_id": "briefing_v1"},
+            sample_registry_rows=[{"rendering_family_id": "archive_v1"}],
+        )
+        self.assertEqual(family_id, "briefing_v1")
+
+    def test_resolve_execution_rendering_family_id_falls_back_to_registry(self):
+        family_id = batch.resolve_execution_rendering_family_id(
+            benchmark_manifest={},
+            sample_registry_rows=[
+                {"rendering_family_id": "briefing_v1"},
+                {"rendering_family_id": "briefing_v1"},
+            ],
+        )
+        self.assertEqual(family_id, "briefing_v1")
+
+    def test_resolve_execution_rendering_family_id_rejects_multiple_registry_values(self):
+        with self.assertRaisesRegex(ValueError, "multiple rendering_family_id values"):
+            batch.resolve_execution_rendering_family_id(
+                benchmark_manifest={},
+                sample_registry_rows=[
+                    {"rendering_family_id": "archive_v1"},
+                    {"rendering_family_id": "briefing_v1"},
+                ],
+            )
+
+    def test_build_standing_report_carries_rendering_family_id(self):
+        report = batch.build_standing_report(
+            run_id="gate8b_report_test",
+            benchmark_manifest={"run_id": "gate8b_benchmark"},
+            rendering_family_id="briefing_v1",
+            sample_registry_rows=[
+                {"quietness_pair_id": "quiet_pair_w0"},
+                {"quietness_pair_id": "quiet_pair_w0"},
+            ],
+            extraction_rows=[],
+            candidate_summary_rows=[],
+            model_id="Qwen/Qwen2.5-0.5B",
+            model_revision="rev",
+        )
+        self.assertIn("rendering_family_id: briefing_v1", report)
 
     def test_bridge_metrics_are_zero_for_identity_transition(self):
         current_basis = np.zeros((4, 3), dtype=np.float64)
