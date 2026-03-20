@@ -4,6 +4,12 @@ Status: tracked first-pass portability snapshot
 Role: tracked Gate8B execution read under one controlled rendering-family shift
 Date: 2026-03-21
 
+Gate8C second-family evidence is now tracked separately in:
+
+- `24_GATE8C_EXECUTION_AND_PORTABILITY.md`
+
+This file remains the Gate8B first-pass portability snapshot.
+
 ## 0. Scope
 
 This file records the first executed Gate8B portability read.

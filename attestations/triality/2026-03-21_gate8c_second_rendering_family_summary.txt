@@ -1,0 +1,47 @@
+Gate8C second rendering family summary
+date=2026-03-21
+repo_relative_workstream=Gate8C second-family portability read under one additional rendering-family shift
+
+tracked_docs:
+- 23_GATE8C_SECOND_RENDERING_FAMILY.md
+- 24_GATE8C_EXECUTION_AND_PORTABILITY.md
+- 22_GATE8B_EXECUTION_AND_PORTABILITY.md
+
+commands:
+- python -B -m py_compile tools/generate_gate8_semiclosed_conflict.py tools/materialize_gate8_semiclosed_conflict.py tools/run_gate8_scaleup.py tools/run_gate8_candidate_batch.py tools/test_generate_gate8_semiclosed_conflict.py tools/test_materialize_gate8_semiclosed_conflict.py tools/test_run_gate8_scaleup.py tools/test_run_gate8_candidate_batch.py tools/test_evaluate_gate8_standing.py
+- python tools/test_generate_gate8_semiclosed_conflict.py
+- python tools/test_materialize_gate8_semiclosed_conflict.py
+- python tools/test_run_gate8_scaleup.py
+- python tools/test_run_gate8_candidate_batch.py
+- python tools/test_evaluate_gate8_standing.py
+- python tools/run_gate8_scaleup.py --run-prefix gate8q_128r_transcript --samples-per-cell 32 --device cpu --model-id Qwen/Qwen2.5-0.5B --rendering-family transcript_v1
+- python tools/run_gate8_scaleup.py --run-prefix gate8r_200r_transcript --samples-per-cell 50 --device cpu --model-id Qwen/Qwen2.5-0.5B --rendering-family transcript_v1
+
+binding:
+- gate8q manifest binds rendering_family_id=transcript_v1
+- gate8r manifest binds rendering_family_id=transcript_v1
+- gate8q manifest binds code_git_commit=744bc7ac21e7bba60ba9e09ff03809803c4b8024
+- gate8r manifest binds code_git_commit=744bc7ac21e7bba60ba9e09ff03809803c4b8024
+- execution reports carry rendering_family_id=transcript_v1
+
+gate8q_128_read:
+- gate7c direct_global_auprc=0.235397 > F=0.216630
+- gate7c distributed_global_auprc=0.178819 > F=0.172439
+- F quiet_mean_delta_p90=-0.011465 < gate7c=0.002489
+- F quiet_mean_top10_inflation=2.375000 < gate7c=2.812500
+
+gate8r_200_read:
+- gate7c direct_global_auprc=0.238740 > F=0.214732
+- gate7c distributed_global_auprc=0.171347 > F=0.163006
+- F quiet_mean_delta_p90=-0.012448 < gate7c=0.002495
+- F quiet_mean_top10_inflation=2.420000 < gate7c=2.840000
+
+interpretation:
+- the conflict-side revival survives the second rendering-family shift
+- the quietness side does not survive that shift
+- Gate8C is therefore a portability-boundary read rather than a clean second portability success
+- no bridge rescue or field aggregation claim is earned
+
+next_move_if_any:
+- freeze Gate8C as the current portability boundary
+- only consider another family if the cost of one more frozen-court regime shift is justified
