@@ -1,6 +1,6 @@
 # Gate8B Standing Generalization
 
-Status: spec-only draft
+Status: spec fixed, first rendering-family implementation landed
 Role: post-Gate8 standing portability spec, not bridge spec
 Date: 2026-03-20
 
@@ -218,3 +218,40 @@ Implementation is allowed only if:
 - the falsifiers are written first
 
 Until then, this remains spec-only.
+
+## 12. Implementation Note
+
+The first implementation pass has now been limited to exactly one new rendering family:
+
+- `briefing_v1`
+
+This implementation keeps fixed:
+
+- candidates: `F`, `gate6f`, `gate6h`, `gate7c`
+- standing evaluator semantics
+- aggregation ban
+- diagnostic-only bridge status
+
+The implementation scope is intentionally narrow:
+
+- add one rendering-family switch at generation/materialization time
+- carry `rendering_family_id` through benchmark and candidate-batch provenance
+- do not change the court-facing standing logic
+
+Commit-bound smoke validation was run at:
+
+- `runs/gate8b_smoke_briefing_commitbind_constitution`
+- `runs/gate8b_smoke_briefing_commitbind_benchmark`
+- `runs/gate8b_smoke_briefing_commitbind_candidate_execution`
+
+with code commit:
+
+- `4ac4b97`
+
+This smoke run is only an implementation bind check.
+
+It does not settle the Gate8B scientific read.
+
+The real question remains:
+
+- does `gate7c revival` survive a proper regime-shift evaluation under the new family
