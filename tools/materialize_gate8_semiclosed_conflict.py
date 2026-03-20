@@ -219,6 +219,15 @@ def build_clean_support_rendering(spec: RelationSpec) -> Tuple[List[Dict[str, st
     return chunks, [0, 1, 2], []
 
 
+def build_clean_support_rendering_briefing(spec: RelationSpec) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "support", "text": f"Packet alpha reports: {spec.fact_1}"},
+        {"role": "support", "text": f"Packet beta reports: {spec.fact_2}"},
+        {"role": "support", "text": f"Briefing merge: the supported conclusion is {spec.support_claim}."},
+    ]
+    return chunks, [0, 1, 2], []
+
+
 def build_direct_contradiction_rendering(spec: RelationSpec) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
     chunks = [
         {"role": "support", "text": f"Archive note: {spec.fact_1}"},
@@ -226,6 +235,17 @@ def build_direct_contradiction_rendering(spec: RelationSpec) -> Tuple[List[Dict[
         {"role": "conflict", "text": f"Disputed memo: {spec.wrong_claim}."},
     ]
     return chunks, [0, 1], [2]
+
+
+def build_direct_contradiction_rendering_briefing(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "conflict", "text": f"Counter-brief: {spec.wrong_claim}."},
+        {"role": "support", "text": f"Packet alpha reports: {spec.fact_1}"},
+        {"role": "support", "text": f"Packet beta reports: {spec.fact_2}"},
+    ]
+    return chunks, [1, 2], [0]
 
 
 def build_distributed_incompatibility_rendering(spec: RelationSpec) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
@@ -243,6 +263,23 @@ def build_distributed_incompatibility_rendering(spec: RelationSpec) -> Tuple[Lis
     return chunks, [0, 1], [2]
 
 
+def build_distributed_incompatibility_rendering_briefing(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "support", "text": f"Packet alpha reports: {spec.fact_1}"},
+        {
+            "role": "conflict",
+            "text": (
+                "Integrator warning: independent packets must not be transitively fused; "
+                f"{spec.distributed_block_claim}."
+            ),
+        },
+        {"role": "support", "text": f"Packet beta reports: {spec.fact_2}"},
+    ]
+    return chunks, [0, 2], [1]
+
+
 def build_surface_noisy_clean_rendering(spec: RelationSpec) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
     chunks = [
         {"role": "support", "text": f"Field note // relation record // {spec.fact_1}"},
@@ -258,63 +295,146 @@ def build_surface_noisy_clean_rendering(spec: RelationSpec) -> Tuple[List[Dict[s
     return chunks, [0, 1, 2], []
 
 
-def build_rendering(cell_id: str, spec: RelationSpec) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
-    if cell_id == "clean_support":
-        return build_clean_support_rendering(spec)
-    if cell_id == "direct_contradiction":
-        return build_direct_contradiction_rendering(spec)
-    if cell_id == "distributed_incompatibility":
-        return build_distributed_incompatibility_rendering(spec)
-    if cell_id == "surface_noisy_clean":
-        return build_surface_noisy_clean_rendering(spec)
+def build_surface_noisy_clean_rendering_briefing(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "noise", "text": "Transmission note: headers drifted during packet relay; content should be normalized."},
+        {"role": "support", "text": f"Packet alpha reports: {spec.fact_1}"},
+        {
+            "role": "support",
+            "text": f"Packet beta plus cleanup note: {spec.fact_2}; the supported conclusion remains {spec.support_claim}.",
+        },
+    ]
+    return chunks, [1, 2], []
+
+
+def build_rendering(
+    cell_id: str,
+    spec: RelationSpec,
+    rendering_family_id: str,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    if rendering_family_id == "archive_v1":
+        if cell_id == "clean_support":
+            return build_clean_support_rendering(spec)
+        if cell_id == "direct_contradiction":
+            return build_direct_contradiction_rendering(spec)
+        if cell_id == "distributed_incompatibility":
+            return build_distributed_incompatibility_rendering(spec)
+        if cell_id == "surface_noisy_clean":
+            return build_surface_noisy_clean_rendering(spec)
+    elif rendering_family_id == "briefing_v1":
+        if cell_id == "clean_support":
+            return build_clean_support_rendering_briefing(spec)
+        if cell_id == "direct_contradiction":
+            return build_direct_contradiction_rendering_briefing(spec)
+        if cell_id == "distributed_incompatibility":
+            return build_distributed_incompatibility_rendering_briefing(spec)
+        if cell_id == "surface_noisy_clean":
+            return build_surface_noisy_clean_rendering_briefing(spec)
+    else:
+        raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
     raise ValueError(f"Unsupported cell_id: {cell_id}")
 
 
-def build_answer_payload(cell_id: str, answer_target_type: str, spec: RelationSpec) -> Dict[str, Any]:
-    if cell_id in ("clean_support", "surface_noisy_clean"):
-        answer_text = (
-            f"Given the retrieved notes, {spec.support_claim}. "
-            "The relation remains intact despite surface variation."
-        )
-        support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
-        conflict_spans: List[Dict[str, Any]] = []
-        defect_spans: List[Dict[str, Any]] = []
-    elif cell_id == "direct_contradiction" and answer_target_type == "consistent_answer":
-        answer_text = (
-            f"Given the aligned archive notes, {spec.support_claim}. "
-            "The disputed memo is not adopted."
-        )
-        support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
-        conflict_spans = []
-        defect_spans = []
-    elif cell_id == "direct_contradiction" and answer_target_type == "conflict_following_wrong_answer":
-        answer_text = (
-            f"Given the disputed memo, {spec.wrong_claim}. "
-            "This follows the conflicting note instead of the aligned archive."
-        )
-        support_spans = []
-        conflict_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_conflict_span_v1")]
-        defect_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_defect_span_v1")]
-    elif cell_id == "distributed_incompatibility" and answer_target_type == "consistent_answer":
-        answer_text = (
-            f"Given the ledger split, {spec.distributed_block_claim}. "
-            "The notes cannot be glued into one transitive conclusion."
-        )
-        support_spans = [
-            find_span_or_fail(answer_text, spec.distributed_block_claim, "gate8_support_span_v1")
-        ]
-        conflict_spans = []
-        defect_spans = []
-    elif cell_id == "distributed_incompatibility" and answer_target_type == "unsupported_bridge_answer":
-        answer_text = (
-            f"Given the two ledgers, {spec.support_claim}. "
-            "This answer wrongly glues separate records into one bridge."
-        )
-        support_spans = []
-        conflict_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_conflict_span_v1")]
-        defect_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_defect_span_v1")]
+def build_answer_payload(
+    cell_id: str,
+    answer_target_type: str,
+    spec: RelationSpec,
+    rendering_family_id: str,
+) -> Dict[str, Any]:
+    if rendering_family_id == "archive_v1":
+        if cell_id in ("clean_support", "surface_noisy_clean"):
+            answer_text = (
+                f"Given the retrieved notes, {spec.support_claim}. "
+                "The relation remains intact despite surface variation."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans: List[Dict[str, Any]] = []
+            defect_spans: List[Dict[str, Any]] = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"Given the aligned archive notes, {spec.support_claim}. "
+                "The disputed memo is not adopted."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "conflict_following_wrong_answer":
+            answer_text = (
+                f"Given the disputed memo, {spec.wrong_claim}. "
+                "This follows the conflicting note instead of the aligned archive."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_defect_span_v1")]
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"Given the ledger split, {spec.distributed_block_claim}. "
+                "The notes cannot be glued into one transitive conclusion."
+            )
+            support_spans = [
+                find_span_or_fail(answer_text, spec.distributed_block_claim, "gate8_support_span_v1")
+            ]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "unsupported_bridge_answer":
+            answer_text = (
+                f"Given the two ledgers, {spec.support_claim}. "
+                "This answer wrongly glues separate records into one bridge."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_defect_span_v1")]
+        else:
+            raise ValueError(f"Unsupported cell/answer target combination: {cell_id}/{answer_target_type}")
+    elif rendering_family_id == "briefing_v1":
+        if cell_id in ("clean_support", "surface_noisy_clean"):
+            answer_text = (
+                f"Given the briefing packets, {spec.support_claim}. "
+                "The relation remains intact despite presentation drift."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"Given the aligned briefing packets, {spec.support_claim}. "
+                "The counter-brief is not adopted."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "conflict_following_wrong_answer":
+            answer_text = (
+                f"Given the counter-brief, {spec.wrong_claim}. "
+                "This follows the conflicting packet instead of the aligned briefing packets."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_defect_span_v1")]
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"Given the packet split, {spec.distributed_block_claim}. "
+                "The packets cannot be fused into one transitive conclusion."
+            )
+            support_spans = [
+                find_span_or_fail(answer_text, spec.distributed_block_claim, "gate8_support_span_v1")
+            ]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "unsupported_bridge_answer":
+            answer_text = (
+                f"Given the two packets, {spec.support_claim}. "
+                "This answer wrongly fuses separate packets into one bridge."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_defect_span_v1")]
+        else:
+            raise ValueError(f"Unsupported cell/answer target combination: {cell_id}/{answer_target_type}")
     else:
-        raise ValueError(f"Unsupported cell/answer target combination: {cell_id}/{answer_target_type}")
+        raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
 
     return {
         "answer_text": answer_text,
@@ -325,13 +445,22 @@ def build_answer_payload(cell_id: str, answer_target_type: str, spec: RelationSp
     }
 
 
-def build_prompt(chunks: Sequence[Dict[str, Any]], question: str) -> str:
-    lines = ["Retrieved notes:"]
-    for idx, chunk in enumerate(chunks, start=1):
-        lines.append(f"[{idx}] {chunk['text']}")
-    lines.append(question)
-    lines.append("Answer in one short paragraph.")
-    return "\n".join(lines)
+def build_prompt(chunks: Sequence[Dict[str, Any]], question: str, rendering_family_id: str) -> str:
+    if rendering_family_id == "archive_v1":
+        lines = ["Retrieved notes:"]
+        for idx, chunk in enumerate(chunks, start=1):
+            lines.append(f"[{idx}] {chunk['text']}")
+        lines.append(question)
+        lines.append("Answer in one short paragraph.")
+        return "\n".join(lines)
+    if rendering_family_id == "briefing_v1":
+        lines = ["Briefing packets:"]
+        for idx, chunk in enumerate(chunks, start=1):
+            lines.append(f"{idx}. ({str(chunk['role']).upper()}) {chunk['text']}")
+        lines.append(question.replace("Question:", "Task:"))
+        lines.append("Return the most warranted conclusion in one short paragraph.")
+        return "\n".join(lines)
+    raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
 
 
 def build_world_plan(world_truth_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
@@ -351,16 +480,23 @@ def build_world_plan(world_truth_rows: Sequence[Dict[str, Any]]) -> Dict[str, An
 
 
 def build_rendering_plan(rendering_rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    rendering_family_ids = sorted(
+        {str(row.get("rendering_family_id") or "archive_v1") for row in rendering_rows}
+    )
+    if len(rendering_family_ids) != 1:
+        raise ValueError("Gate8 materialization expects exactly one rendering family per benchmark")
+    rendering_family_id = rendering_family_ids[0]
     return {
         "schema_version": RENDERING_PLAN_SCHEMA_VERSION,
         "stage": GENERATION_STAGE,
         "binding_status": "materialized",
+        "rendering_family_id": rendering_family_id,
         "n_renderings_total": len(rendering_rows),
         "cell_rendering_rules": {
-            "clean_support": "support + support + support summary",
-            "direct_contradiction": "support + support + explicit contradiction",
-            "distributed_incompatibility": "support + support + cross-ledger caveat",
-            "surface_noisy_clean": "support + support + non-conflicting surface noise",
+            "clean_support": "support-only family-specific retrieval packaging",
+            "direct_contradiction": "support plus explicit contradiction under family-specific ordering",
+            "distributed_incompatibility": "support plus cross-record caveat under family-specific packaging",
+            "surface_noisy_clean": "surface-noisy but non-conflicting family-specific packaging",
         },
     }
 
@@ -400,6 +536,7 @@ def build_manifest(
         "generation_stage": GENERATION_STAGE,
         "provenance_binding_mode": "realized_artifacts",
         "samples_per_cell": int(conflict_plan["samples_per_cell"]),
+        "rendering_family_id": str(conflict_plan.get("rendering_family_id") or "archive_v1"),
         "n_cells_total": len(conflict_plan["cells"]),
         "n_samples_total": n_samples_total,
         "candidate_set": conflict_plan["candidate_set"],
@@ -459,14 +596,24 @@ def materialize_rows(
 
     for sample in sample_rows:
         cell_id = str(sample["cell_id"])
+        rendering_family_id = str(sample.get("rendering_family_id") or "archive_v1")
         world_type = str(sample["world_type"])
         world_ordinal = int(sample["world_ordinal"])
         a, b, c = build_entities(seed=seed, ordinal=world_ordinal)
         spec = build_relation_spec(world_type, a, b, c)
-        chunks, support_chunk_indexes, conflict_chunk_indexes = build_rendering(cell_id, spec)
+        chunks, support_chunk_indexes, conflict_chunk_indexes = build_rendering(
+            cell_id,
+            spec,
+            rendering_family_id,
+        )
         chunk_ids = [f"{sample['sample_id']}_chunk_{idx:02d}" for idx in range(len(chunks))]
-        prompt = build_prompt(chunks, spec.question)
-        answer_payload = build_answer_payload(cell_id, str(sample["answer_target_type"]), spec)
+        prompt = build_prompt(chunks, spec.question, rendering_family_id)
+        answer_payload = build_answer_payload(
+            cell_id,
+            str(sample["answer_target_type"]),
+            spec,
+            rendering_family_id,
+        )
 
         world_truth_row = {
             "world_id": sample["world_id"],
@@ -490,6 +637,7 @@ def materialize_rows(
 
         rendering_row = {
             "rendering_id": sample["rendering_id"],
+            "rendering_family_id": rendering_family_id,
             "world_id": sample["world_id"],
             "cell_id": cell_id,
             "retrieval_chunks": [
@@ -517,6 +665,7 @@ def materialize_rows(
                 "target_id": sample["target_id"],
                 "world_id": sample["world_id"],
                 "rendering_id": sample["rendering_id"],
+                "rendering_family_id": rendering_family_id,
                 "answer_target_type": sample["answer_target_type"],
                 "answer_text": answer_payload["answer_text"],
                 "label_span_support": answer_payload["label_span_support"],
@@ -530,6 +679,7 @@ def materialize_rows(
             {
                 "sample_id": sample["sample_id"],
                 "cell_id": cell_id,
+                "rendering_family_id": rendering_family_id,
                 "world_id": sample["world_id"],
                 "rendering_id": sample["rendering_id"],
                 "target_id": sample["target_id"],
@@ -555,6 +705,7 @@ def materialize_rows(
             {
                 "sample_id": sample["sample_id"],
                 "cell_id": cell_id,
+                "rendering_family_id": rendering_family_id,
                 "world_id": sample["world_id"],
                 "rendering_id": sample["rendering_id"],
                 "target_id": sample["target_id"],

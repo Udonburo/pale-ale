@@ -674,6 +674,7 @@ def build_sample_registry(
                 "execution_sample_id": execution_sample_id,
                 "benchmark_sample_id": benchmark_sample_id,
                 "cell_id": str(row["cell_id"]),
+                "rendering_family_id": str(row.get("rendering_family_id") or ""),
                 "world_id": str(row["world_id"]),
                 "rendering_id": str(row["rendering_id"]),
                 "target_id": str(row["target_id"]),
@@ -832,6 +833,7 @@ def materialize_samples(
             ),
             "benchmark_sample_id": benchmark_sample_id,
             "cell_id": cell_id,
+            "rendering_family_id": str(benchmark_row.get("rendering_family_id") or ""),
             "world_type": str(benchmark_row["world_type"]),
             "answer_target_type": str(benchmark_row["answer_target_type"]),
         }
@@ -997,6 +999,7 @@ def materialize_samples(
                 "execution_sample_id": execution_sample_id,
                 "benchmark_sample_id": benchmark_sample_id,
                 "cell_id": cell_id,
+                "rendering_family_id": str(benchmark_row.get("rendering_family_id") or ""),
                 "world_type": str(benchmark_row["world_type"]),
                 "answer_target_type": str(benchmark_row["answer_target_type"]),
                 "n_steps_written": len(triplet_rows),

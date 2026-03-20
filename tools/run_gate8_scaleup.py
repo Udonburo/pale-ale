@@ -24,6 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--topk", type=int, default=128)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument("--rendering-family", default="archive_v1")
     parser.add_argument(
         "--skip-execution",
         action="store_true",
@@ -64,6 +65,8 @@ def main() -> int:
             constitution_dir.name,
             "--samples-per-cell",
             str(args.samples_per_cell),
+            "--rendering-family",
+            str(args.rendering_family),
         ]
     )
     run_subprocess(
