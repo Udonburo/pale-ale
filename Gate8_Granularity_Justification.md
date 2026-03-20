@@ -150,6 +150,36 @@ Minimum targets:
 3. show that quietness remains a separate token-plane guardrail, not something hand-waved away
 4. explain why `direct_contradiction` and `distributed_incompatibility` are structurally plausible transition-first cells
 
+### 6.1 Bridge Obligation
+
+The mixed court must not graduate on documentation and persistence alone.
+
+Before this note can move from skeleton to accepted justification, it must lock at least one
+falsifiable bridge obligation that could in principle disconfirm the transition-first story.
+
+At minimum, the bridge must be:
+
+- stated before the read is narrated
+- tied to named Gate8 cells rather than to a vague global story
+- capable of producing a negative result that weakens or kills the doctrine
+
+### 6.2 Allowed First Bridge Families
+
+Two acceptable first bridge families are:
+
+- a per-cell necessity matrix bound to the conflict taxonomy:
+  - declare in advance which cells are expected to be transition-first, token-first, or mixed-accountability
+  - if the observed standing does not match that matrix, the doctrine weakens
+- a same-benchmark dual-label or dual-read check:
+  - construct one court where token-plane and transition-plane reads can both be evaluated on the same benchmark support
+  - if the transition-first advantage does not survive that bridge, the doctrine weakens
+
+These are examples, not eternal choices.
+
+The real rule is:
+
+- mixed granularity must face at least one bridge that can fail honestly
+
 ## 7. Possible Acceptance Rule
 
 This branch could justify the Gate8 mixed court if all of the following hold:
@@ -157,7 +187,18 @@ This branch could justify the Gate8 mixed court if all of the following hold:
 - conflict-side standing for `gate7c` persists under fixed court reruns
 - quietness remains tracked independently and is not erased from the decision surface
 - the repo never presents token and transition labels as secretly identical
+- at least one falsifiable bridge obligation has been locked to the taxonomy or benchmark and remains capable of disproving the transition-first reading
 - the justification stays local to Gate8 and does not overclaim ontology
+
+So the court does not close merely because:
+
+- the caveat is explicit
+- the rerun is persistent
+- quietness is separately tracked
+
+Those are necessary.
+
+They are not sufficient without a real bridge burden.
 
 ## 8. Failure Conditions
 
@@ -167,6 +208,8 @@ This justification attempt fails if:
 - mixed granularity is used to excuse contradictory readouts without discipline
 - transition advantage disappears when the court is made explicit
 - token-plane quietness objections are treated as irrelevant instead of separate
+- no falsifiable bridge obligation is ever locked
+- the supposed bridge can be rewritten after the fact so that it cannot really fail
 
 ## 9. Open Questions
 

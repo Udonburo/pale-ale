@@ -2,17 +2,25 @@
 
 Status: Tracked execution snapshot
 Role: Tracked standing snapshot / execution-stage handoff
-Date: 2026-03-19
+Date: 2026-03-20
 
 ## 0. Scope
 
-This file records the corrected Gate8 execution read after the quietness-court repair
-and the mixed-granularity court threading update.
+This file records the corrected Gate8 execution read after the quietness-court repair,
+the mixed-granularity court threading update, and the first diagnostic-only
+rotation/leakage bridge rerun, and the first support/closure bridge burn on the fixed Gate8 benchmarks.
 
 The active evidence package is now:
 
-- `gate8g_128r_granularity_candidate_execution`: 128-row same-world quietness court with explicit mixed-granularity artifacts
-- `gate8h_200r_granularity_candidate_execution`: 200-row same-world quietness court with explicit mixed-granularity artifacts
+- `gate8i_128r_bridge_candidate_execution`: 128-row fixed-benchmark rerun with explicit mixed-granularity artifacts and diagnostic-only bridge outputs
+- `gate8j_200r_bridge_candidate_execution`: 200-row fixed-benchmark rerun with explicit mixed-granularity artifacts and diagnostic-only bridge outputs
+- `gate8k_128r_support_closure_candidate_execution`: 128-row fixed-benchmark rerun with added `support_anchor_coverage` / `support_reanchor_cost` / `support_conditioned_closure`
+- `gate8l_200r_support_closure_candidate_execution`: 200-row fixed-benchmark rerun with added `support_anchor_coverage` / `support_reanchor_cost` / `support_conditioned_closure`
+
+These execution reruns reuse the already-fixed benchmarks:
+
+- `gate8g_128r_granularity_benchmark`
+- `gate8h_200r_granularity_benchmark`
 
 The fixed comparison set remained:
 
@@ -79,6 +87,9 @@ Gate8 now has:
 - corrected same-world quietness controls
 - scale-up evidence through 200 rows
 - explicit mixed-granularity court threading across constitution, materialization, execution, and per-candidate evaluation
+- diagnostic-only bridge outputs for `rotation_only`, `leakage_only`, and `closure_defect`
+- diagnostic-only bridge outputs for `support_anchor_coverage`, `support_reanchor_cost`, and `support_conditioned_closure`
+- artifact-level bridge failure read in the emitted diagnostic report itself
 
 New tooling and contract tightening live in:
 
@@ -86,6 +97,7 @@ New tooling and contract tightening live in:
 - `tools/evaluate_gate8_standing.py`
 - `tools/run_gate8_scaleup.py`
 - `15_GATE8_LABEL_AND_PROVENANCE_RULES.md`
+- `18_GATE8_ROTATION_LEAKAGE_BRIDGE.md`
 
 ## 3. Corrected Read
 
@@ -101,9 +113,23 @@ But quietness is still not fully won:
 - `F` remains better on `mean_delta_p90`
 - `gate7c` remains better on `mean_top10_inflation`
 
-So the correct sentence is:
+The bridge diagnostics are now baked on real execution artifacts too.
 
-- `gate7c` conflict-side revival persists under the corrected court, while quietness remains cleaner than before but still unresolved
+But the first bridge read is not clean enough to license a story win:
+
+- `rotation_only` stays high across all four cells
+- `leakage_only` is not uniquely quiet on clean/noisy cells and is in fact lowest on `direct_contradiction`
+- `closure_defect` shows only weak tail elevation on `distributed_incompatibility` and is not cleanly separated from `surface_noisy_clean`
+
+The second bridge burn is also not a full explanatory win:
+
+- `distributed_incompatibility` does become the lowest-coverage / highest-reanchor / highest-closure-tail cell
+- `clean_support` and `surface_noisy_clean` remain close to each other, which is directionally acceptable
+- but `direct_contradiction` does not rise on `support_conditioned_closure`; it is actually lower than the clean/noisy cells on mean closure
+
+So the correct sentence is now:
+
+- `gate7c` conflict-side revival persists under the corrected court, while quietness remains unresolved, bridge v1 stays a clean negative, and bridge v2 only partially cuts the taxonomy by making distributed incompatibility more legible without carrying direct contradiction with it.`
 
 ## 4. Current Numerical Read
 
@@ -126,6 +152,18 @@ Quietness:
 - `F mean_top10_inflation = 2.031250`
 - `gate7c mean_top10_inflation = 1.906250`
 
+Bridge diagnostics:
+
+- `rotation_only` mean is high across all cells: `surface_noisy_clean 0.597033`, `clean_support 0.578749`, `distributed_incompatibility 0.571634`, `direct_contradiction 0.545732`
+- `leakage_only` mean is lowest on `direct_contradiction 0.253358`; the other three cells cluster around `0.299-0.309`
+- `closure_defect` mean stays broad across all cells (`0.499022-0.519938`); `distributed_incompatibility` has the highest `p90 = 0.608549`, but `surface_noisy_clean` is close at `0.606212`
+
+Support/closure bridge:
+
+- `distributed_incompatibility` is the lowest-coverage cell at `0.655203` and the highest-reanchor cell at `0.588949`
+- `distributed_incompatibility` also has the highest `support_conditioned_closure p90 = 0.927918`
+- but `direct_contradiction mean_support_conditioned_closure = 0.764955` remains below `clean_support = 0.798421` and `surface_noisy_clean = 0.798094`
+
 ### 4.2 `gate8h_200r_granularity`
 
 Direct contradiction:
@@ -144,6 +182,18 @@ Quietness:
 - `gate7c mean_delta_p90 = -0.006514`
 - `F mean_top10_inflation = 2.060000`
 - `gate7c mean_top10_inflation = 1.980000`
+
+Bridge diagnostics:
+
+- `rotation_only` mean is high across all cells: `surface_noisy_clean 0.597114`, `clean_support 0.578824`, `distributed_incompatibility 0.571218`, `direct_contradiction 0.545658`
+- `leakage_only` mean is again lowest on `direct_contradiction 0.252066`; `clean_support`, `surface_noisy_clean`, and `distributed_incompatibility` sit at `0.299787-0.307476`
+- `closure_defect` mean remains broad (`0.500191-0.519174`); `distributed_incompatibility` has the highest `p90 = 0.609673`, but `surface_noisy_clean` remains close at `0.607331`
+
+Support/closure bridge:
+
+- `distributed_incompatibility` is again the lowest-coverage cell at `0.653657` and the highest-reanchor cell at `0.591002`
+- `distributed_incompatibility` also has the highest `support_conditioned_closure p90 = 0.924696`
+- but `direct_contradiction mean_support_conditioned_closure = 0.763350` remains below `clean_support = 0.798916` and `surface_noisy_clean = 0.798365`
 
 ## 5. Caveats
 
@@ -182,6 +232,22 @@ So the right claim is:
 - quietness is better adjudicated
 - quietness leadership still does not transfer
 
+### 5.4 Bridge diagnostics are baked, not won
+
+The bridge outputs now exist on real 128-row and 200-row execution artifacts.
+
+That earns:
+
+- a falsifiable bridge surface on the fixed court
+- manifest-bound diagnostic outputs beside the standing artifacts
+- diagnostic reports that explicitly state what bridge v1 failed to separate
+
+That does not earn:
+
+- a clean `rotation vs leakage vs closure_defect` separation claim
+- a promote / replace conclusion for `gate7c`
+- a doctrinal victory sentence about lawful jump versus unlawful escape
+
 ## 6. Decision
 
 The current decision should remain disciplined:
@@ -189,18 +255,29 @@ The current decision should remain disciplined:
 - do not add new candidates
 - do not reopen the evaluator
 - do not introduce aggregation rescue
+- do not promote bridge diagnostics into standing metrics
 
 What is now earned:
 
 - the `gate7c` conflict-side revival does not depend on the old quietness bug
+- the bridge diagnostics are now real execution artifacts, not doctrine-only placeholders
 
 What is not yet earned:
 
 - a full quietness victory claim
 - a settled dynamic mainline replacement claim
+- a clean bridge-level explanation of Seam-tail burden
+- a closure-centric contradiction read that survives both conflict cells
+
+The next move, if any, should therefore remain narrow:
+
+- do not rescue `bridge v1`
+- do not promote `bridge v2`
+- read `bridge v2` as partial / mixed, not as explanatory settlement
+- if another bridge is tried later, it should start from the direct-vs-distributed split that `v2` failed to unify
 
 ## 7. Working Sentence
 
-The best short sentence after the quietness-court correction is:
+The best short sentence after the bridge rerun is:
 
-- `Under the corrected same-world quietness court and explicit mixed-granularity standing metadata, gate7c retains a persistent conflict-side standing gain through 200 rows, while quietness remains non-collapsed in some respects but still unresolved overall.`
+- `Under the corrected same-world quietness court and explicit mixed-granularity standing metadata, gate7c retains a persistent conflict-side standing gain through 200 rows, while quietness remains unresolved, bridge v1 remains a clean negative, and bridge v2 yields only a partial read in which distributed incompatibility sharpens but direct contradiction does not survive as closure-first burden.`
