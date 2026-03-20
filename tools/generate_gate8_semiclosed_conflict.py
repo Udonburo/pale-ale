@@ -40,6 +40,11 @@ RENDERING_FAMILY_DEFS: Sequence[Dict[str, str]] = (
         "role": "generalization_family",
         "description": "Briefing-packet phrasing with reordered memo presentation under the same taxonomy.",
     },
+    {
+        "rendering_family_id": "transcript_v1",
+        "role": "second_generalization_family",
+        "description": "Transcript-style speaker turns with hearing-record packaging under the same taxonomy.",
+    },
 )
 
 

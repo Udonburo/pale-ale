@@ -110,6 +110,37 @@ class Gate8SemiclosedConflictMaterializationTests(unittest.TestCase):
             self.assertIn("Given the briefing packets,", all_answer_text)
             self.assertIn("Given the counter-brief,", all_answer_text)
 
+    def test_materializer_supports_transcript_rendering_family(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_str:
+            tmp_dir = Path(tmp_dir_str)
+            constitution_dir = tmp_dir / "constitution"
+            out_dir = tmp_dir / "materialized"
+            self._run_scaffold(constitution_dir, samples_per_cell=2, rendering_family="transcript_v1")
+            self._run_materializer(constitution_dir, out_dir)
+
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            rendering_plan = json.loads((out_dir / "rendering_plan.json").read_text(encoding="utf-8"))
+            rendering_rows = self._read_jsonl(out_dir / "retrieval_renderings.jsonl")
+            benchmark_rows = self._read_jsonl(out_dir / "benchmark_rows.jsonl")
+
+            self.assertEqual(manifest["rendering_family_id"], "transcript_v1")
+            self.assertEqual(rendering_plan["rendering_family_id"], "transcript_v1")
+            self.assertEqual({row["rendering_family_id"] for row in rendering_rows}, {"transcript_v1"})
+            self.assertEqual({row["rendering_family_id"] for row in benchmark_rows}, {"transcript_v1"})
+            self.assertTrue(
+                str(rendering_rows[0]["prompt"]).startswith("Transcript excerpts:")
+            )
+            all_chunk_text = "\n".join(
+                str(chunk["text"])
+                for row in rendering_rows
+                for chunk in row["retrieval_chunks"]
+            )
+            all_answer_text = "\n".join(str(row["answer_text"]) for row in benchmark_rows)
+            self.assertIn("Speaker A:", all_chunk_text)
+            self.assertIn("Cross-exam aside:", all_chunk_text)
+            self.assertIn("On the transcript record,", all_answer_text)
+            self.assertIn("If the cross-exam aside is followed,", all_answer_text)
+
     def test_materializer_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:
             tmp_dir = Path(tmp_dir_str)

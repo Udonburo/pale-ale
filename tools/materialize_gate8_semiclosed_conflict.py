@@ -309,6 +309,65 @@ def build_surface_noisy_clean_rendering_briefing(
     return chunks, [1, 2], []
 
 
+def build_clean_support_rendering_transcript(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "support", "text": f"Speaker A: {spec.fact_1}"},
+        {"role": "support", "text": f"Speaker B: {spec.fact_2}"},
+        {
+            "role": "support",
+            "text": f"Recorder note: the hearing record supports {spec.support_claim}.",
+        },
+    ]
+    return chunks, [0, 1, 2], []
+
+
+def build_direct_contradiction_rendering_transcript(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "support", "text": f"Speaker A: {spec.fact_1}"},
+        {"role": "conflict", "text": f"Cross-exam aside: {spec.wrong_claim}."},
+        {"role": "support", "text": f"Speaker B: {spec.fact_2}"},
+    ]
+    return chunks, [0, 2], [1]
+
+
+def build_distributed_incompatibility_rendering_transcript(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {"role": "support", "text": f"Witness North: {spec.fact_1}"},
+        {"role": "support", "text": f"Witness South: {spec.fact_2}"},
+        {
+            "role": "conflict",
+            "text": (
+                "Judge's instruction: separate witness fragments must not be transitively fused; "
+                f"{spec.distributed_block_claim}."
+            ),
+        },
+    ]
+    return chunks, [0, 1], [2]
+
+
+def build_surface_noisy_clean_rendering_transcript(
+    spec: RelationSpec,
+) -> Tuple[List[Dict[str, str]], List[int], List[int]]:
+    chunks = [
+        {
+            "role": "noise",
+            "text": "Clerk note: turn labels drifted during transcription, but the record was not substantively altered.",
+        },
+        {"role": "support", "text": f"Speaker A: {spec.fact_1}"},
+        {
+            "role": "support",
+            "text": f"Speaker B with transcript cleanup: {spec.fact_2}; the record still supports {spec.support_claim}.",
+        },
+    ]
+    return chunks, [1, 2], []
+
+
 def build_rendering(
     cell_id: str,
     spec: RelationSpec,
@@ -332,6 +391,15 @@ def build_rendering(
             return build_distributed_incompatibility_rendering_briefing(spec)
         if cell_id == "surface_noisy_clean":
             return build_surface_noisy_clean_rendering_briefing(spec)
+    elif rendering_family_id == "transcript_v1":
+        if cell_id == "clean_support":
+            return build_clean_support_rendering_transcript(spec)
+        if cell_id == "direct_contradiction":
+            return build_direct_contradiction_rendering_transcript(spec)
+        if cell_id == "distributed_incompatibility":
+            return build_distributed_incompatibility_rendering_transcript(spec)
+        if cell_id == "surface_noisy_clean":
+            return build_surface_noisy_clean_rendering_transcript(spec)
     else:
         raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
     raise ValueError(f"Unsupported cell_id: {cell_id}")
@@ -433,6 +501,51 @@ def build_answer_payload(
             defect_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_defect_span_v1")]
         else:
             raise ValueError(f"Unsupported cell/answer target combination: {cell_id}/{answer_target_type}")
+    elif rendering_family_id == "transcript_v1":
+        if cell_id in ("clean_support", "surface_noisy_clean"):
+            answer_text = (
+                f"On the transcript record, {spec.support_claim}. "
+                "Surface drift in the hearing record does not change the relation."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"On the transcript record, {spec.support_claim}. "
+                "The cross-exam aside is not adopted."
+            )
+            support_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_support_span_v1")]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "direct_contradiction" and answer_target_type == "conflict_following_wrong_answer":
+            answer_text = (
+                f"If the cross-exam aside is followed, {spec.wrong_claim}. "
+                "This ignores the aligned hearing record."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.wrong_claim, "gate8_defect_span_v1")]
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "consistent_answer":
+            answer_text = (
+                f"Across the separated transcript fragments, {spec.distributed_block_claim}. "
+                "The fragments do not warrant one fused transitive conclusion."
+            )
+            support_spans = [
+                find_span_or_fail(answer_text, spec.distributed_block_claim, "gate8_support_span_v1")
+            ]
+            conflict_spans = []
+            defect_spans = []
+        elif cell_id == "distributed_incompatibility" and answer_target_type == "unsupported_bridge_answer":
+            answer_text = (
+                f"If the transcript fragments are naively fused, {spec.support_claim}. "
+                "This wrongly glues separate transcript fragments into one bridge."
+            )
+            support_spans = []
+            conflict_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_conflict_span_v1")]
+            defect_spans = [find_span_or_fail(answer_text, spec.support_claim, "gate8_defect_span_v1")]
+        else:
+            raise ValueError(f"Unsupported cell/answer target combination: {cell_id}/{answer_target_type}")
     else:
         raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
 
@@ -459,6 +572,13 @@ def build_prompt(chunks: Sequence[Dict[str, Any]], question: str, rendering_fami
             lines.append(f"{idx}. ({str(chunk['role']).upper()}) {chunk['text']}")
         lines.append(question.replace("Question:", "Task:"))
         lines.append("Return the most warranted conclusion in one short paragraph.")
+        return "\n".join(lines)
+    if rendering_family_id == "transcript_v1":
+        lines = ["Transcript excerpts:"]
+        for idx, chunk in enumerate(chunks, start=1):
+            lines.append(f"Turn {idx} | {str(chunk['role']).upper()} | {chunk['text']}")
+        lines.append(question.replace("Question:", "Prompt:"))
+        lines.append("State the most warranted conclusion from the record in one short paragraph.")
         return "\n".join(lines)
     raise ValueError(f"Unsupported rendering_family_id: {rendering_family_id}")
 
