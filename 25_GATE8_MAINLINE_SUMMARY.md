@@ -4,6 +4,10 @@ Status: tracked workstream closeout
 Role: Gate8 mainline summary / closeout, not a new benchmark spec
 Date: 2026-03-21
 
+Gate9 mainline constitution is now tracked separately in:
+
+- `26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`
+
 ## 0. Scope
 
 This file closes Gate8 as a completed workstream.
