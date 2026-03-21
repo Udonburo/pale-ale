@@ -499,7 +499,7 @@ def main() -> int:
 
     rerun_dirs = rerun_downstream_layers(out_dir=out_dir, recovered_gate8_dir=recovered_gate8_dir)
     rerun_dirs["recovered_gate8"] = recovered_gate8_dir
-    gate9c_status = gate9a.read_json(rerun_dirs["gate9c"] / gate9c.DEFAULT_STATUS)
+    gate9c_status = gate9a.read_json(rerun_dirs["gate9c"] / gate9c.DEFAULT_ADMISSION_STATUS)
     gate9d_status = gate9a.read_json(rerun_dirs["gate9d"] / gate9d.DEFAULT_STATUS)
     status_payload = build_status_payload(
         recovery_rows,
