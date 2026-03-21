@@ -60,6 +60,10 @@ The first tracked Gate9M pollution-anatomy smoke read is now recorded in:
 
 - `53_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
 
+The next cleaner-side role-coupling spec is now tracked in:
+
+- `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
