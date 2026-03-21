@@ -62,6 +62,10 @@ The first tracked Gate9G smoke read is now recorded in:
 
 - `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
 
+The next anchor-conditioned redesign spec is now recorded in:
+
+- `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

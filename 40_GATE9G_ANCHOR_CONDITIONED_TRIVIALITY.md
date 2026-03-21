@@ -1,6 +1,6 @@
 # Gate9G Anchor-Conditioned Triviality
 
-Status: narrow admission-blocker spec, first implementation planned
+Status: narrow admission-blocker spec, first implementation landed and first smoke execution recorded
 Role: Gate9G anchor-conditioned-read blocker spec, not anchor redesign or operator opening
 Date: 2026-03-21
 
@@ -16,6 +16,10 @@ The first Gate9G triviality consumer now exists in:
 The first tracked Gate9G smoke execution read is now recorded in:
 
 - `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
+
+The next redesign-candidate spec is now recorded in:
+
+- `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
 
 ## 0. Why This Exists
 

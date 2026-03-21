@@ -8,6 +8,10 @@ This first tracked Gate9G smoke read executes the narrow blocker audit defined i
 
 - `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
 
+The next redesign-candidate spec is now recorded in:
+
+- `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9G anchor-conditioned triviality audit.
