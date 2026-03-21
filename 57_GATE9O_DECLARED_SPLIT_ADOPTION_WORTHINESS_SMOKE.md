@@ -8,6 +8,10 @@ This first tracked Gate9O smoke read executes the adoption-worthiness audit defi
 
 - `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
 
+The next declared-split adopt-or-defer judgment spec is now recorded in:
+
+- `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9O declared-split adoption-worthiness audit.

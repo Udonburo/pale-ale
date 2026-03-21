@@ -76,6 +76,10 @@ The first tracked Gate9O adoption-worthiness smoke read is now recorded in:
 
 - `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
 
+The next declared-split adopt-or-defer judgment spec is now tracked in:
+
+- `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
