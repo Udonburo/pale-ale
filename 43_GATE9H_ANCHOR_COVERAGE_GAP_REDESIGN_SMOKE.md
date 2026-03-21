@@ -8,6 +8,11 @@ This first tracked Gate9H smoke read executes the narrow redesign audit defined 
 
 - `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
 
+The next tracked blocker slice is now recorded in:
+
+- `44_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE.md`
+- `45_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9H anchor-coverage-gap redesign audit.

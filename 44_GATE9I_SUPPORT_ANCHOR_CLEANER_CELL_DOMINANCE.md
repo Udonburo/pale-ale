@@ -1,6 +1,6 @@
 # Gate9I Support-Anchor Cleaner-Cell Dominance
 
-Status: narrow blocker-audit spec, first implementation landed
+Status: narrow blocker-audit spec, first implementation landed and first smoke execution recorded
 Role: Gate9I support-anchor dominance blocker spec, not redesign settlement or operator opening
 Date: 2026-03-21
 
@@ -12,6 +12,10 @@ Gate9I proceeds from:
 The first Gate9I dominance consumer now exists in:
 
 - `tools/run_gate9i_support_anchor_cleaner_cell_dominance_audit.py`
+
+The first tracked Gate9I smoke execution read is now recorded in:
+
+- `45_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE_SMOKE.md`
 
 ## 0. Why This Exists
 

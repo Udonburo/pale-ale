@@ -29,6 +29,11 @@ The first redesign-candidate slice is now tracked in:
 - `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
 - `43_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN_SMOKE.md`
 
+The next cleaner-cell dominance slice is now tracked in:
+
+- `44_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE.md`
+- `45_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
