@@ -17,6 +17,7 @@ The first missingness-topology slice is now tracked in:
 The next Gate9D coverage-recovery slice is now tracked in:
 
 - `34_GATE9D_CONFLICT_MOTIF_COVERAGE.md`
+- `35_GATE9D_CONFLICT_MOTIF_COVERAGE_SMOKE.md`
 
 ## 0. Scope
 

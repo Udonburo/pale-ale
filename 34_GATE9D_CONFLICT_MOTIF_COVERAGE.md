@@ -14,6 +14,10 @@ Initial Gate9D coverage-recovery audit implementation now exists in:
 
 - `tools/run_gate9d_conflict_motif_coverage_audit.py`
 
+The first tracked Gate9D smoke execution read is now recorded in:
+
+- `35_GATE9D_CONFLICT_MOTIF_COVERAGE_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9C named the blocker.
