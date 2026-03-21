@@ -54,6 +54,10 @@ The first tracked Gate9F smoke read is now recorded in:
 
 - `39_GATE9F_CONFLICT_ANCHOR_RECOVERY_SMOKE.md`
 
+The next anchor-conditioned blocker spec is now recorded in:
+
+- `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

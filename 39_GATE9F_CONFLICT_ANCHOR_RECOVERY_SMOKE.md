@@ -8,6 +8,10 @@ This first tracked Gate9F smoke read executes the narrow recovery defined in:
 
 - `38_GATE9F_CONFLICT_ANCHOR_RECOVERY.md`
 
+The next anchor-conditioned blocker spec is now recorded in:
+
+- `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9F conflict-anchor recovery.
