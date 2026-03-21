@@ -1,6 +1,6 @@
 # Gate9L First-Tree Answer-Projection Pollution
 
-Status: narrow blocker-audit spec, first implementation landed
+Status: narrow blocker-audit spec, first implementation landed and first smoke execution recorded
 Role: Gate9L first-tree residual-pollution spec, not decomposition verdict or operator opening
 Date: 2026-03-21
 
@@ -12,6 +12,10 @@ Gate9L proceeds from:
 The first Gate9L first-tree consumer now exists in:
 
 - `tools/run_gate9l_first_tree_answer_projection_pollution_audit.py`
+
+The first tracked Gate9L smoke execution read is now recorded in:
+
+- `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
 
 ## 0. Why This Exists
 

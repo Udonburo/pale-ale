@@ -94,6 +94,14 @@ The first tracked Gate9K logging smoke read is now recorded in:
 
 - `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
 
+The next first-tree residual-pollution slice is now recorded in:
+
+- `50_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION.md`
+
+The first tracked Gate9L smoke read is now recorded in:
+
+- `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

@@ -47,6 +47,11 @@ The first tracked Gate9K logging smoke read is now recorded in:
 
 - `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
 
+The next first-tree residual-pollution slice is now tracked in:
+
+- `50_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION.md`
+- `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

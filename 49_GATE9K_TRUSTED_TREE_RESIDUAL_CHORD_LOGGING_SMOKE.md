@@ -8,6 +8,11 @@ This first tracked Gate9K smoke read executes the logging consumer defined in:
 
 - `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
 
+The next first-tree residual-pollution slice is now recorded in:
+
+- `50_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION.md`
+- `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9K trusted-tree / residual-chord logging audit.
