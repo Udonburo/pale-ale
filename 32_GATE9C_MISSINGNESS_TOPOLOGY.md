@@ -16,6 +16,10 @@ The first tracked smoke execution read is now recorded in:
 
 - `33_GATE9C_MISSINGNESS_AUDIT_SMOKE.md`
 
+The next narrow coverage-recovery slice is now tracked in:
+
+- `34_GATE9D_CONFLICT_MOTIF_COVERAGE.md`
+
 ## 0. Why This Exists
 
 Gate9C begins with admission criteria, not operator design.

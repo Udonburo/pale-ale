@@ -14,6 +14,10 @@ The first missingness-topology slice is now tracked in:
 - `32_GATE9C_MISSINGNESS_TOPOLOGY.md`
 - `33_GATE9C_MISSINGNESS_AUDIT_SMOKE.md`
 
+The next Gate9D coverage-recovery slice is now tracked in:
+
+- `34_GATE9D_CONFLICT_MOTIF_COVERAGE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

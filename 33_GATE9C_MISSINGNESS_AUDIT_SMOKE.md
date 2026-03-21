@@ -168,3 +168,7 @@ The next honest move is:
 - preserve this audit as the first tracked Gate9C admission slice
 - keep operator status closed
 - only then decide whether the next narrow move should target motif coverage or anchor-conditioned redesign
+
+That next narrow move is now tracked in:
+
+- `34_GATE9D_CONFLICT_MOTIF_COVERAGE.md`

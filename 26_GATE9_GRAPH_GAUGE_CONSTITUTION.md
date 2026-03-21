@@ -30,6 +30,10 @@ The Gate9C admission spec is now recorded in:
 
 - `31_GATE9C_OPERATOR_ADMISSION.md`
 
+The Gate9D conflict-motif coverage spec is now recorded in:
+
+- `34_GATE9D_CONFLICT_MOTIF_COVERAGE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
