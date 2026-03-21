@@ -34,6 +34,11 @@ The next cleaner-cell dominance slice is now tracked in:
 - `44_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE.md`
 - `45_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE_SMOKE.md`
 
+The next distributed-underactivation slice is now tracked in:
+
+- `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
+- `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

@@ -17,6 +17,11 @@ The first tracked Gate9I smoke execution read is now recorded in:
 
 - `45_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE_SMOKE.md`
 
+The next distributed-underactivation slice is now recorded in:
+
+- `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
+- `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9H moved the blocker cleanly.

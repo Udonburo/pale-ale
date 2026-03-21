@@ -1,6 +1,6 @@
 # Gate9J Distributed Underactivation Audit
 
-Status: narrow blocker-audit spec, first implementation landed
+Status: narrow blocker-audit spec, first implementation landed and first smoke execution recorded
 Role: Gate9J support-anchor distributed-underactivation spec, not redesign settlement or operator opening
 Date: 2026-03-21
 
@@ -12,6 +12,10 @@ Gate9J proceeds from:
 The first Gate9J underactivation consumer now exists in:
 
 - `tools/run_gate9j_distributed_underactivation_audit.py`
+
+The first tracked Gate9J smoke execution read is now recorded in:
+
+- `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
 
 ## 0. Why This Exists
 

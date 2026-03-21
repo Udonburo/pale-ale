@@ -8,6 +8,11 @@ This first tracked Gate9I smoke read executes the narrow dominance audit defined
 
 - `44_GATE9I_SUPPORT_ANCHOR_CLEANER_CELL_DOMINANCE.md`
 
+The next tracked blocker slice is now recorded in:
+
+- `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
+- `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9I support-anchor cleaner-cell dominance audit.
