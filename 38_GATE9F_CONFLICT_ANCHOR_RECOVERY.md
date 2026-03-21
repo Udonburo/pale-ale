@@ -13,6 +13,10 @@ The first Gate9F recovery consumer now exists in:
 
 - `tools/run_gate9f_conflict_anchor_recovery.py`
 
+The first tracked Gate9F smoke execution read is now recorded in:
+
+- `39_GATE9F_CONFLICT_ANCHOR_RECOVERY_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9E already earned the dry-run sentence.
