@@ -253,7 +253,7 @@ enum Gate4Command {
         cfa_jsonl: PathBuf,
         #[arg(long, required = true, num_args = 1..)]
         sample_ids: Vec<u64>,
-        #[arg(long, default_value = "SPEC.internal.draft.md")]
+        #[arg(long, default_value = "specs/internal/SPEC.internal.draft.md")]
         spec_path: PathBuf,
     },
 }

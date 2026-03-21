@@ -26,9 +26,8 @@ Thumbs.db
 
 # Internal docs
 RELEASE.md
-SPEC.md
-SPEC.*.local.md
-[0-9][0-9]_*.local.md
+*.local.md
+/workstream/local/
 
 # Data files
 *.jsonl

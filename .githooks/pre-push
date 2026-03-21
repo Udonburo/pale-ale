@@ -1,0 +1,41 @@
+#!/bin/sh
+
+remote_name="$1"
+
+has_forbidden_path() {
+  commit="$1"
+  git ls-tree -r --name-only "$commit" | grep -E '(^|/).*\.local\.md$|^workstream/local/' >/dev/null 2>&1
+}
+
+has_forbidden_history() {
+  range_spec="$1"
+  git diff --name-only "$range_spec" | grep -E '(^|/).*\.local\.md$|^workstream/local/' >/dev/null 2>&1
+}
+
+while read local_ref local_sha remote_ref remote_sha
+do
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+
+  if has_forbidden_path "$local_sha"; then
+    echo "push blocked: tracked .local.md content detected in $local_ref" >&2
+    exit 1
+  fi
+
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    commit_list=$(git rev-list "$local_sha" --not --remotes="$remote_name")
+    for commit in $commit_list
+    do
+      if has_forbidden_history "$commit^!"; then
+        echo "push blocked: outbound history touches local-only markdown in $local_ref" >&2
+        exit 1
+      fi
+    done
+  else
+    if has_forbidden_history "$remote_sha..$local_sha"; then
+      echo "push blocked: outbound history touches local-only markdown in $local_ref" >&2
+      exit 1
+    fi
+  fi
+done
+
+exit 0

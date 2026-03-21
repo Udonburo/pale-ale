@@ -27,8 +27,8 @@ Those are governed separately by:
 - [`SPEC.phase4.md`](SPEC.phase4.md)
 - [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md)
 - [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md)
-- [`SPEC.internal.draft.md`](SPEC.internal.draft.md)
-- [`docs/gate4_feature_contract_draft.md`](docs/gate4_feature_contract_draft.md)
+- [`../internal/SPEC.internal.draft.md`](../internal/SPEC.internal.draft.md)
+- [`../../docs/gate4_feature_contract_draft.md`](../../docs/gate4_feature_contract_draft.md)
 
 This separation is intentional: the public evaluator contract is narrower than the current repository-wide research implementation.
 

@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--spec-path",
-        default="SPEC.internal.draft.md",
+        default="specs/internal/SPEC.internal.draft.md",
     )
     parser.add_argument(
         "--out-dir",

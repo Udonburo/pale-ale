@@ -14,7 +14,7 @@ on:
       - "tools/validate_gate4_parity.py"
       - "tools/run_gate4_fixture_parity.py"
       - "fixtures/gate4/**"
-      - "SPEC.internal.draft.md"
+      - "specs/internal/SPEC.internal.draft.md"
       - "docs/gate4_feature_contract_draft.md"
   pull_request:
     branches:
@@ -29,7 +29,7 @@ on:
       - "tools/validate_gate4_parity.py"
       - "tools/run_gate4_fixture_parity.py"
       - "fixtures/gate4/**"
-      - "SPEC.internal.draft.md"
+      - "specs/internal/SPEC.internal.draft.md"
       - "docs/gate4_feature_contract_draft.md"
   workflow_dispatch:
 
