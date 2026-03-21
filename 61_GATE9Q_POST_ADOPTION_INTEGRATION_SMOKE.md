@@ -8,6 +8,10 @@ This first tracked Gate9Q smoke read executes the post-adoption integration defi
 
 - `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
 
+The Gate9 workstream closeout is now recorded in:
+
+- `62_GATE9_CLOSEOUT.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9Q post-adoption integration.

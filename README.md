@@ -1,221 +1,156 @@
 # pale-ale
 
-**Deterministic geometric defect telemetry for LLM outputs, from Gate1 rotor diagnostics through Gate4 feature-sink artifacts.**
+**pale-ale is a deterministic observation-and-transport lab for local non-integrability in symbolic trajectories.**
 
-pale-ale measures geometric failure signals from model outputs after inference. It does not modify the model; it measures what the model has already produced. The current repository has two active surfaces:
+The repo no longer treats its mainline problem as "finding a better score."
+Its current mainline is:
 
-- **public/stable surface**: Gate1 and Gate2 auditing, plus the public `eval` / `batch` / `report` / `calibrate` CLI path
-- **internal/research surface**: Gate3 local geometry, Gate4 feature-sink artifacts, CFA tooling, attestations, and internal SSOT work
+- define local objects
+- define transport between them
+- name where closure fails
+- keep failure explicit instead of smoothing it away
 
-Gate1 computes local rotor diagnostics in `SimpleRotor29`; Gate2 upgrades to the closed even subalgebra `Cl+(8)` (128 dimensions) to measure composition-dependent observables such as closure error, triangle holonomy, and higher-grade energy leakage. Gate3 and Gate4 extend the repo into local geometry telemetry and deterministic token / transition / sample / run artifact collection.
+The current completed chapter is:
 
-## How It Works
+- Gate8: standing, portability, unresolved bridge
+- Gate9: graph-gauge constitution and forward-basis audit-lane integration
 
-LLM outputs are projected into 8-dimensional blocks. For each adjacent pair of vectors, pale-ale constructs a **rotor** -- the Clifford algebra element that rotates one vector into another. These rotors are then **composed** along the answer trajectory.
+The current high-level state is:
 
-In flat space, composing rotors around a closed loop yields the identity. When it doesn't, the residual is **holonomy** -- a direct, model-agnostic measurement of geometric path-dependence in the output.
+- graph-gauge mainline is established
+- the Gate9N declared split is adopted on a forward basis into the Gate9 mainline audit lane
+- that forward-basis adoption is integrated into mainline memory
+- operator admission remains denied
+- broader trusted-tree settlement remains unresolved
+- prior Gate9 reads remain non-retroactive
 
-```
-ans_0 -> ans_1 -> ans_2 -> ... -> ans_N
-  R_01     R_12     R_23
-         | compose |
-    R_total  vs  R_direct(ans_0 -> ans_N)
-         | compare |
-       closure error (H1-B)
-```
+## Start Here
 
-## Current Surfaces
+If you need the current research line rather than historical implementation details, read these first:
 
-### Public / Stable
+- [`25_GATE8_MAINLINE_SUMMARY.md`](25_GATE8_MAINLINE_SUMMARY.md): Gate8 closeout
+- [`26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](26_GATE9_GRAPH_GAUGE_CONSTITUTION.md): Gate9 mainline constitution
+- [`62_GATE9_CLOSEOUT.md`](62_GATE9_CLOSEOUT.md): Gate9 closeout
 
-- `README.md` (this file): repository overview
-- [`SPEC.public.md`](SPEC.public.md): stable public evaluator / batch contract
-- [`SPEC.phase4.md`](SPEC.phase4.md): Gate1 SSOT
-- [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md): Gate2 SSOT
+If you need the current operator boundary:
 
-### Internal / Research
+- [`31_GATE9C_OPERATOR_ADMISSION.md`](31_GATE9C_OPERATOR_ADMISSION.md)
 
-- [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md): Gate3 local rotor geometry
-- [`SPEC.internal.draft.md`](SPEC.internal.draft.md): internal identity / Gate4 / research positioning
-- [`docs/gate4_feature_contract_draft.md`](docs/gate4_feature_contract_draft.md): Gate4 feature-sink contract draft
-- [`06_GATE6_LOCAL_DESIGN_MEMO.md`](06_GATE6_LOCAL_DESIGN_MEMO.md): Gate6 observation redesign memo
-- [`07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md`](07_NATIVE_LOCAL_SPAN_GAUGE_POLICY.md): Gate6-A gauge and construction policy
-- [`08_GATE6A_ARTIFACT_SCHEMA.md`](08_GATE6A_ARTIFACT_SCHEMA.md): Gate6-A native object artifact contract
-- [`09_GATE6_FIRST_BENCHMARK_PLAN.md`](09_GATE6_FIRST_BENCHMARK_PLAN.md): Gate6-A first benchmark discipline
-- [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md): Gate6 standing snapshot and closeout outcome
-- [`11_GATE7_PROGRESSION_LEAK_SMOKE.md`](11_GATE7_PROGRESSION_LEAK_SMOKE.md): first Gate7 dynamic projector-motif smoke
-- [`12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md): Gate7 dynamic motif comparison outcome
-- [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md): Gate8 benchmark constitution
-- [`14_GATE8_CONFLICT_TAXONOMY.md`](14_GATE8_CONFLICT_TAXONOMY.md): Gate8 semi-closed conflict taxonomy
-- [`15_GATE8_LABEL_AND_PROVENANCE_RULES.md`](15_GATE8_LABEL_AND_PROVENANCE_RULES.md): Gate8 label and provenance contract
-- [`16_GATE8_GENERATION_STAGE_SMOKE.md`](16_GATE8_GENERATION_STAGE_SMOKE.md): Gate8 first materialized generation-stage smoke
-- [`tools/README_gate6.md`](tools/README_gate6.md): Gate6-A builder and Gate5 compatibility workflow
-- [`tools/README_gate7.md`](tools/README_gate7.md): Gate7 progression-leak smoke workflow
-- [`tools/README_gate8.md`](tools/README_gate8.md): Gate8 benchmark skeleton workflow
-- `tools/run_gate6_native_object_consumer.py`: Gate6-B object-native edge-plane holonomy smoke consumer
-- `tools/run_gate6_sigma_gram_consumer.py`: Gate6 object-native sigma/gram consumer from `gram_raw` and `singular_values`
-- `tools/run_gate6_sigma_gram_consumer_v2.py`: tail-aware sigma/gram consumer that reweights `F` by spectral gap and tail retention
-- `tools/run_gate6_sigma_object_consumer.py`: pure object-native sigma consumer that uses only singular-spectrum structure
-- `tools/run_gate6_sigma_object_consumer_v2.py`: pure object-native sigma consumer with sqrt-gap weighting for quieter Seam behavior
-- `tools/`, `docs/`, `attestations/`: experimental pipelines, CFA utilities, and evidence artifacts
+If you need the forward-basis adoption line:
 
-## Gate Architecture
+- [`58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
+- [`59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
+- [`60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
+- [`61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
 
-pale-ale uses a staged **gate pipeline** -- each gate measures a different geometric property, with increasing algebraic complexity.
+## Current Doctrine
 
-### Gate 1 -- Rotor Diagnostics (v4.0.0)
+The repo's current mainline doctrine is:
 
-Operates in `SimpleRotor29` (scalar + 28 bivector components). Measures:
+- projector is the public primitive
+- basis is auxiliary only
+- connection comes before curvature
+- score-first is no longer the mainline
+- graph-wide operator remains denied until explicitly earned
+- blocker naming must happen at object or artifact level
+- every escalation step must stay spec-first and falsifier-first
 
-- **AUC** over rotor-derived structural distances
-- **Linking sanity** between answer units and context
-- **Collapse / entropy gates** for degenerate outputs
-- **Run validity** with threshold-based pass/fail
+The mainline does not currently claim:
 
-```bash
-pale-ale gate1 run --input gate1_input.json --out ./gate1_out \
-  --dataset-revision-id rev1 --dataset-hash-blake3 abc123 \
-  --spec-hash-raw-blake3 def456 --spec-hash-blake3 ghi789 \
-  --unitization-id sentence_split_v1 \
-  --rotor-encoder-id encoder@rev \
-  --rotor-encoder-preproc-id preproc_v1 \
-  --vec8-postproc-id postproc_v1 \
-  --evaluation-mode supervised_v1
-```
+- graph-wide operator success
+- broader trusted-tree settlement
+- field ontology
+- retroactive reinterpretation of earlier Gate9 reads
 
-### Gate 2 -- Holonomy Telemetry (v4.1.0)
+## What Gate9 Actually Did
 
-Upgrades representation to `Even128` -- the full 128-dimensional even subalgebra Cl+(8). Measures composition-dependent observables that are invisible in Gate 1:
+Gate9 was not "one more experiment."
+It was the workstream that gave the post-Gate8 line a real subject.
 
-| Metric | What it measures |
-|---|---|
-| **H1-B** (Closure Error) | Discrepancy between composed adjacent rotors and the direct endpoint rotor |
-| **H2** (Triangle Holonomy) | Loop closure failure for 3-step triangles; non-zero values indicate path-dependent geometry |
-| **H3** (Higher-Grade Energy) | Energy leaking into grades 4, 6, 8 after composition; measures departure from pure spin group |
+In practical terms, Gate9:
 
-```bash
-pale-ale gate2 run --input gate2_input.json --out ./gate2_out \
-  --dataset-revision-id rev1 --dataset-hash-blake3 abc123 \
-  --spec-hash-raw-blake3 def456 --spec-hash-blake3 ghi789 \
-  --unitization-id sentence_split_v1 \
-  --rotor-encoder-id encoder@rev \
-  --rotor-encoder-preproc-id preproc_v1 \
-  --vec8-postproc-id postproc_v1 \
-  --evaluation-mode-id supervised_v1
-```
+- established a graph-gauge constitution
+- rejected premature operator opening
+- turned blockers into artifact-level objects
+- executed at least one real recovery rather than only diagnosis
+- decomposed cleaner-side `answer_projection` coupling into structural and policy-role components
+- carried the declared split through:
+  - `separable`
+  - `adoption_worthy`
+  - `adopt`
+  - `integrated`
 
-**Gate 2 is telemetry-only in v4.1.0** -- it measures and records, but does not invalidate runs. Thresholding is reserved for future versions.
+The final Gate9 sentence is:
 
-**Output artifacts** (`manifest.json`, `summary.csv`, `samples.csv`) are deterministic: UTF-8/LF, `{:.17e}` float formatting, no NaN/Inf, stable key/column/row ordering.
+- `Gate9 is complete as a graph-gauge constitution and forward-basis audit-lane integration workstream; operator admission remains denied, broader trusted-tree settlement remains unresolved, and prior Gate9 reads remain non-retroactive.`
 
-### Gate 3 -- Local Rotor Geometry (draft / telemetry-only)
+## Key Research Entry Points
 
-Gate3 measures local geometry of adjacent step rotors in `Cl+(8)`. It is telemetry-only and follows the same step-construction path as Gate2. Current focus is local curvature / torsion style observables and explicit missing reasons, not threshold-based invalidation.
+### Mainline Closeouts
 
-Primary reference: [SPEC.phase4.gate3.md](SPEC.phase4.gate3.md)
+- [`25_GATE8_MAINLINE_SUMMARY.md`](25_GATE8_MAINLINE_SUMMARY.md)
+- [`62_GATE9_CLOSEOUT.md`](62_GATE9_CLOSEOUT.md)
 
-### Gate 4 -- Feature Sink (draft / implementation complete)
+### Gate8 Line
 
-Gate4 is a deterministic feature sink for token / transition / sample / run artifacts. It collects proxy-observable outputs and baselines into stable CSV / manifest artifacts. Gate4 does not introduce new math, learned fusion, or benchmark-specific verdict logic.
+- [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md)
+- [`17_GATE8A_EXECUTION_AND_SCALEUP.md`](17_GATE8A_EXECUTION_AND_SCALEUP.md)
+- [`22_GATE8B_EXECUTION_AND_PORTABILITY.md`](22_GATE8B_EXECUTION_AND_PORTABILITY.md)
+- [`24_GATE8C_EXECUTION_AND_PORTABILITY.md`](24_GATE8C_EXECUTION_AND_PORTABILITY.md)
 
-Primary references:
+### Gate9 Line
 
-- [SPEC.internal.draft.md](SPEC.internal.draft.md)
-- [docs/gate4_feature_contract_draft.md](docs/gate4_feature_contract_draft.md)
+- [`26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](26_GATE9_GRAPH_GAUGE_CONSTITUTION.md)
+- [`31_GATE9C_OPERATOR_ADMISSION.md`](31_GATE9C_OPERATOR_ADMISSION.md)
+- [`54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`](54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md)
+- [`55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`](55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md)
+- [`56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`](56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md)
+- [`57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`](57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md)
+- [`58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
+- [`59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
+- [`60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
+- [`61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
 
-## Mathematical Foundation
+## Legacy And Public Surface
 
-| Component | Detail |
-|---|---|
-| **Algebra** | Even subalgebra Cl+(8) -- 128 basis blades across grades {0, 2, 4, 6, 8} |
-| **Blade sign** | Swap-count with popcount (`swapcount_popcount_v1`) |
-| **Composition** | Strict left-fold over time-reversed sequence, normalize once at end |
-| **Distance** | Projective chordal: `d = sqrt(2(1 - min(1, abs(inner(R1, R2)))))` |
-| **Determinism** | Fixed accumulation order, `total_cmp` sorting, no intermediate normalization |
+The repo still contains the older public/stable evaluator surface and legacy gate implementations.
 
-The composition order ensures correct temporal application: older rotors act first in the sandwich product `R x ~R`.
+Stable/public entry points:
 
-Full specifications: [SPEC.phase4.md](SPEC.phase4.md) (Gate 1) / [SPEC.phase4.gate2.md](SPEC.phase4.gate2.md) (Gate 2)
+- [`SPEC.public.md`](SPEC.public.md)
+- [`SPEC.phase4.md`](SPEC.phase4.md)
+- [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md)
+
+Research/internal entry points:
+
+- [`SPEC.internal.draft.md`](SPEC.internal.draft.md)
+- [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md)
+- [`06_GATE6_LOCAL_DESIGN_MEMO.md`](06_GATE6_LOCAL_DESIGN_MEMO.md)
+- [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md)
+- [`12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
+
+The older Gate1-4 material remains relevant as implementation and historical background, but it is no longer the best starting point for understanding the current research mainline.
 
 ## Workspace Structure
 
-```
+Core Rust workspace:
+
+```text
 crates/
-  rotor/       <- leaf math: SimpleRotor29, Even128, Cl+(8) algebra (no deps)
-  diagnose/    <- metrics, orchestrator, artifact writer, manifest validator
-  cli/         <- thin CLI shell (gate1, gate2, gate3, gate4, eval, batch, ...)
-  embed/       <- model loading and embedding
-  modelspec/   <- model specification and verification
+  rotor/       leaf math: SimpleRotor29, Even128, Cl+(8) algebra
+  diagnose/    metrics, orchestrator, artifact writer, manifest validator
+  cli/         CLI shell
+  embed/       model loading and embedding
+  modelspec/   model specification and verification
 ```
 
-## Additional CLI Commands
+Research workflow surfaces:
 
-Beyond gate runs, pale-ale includes tools for interactive evaluation and batch processing:
+- `tools/`: narrow consumers, audits, and smoke runners
+- `docs/`: contracts and design drafts
+- `attestations/`: evidence snapshots and run summaries
 
-```bash
-# Single evaluation
-pale-ale eval "query" "context" "answer"
-
-# Batch run -> NDJSON report
-pale-ale batch input.ndjson --out report_out.ndjson
-
-# Report summary / filtering
-pale-ale report report_out.ndjson --summary --top 20
-
-# Threshold calibration from batch output
-pale-ale calibrate report_out.ndjson --json
-
-# Environment / model health
-pale-ale doctor
-pale-ale model status
-```
-
-## Audit Binding
-
-When running with `--json`, audit fields are bound in the output envelope:
-
-- `audit_trace.hashes.inputs_hash` -- binds raw eval input
-- `audit_trace.hashes.measurement_hash` -- binds measurement definition
-- `audit_trace.hashes.policy_hash` -- binds verdict policy
-- `audit_trace.model.files[].blake3` -- binds model artifacts to pinned hashes
-
-## Rust Library
-
-The Rust crates in this workspace are not yet published to crates.io. Use a path or git dependency:
-
-```toml
-[dependencies]
-pale-ale-core = { path = "../pale-ale" }      # local checkout
-# or
-pale-ale-core = { git = "https://github.com/Udonburo/pale-ale", tag = "v1.0.1" }
-```
-
-```rust
-use pale_ale_core::{spin3_components, spin3_struct_distance};
-
-let u = vec![0.1_f64; 8];
-let v = vec![0.2_f64; 8];
-
-let d = spin3_struct_distance(&u, &v).unwrap();
-let c = spin3_components(&u, &v).unwrap();
-println!("d_struct={:.6} d_intra={:.6} d_hct={:.6}", d, c.d_intra, c.d_hct);
-```
-
-## Distribution
-
-Current canonical distribution is this monorepo (GitHub tags/releases).
-
-- CLI: build from source (`cargo build -p pale-ale-cli --release`)
-- Rust crates in this workspace: use Cargo path dependencies or published crate versions as applicable
-- Legacy PyPI project `pale-ale-core` is pre-monorepo and retained for reference only (not the current release channel)
-
-## Constraints
-
-- Vector length must be a multiple of 8
-- All inputs must be finite `f64`
-- Determinism is a hard requirement: identical inputs always produce identical outputs
-
-## Building
+## Build And Test
 
 ```bash
 cargo build -p pale-ale-cli --release
@@ -223,16 +158,22 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
+Python-side narrow consumers are usually validated per file with:
+
+```bash
+python -B -m py_compile tools\\some_consumer.py tools\\test_some_consumer.py
+python -B tools\\test_some_consumer.py
+```
+
 MSRV: Rust 1.65+
 
-## Near-Term Direction
+## Distribution
 
-- Freeze the Gate4 feature-sink contract only after research-facing freeze triggers are met
-- Design stricter post-CFA validation regimes (for example CFA v2 or non-synthetic benchmarks)
-- Carry Gate6 in a two-layer form: `gate6f` as operational candidate, `gate6h` as pure object-native north star
-- Keep Gate7 as dynamic motif comparison only, and do not unlock field aggregation until seam-tail discipline is actually cleared
-- Start Gate8 from benchmark constitution and conflict taxonomy before any large semi-closed generation batch
-- Keep Gate8 generation-stage smoke strictly at benchmark materialization until the four-layer contract is fully auditable
+Current canonical distribution is this monorepo.
+
+- CLI: build from source
+- Rust crates: use Cargo path or git dependencies as appropriate
+- legacy PyPI `pale-ale-core` is pre-monorepo and not the current release channel
 
 ## License
 

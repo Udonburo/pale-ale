@@ -142,6 +142,10 @@ The first tracked Gate9Q smoke read is now recorded in:
 
 - `61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`
 
+The Gate9 workstream closeout is now recorded in:
+
+- `62_GATE9_CLOSEOUT.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

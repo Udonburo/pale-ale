@@ -8,6 +8,10 @@ Gate9 mainline constitution is now tracked separately in:
 
 - `26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`
 
+The Gate9 workstream closeout is now tracked separately in:
+
+- `62_GATE9_CLOSEOUT.md`
+
 ## 0. Scope
 
 This file closes Gate8 as a completed workstream.
