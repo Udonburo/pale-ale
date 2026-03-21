@@ -1,8 +1,14 @@
 # Gate9 Graph-Gauge Constitution
 
-Status: mainline constitution drafted, implementation pending
+Status: mainline constitution drafted, first Gate9A implementation landed
 Role: Gate9 mainline constitution / roadmap, not a benchmark result file
 Date: 2026-03-21
+
+Initial Gate9A object-level implementation now exists in:
+
+- `tools/run_gate9a_graph_gauge_consumer.py`
+
+That implementation is still a first consumer, not yet a tracked Gate9 execution verdict.
 
 ## 0. Why Gate9 Exists
 
