@@ -189,4 +189,4 @@ The next honest move is:
 
 - preserve this smoke run as the first tracked Gate9B handoff
 - keep the two-motif study frozen
-- only then decide whether a fuller tracked Gate9B execution is worth the cost under the same falsifiers
+- preserve the closeout memory now tracked in `30_GATE9B_CLOSEOUT.md`

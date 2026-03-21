@@ -22,6 +22,10 @@ The first tracked Gate9B smoke read is now recorded in:
 
 - `29_GATE9B_EXECUTION_SMOKE.md`
 
+The Gate9B closeout memory is now recorded in:
+
+- `30_GATE9B_CLOSEOUT.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
