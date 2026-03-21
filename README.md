@@ -28,20 +28,20 @@ The current high-level state is:
 
 If you need the current research line rather than historical implementation details, read these first:
 
-- [`25_GATE8_MAINLINE_SUMMARY.md`](25_GATE8_MAINLINE_SUMMARY.md): Gate8 closeout
-- [`26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](26_GATE9_GRAPH_GAUGE_CONSTITUTION.md): Gate9 mainline constitution
-- [`62_GATE9_CLOSEOUT.md`](62_GATE9_CLOSEOUT.md): Gate9 closeout
+- [`workstream/25_GATE8_MAINLINE_SUMMARY.md`](workstream/25_GATE8_MAINLINE_SUMMARY.md): Gate8 closeout
+- [`workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md): Gate9 mainline constitution
+- [`workstream/62_GATE9_CLOSEOUT.md`](workstream/62_GATE9_CLOSEOUT.md): Gate9 closeout
 
 If you need the current operator boundary:
 
-- [`31_GATE9C_OPERATOR_ADMISSION.md`](31_GATE9C_OPERATOR_ADMISSION.md)
+- [`workstream/31_GATE9C_OPERATOR_ADMISSION.md`](workstream/31_GATE9C_OPERATOR_ADMISSION.md)
 
 If you need the forward-basis adoption line:
 
-- [`58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
-- [`59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
-- [`60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
-- [`61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
+- [`workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
+- [`workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
+- [`workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
+- [`workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
 
 ## Current Doctrine
 
@@ -88,28 +88,28 @@ The final Gate9 sentence is:
 
 ### Mainline Closeouts
 
-- [`25_GATE8_MAINLINE_SUMMARY.md`](25_GATE8_MAINLINE_SUMMARY.md)
-- [`62_GATE9_CLOSEOUT.md`](62_GATE9_CLOSEOUT.md)
+- [`workstream/25_GATE8_MAINLINE_SUMMARY.md`](workstream/25_GATE8_MAINLINE_SUMMARY.md)
+- [`workstream/62_GATE9_CLOSEOUT.md`](workstream/62_GATE9_CLOSEOUT.md)
 
 ### Gate8 Line
 
-- [`13_GATE8_BENCHMARK_CONSTITUTION.md`](13_GATE8_BENCHMARK_CONSTITUTION.md)
-- [`17_GATE8A_EXECUTION_AND_SCALEUP.md`](17_GATE8A_EXECUTION_AND_SCALEUP.md)
-- [`22_GATE8B_EXECUTION_AND_PORTABILITY.md`](22_GATE8B_EXECUTION_AND_PORTABILITY.md)
-- [`24_GATE8C_EXECUTION_AND_PORTABILITY.md`](24_GATE8C_EXECUTION_AND_PORTABILITY.md)
+- [`workstream/13_GATE8_BENCHMARK_CONSTITUTION.md`](workstream/13_GATE8_BENCHMARK_CONSTITUTION.md)
+- [`workstream/17_GATE8A_EXECUTION_AND_SCALEUP.md`](workstream/17_GATE8A_EXECUTION_AND_SCALEUP.md)
+- [`workstream/22_GATE8B_EXECUTION_AND_PORTABILITY.md`](workstream/22_GATE8B_EXECUTION_AND_PORTABILITY.md)
+- [`workstream/24_GATE8C_EXECUTION_AND_PORTABILITY.md`](workstream/24_GATE8C_EXECUTION_AND_PORTABILITY.md)
 
 ### Gate9 Line
 
-- [`26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](26_GATE9_GRAPH_GAUGE_CONSTITUTION.md)
-- [`31_GATE9C_OPERATOR_ADMISSION.md`](31_GATE9C_OPERATOR_ADMISSION.md)
-- [`54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`](54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md)
-- [`55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`](55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md)
-- [`56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`](56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md)
-- [`57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`](57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md)
-- [`58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
-- [`59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
-- [`60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
-- [`61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
+- [`workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md)
+- [`workstream/31_GATE9C_OPERATOR_ADMISSION.md`](workstream/31_GATE9C_OPERATOR_ADMISSION.md)
+- [`workstream/54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`](workstream/54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md)
+- [`workstream/55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`](workstream/55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md)
+- [`workstream/56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`](workstream/56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md)
+- [`workstream/57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`](workstream/57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md)
+- [`workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
+- [`workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
+- [`workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
+- [`workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
 
 ## Legacy And Public Surface
 
@@ -117,17 +117,17 @@ The repo still contains the older public/stable evaluator surface and legacy gat
 
 Stable/public entry points:
 
-- [`SPEC.public.md`](SPEC.public.md)
-- [`SPEC.phase4.md`](SPEC.phase4.md)
-- [`SPEC.phase4.gate2.md`](SPEC.phase4.gate2.md)
+- [`specs/public/SPEC.public.md`](specs/public/SPEC.public.md)
+- [`specs/public/SPEC.phase4.md`](specs/public/SPEC.phase4.md)
+- [`specs/public/SPEC.phase4.gate2.md`](specs/public/SPEC.phase4.gate2.md)
 
 Research/internal entry points:
 
-- [`SPEC.internal.draft.md`](SPEC.internal.draft.md)
-- [`SPEC.phase4.gate3.md`](SPEC.phase4.gate3.md)
-- [`06_GATE6_LOCAL_DESIGN_MEMO.md`](06_GATE6_LOCAL_DESIGN_MEMO.md)
-- [`10_GATE6_STANDING_AND_OUTCOME.md`](10_GATE6_STANDING_AND_OUTCOME.md)
-- [`12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
+- [`specs/internal/SPEC.internal.draft.md`](specs/internal/SPEC.internal.draft.md)
+- [`specs/public/SPEC.phase4.gate3.md`](specs/public/SPEC.phase4.gate3.md)
+- [`workstream/06_GATE6_LOCAL_DESIGN_MEMO.md`](workstream/06_GATE6_LOCAL_DESIGN_MEMO.md)
+- [`workstream/10_GATE6_STANDING_AND_OUTCOME.md`](workstream/10_GATE6_STANDING_AND_OUTCOME.md)
+- [`workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
 
 The older Gate1-4 material remains relevant as implementation and historical background, but it is no longer the best starting point for understanding the current research mainline.
 
@@ -146,8 +146,11 @@ crates/
 
 Research workflow surfaces:
 
+- `workstream/`: numbered tracked workstream memory and closeouts
+- `workstream/local/`: ignored local-only notes; never pushed by convention and hook
+- `specs/`: public/internal constitutions and historical implementation checklists
 - `tools/`: narrow consumers, audits, and smoke runners
-- `docs/`: contracts and design drafts
+- `docs/`: non-sequential reference docs and design drafts
 - `attestations/`: evidence snapshots and run summaries
 
 ## Build And Test
