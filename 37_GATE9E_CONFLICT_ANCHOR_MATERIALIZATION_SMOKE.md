@@ -8,6 +8,10 @@ This first tracked Gate9E smoke read executes the narrow audit defined in:
 
 - `36_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION.md`
 
+The next actual-recovery spec is now recorded in:
+
+- `38_GATE9F_CONFLICT_ANCHOR_RECOVERY.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9E conflict-anchor materialization audit.

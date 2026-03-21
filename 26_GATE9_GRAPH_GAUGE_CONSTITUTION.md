@@ -46,6 +46,10 @@ The first tracked Gate9E smoke read is now recorded in:
 
 - `37_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION_SMOKE.md`
 
+The Gate9F actual-recovery spec is now recorded in:
+
+- `38_GATE9F_CONFLICT_ANCHOR_RECOVERY.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
