@@ -42,6 +42,10 @@ The Gate9E conflict-anchor materialization spec is now recorded in:
 
 - `36_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION.md`
 
+The first tracked Gate9E smoke read is now recorded in:
+
+- `37_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

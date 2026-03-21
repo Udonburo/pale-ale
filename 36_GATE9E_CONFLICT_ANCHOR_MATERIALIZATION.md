@@ -13,6 +13,10 @@ Initial Gate9E dry-run materialization audit now exists in:
 
 - `tools/run_gate9e_conflict_anchor_materialization_audit.py`
 
+The first tracked Gate9E smoke execution read is now recorded in:
+
+- `37_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9D already named the blocker and its current signature.

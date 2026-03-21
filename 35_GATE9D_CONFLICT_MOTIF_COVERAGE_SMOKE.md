@@ -179,3 +179,4 @@ The next honest move is:
 That next narrow move is now tracked in:
 
 - `36_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION.md`
+- `37_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION_SMOKE.md`
