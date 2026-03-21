@@ -9,6 +9,11 @@ Gate9C proceeds from:
 - `26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`
 - `30_GATE9B_CLOSEOUT.md`
 
+The first missingness-topology slice is now tracked in:
+
+- `32_GATE9C_MISSINGNESS_TOPOLOGY.md`
+- `33_GATE9C_MISSINGNESS_AUDIT_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
