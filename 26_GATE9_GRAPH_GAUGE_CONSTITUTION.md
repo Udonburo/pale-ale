@@ -14,6 +14,10 @@ The first tracked smoke execution read is now recorded in:
 
 - `27_GATE9A_EXECUTION_SMOKE.md`
 
+The next narrow spec is now recorded in:
+
+- `28_GATE9B_SMALL_CYCLE_HOLONOMY_STUDY.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

@@ -191,4 +191,4 @@ The next honest move is:
 
 - preserve this smoke run as the first tracked Gate9A handoff
 - keep the scientific judgment cold
-- only then decide whether a fuller tracked Gate9A execution read is warranted
+- move next only through a narrow Gate9B holonomy spec, now tracked in `28_GATE9B_SMALL_CYCLE_HOLONOMY_STUDY.md`
