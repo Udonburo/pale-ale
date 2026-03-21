@@ -1,6 +1,6 @@
 # Gate9H Anchor-Coverage-Gap Redesign
 
-Status: narrow redesign spec, first implementation planned
+Status: narrow redesign spec, first implementation landed and first smoke execution recorded
 Role: Gate9H redesign-candidate spec, not operator opening or final anchor redesign settlement
 Date: 2026-03-21
 
@@ -8,6 +8,14 @@ Gate9H proceeds from:
 
 - `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
 - `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
+
+The first Gate9H redesign consumer now exists in:
+
+- `tools/run_gate9h_anchor_coverage_gap_redesign_audit.py`
+
+The first tracked Gate9H smoke execution read is now recorded in:
+
+- `43_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN_SMOKE.md`
 
 ## 0. Why This Exists
 

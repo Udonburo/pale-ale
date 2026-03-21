@@ -24,6 +24,11 @@ The next anchor-conditioned blocker slice is now tracked in:
 - `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
 - `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
 
+The first redesign-candidate slice is now tracked in:
+
+- `42_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN.md`
+- `43_GATE9H_ANCHOR_COVERAGE_GAP_REDESIGN_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
