@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import run_gate9a_graph_gauge_consumer as gate9a
+import run_gate9i_support_anchor_cleaner_cell_dominance_audit as gate9i
 import run_gate9j_distributed_underactivation_audit as gate9j
 
 
