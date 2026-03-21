@@ -10,6 +10,10 @@ Initial Gate9A object-level implementation now exists in:
 
 That implementation is still a first consumer, not yet a tracked Gate9 execution verdict.
 
+The first tracked smoke execution read is now recorded in:
+
+- `27_GATE9A_EXECUTION_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
