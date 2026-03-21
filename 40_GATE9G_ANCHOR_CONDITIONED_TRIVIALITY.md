@@ -9,6 +9,14 @@ Gate9G proceeds from:
 - `31_GATE9C_OPERATOR_ADMISSION.md`
 - `39_GATE9F_CONFLICT_ANCHOR_RECOVERY_SMOKE.md`
 
+The first Gate9G triviality consumer now exists in:
+
+- `tools/run_gate9g_anchor_conditioned_triviality_audit.py`
+
+The first tracked Gate9G smoke execution read is now recorded in:
+
+- `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9F removed the named coverage blocker.

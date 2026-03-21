@@ -22,6 +22,7 @@ The next Gate9D coverage-recovery slice is now tracked in:
 The next anchor-conditioned blocker slice is now tracked in:
 
 - `40_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY.md`
+- `41_GATE9G_ANCHOR_CONDITIONED_TRIVIALITY_SMOKE.md`
 
 ## 0. Scope
 
