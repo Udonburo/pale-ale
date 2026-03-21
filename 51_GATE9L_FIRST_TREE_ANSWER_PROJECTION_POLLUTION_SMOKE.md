@@ -8,6 +8,10 @@ This first tracked Gate9L smoke read executes the first-tree audit defined in:
 
 - `50_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION.md`
 
+The next cleaner-side pollution anatomy spec is now recorded in:
+
+- `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9L first-tree answer-projection pollution audit.

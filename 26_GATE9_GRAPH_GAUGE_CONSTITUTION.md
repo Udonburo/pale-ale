@@ -102,6 +102,10 @@ The first tracked Gate9L smoke read is now recorded in:
 
 - `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
 
+The next cleaner-side pollution anatomy spec is now recorded in:
+
+- `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

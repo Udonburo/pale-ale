@@ -52,6 +52,10 @@ The next first-tree residual-pollution slice is now tracked in:
 - `50_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION.md`
 - `51_GATE9L_FIRST_TREE_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
 
+The next cleaner-side pollution anatomy spec is now tracked in:
+
+- `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
