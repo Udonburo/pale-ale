@@ -1,6 +1,6 @@
 # Gate9K Trusted-Tree / Residual-Chord Decomposition
 
-Status: spec-only, decomposition hypothesis not yet executed
+Status: decomposition hypothesis spec, first implementation landed
 Role: Gate9K trusted-tree / residual-chord hypothesis spec, not operator opening or metric settlement
 Date: 2026-03-21
 
@@ -8,6 +8,10 @@ Gate9K proceeds from:
 
 - `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
 - `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
+
+The first Gate9K logging consumer now exists in:
+
+- `tools/run_gate9k_trusted_tree_residual_chord_logging.py`
 
 ## 0. Context And Blocker
 
