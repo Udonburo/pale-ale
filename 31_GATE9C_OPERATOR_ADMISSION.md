@@ -39,6 +39,10 @@ The next distributed-underactivation slice is now tracked in:
 - `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
 - `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
 
+The next decomposition-hypothesis slice is now tracked in:
+
+- `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

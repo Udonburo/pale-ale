@@ -17,6 +17,10 @@ The first tracked Gate9J smoke execution read is now recorded in:
 
 - `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
 
+The next decomposition-hypothesis spec is now recorded in:
+
+- `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
+
 ## 0. Why This Exists
 
 Gate9I moved the blocker one layer inward.

@@ -86,6 +86,10 @@ The first tracked Gate9J smoke read is now recorded in:
 
 - `47_GATE9J_DISTRIBUTED_UNDERACTIVATION_SMOKE.md`
 
+The next trusted-tree decomposition hypothesis spec is now recorded in:
+
+- `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

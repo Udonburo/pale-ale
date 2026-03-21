@@ -8,6 +8,10 @@ This first tracked Gate9J smoke read executes the narrow underactivation audit d
 
 - `46_GATE9J_DISTRIBUTED_UNDERACTIVATION_AUDIT.md`
 
+The next decomposition-hypothesis spec is now recorded in:
+
+- `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9J distributed-underactivation audit.
