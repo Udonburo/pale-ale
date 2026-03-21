@@ -120,11 +120,11 @@ Stable/public entry points:
 - [`specs/public/SPEC.public.md`](specs/public/SPEC.public.md)
 - [`specs/public/SPEC.phase4.md`](specs/public/SPEC.phase4.md)
 - [`specs/public/SPEC.phase4.gate2.md`](specs/public/SPEC.phase4.gate2.md)
+- [`specs/public/SPEC.phase4.gate3.md`](specs/public/SPEC.phase4.gate3.md)
 
 Research/internal entry points:
 
 - [`specs/internal/SPEC.internal.draft.md`](specs/internal/SPEC.internal.draft.md)
-- [`specs/public/SPEC.phase4.gate3.md`](specs/public/SPEC.phase4.gate3.md)
 - [`workstream/06_GATE6_LOCAL_DESIGN_MEMO.md`](workstream/06_GATE6_LOCAL_DESIGN_MEMO.md)
 - [`workstream/10_GATE6_STANDING_AND_OUTCOME.md`](workstream/10_GATE6_STANDING_AND_OUTCOME.md)
 - [`workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
