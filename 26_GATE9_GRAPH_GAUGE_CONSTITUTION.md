@@ -130,6 +130,10 @@ The next declared-split adopt-or-defer judgment spec is now recorded in:
 
 - `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
 
+The first tracked Gate9P smoke read is now recorded in:
+
+- `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

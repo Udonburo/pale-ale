@@ -1,6 +1,6 @@
 # Gate9P Declared Split Adopt-Or-Defer Judgment
 
-Status: spec-only, implementation not yet landed
+Status: spec-only, first implementation landed and first smoke execution recorded
 Role: Gate9P adopt-or-defer judgment spec, not operator opening or broader trusted-tree settlement
 Date: 2026-03-22
 
@@ -8,6 +8,14 @@ Gate9P proceeds from:
 
 - `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
 - `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
+
+The first Gate9P adopt-or-defer consumer now exists in:
+
+- `tools/run_gate9p_declared_split_adopt_or_defer_judgment.py`
+
+The first tracked Gate9P smoke execution read is now recorded in:
+
+- `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
 
 ## 0. Why This Exists
 

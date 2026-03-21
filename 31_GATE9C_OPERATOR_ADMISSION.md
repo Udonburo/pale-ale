@@ -80,6 +80,10 @@ The next declared-split adopt-or-defer judgment spec is now tracked in:
 
 - `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
 
+The first tracked Gate9P judgment smoke read is now recorded in:
+
+- `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.
