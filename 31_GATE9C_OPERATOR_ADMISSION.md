@@ -56,6 +56,10 @@ The next cleaner-side pollution anatomy spec is now tracked in:
 
 - `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
 
+The first tracked Gate9M pollution-anatomy smoke read is now recorded in:
+
+- `53_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

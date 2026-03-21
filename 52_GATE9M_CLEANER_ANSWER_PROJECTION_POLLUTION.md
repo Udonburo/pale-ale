@@ -1,6 +1,6 @@
 # Gate9M Cleaner Answer-Projection Pollution
 
-Status: pollution anatomy spec, first implementation landed
+Status: pollution anatomy spec, first implementation landed and first smoke execution recorded
 Role: Gate9M cleaner-side answer-projection pollution spec, not decomposition verdict or operator opening
 Date: 2026-03-21
 
@@ -12,6 +12,10 @@ Gate9M proceeds from:
 The first Gate9M pollution-audit consumer now exists in:
 
 - `tools/run_gate9m_cleaner_answer_projection_pollution_audit.py`
+
+The first tracked Gate9M smoke execution read is now recorded in:
+
+- `53_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
 
 ## 0. Why This Exists
 

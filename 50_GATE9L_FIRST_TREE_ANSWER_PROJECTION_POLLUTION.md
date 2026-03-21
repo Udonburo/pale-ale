@@ -21,6 +21,10 @@ The next cleaner-side pollution anatomy spec is now recorded in:
 
 - `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
 
+The first tracked Gate9M smoke execution read is now recorded in:
+
+- `53_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
 ## 0. Why This Exists
 
 Gate9K made the decomposition policy executable as logging.
