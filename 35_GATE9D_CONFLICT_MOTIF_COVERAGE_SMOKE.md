@@ -175,3 +175,7 @@ The next honest move is:
 - preserve this audit as the first tracked Gate9D recovery-candidate slice
 - keep operator status closed
 - move upstream to the exact conflict-anchor materialization gap on `distributed_incompatibility`
+
+That next narrow move is now tracked in:
+
+- `36_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION.md`

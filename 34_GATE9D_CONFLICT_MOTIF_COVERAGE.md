@@ -18,6 +18,10 @@ The first tracked Gate9D smoke execution read is now recorded in:
 
 - `35_GATE9D_CONFLICT_MOTIF_COVERAGE_SMOKE.md`
 
+The next upstream artifact-lane slice is now tracked in:
+
+- `36_GATE9E_CONFLICT_ANCHOR_MATERIALIZATION.md`
+
 ## 0. Why This Exists
 
 Gate9C named the blocker.
