@@ -1,6 +1,6 @@
 # Gate9O Declared Split Adoption-Worthiness
 
-Status: spec-only, implementation not yet landed
+Status: spec-only, first implementation landed and first smoke execution recorded
 Role: Gate9O declared-split adoption-worthiness spec, not mainline adoption or operator opening
 Date: 2026-03-21
 
@@ -8,6 +8,14 @@ Gate9O proceeds from:
 
 - `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
 - `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
+
+The first Gate9O adoption-worthiness consumer now exists in:
+
+- `tools/run_gate9o_declared_split_adoption_worthiness_audit.py`
+
+The first tracked Gate9O smoke execution read is now recorded in:
+
+- `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
 
 ## 0. Why This Exists
 

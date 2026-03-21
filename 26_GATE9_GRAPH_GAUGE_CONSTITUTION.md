@@ -122,6 +122,10 @@ The next declared-split adoption-worthiness spec is now recorded in:
 
 - `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
 
+The first tracked Gate9O smoke read is now recorded in:
+
+- `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

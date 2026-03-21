@@ -72,6 +72,10 @@ The next declared-split adoption-worthiness spec is now tracked in:
 
 - `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
 
+The first tracked Gate9O adoption-worthiness smoke read is now recorded in:
+
+- `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

@@ -12,6 +12,10 @@ The next declared-split adoption-worthiness spec is now recorded in:
 
 - `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
 
+The first tracked Gate9O smoke execution read is now recorded in:
+
+- `57_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9N cleaner-side `answer_projection` role-coupling audit.
