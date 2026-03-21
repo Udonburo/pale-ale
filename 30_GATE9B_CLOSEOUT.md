@@ -98,6 +98,10 @@ It is:
 
 - what is still missing in the current cycle family that prevents explanatory status from being earned
 
+That next admission-facing question is now tracked in:
+
+- `31_GATE9C_OPERATOR_ADMISSION.md`
+
 ## 6. Relation To Gate9C
 
 If Gate9C ever opens, it should not open as:

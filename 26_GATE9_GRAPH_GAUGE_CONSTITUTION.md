@@ -26,6 +26,10 @@ The Gate9B closeout memory is now recorded in:
 
 - `30_GATE9B_CLOSEOUT.md`
 
+The Gate9C admission spec is now recorded in:
+
+- `31_GATE9C_OPERATOR_ADMISSION.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
