@@ -68,6 +68,10 @@ The first tracked Gate9N role-coupling smoke read is now recorded in:
 
 - `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
 
+The next declared-split adoption-worthiness spec is now tracked in:
+
+- `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

@@ -118,6 +118,10 @@ The first tracked Gate9N smoke read is now recorded in:
 
 - `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
 
+The next declared-split adoption-worthiness spec is now recorded in:
+
+- `56_GATE9O_DECLARED_SPLIT_ADOPTION_WORTHINESS.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:
