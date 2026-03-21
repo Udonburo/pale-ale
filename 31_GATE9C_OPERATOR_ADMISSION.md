@@ -88,6 +88,10 @@ The next post-adoption integration spec is now tracked in:
 
 - `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
 
+The first tracked Gate9Q integration smoke read is now recorded in:
+
+- `61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

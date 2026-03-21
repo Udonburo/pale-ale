@@ -1,6 +1,6 @@
 # Gate9Q Post-Adoption Integration
 
-Status: spec-only, implementation not yet landed
+Status: spec-only, first implementation landed and first smoke execution recorded
 Role: Gate9Q post-adoption integration / mainline summary update spec, not operator opening or broader trusted-tree settlement
 Date: 2026-03-22
 
@@ -8,6 +8,14 @@ Gate9Q proceeds from:
 
 - `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
 - `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
+
+The first Gate9Q post-adoption integration consumer now exists in:
+
+- `tools/run_gate9q_post_adoption_integration.py`
+
+The first tracked Gate9Q smoke execution read is now recorded in:
+
+- `61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`
 
 ## 0. Why This Exists
 

@@ -12,6 +12,10 @@ The next post-adoption integration spec is now recorded in:
 
 - `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
 
+The next post-adoption integration spec is now recorded in:
+
+- `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9P declared-split adopt-or-defer judgment.
