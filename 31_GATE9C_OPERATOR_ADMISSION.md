@@ -64,6 +64,10 @@ The next cleaner-side role-coupling spec is now tracked in:
 
 - `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
 
+The first tracked Gate9N role-coupling smoke read is now recorded in:
+
+- `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

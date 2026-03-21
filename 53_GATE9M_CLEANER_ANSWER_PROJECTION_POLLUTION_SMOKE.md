@@ -12,6 +12,10 @@ The next cleaner-side role-coupling spec is now recorded in:
 
 - `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
 
+The first tracked Gate9N smoke execution read is now recorded in:
+
+- `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9M cleaner-side `answer_projection` pollution audit.

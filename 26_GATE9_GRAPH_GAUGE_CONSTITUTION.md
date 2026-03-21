@@ -114,6 +114,10 @@ The next cleaner-side role-coupling spec is now recorded in:
 
 - `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
 
+The first tracked Gate9N smoke read is now recorded in:
+
+- `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

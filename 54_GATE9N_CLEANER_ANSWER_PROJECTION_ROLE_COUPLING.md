@@ -1,6 +1,6 @@
 # Gate9N Cleaner Answer-Projection Role Coupling
 
-Status: spec-only, implementation not yet landed
+Status: spec-only, first implementation landed and first smoke execution recorded
 Role: Gate9N cleaner-side role-coupling spec, not blocker resolution or operator opening
 Date: 2026-03-21
 
@@ -8,6 +8,14 @@ Gate9N proceeds from:
 
 - `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
 - `53_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION_SMOKE.md`
+
+The first Gate9N role-coupling consumer now exists in:
+
+- `tools/run_gate9n_cleaner_answer_projection_role_coupling_audit.py`
+
+The first tracked Gate9N smoke execution read is now recorded in:
+
+- `55_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING_SMOKE.md`
 
 ## 0. Why This Exists
 
