@@ -234,11 +234,20 @@ Its role is:
 
 This is the loop residual on small, explicit cycles.
 
-The first cycles should stay simple, such as:
+Gate9A does not allow implicit closure.
 
-- token -> support -> answer
-- token -> conflict -> answer
-- support -> answer -> quietness-paired answer
+Holonomy is defined only when the cycle contains an explicit closing leg under the declared node/edge ontology.
+
+That closing leg must be one of:
+
+- an instantiated edge already present in the graph
+- an explicitly allowed inverse transport of an instantiated anchor or projection edge
+
+The first cycles should therefore stay simple and explicit, such as:
+
+- `token_state -> support_chunk -> answer_state -> token_state` when the answer node carries an explicit return projection to the originating token
+- `token_state -> conflict_chunk -> answer_state -> token_state` when the answer node carries an explicit return projection to the originating token
+- `support_chunk -> answer_state -> quietness-paired answer_state -> support_chunk` when both answer nodes carry explicit support-anchor legs to the same support chunk
 
 This is the first main readout for local non-closure.
 
