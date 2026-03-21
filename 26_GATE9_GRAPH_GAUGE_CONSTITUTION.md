@@ -18,6 +18,10 @@ The next narrow spec is now recorded in:
 
 - `28_GATE9B_SMALL_CYCLE_HOLONOMY_STUDY.md`
 
+The first tracked Gate9B smoke read is now recorded in:
+
+- `29_GATE9B_EXECUTION_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

@@ -1,6 +1,6 @@
 # Gate9B Small-Cycle Holonomy Study
 
-Status: spec-only, execution not yet started
+Status: narrow spec frozen, first implementation and smoke landed
 Role: narrow Gate9B spec under frozen graph-gauge law, not a field or spectral spec
 Date: 2026-03-21
 
@@ -8,6 +8,14 @@ Gate9B proceeds from:
 
 - `26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`
 - `27_GATE9A_EXECUTION_SMOKE.md`
+
+Initial Gate9B narrow implementation now exists in:
+
+- `tools/run_gate9b_small_cycle_holonomy_study.py`
+
+The first tracked smoke execution read is now recorded in:
+
+- `29_GATE9B_EXECUTION_SMOKE.md`
 
 ## 0. Why This Exists
 
