@@ -154,6 +154,44 @@ class Gate8SemiclosedConflictSkeletonTests(unittest.TestCase):
                 all(str(row["rendering_id"]).startswith("briefing_v1_") for row in sample_rows)
             )
 
+    def test_generator_supports_transcript_rendering_family(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir_str:
+            tmp_dir = Path(tmp_dir_str)
+            out_dir = tmp_dir / "gate8_out"
+            script = REPO_ROOT / "tools" / "generate_gate8_semiclosed_conflict.py"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--out-dir",
+                    str(out_dir),
+                    "--run-id",
+                    "gate8_test",
+                    "--samples-per-cell",
+                    "2",
+                    "--rendering-family",
+                    "transcript_v1",
+                ],
+                cwd=str(REPO_ROOT),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            rendering_plan = json.loads((out_dir / "rendering_plan.json").read_text(encoding="utf-8"))
+            sample_rows = [
+                json.loads(line)
+                for line in (out_dir / "sample_index.jsonl").read_text(encoding="utf-8").strip().splitlines()
+            ]
+
+            self.assertEqual(manifest["rendering_family_id"], "transcript_v1")
+            self.assertEqual(rendering_plan["rendering_family_id"], "transcript_v1")
+            self.assertEqual({row["rendering_family_id"] for row in sample_rows}, {"transcript_v1"})
+            self.assertTrue(
+                all(str(row["rendering_id"]).startswith("transcript_v1_") for row in sample_rows)
+            )
+
     def test_generator_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir_str:
             tmp_dir = Path(tmp_dir_str)
