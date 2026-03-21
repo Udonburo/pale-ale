@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--attest-dir", default="attestations/triality/gate4_validation")
     parser.add_argument("--run-id", default="gate4_representative_smoke")
     parser.add_argument("--dataset-revision-id", default="cfa_v1_representative15pairs_v1")
-    parser.add_argument("--spec-path", default="SPEC.internal.draft.md")
+    parser.add_argument("--spec-path", default="specs/internal/SPEC.internal.draft.md")
     parser.add_argument("--perm-r", type=int, default=2000)
     parser.add_argument("--primary-score", default="E")
     parser.add_argument("--script-extract", default="tools/extract_triality_triplets.py")

@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--cfa-jsonl", default="data/cfa/cfa_v1.jsonl")
-    parser.add_argument("--spec-path", default="SPEC.internal.draft.md")
+    parser.add_argument("--spec-path", default="specs/internal/SPEC.internal.draft.md")
     parser.add_argument("--out-dir", default="runs/gate4_batch_ingestion")
     parser.add_argument("--run-id", default="gate4_batch_ingestion")
     parser.add_argument("--dataset-revision-id", default="cfa_v1_batch_ingestion_v1")

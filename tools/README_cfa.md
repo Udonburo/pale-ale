@@ -145,7 +145,7 @@ python tools/run_gate4_fixture_parity.py
 Inputs:
 - `fixtures/gate4/core/gate4_input.json`
 - `fixtures/gate4/core/cfa_subset.txt`
-- `SPEC.internal.draft.md`
+- `specs/internal/SPEC.internal.draft.md`
 
 What it checks:
 - `pale-ale gate4 run` parity against Python expectations

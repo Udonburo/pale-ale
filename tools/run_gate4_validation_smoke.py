@@ -294,7 +294,7 @@ def main() -> int:
     rows = load_cfa_rows(cfa_path)
     selected = select_samples(rows, args.n_consistent, args.n_frustrated)
     dataset_revision_id = "cfa_v1_small_smoke_v1"
-    spec_path = REPO_ROOT / "SPEC.internal.draft.md"
+    spec_path = REPO_ROOT / "specs" / "internal" / "SPEC.internal.draft.md"
 
     extractor.configure_reproducibility(args.seed, deterministic=True)
     device = extractor.resolve_device(args.device)
