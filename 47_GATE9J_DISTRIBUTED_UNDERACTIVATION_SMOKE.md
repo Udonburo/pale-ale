@@ -12,6 +12,10 @@ The next decomposition-hypothesis spec is now recorded in:
 
 - `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
 
+The first tracked Gate9K logging smoke read is now recorded in:
+
+- `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9J distributed-underactivation audit.

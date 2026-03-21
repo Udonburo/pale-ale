@@ -90,6 +90,10 @@ The next trusted-tree decomposition hypothesis spec is now recorded in:
 
 - `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
 
+The first tracked Gate9K logging smoke read is now recorded in:
+
+- `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
+
 ## 0. Why Gate9 Exists
 
 Gate8 closed with an explicit outcome:

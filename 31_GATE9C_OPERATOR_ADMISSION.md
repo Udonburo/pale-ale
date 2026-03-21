@@ -43,6 +43,10 @@ The next decomposition-hypothesis slice is now tracked in:
 
 - `48_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_DECOMPOSITION.md`
 
+The first tracked Gate9K logging smoke read is now recorded in:
+
+- `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

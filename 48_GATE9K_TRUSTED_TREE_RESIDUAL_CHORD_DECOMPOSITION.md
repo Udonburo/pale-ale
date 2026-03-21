@@ -1,6 +1,6 @@
 # Gate9K Trusted-Tree / Residual-Chord Decomposition
 
-Status: decomposition hypothesis spec, first implementation landed
+Status: decomposition hypothesis spec, first implementation landed and first logging smoke execution recorded
 Role: Gate9K trusted-tree / residual-chord hypothesis spec, not operator opening or metric settlement
 Date: 2026-03-21
 
@@ -12,6 +12,10 @@ Gate9K proceeds from:
 The first Gate9K logging consumer now exists in:
 
 - `tools/run_gate9k_trusted_tree_residual_chord_logging.py`
+
+The first tracked Gate9K logging smoke read is now recorded in:
+
+- `49_GATE9K_TRUSTED_TREE_RESIDUAL_CHORD_LOGGING_SMOKE.md`
 
 ## 0. Context And Blocker
 
