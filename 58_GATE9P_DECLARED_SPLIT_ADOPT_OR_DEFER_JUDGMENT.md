@@ -17,6 +17,10 @@ The first tracked Gate9P smoke execution read is now recorded in:
 
 - `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
 
+The next post-adoption integration spec is now recorded in:
+
+- `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
+
 ## 0. Why This Exists
 
 Gate9O earned one narrow but serious result.

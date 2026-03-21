@@ -84,6 +84,10 @@ The first tracked Gate9P judgment smoke read is now recorded in:
 
 - `59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`
 
+The next post-adoption integration spec is now tracked in:
+
+- `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
+
 ## 0. Scope
 
 This file defines only when opening a graph-wide operator would be honest.

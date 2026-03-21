@@ -8,6 +8,10 @@ This first tracked Gate9P smoke read executes the adopt-or-defer judgment define
 
 - `58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`
 
+The next post-adoption integration spec is now recorded in:
+
+- `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate9P declared-split adopt-or-defer judgment.
