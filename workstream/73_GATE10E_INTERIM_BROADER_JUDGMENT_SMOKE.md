@@ -12,6 +12,10 @@ The broader Gate10 court remains defined in:
 
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
 
+The next Gate10F pre-closeout / closeout judgment slice is now tracked in:
+
+- `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
+
 The preserved upstream settled slices remain recorded in:
 
 - `66_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON.md`

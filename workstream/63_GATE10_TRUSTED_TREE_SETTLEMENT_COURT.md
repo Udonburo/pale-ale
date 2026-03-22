@@ -61,6 +61,10 @@ The first tracked Gate10E interim broader-judgment smoke read is now recorded in
 
 - `73_GATE10E_INTERIM_BROADER_JUDGMENT_SMOKE.md`
 
+The Gate10F pre-closeout / closeout judgment slice is now tracked in:
+
+- `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
+
 ## 0. Scope
 
 Gate10 is not an operator chapter.
