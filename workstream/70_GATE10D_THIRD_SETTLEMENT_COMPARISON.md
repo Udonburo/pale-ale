@@ -1,6 +1,6 @@
 # Gate10D Third Trusted-Tree Settlement Comparison
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: third narrow settlement-comparison slice, not Gate10 closeout, operator chapter, or retroactive rewrite
 Date: 2026-03-23
 
@@ -9,6 +9,14 @@ Gate10D proceeds from:
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
 - `68_GATE10C_SECOND_SETTLEMENT_COMPARISON.md`
 - `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
+
+The first Gate10D third settlement-comparison consumer now exists in:
+
+- `tools/run_gate10d_third_settlement_comparison.py`
+
+The first tracked Gate10D third settlement-comparison smoke read is now recorded in:
+
+- `71_GATE10D_THIRD_SETTLEMENT_COMPARISON_SMOKE.md`
 
 ## 0. Scope
 
