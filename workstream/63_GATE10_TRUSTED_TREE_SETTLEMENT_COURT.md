@@ -37,6 +37,10 @@ The first tracked Gate10B settlement-comparison smoke read is now recorded in:
 
 - `67_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON_SMOKE.md`
 
+The second Gate10C settlement-comparison slice is now tracked in:
+
+- `68_GATE10C_SECOND_SETTLEMENT_COMPARISON.md`
+
 ## 0. Scope
 
 Gate10 is not an operator chapter.

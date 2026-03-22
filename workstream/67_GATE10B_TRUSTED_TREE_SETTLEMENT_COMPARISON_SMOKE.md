@@ -17,6 +17,10 @@ The Gate10A eligibility gate that permitted this comparison remains recorded in:
 - `64_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY.md`
 - `65_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY_SMOKE.md`
 
+The next Gate10C second settlement-comparison slice is now tracked in:
+
+- `68_GATE10C_SECOND_SETTLEMENT_COMPARISON.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate10B settlement-comparison slice.
