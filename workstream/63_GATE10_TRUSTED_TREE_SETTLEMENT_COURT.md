@@ -21,6 +21,10 @@ The trusted-tree anatomy line that produced the adopted split is recorded in:
 - `52_GATE9M_CLEANER_ANSWER_PROJECTION_POLLUTION.md`
 - `54_GATE9N_CLEANER_ANSWER_PROJECTION_ROLE_COUPLING.md`
 
+The first Gate10A eligibility slice is now tracked in:
+
+- `64_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY.md`
+
 ## 0. Scope
 
 Gate10 is not an operator chapter.
