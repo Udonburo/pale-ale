@@ -1,6 +1,6 @@
 # Gate10E Interim Broader Judgment
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: interim broader-judgment / pre-closeout memory slice, not Gate10 closeout, operator chapter, or broader trusted-tree settlement declaration
 Date: 2026-03-23
 
@@ -13,6 +13,14 @@ Gate10E proceeds from:
 - `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
 - `70_GATE10D_THIRD_SETTLEMENT_COMPARISON.md`
 - `71_GATE10D_THIRD_SETTLEMENT_COMPARISON_SMOKE.md`
+
+The first Gate10E interim broader-judgment consumer now exists in:
+
+- `tools/run_gate10e_interim_broader_judgment.py`
+
+The first tracked Gate10E interim broader-judgment smoke read is now recorded in:
+
+- `73_GATE10E_INTERIM_BROADER_JUDGMENT_SMOKE.md`
 
 ## 0. Scope
 
