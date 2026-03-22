@@ -1,6 +1,6 @@
 # Gate10B Trusted-Tree Settlement Comparison
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: Gate10B settlement-comparison slice, not Gate10 closeout, operator chapter, or retroactive rewrite
 Date: 2026-03-23
 
@@ -9,6 +9,14 @@ Gate10B proceeds from:
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
 - `64_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY.md`
 - `65_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY_SMOKE.md`
+
+The first Gate10B settlement-comparison consumer now exists in:
+
+- `tools/run_gate10b_trusted_tree_settlement_comparison.py`
+
+The first tracked Gate10B settlement-comparison smoke read is now recorded in:
+
+- `67_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON_SMOKE.md`
 
 ## 0. Scope
 

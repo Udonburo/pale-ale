@@ -23,6 +23,10 @@ The next Gate10B settlement-comparison slice is now tracked in:
 
 - `66_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON.md`
 
+The first tracked Gate10B settlement-comparison smoke read is now recorded in:
+
+- `67_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON_SMOKE.md`
+
 ## 0. Scope
 
 Gate10A does not decide broader trusted-tree settlement.
