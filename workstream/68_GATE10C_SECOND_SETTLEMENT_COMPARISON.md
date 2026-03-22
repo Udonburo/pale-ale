@@ -18,6 +18,10 @@ The first tracked Gate10C second settlement-comparison smoke read is now recorde
 
 - `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
 
+The next Gate10D third settlement-comparison slice is now tracked in:
+
+- `70_GATE10D_THIRD_SETTLEMENT_COMPARISON.md`
+
 ## 0. Scope
 
 Gate10C is the second narrow settlement-comparison slice under the Gate10 court.

@@ -17,6 +17,10 @@ The first Gate10B settled comparison slice that Gate10C preserves remains record
 - `66_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON.md`
 - `67_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON_SMOKE.md`
 
+The next Gate10D third settlement-comparison slice is now tracked in:
+
+- `70_GATE10D_THIRD_SETTLEMENT_COMPARISON.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate10C second settlement-comparison slice.
