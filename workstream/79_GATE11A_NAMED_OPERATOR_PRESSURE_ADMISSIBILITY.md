@@ -22,6 +22,10 @@ The first tracked Gate11A admissibility smoke read is now recorded in:
 
 - `80_GATE11A_NAMED_OPERATOR_PRESSURE_ADMISSIBILITY_SMOKE.md`
 
+The next narrow Gate11B bounded-line insufficiency declarability slice is now tracked in:
+
+- `81_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY.md`
+
 ## 0. Scope
 
 Gate11A is the first narrow Gate11 slice.

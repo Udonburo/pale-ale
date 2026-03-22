@@ -139,3 +139,8 @@ The next honest move is not:
 The next honest move is:
 
 - keep the line closed until a real named operator-pressure case is actually explicit in a later frozen source
+- or open one narrow bounded-line insufficiency declarability slice if a single candidate can later be declared explicitly without inflation, retroactive rewrite, or graph-wide leap pressure
+
+That next narrow slice is now tracked in:
+
+- `81_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY.md`
