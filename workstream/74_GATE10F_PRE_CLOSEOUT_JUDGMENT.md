@@ -1,6 +1,6 @@
 # Gate10F Pre-Closeout / Closeout Judgment
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: pre-closeout / closeout judgment slice, not broader trusted-tree settlement declaration, operator reopening, or retroactive rewrite
 Date: 2026-03-23
 
@@ -18,6 +18,14 @@ The preserved upstream settled slices remain recorded in:
 - `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
 - `70_GATE10D_THIRD_SETTLEMENT_COMPARISON.md`
 - `71_GATE10D_THIRD_SETTLEMENT_COMPARISON_SMOKE.md`
+
+The first Gate10F pre-closeout / closeout judgment consumer now exists in:
+
+- `tools/run_gate10f_pre_closeout_judgment.py`
+
+The first tracked Gate10F pre-closeout / closeout judgment smoke read is now recorded in:
+
+- `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
 ## 0. Scope
 
