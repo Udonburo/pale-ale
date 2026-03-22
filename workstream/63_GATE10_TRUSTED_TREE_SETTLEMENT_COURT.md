@@ -29,6 +29,10 @@ The first tracked Gate10A eligibility smoke read is now recorded in:
 
 - `65_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY_SMOKE.md`
 
+The first Gate10B settlement-comparison slice is now tracked in:
+
+- `66_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON.md`
+
 ## 0. Scope
 
 Gate10 is not an operator chapter.
