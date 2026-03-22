@@ -52,7 +52,7 @@ This smoke run consumes exactly this controlling source run:
 The Gate10F bind is:
 
 - `method_id = gate10f_pre_closeout_judgment_v1`
-- `code_git_commit = 318fb5914d9ba118671b49756a6aeeaf50eeacef`
+- `code_git_commit = b722d89ffefaab76d912821ac0f5beabf70117a1`
 
 ## 2. What Landed
 

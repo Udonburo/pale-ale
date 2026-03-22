@@ -69,6 +69,10 @@ The first tracked Gate10F pre-closeout / closeout judgment smoke read is now rec
 
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
+The Gate10 closeout / mainline-memory update is now tracked in:
+
+- `76_GATE10_CLOSEOUT.md`
+
 ## 0. Scope
 
 Gate10 is not an operator chapter.
