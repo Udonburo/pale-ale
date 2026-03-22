@@ -18,6 +18,10 @@ The first tracked Gate10D third settlement-comparison smoke read is now recorded
 
 - `71_GATE10D_THIRD_SETTLEMENT_COMPARISON_SMOKE.md`
 
+The next Gate10E interim broader-judgment / pre-closeout memory slice is now tracked in:
+
+- `72_GATE10E_INTERIM_BROADER_JUDGMENT.md`
+
 ## 0. Scope
 
 Gate10D is the third narrow settlement-comparison slice under the Gate10 court.

@@ -19,6 +19,10 @@ The prior settled slices that Gate10D preserves remain recorded in:
 - `68_GATE10C_SECOND_SETTLEMENT_COMPARISON.md`
 - `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
 
+The next Gate10E interim broader-judgment / pre-closeout memory slice is now tracked in:
+
+- `72_GATE10E_INTERIM_BROADER_JUDGMENT.md`
+
 ## 0. Scope
 
 This file records the first committed-code smoke execution of the Gate10D third settlement-comparison slice.
