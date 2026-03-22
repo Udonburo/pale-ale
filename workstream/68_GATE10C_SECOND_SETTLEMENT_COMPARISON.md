@@ -1,6 +1,6 @@
 # Gate10C Second Trusted-Tree Settlement Comparison
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: second narrow settlement-comparison slice, not Gate10 closeout, operator chapter, or retroactive rewrite
 Date: 2026-03-23
 
@@ -9,6 +9,14 @@ Gate10C proceeds from:
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
 - `66_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON.md`
 - `67_GATE10B_TRUSTED_TREE_SETTLEMENT_COMPARISON_SMOKE.md`
+
+The first Gate10C second settlement-comparison consumer now exists in:
+
+- `tools/run_gate10c_second_settlement_comparison.py`
+
+The first tracked Gate10C second settlement-comparison smoke read is now recorded in:
+
+- `69_GATE10C_SECOND_SETTLEMENT_COMPARISON_SMOKE.md`
 
 ## 0. Scope
 
