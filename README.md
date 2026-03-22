@@ -14,15 +14,17 @@ The current completed chapter is:
 
 - Gate8: standing, portability, unresolved bridge
 - Gate9: graph-gauge constitution and forward-basis audit-lane integration
+- Gate10: trusted-tree settlement court and bounded broader-pattern judgment
 
 The current high-level state is:
 
 - graph-gauge mainline is established
 - the Gate9N declared split is adopted on a forward basis into the Gate9 mainline audit lane
 - that forward-basis adoption is integrated into mainline memory
+- Gate10 closed with three declared narrow slice-local `settled` results and bounded broader-pattern support
 - operator admission remains denied
-- broader trusted-tree settlement remains unresolved
-- prior Gate9 reads remain non-retroactive
+- broader trusted-tree settlement remains unearned
+- prior Gate9 and Gate10 reads remain non-retroactive
 
 ## Start Here
 
@@ -31,10 +33,16 @@ If you need the current research line rather than historical implementation deta
 - [`workstream/25_GATE8_MAINLINE_SUMMARY.md`](workstream/25_GATE8_MAINLINE_SUMMARY.md): Gate8 closeout
 - [`workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`](workstream/26_GATE9_GRAPH_GAUGE_CONSTITUTION.md): Gate9 mainline constitution
 - [`workstream/62_GATE9_CLOSEOUT.md`](workstream/62_GATE9_CLOSEOUT.md): Gate9 closeout
+- [`workstream/76_GATE10_CLOSEOUT.md`](workstream/76_GATE10_CLOSEOUT.md): Gate10 closeout
+- [`workstream/77_GATE6_TO_GATE10_MAINLINE_OVERVIEW.md`](workstream/77_GATE6_TO_GATE10_MAINLINE_OVERVIEW.md): compact Gate6-Gate10 map
 
 If you need the current operator boundary:
 
 - [`workstream/31_GATE9C_OPERATOR_ADMISSION.md`](workstream/31_GATE9C_OPERATOR_ADMISSION.md)
+
+If you need the next operator-pressure admissibility court rather than the current boundary:
+
+- [`workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`](workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md)
 
 If you need the forward-basis adoption line:
 
@@ -60,7 +68,7 @@ The mainline does not currently claim:
 - graph-wide operator success
 - broader trusted-tree settlement
 - field ontology
-- retroactive reinterpretation of earlier Gate9 reads
+- retroactive reinterpretation of earlier Gate9 or Gate10 reads
 
 ## What Gate9 Actually Did
 
@@ -90,6 +98,8 @@ The final Gate9 sentence is:
 
 - [`workstream/25_GATE8_MAINLINE_SUMMARY.md`](workstream/25_GATE8_MAINLINE_SUMMARY.md)
 - [`workstream/62_GATE9_CLOSEOUT.md`](workstream/62_GATE9_CLOSEOUT.md)
+- [`workstream/76_GATE10_CLOSEOUT.md`](workstream/76_GATE10_CLOSEOUT.md)
+- [`workstream/77_GATE6_TO_GATE10_MAINLINE_OVERVIEW.md`](workstream/77_GATE6_TO_GATE10_MAINLINE_OVERVIEW.md)
 
 ### Gate8 Line
 
@@ -110,6 +120,19 @@ The final Gate9 sentence is:
 - [`workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md`](workstream/59_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT_SMOKE.md)
 - [`workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md`](workstream/60_GATE9Q_POST_ADOPTION_INTEGRATION.md)
 - [`workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`](workstream/61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md)
+
+### Gate10 Line
+
+- [`workstream/63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`](workstream/63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md)
+- [`workstream/72_GATE10E_INTERIM_BROADER_JUDGMENT.md`](workstream/72_GATE10E_INTERIM_BROADER_JUDGMENT.md)
+- [`workstream/73_GATE10E_INTERIM_BROADER_JUDGMENT_SMOKE.md`](workstream/73_GATE10E_INTERIM_BROADER_JUDGMENT_SMOKE.md)
+- [`workstream/74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`](workstream/74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md)
+- [`workstream/75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`](workstream/75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md)
+- [`workstream/76_GATE10_CLOSEOUT.md`](workstream/76_GATE10_CLOSEOUT.md)
+
+### Next Eligibility Court Draft
+
+- [`workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`](workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md)
 
 ## Legacy And Public Surface
 

@@ -8,6 +8,14 @@ Gate10 proceeds from the Gate9 closeout recorded in:
 
 - `62_GATE9_CLOSEOUT.md`
 
+The repo-level Gate6-Gate10 overview is now tracked in:
+
+- `77_GATE6_TO_GATE10_MAINLINE_OVERVIEW.md`
+
+The next narrow chapter is now tracked in:
+
+- `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
+
 The Gate10 settlement court is recorded in:
 
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
