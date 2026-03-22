@@ -1,6 +1,6 @@
 # Gate10A Trusted-Tree Generalization Eligibility
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: Gate10A eligibility audit / pre-settlement gate, not settlement comparison or settlement verdict
 Date: 2026-03-23
 
@@ -10,6 +10,14 @@ Gate10A proceeds from:
 - `62_GATE9_CLOSEOUT.md`
 - `60_GATE9Q_POST_ADOPTION_INTEGRATION.md`
 - `61_GATE9Q_POST_ADOPTION_INTEGRATION_SMOKE.md`
+
+The first Gate10A eligibility consumer now exists in:
+
+- `tools/run_gate10a_trusted_tree_generalization_eligibility.py`
+
+The first tracked Gate10A eligibility smoke read is now recorded in:
+
+- `65_GATE10A_TRUSTED_TREE_GENERALIZATION_ELIGIBILITY_SMOKE.md`
 
 ## 0. Scope
 
