@@ -1,6 +1,6 @@
 # Gate11I Later-Source Explicit-Naming Instantiation Path Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: later-source explicit-naming instantiation path audit, not later-source admissibility itself, candidate declaration, explicit-declaration existence judgment, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
@@ -30,7 +30,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11I implementation consumer has not landed yet.
+The first Gate11I later-source explicit-naming instantiation path audit consumer now exists in:
+
+- `tools/run_gate11i_later_source_explicit_naming_instantiation_path_audit.py`
+
+The first tracked Gate11I later-source explicit-naming instantiation path smoke read is now recorded in:
+
+- `96_GATE11I_LATER_SOURCE_EXPLICIT_NAMING_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The next narrow Gate11J later-source naming-instantiation admissibility audit slice is now tracked in:
+
+- `97_GATE11J_LATER_SOURCE_NAMING_INSTANTIATION_ADMISSIBILITY_AUDIT.md`
 
 ## 0. Scope
 
@@ -64,7 +74,7 @@ Gate11I does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11I must consume exactly this controlling source run:
+Gate11I consumes exactly this controlling source run:
 
 - `runs/gate11h_one_later_source_explicit_naming_audit_smoke_from_gate11g`
 

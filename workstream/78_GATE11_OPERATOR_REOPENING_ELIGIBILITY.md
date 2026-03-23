@@ -91,6 +91,14 @@ The ninth narrow Gate11I later-source explicit-naming instantiation path audit s
 
 - `95_GATE11I_LATER_SOURCE_EXPLICIT_NAMING_INSTANTIATION_PATH_AUDIT.md`
 
+The first tracked Gate11I later-source explicit-naming instantiation path smoke read is now recorded in:
+
+- `96_GATE11I_LATER_SOURCE_EXPLICIT_NAMING_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The tenth narrow Gate11J later-source naming-instantiation admissibility audit slice is now tracked in:
+
+- `97_GATE11J_LATER_SOURCE_NAMING_INSTANTIATION_ADMISSIBILITY_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -174,6 +182,7 @@ The target is therefore:
 - later-source naming surface audit seventh
 - one later-source explicit-naming audit eighth
 - later-source explicit-naming instantiation path audit ninth
+- later-source naming-instantiation admissibility audit tenth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -376,6 +385,7 @@ That staged slice order may include:
 - later-source naming surface audit
 - one later-source explicit-naming audit
 - later-source explicit-naming instantiation path audit
+- later-source naming-instantiation admissibility audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
