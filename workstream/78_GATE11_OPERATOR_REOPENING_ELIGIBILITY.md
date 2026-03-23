@@ -51,6 +51,10 @@ The fourth narrow Gate11D one bounded-line insufficiency explicit-declaration au
 
 - `85_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT.md`
 
+The first tracked Gate11D one bounded-line insufficiency explicit-declaration smoke read is now recorded in:
+
+- `86_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT_SMOKE.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.

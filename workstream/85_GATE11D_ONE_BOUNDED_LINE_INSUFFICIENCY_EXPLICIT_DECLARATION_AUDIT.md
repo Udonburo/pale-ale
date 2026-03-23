@@ -1,6 +1,6 @@
 # Gate11D One Bounded-Line Insufficiency Explicit-Declaration Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: one bounded-line insufficiency explicit-declaration audit, not reopening-eligibility judgment or operator reopening
 Date: 2026-03-23
 
@@ -20,7 +20,13 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11D implementation consumer has not landed yet.
+The first Gate11D one bounded-line insufficiency explicit-declaration audit consumer now exists in:
+
+- `tools/run_gate11d_one_bounded_line_insufficiency_explicit_declaration_audit.py`
+
+The first tracked Gate11D one bounded-line insufficiency explicit-declaration smoke read is now recorded in:
+
+- `86_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT_SMOKE.md`
 
 ## 0. Scope
 
@@ -47,7 +53,7 @@ Gate11D does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11D must consume exactly this controlling source run:
+Gate11D consumes exactly this controlling source run:
 
 - `runs/gate11c_bounded_line_insufficiency_declaration_surface_audit_smoke_from_gate11b`
 
