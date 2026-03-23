@@ -1,7 +1,7 @@
 # Gate11B Bounded-Line Insufficiency Declarability
 
 Status: spec-only draft
-Role: bounded-line insufficiency declarability audit, not reopening-eligibility judgment or operator reopening
+Role: bounded-line insufficiency declarability absence-preservation audit, not reopening-eligibility judgment or operator reopening
 Date: 2026-03-23
 
 Gate11B proceeds from:
@@ -26,6 +26,7 @@ Gate11B does:
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - decide only whether one bounded-line insufficiency candidate may be declared honestly
+- preserve the current no-candidate state when the frozen controlling source contains no explicit declaration surface
 
 Gate11B does not:
 
@@ -44,6 +45,16 @@ Gate11B consumes exactly this controlling source run:
 - `runs/gate11a_named_operator_pressure_admissibility_smoke_from_gate10f`
 
 No additional source run is in scope.
+
+Gate11B is not a declaration-generation slice.
+
+Under the currently frozen Gate11A source, the recorded upstream result is:
+
+- `named_operator_pressure_case_status = absent`
+- `admissible_pressure_class_status = none`
+- `named_operator_pressure_admissibility_status = not_yet_admissible`
+
+So Gate11B must treat the current controlling source as an absence-preservation source unless one explicit bounded-line insufficiency declaration is already present inside that same frozen run.
 
 The worker must not:
 
@@ -67,6 +78,7 @@ This is narrower than:
 It is only:
 
 - the declarability gate for whether one bounded-line insufficiency candidate may be named honestly
+- and, under the current frozen source, the absence-preservation gate for whether the line still contains no such explicit candidate
 
 ## 3. Why Gate11B Exists
 
@@ -84,6 +96,7 @@ So the next honest move is not:
 It is:
 
 - ask whether one bounded-line insufficiency candidate can even be declared honestly under the frozen post-Gate10 line
+- and preserve `absent / none / not_yet_declarable` if the frozen source still contains no explicit declaration surface
 
 ## 4. Declarability Discipline
 
@@ -109,6 +122,8 @@ In that default absence case:
 If the controlling source run contains more than one distinct explicit candidate declaration, Gate11B must treat the slice as:
 
 - `deferred`
+
+Under the current frozen Gate11A source, the default absence path is expected unless a later tracked source supersedes this frozen input.
 
 Absence or multiplicity may not be replaced by:
 
@@ -318,6 +333,8 @@ It does not mean:
 - reopening is eligible
 - operator reopening is earned
 
+Under the current frozen Gate11A source, `declarable` is not expected to be a live path unless that same frozen run already contains one explicit bounded-line insufficiency declaration marker.
+
 ## 11. Outcome Ladder
 
 Gate11B outcomes are limited to these four.
@@ -330,12 +347,16 @@ Use `declarable` only if:
 - exactly one class applies
 - no falsifier fires
 
+This path is unavailable under the current frozen Gate11A source unless an explicit declaration marker is already present in that same run.
+
 ### 11.2 Not Yet Declarable
 
 Use `not_yet_declarable` if:
 
 - the frozen post-Gate10 line does not yet contain a single explicit bounded-line insufficiency declaration
 - but denial by inflation, rewrite, or graph-wide leap is not yet the right verdict
+
+This is the expected default result under the current frozen Gate11A source.
 
 ### 11.3 Denied
 
@@ -392,7 +413,8 @@ If the spec is insufficient, the work must stop and report the gap rather than i
 The Gate11B sentence is:
 
 - Gate11B asks only whether one bounded-line insufficiency candidate can be named honestly under the frozen post-Gate10 line
+- and preserves absence when the frozen Gate11A source still contains no explicit declaration surface
 
 The shortest acceptable memory hook is:
 
-- `Gate11B does not ask whether reopening is eligible; it asks whether even one bounded-line insufficiency candidate can be declared honestly.`
+- `Gate11B does not ask whether reopening is eligible; it asks whether even one bounded-line insufficiency candidate can be declared honestly, and otherwise preserves not-yet-declarable absence.`
