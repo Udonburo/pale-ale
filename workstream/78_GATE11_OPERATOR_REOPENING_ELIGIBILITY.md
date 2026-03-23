@@ -35,6 +35,18 @@ The second narrow Gate11B bounded-line insufficiency declarability slice is now 
 
 - `81_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY.md`
 
+The first tracked Gate11B bounded-line insufficiency declarability smoke read is now recorded in:
+
+- `82_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY_SMOKE.md`
+
+The third narrow Gate11C bounded-line insufficiency declaration-surface audit slice is now tracked in:
+
+- `83_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT.md`
+
+The first tracked Gate11C bounded-line insufficiency declaration-surface smoke read is now recorded in:
+
+- `84_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT_SMOKE.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -110,7 +122,9 @@ Only after that may Gate11 ask whether there is a doctrine-safe path for even re
 The target is therefore:
 
 - named operator-pressure admissibility first
-- operator-reopening eligibility only after admissibility is established
+- bounded-line insufficiency declarability / absence-preservation second
+- bounded-line insufficiency declaration-surface definition third
+- operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
 
@@ -301,7 +315,14 @@ A future narrow Gate11 slice may freeze:
 - one status payload
 - one smoke handoff
 
-but those belong in the first Gate11 slice spec rather than in this constitution.
+That staged slice order may include:
+
+- named operator-pressure admissibility
+- bounded-line insufficiency declarability / absence-preservation
+- bounded-line insufficiency declaration-surface audit
+- and only later any reopening-eligibility read that proceeds from those preserved gates
+
+but those belong in narrow Gate11 slice specs rather than in this constitution.
 
 ## 12. Outcome Ladder
 

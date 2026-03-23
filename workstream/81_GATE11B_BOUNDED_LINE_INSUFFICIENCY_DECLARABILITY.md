@@ -24,6 +24,10 @@ The first tracked Gate11B bounded-line insufficiency declarability smoke read is
 
 - `82_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY_SMOKE.md`
 
+The next narrow Gate11C bounded-line insufficiency declaration-surface audit slice is now tracked in:
+
+- `83_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT.md`
+
 ## 0. Scope
 
 Gate11B is the second narrow Gate11 slice.

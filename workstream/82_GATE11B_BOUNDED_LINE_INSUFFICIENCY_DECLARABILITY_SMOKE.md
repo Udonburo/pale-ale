@@ -160,3 +160,7 @@ The next honest move is:
 
 - keep the line closed until one explicit bounded-line insufficiency candidate is actually declared in a later frozen source
 - and only then open a later narrow Gate11 slice off that tracked declaration
+
+That next narrow slice is now tracked in:
+
+- `83_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT.md`
