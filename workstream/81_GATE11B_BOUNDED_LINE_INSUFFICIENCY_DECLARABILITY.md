@@ -1,6 +1,6 @@
 # Gate11B Bounded-Line Insufficiency Declarability
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: bounded-line insufficiency declarability absence-preservation audit, not reopening-eligibility judgment or operator reopening
 Date: 2026-03-23
 
@@ -15,6 +15,14 @@ The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
+
+The first Gate11B bounded-line insufficiency declarability consumer now exists in:
+
+- `tools/run_gate11b_bounded_line_insufficiency_declarability.py`
+
+The first tracked Gate11B bounded-line insufficiency declarability smoke read is now recorded in:
+
+- `82_GATE11B_BOUNDED_LINE_INSUFFICIENCY_DECLARABILITY_SMOKE.md`
 
 ## 0. Scope
 
