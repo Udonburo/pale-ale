@@ -1,6 +1,6 @@
 # Gate11F Later-Source Instantiation Admissibility Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: later-source instantiation admissibility audit, not candidate declaration, explicit-declaration existence judgment, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-23
 
@@ -24,7 +24,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11F implementation consumer has not landed yet.
+The first Gate11F later-source instantiation admissibility audit consumer now exists in:
+
+- `tools/run_gate11f_later_source_instantiation_admissibility_audit.py`
+
+The first tracked Gate11F later-source instantiation admissibility smoke read is now recorded in:
+
+- `90_GATE11F_LATER_SOURCE_INSTANTIATION_ADMISSIBILITY_AUDIT_SMOKE.md`
+
+The next narrow Gate11G later-source naming surface audit slice is now tracked in:
+
+- `91_GATE11G_LATER_SOURCE_NAMING_SURFACE_AUDIT.md`
 
 ## 0. Scope
 
@@ -54,7 +64,7 @@ Gate11F does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11F must consume exactly this controlling source run:
+Gate11F consumes exactly this controlling source run:
 
 - `runs/gate11e_explicit_declaration_instantiation_path_audit_smoke_from_gate11d`
 

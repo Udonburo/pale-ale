@@ -67,6 +67,14 @@ The sixth narrow Gate11F later-source instantiation admissibility audit slice is
 
 - `89_GATE11F_LATER_SOURCE_INSTANTIATION_ADMISSIBILITY_AUDIT.md`
 
+The first tracked Gate11F later-source instantiation admissibility smoke read is now recorded in:
+
+- `90_GATE11F_LATER_SOURCE_INSTANTIATION_ADMISSIBILITY_AUDIT_SMOKE.md`
+
+The seventh narrow Gate11G later-source naming surface audit slice is now tracked in:
+
+- `91_GATE11G_LATER_SOURCE_NAMING_SURFACE_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -147,6 +155,7 @@ The target is therefore:
 - one bounded-line insufficiency explicit-declaration audit fourth
 - explicit-declaration instantiation path audit fifth
 - later-source instantiation admissibility audit sixth
+- later-source naming surface audit seventh
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -346,6 +355,7 @@ That staged slice order may include:
 - one bounded-line insufficiency explicit-declaration audit
 - explicit-declaration instantiation path audit
 - later-source instantiation admissibility audit
+- later-source naming surface audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
