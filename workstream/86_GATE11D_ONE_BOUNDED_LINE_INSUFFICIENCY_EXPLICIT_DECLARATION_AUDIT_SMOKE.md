@@ -161,3 +161,7 @@ The next honest move is:
 
 - keep the line closed until a later frozen source actually instantiates one full explicit declaration under the fixed Gate11C surface
 - and only then open a later narrow Gate11 slice that proceeds from that tracked declaration
+
+That next narrow slice is now tracked in:
+
+- `87_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT.md`

@@ -55,6 +55,10 @@ The first tracked Gate11D one bounded-line insufficiency explicit-declaration sm
 
 - `86_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT_SMOKE.md`
 
+The fifth narrow Gate11E explicit-declaration instantiation path audit slice is now tracked in:
+
+- `87_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -133,6 +137,7 @@ The target is therefore:
 - bounded-line insufficiency declarability / absence-preservation second
 - bounded-line insufficiency declaration-surface definition third
 - one bounded-line insufficiency explicit-declaration audit fourth
+- explicit-declaration instantiation path audit fifth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -330,6 +335,7 @@ That staged slice order may include:
 - bounded-line insufficiency declarability / absence-preservation
 - bounded-line insufficiency declaration-surface audit
 - one bounded-line insufficiency explicit-declaration audit
+- explicit-declaration instantiation path audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.

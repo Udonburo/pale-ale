@@ -28,6 +28,10 @@ The first tracked Gate11D one bounded-line insufficiency explicit-declaration sm
 
 - `86_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT_SMOKE.md`
 
+The next narrow Gate11E explicit-declaration instantiation path audit slice is now tracked in:
+
+- `87_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT.md`
+
 ## 0. Scope
 
 Gate11D is the fourth narrow Gate11 slice.
