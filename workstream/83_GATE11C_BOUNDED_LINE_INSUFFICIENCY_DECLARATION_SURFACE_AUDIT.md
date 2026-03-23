@@ -26,6 +26,10 @@ The first tracked Gate11C bounded-line insufficiency declaration-surface smoke r
 
 - `84_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT_SMOKE.md`
 
+The next narrow Gate11D one bounded-line insufficiency explicit-declaration audit slice is now tracked in:
+
+- `85_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11C is the third narrow Gate11 slice.

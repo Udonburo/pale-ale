@@ -168,3 +168,7 @@ The next honest move is:
 
 - keep the line closed until a later frozen source actually carries one explicit declaration surface that matches the Gate11C definition
 - and only then open a later narrow Gate11 slice that judges whether one bounded-line insufficiency candidate is explicitly declared
+
+That next narrow slice is now tracked in:
+
+- `85_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT.md`

@@ -47,6 +47,10 @@ The first tracked Gate11C bounded-line insufficiency declaration-surface smoke r
 
 - `84_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT_SMOKE.md`
 
+The fourth narrow Gate11D one bounded-line insufficiency explicit-declaration audit slice is now tracked in:
+
+- `85_GATE11D_ONE_BOUNDED_LINE_INSUFFICIENCY_EXPLICIT_DECLARATION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -124,6 +128,7 @@ The target is therefore:
 - named operator-pressure admissibility first
 - bounded-line insufficiency declarability / absence-preservation second
 - bounded-line insufficiency declaration-surface definition third
+- one bounded-line insufficiency explicit-declaration audit fourth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -320,6 +325,7 @@ That staged slice order may include:
 - named operator-pressure admissibility
 - bounded-line insufficiency declarability / absence-preservation
 - bounded-line insufficiency declaration-surface audit
+- one bounded-line insufficiency explicit-declaration audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
@@ -342,7 +348,7 @@ Use `eligible` only if:
 Use `not_yet_eligible` if:
 
 - the operator question may become legitimate later
-- but the current record does not yet contain a real admissible named pressure case or a named bounded-line insufficiency
+- but the current record does not yet contain a real admissible named pressure case or one explicit bounded-line insufficiency declaration under the fixed Gate11C surface
 
 ### 12.3 Denied
 
