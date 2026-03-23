@@ -1,6 +1,6 @@
 # Gate11G Later-Source Naming Surface Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: later-source naming surface audit, not later-source admissibility itself, candidate declaration, explicit-declaration existence judgment, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-23
 
@@ -26,7 +26,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11G implementation consumer has not landed yet.
+The first Gate11G later-source naming surface audit consumer now exists in:
+
+- `tools/run_gate11g_later_source_naming_surface_audit.py`
+
+The first tracked Gate11G later-source naming surface smoke read is now recorded in:
+
+- `92_GATE11G_LATER_SOURCE_NAMING_SURFACE_AUDIT_SMOKE.md`
+
+The next narrow Gate11H one later-source explicit-naming audit slice is now tracked in:
+
+- `93_GATE11H_ONE_LATER_SOURCE_EXPLICIT_NAMING_AUDIT.md`
 
 ## 0. Scope
 
@@ -58,7 +68,7 @@ Gate11G does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11G must consume exactly this controlling source run:
+Gate11G consumes exactly this controlling source run:
 
 - `runs/gate11f_later_source_instantiation_admissibility_audit_smoke_from_gate11e`
 
