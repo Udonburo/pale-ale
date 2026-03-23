@@ -59,6 +59,14 @@ The fifth narrow Gate11E explicit-declaration instantiation path audit slice is 
 
 - `87_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT.md`
 
+The first tracked Gate11E explicit-declaration instantiation path smoke read is now recorded in:
+
+- `88_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The sixth narrow Gate11F later-source instantiation admissibility audit slice is now tracked in:
+
+- `89_GATE11F_LATER_SOURCE_INSTANTIATION_ADMISSIBILITY_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -138,6 +146,7 @@ The target is therefore:
 - bounded-line insufficiency declaration-surface definition third
 - one bounded-line insufficiency explicit-declaration audit fourth
 - explicit-declaration instantiation path audit fifth
+- later-source instantiation admissibility audit sixth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -336,6 +345,7 @@ That staged slice order may include:
 - bounded-line insufficiency declaration-surface audit
 - one bounded-line insufficiency explicit-declaration audit
 - explicit-declaration instantiation path audit
+- later-source instantiation admissibility audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.

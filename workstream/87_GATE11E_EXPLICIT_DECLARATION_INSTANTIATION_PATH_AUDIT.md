@@ -1,6 +1,6 @@
 # Gate11E Explicit-Declaration Instantiation Path Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: explicit-declaration instantiation path audit, not candidate declaration, explicit-declaration audit, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-23
 
@@ -22,7 +22,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11E implementation consumer has not landed yet.
+The first Gate11E explicit-declaration instantiation path audit consumer now exists in:
+
+- `tools/run_gate11e_explicit_declaration_instantiation_path_audit.py`
+
+The first tracked Gate11E explicit-declaration instantiation path smoke read is now recorded in:
+
+- `88_GATE11E_EXPLICIT_DECLARATION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The next narrow Gate11F later-source instantiation admissibility audit slice is now tracked in:
+
+- `89_GATE11F_LATER_SOURCE_INSTANTIATION_ADMISSIBILITY_AUDIT.md`
 
 ## 0. Scope
 
@@ -51,7 +61,7 @@ Gate11E does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11E must consume exactly this controlling source run:
+Gate11E consumes exactly this controlling source run:
 
 - `runs/gate11d_one_bounded_line_insufficiency_explicit_declaration_audit_smoke_from_gate11c`
 
