@@ -171,6 +171,14 @@ The nineteenth narrow Gate11S explicit residual completion-marker instantiation 
 
 - `115_GATE11S_EXPLICIT_RESIDUAL_COMPLETION_MARKER_INSTANTIATION_PATH_AUDIT.md`
 
+The first tracked Gate11S explicit residual completion-marker instantiation path smoke read is now recorded in:
+
+- `116_GATE11S_EXPLICIT_RESIDUAL_COMPLETION_MARKER_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The twentieth narrow Gate11T one explicit residual completion-marker path-instantiation audit slice is now tracked in:
+
+- `117_GATE11T_ONE_EXPLICIT_RESIDUAL_COMPLETION_MARKER_PATH_INSTANTIATION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -264,6 +272,7 @@ The target is therefore:
 - named residual completion-marker surface audit seventeenth
 - one explicit residual completion-marker audit eighteenth
 - explicit residual completion-marker instantiation path audit nineteenth
+- one explicit residual completion-marker path-instantiation audit twentieth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
