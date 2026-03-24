@@ -1,6 +1,6 @@
 # Gate11R One Explicit Residual Completion-Marker Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: one explicit residual completion-marker audit, not residual completion itself, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
@@ -48,7 +48,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11R implementation consumer has not landed yet.
+The first Gate11R one explicit residual completion-marker audit consumer now exists in:
+
+- `tools/run_gate11r_one_explicit_residual_completion_marker_audit.py`
+
+The first tracked Gate11R one explicit residual completion-marker smoke read is now recorded in:
+
+- `114_GATE11R_ONE_EXPLICIT_RESIDUAL_COMPLETION_MARKER_AUDIT_SMOKE.md`
+
+The next narrow Gate11S explicit residual completion-marker instantiation path audit slice is now tracked in:
+
+- `115_GATE11S_EXPLICIT_RESIDUAL_COMPLETION_MARKER_INSTANTIATION_PATH_AUDIT.md`
 
 ## 0. Scope
 
@@ -95,7 +105,7 @@ Gate11R does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11R must consume exactly this controlling source run:
+Gate11R consumes exactly this controlling source run:
 
 - `runs/gate11q_named_residual_completion_marker_surface_audit_smoke_from_gate11p`
 
