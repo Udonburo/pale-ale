@@ -1,6 +1,6 @@
 # Gate11Q Named Residual Completion-Marker Surface Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: residual completion-marker surface audit, not residual completion itself, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
@@ -46,7 +46,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11Q implementation consumer has not landed yet.
+The first Gate11Q named residual completion-marker surface audit consumer now exists in:
+
+- `tools/run_gate11q_named_residual_completion_marker_surface_audit.py`
+
+The first tracked Gate11Q named residual completion-marker surface smoke read is now recorded in:
+
+- `112_GATE11Q_NAMED_RESIDUAL_COMPLETION_MARKER_SURFACE_AUDIT_SMOKE.md`
+
+The next narrow Gate11R one explicit residual completion-marker audit slice is now tracked in:
+
+- `113_GATE11R_ONE_EXPLICIT_RESIDUAL_COMPLETION_MARKER_AUDIT.md`
 
 ## 0. Scope
 
@@ -96,7 +106,7 @@ The shortest acceptable label for Gate11Q is:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11Q must consume exactly this controlling source run:
+Gate11Q consumes exactly this controlling source run:
 
 - `runs/gate11p_named_residual_carrier_completion_audit_smoke_from_gate11o`
 

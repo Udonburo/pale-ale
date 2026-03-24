@@ -155,6 +155,14 @@ The seventeenth narrow Gate11Q named residual completion-marker surface audit sl
 
 - `111_GATE11Q_NAMED_RESIDUAL_COMPLETION_MARKER_SURFACE_AUDIT.md`
 
+The first tracked Gate11Q named residual completion-marker surface smoke read is now recorded in:
+
+- `112_GATE11Q_NAMED_RESIDUAL_COMPLETION_MARKER_SURFACE_AUDIT_SMOKE.md`
+
+The eighteenth narrow Gate11R one explicit residual completion-marker audit slice is now tracked in:
+
+- `113_GATE11R_ONE_EXPLICIT_RESIDUAL_COMPLETION_MARKER_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -246,6 +254,7 @@ The target is therefore:
 - admissible later-source carrier-completion instantiation path audit fifteenth
 - named residual carrier completion audit sixteenth
 - named residual completion-marker surface audit seventeenth
+- one explicit residual completion-marker audit eighteenth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
