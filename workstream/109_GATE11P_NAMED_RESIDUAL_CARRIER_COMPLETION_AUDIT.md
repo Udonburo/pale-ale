@@ -184,8 +184,10 @@ The named residual counts as completable only if:
 The named residual counts as completed only if:
 
 - one explicit completion marker appears for the named residual carrier condition
+- that completion marker appears on a bounded completion surface, for example `residual_completion_marker_status: present`
 
 Generic future-language or path-language alone does not count.
+Whole-read phrase hits do not count.
 
 ### 5.3 Same-Source Completion Is Actually Instantiated
 
@@ -201,6 +203,14 @@ The named residual counts as completed only if the controlling source explicitly
 - matched status, registry, and read surfaces
 
 If those elements are not explicit on the same later source, completion is not yet established.
+
+For this slice, those elements count only when they appear on bounded completion surfaces tied to the marker, for example:
+
+- `residual_completion_later_source_id: ...` or `residual_completion_later_frozen_run_id: ...`
+- `residual_completion_same_source_status: completed`
+- repeated bounded `residual_completion_surface: ...` lines for the required same-source elements
+
+Path-definition prose, hypothetical examples, and explanatory examples do not count as completion evidence.
 
 ### 5.4 Completion Boundary Remains Intact
 
