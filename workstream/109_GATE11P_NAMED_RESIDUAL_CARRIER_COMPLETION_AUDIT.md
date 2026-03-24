@@ -1,10 +1,10 @@
-# Gate11O Admissible Later-Source Carrier-Completion Instantiation Path Audit
+# Gate11P Named Residual Carrier Completion Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: admissible later-source carrier-completion instantiation path audit, not later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: named residual carrier completion audit, not later-source admission, explicit-presence judgment leap, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
-Gate11O proceeds from:
+Gate11P proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -36,31 +36,23 @@ Gate11O proceeds from:
 - `104_GATE11M_ONE_ADMISSIBLE_LATER_SOURCE_EXPLICIT_PRESENCE_PATH_INSTANTIATION_AUDIT_SMOKE.md`
 - `105_GATE11N_ADMISSIBLE_LATER_SOURCE_CARRIER_COMPLETION_AUDIT.md`
 - `106_GATE11N_ADMISSIBLE_LATER_SOURCE_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+- `107_GATE11O_ADMISSIBLE_LATER_SOURCE_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT.md`
+- `108_GATE11O_ADMISSIBLE_LATER_SOURCE_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11O admissible later-source carrier-completion instantiation path audit consumer now exists in:
-
-- `tools/run_gate11o_admissible_later_source_carrier_completion_instantiation_path_audit.py`
-
-The first tracked Gate11O admissible later-source carrier-completion instantiation path smoke read is now recorded in:
-
-- `108_GATE11O_ADMISSIBLE_LATER_SOURCE_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
-
-The next narrow Gate11P named residual carrier completion audit slice is now tracked in:
-
-- `109_GATE11P_NAMED_RESIDUAL_CARRIER_COMPLETION_AUDIT.md`
+The first Gate11P implementation consumer has not landed yet.
 
 ## 0. Scope
 
-Gate11O is the fifteenth narrow Gate11 slice.
+Gate11P is the sixteenth narrow Gate11 slice.
 
-Gate11O does:
+Gate11P does:
 
-- ask what is the minimum honest path by which the named residual carrier condition could later be completed under the fixed Gate11N line
+- ask whether the named residual carrier condition now counts as completed under the fixed Gate11O path
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -75,59 +67,58 @@ Gate11O does:
 - preserve the Gate11L `path_defined` result exactly as already recorded
 - preserve the Gate11M `not_yet_present` result exactly as already recorded
 - preserve the Gate11N `residual_named` result exactly as already recorded
-- define only the minimum later-source additions by which the named residual carrier condition could later become honestly completed
+- preserve the Gate11O `path_defined` result exactly as already recorded
+- decide only whether the named residual carrier condition is now actually completed under that fixed path
 
-Gate11O does not:
+Gate11P does not:
 
-- redesign prior surfaces
-- redesign prior paths
-- admit a later source
-- declare one admissible later source already present
+- admit a later source by leap
+- declare one admissible later source already present by leap
 - declare a bounded-line insufficiency candidate
 - declare that explicit declaration already exists
 - decide reopening eligibility
 - reopen operator admission
+- redesign prior surfaces
+- redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, or Gate11N memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, or Gate11O memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11O consumes exactly this controlling source run:
+When implemented, Gate11P must consume exactly this controlling source run:
 
-- `runs/gate11n_admissible_later_source_carrier_completion_audit_smoke_from_gate11m`
+- `runs/gate11o_admissible_later_source_carrier_completion_instantiation_path_audit_smoke_from_gate11n`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11N source, the recorded upstream result is:
+Under the currently frozen Gate11O source, the recorded upstream result is:
 
-- `gate11m_not_yet_present_state_preservation_status = preserved`
-- `explicit_presence_marker_carrier_completion_status = missing`
-- `later_source_singularity_carrier_completion_status = missing`
-- `same_source_path_attachment_carrier_completion_status = missing`
-- `carrier_completion_boundary_status = confirmed`
-- `admissible_later_source_carrier_completion_status = residual_named`
-- `next_named_blocker = no_explicit_admissible_later_source_presence_marker`
+- `gate11n_residual_named_state_preservation_status = preserved`
+- `named_residual_carrier_condition_preservation_status = preserved`
+- `minimum_residual_carrier_completion_rule_status = defined`
+- `residual_completion_boundary_status = confirmed`
+- `admissible_later_source_carrier_completion_instantiation_path_status = path_defined`
 
-So Gate11O must treat the current controlling source as:
+So Gate11P must treat the current controlling source as:
 
-- a residual-carrier-named source
-- not a source where that residual carrier condition is already completed
+- a fixed-path source
+- but not a source where the residual carrier condition is already completed unless that same frozen run explicitly completes it
 
 The worker must not:
 
 - invent a later source identifier
-- convert residual naming into completion
-- treat boundary confirmation as completed carrier state
-- resolve missing-carrier ambiguity by worker-side synthesis
+- convert path definition into completion
+- treat boundary confirmation as completion
+- resolve completion ambiguity by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11O question is:
+The Gate11P question is:
 
-- `what is the minimum honest path by which the named residual carrier condition could later be completed under the fixed Gate11N line?`
+- `does the named residual carrier condition now count as completed under the fixed Gate11O path or not?`
 
 This is narrower than:
 
@@ -139,52 +130,66 @@ This is narrower than:
 
 It is only:
 
-- the paired path-definition gate for how the named residual carrier condition could later be honestly completed
+- the existence and completion audit for whether the named residual carrier condition is now actually completed
 
-## 3. Why Gate11O Exists
+## 3. Why Gate11P Exists
 
-Gate11N earned:
+Gate11O earned:
 
-- the residual carrier condition is now named narrowly
-- the correct current result is `residual_named`
-- the next named blocker remains `no_explicit_admissible_later_source_presence_marker`
+- the named residual carrier condition remains preserved
+- the correct current result is `path_defined`
+- the minimum honest path by which that residual could later be completed is now fixed
 
 So the next honest move is not:
 
-- admit a later source
-- declare one explicit admissible presence
-- declare a candidate
-- declare reopening eligible
+- later-source admission leap
+- explicit-presence judgment leap
+- candidate declaration
+- reopening-eligibility promotion
 
 It is:
 
-- define the minimum honest path by which the named residual carrier condition could later be completed
+- ask whether the named residual carrier condition now counts as completed under that fixed path
 
-## 4. Residual-Completion Path Discipline
+## 4. Completion Discipline
 
-Gate11O must define path conditions, not completion itself.
+Gate11P must audit actual completion, not redesign the path.
 
-The residual carrier condition counts as later honestly completable only if all of the following are fixed:
+The named residual carrier condition counts as completed only if all of the following are true:
 
-- the named residual condition remains explicitly preserved
-- the minimum later-source additions required to complete that residual are fixed explicitly
-- the same-source completion boundary remains intact
+- the named residual carrier condition remains preserved
+- a completion marker is explicit
+- same-source completion is actually instantiated
+- the completion boundary remains intact
 
-If those conditions are not fixed, Gate11O must not promote the line into residual-completion path definition.
+If any of those conditions is absent, Gate11P must not promote the line into completed status.
 
-## 5. Required Path Conditions
+The minimum audit is therefore exactly:
+
+1. `named_residual_carrier_condition_preservation_status`
+2. `explicit_residual_completion_marker_status`
+3. `same_source_residual_completion_status`
+4. `residual_completion_boundary_status`
+
+## 5. Required Completion Conditions
 
 ### 5.1 Named Residual Carrier Condition Is Preserved
 
-The path counts as defined only if the controlling source preserves explicitly that the named residual carrier condition remains:
+The named residual counts as completable only if:
 
-- no explicit admissible later-source presence marker
-- no single later source
-- no same-source fixed-path attachment
+- the controlling source still explicitly preserves the same named residual carrier condition under the fixed Gate11O line
 
-### 5.2 Minimum Residual Carrier Completion Rule Is Fixed
+### 5.2 Completion Marker Is Explicit
 
-The path counts as defined only if the rule requires one same later source carrying:
+The named residual counts as completed only if:
+
+- one explicit completion marker appears for the named residual carrier condition
+
+Generic future-language or path-language alone does not count.
+
+### 5.3 Same-Source Completion Is Actually Instantiated
+
+The named residual counts as completed only if the controlling source explicitly states that the same later source now carries:
 
 - one explicit admissible later-source presence marker
 - one explicit `later_source_id` or `later_frozen_run_id`
@@ -195,121 +200,133 @@ The path counts as defined only if the rule requires one same later source carry
 - one explicit host-failure sentence
 - matched status, registry, and read surfaces
 
-Those additions must stay on the same later source and complete the named residual carrier condition without widening the line.
+If those elements are not explicit on the same later source, completion is not yet established.
 
-### 5.3 Residual-Completion Boundary Remains Intact
+### 5.4 Completion Boundary Remains Intact
 
-The path counts as defined only if it forbids reliance on:
+The named residual counts as completed only if:
 
-- shortcut
-- inflation
-- retroactive rewrite
-- graph-wide leap
-- worker-side synthesis
+- shortcut is not needed
+- inflation is not needed
+- retroactive rewrite is not needed
+- graph-wide leap is not needed
+- worker-side synthesis is not needed
 
 ## 6. Required Judgment Checks
 
-Gate11O may recognize a residual-completion path only if all of the following remain clear.
+Gate11P may recognize completion only if all of the following remain clear.
 
 ### 6.1 Gate10 Closeout Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate10 closeout sentence no longer remains preserved as recorded
 
 ### 6.2 Gate11A Absence Result Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11A absence result no longer remains preserved as recorded
 
 ### 6.3 Gate11C Surface Definition Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11C declaration surface is no longer preserved as `surface_defined`
 
 ### 6.4 Gate11D Not-Yet-Declared Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11D `not_yet_declared` result no longer remains preserved as recorded
 
 ### 6.5 Gate11E Path-Defined Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11E `path_defined` result no longer remains preserved as recorded
 
 ### 6.6 Gate11F Not-Yet-Admissible Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11F `not_yet_admissible` result no longer remains preserved as recorded
 
 ### 6.7 Gate11G Surface-Defined Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11G `surface_defined` result no longer remains preserved as recorded
 
 ### 6.8 Gate11H Not-Yet-Named Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11H `not_yet_named` result no longer remains preserved as recorded
 
 ### 6.9 Gate11I Path-Defined Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11I `path_defined` result no longer remains preserved as recorded
 
 ### 6.10 Gate11J Not-Yet-Admissible Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11J `not_yet_admissible` result no longer remains preserved as recorded
 
 ### 6.11 Gate11K Not-Yet-Present Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11K `not_yet_present` result no longer remains preserved as recorded
 
 ### 6.12 Gate11L Path-Defined Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11L `path_defined` result no longer remains preserved as recorded
 
 ### 6.13 Gate11M Not-Yet-Present Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11M `not_yet_present` result no longer remains preserved as recorded
 
 ### 6.14 Gate11N Residual-Named Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
 - the Gate11N `residual_named` result no longer remains preserved as recorded
 
-### 6.15 Minimum Residual Carrier Completion Rule Is Fixed
+### 6.15 Gate11O Path-Defined Preservation
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
-- the controlling source does not fix the minimum later-source additions required to complete the named residual carrier condition
+- the Gate11O `path_defined` result no longer remains preserved as recorded
 
-### 6.16 Residual-Completion Boundary Remains Intact
+### 6.16 Completion Marker Is Explicit
 
-The residual-completion path audit is invalid if:
+The completion audit is invalid if:
 
-- the path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- no explicit completion marker is actually present for the named residual
+
+### 6.17 Same-Source Completion Is Actually Instantiated
+
+The completion audit is invalid if:
+
+- the controlling source does not explicitly instantiate the full fixed Gate11O completion rule on the same later source
+
+### 6.18 Completion Boundary Remains Intact
+
+The completion audit is invalid if:
+
+- the completion depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
 ## 7. Falsifiers
 
-Gate11O fails residual-completion path definition if any of the following happens:
+Gate11P fails named residual completion if any of the following happens:
 
 - Gate10 closeout preservation fails
 - Gate11A absence-result preservation fails
@@ -325,7 +342,9 @@ Gate11O fails residual-completion path definition if any of the following happen
 - Gate11L path-defined preservation fails
 - Gate11M not-yet-present preservation fails
 - Gate11N residual-named preservation fails
-- the minimum residual carrier completion rule is not fixed
+- Gate11O path-defined preservation fails
+- no explicit completion marker is present
+- the same-source completion is not actually instantiated
 - broader-settlement inflation is needed
 - retroactive reinterpretation pressure appears
 - graph-wide operator leap pressure appears
@@ -333,18 +352,18 @@ Gate11O fails residual-completion path definition if any of the following happen
 
 ## 8. Expected Outputs
 
-Any Gate11O implementation must emit exactly these files:
+Any Gate11P implementation must emit exactly these files:
 
 - `manifest.json`
 - `checksums.json`
-- `admissible_later_source_carrier_completion_instantiation_path_registry.jsonl`
-- `admissible_later_source_carrier_completion_instantiation_path_policy_compare.csv`
-- `admissible_later_source_carrier_completion_instantiation_path_status.json`
-- `gate11o_admissible_later_source_carrier_completion_instantiation_path_read.md`
+- `named_residual_carrier_completion_registry.jsonl`
+- `named_residual_carrier_completion_policy_compare.csv`
+- `named_residual_carrier_completion_status.json`
+- `gate11p_named_residual_carrier_completion_read.md`
 
 ## 9. Required Status Keys
 
-Any Gate11O implementation must emit explicit status for:
+Any Gate11P implementation must emit explicit status for:
 
 - `gate10_closeout_preservation_status`
 - `gate11a_absence_result_preservation_status`
@@ -360,18 +379,20 @@ Any Gate11O implementation must emit explicit status for:
 - `gate11l_path_defined_state_preservation_status`
 - `gate11m_not_yet_present_state_preservation_status`
 - `gate11n_residual_named_state_preservation_status`
+- `gate11o_path_defined_state_preservation_status`
 - `broader_trusted_tree_settlement_still_unearned_status`
 - `operator_admission_still_denied_status`
 - `retroactive_reinterpretation_forbidden_status`
 - `named_residual_carrier_condition_preservation_status`
-- `minimum_residual_carrier_completion_rule_status`
+- `explicit_residual_completion_marker_status`
+- `same_source_residual_completion_status`
 - `residual_completion_boundary_status`
-- `admissible_later_source_carrier_completion_instantiation_path_status`
+- `named_residual_carrier_completion_status`
 - `next_named_blocker`
 
 ## 10. Status Space
 
-Gate11O is limited to the following judgment space.
+Gate11P is limited to the following judgment space.
 
 ### 10.1 Preservation Statuses
 
@@ -391,6 +412,7 @@ Each of:
 - `gate11l_path_defined_state_preservation_status`
 - `gate11m_not_yet_present_state_preservation_status`
 - `gate11n_residual_named_state_preservation_status`
+- `gate11o_path_defined_state_preservation_status`
 
 must be emitted as one of:
 
@@ -413,7 +435,7 @@ must be emitted as one of:
 - `denied`
 - `deferred`
 
-### 10.3 Path-Condition Statuses
+### 10.3 Completion Statuses
 
 `named_residual_carrier_condition_preservation_status` must be emitted as one of:
 
@@ -421,69 +443,75 @@ must be emitted as one of:
 - `not_preserved`
 - `deferred`
 
-`minimum_residual_carrier_completion_rule_status` must be emitted as one of:
+`explicit_residual_completion_marker_status` must be emitted as one of:
 
-- `defined`
-- `not_defined`
+- `present`
+- `absent`
 - `deferred`
 
-### 10.4 Residual Carrier-Completion Instantiation Path Outcome Status
+`same_source_residual_completion_status` must be emitted as one of:
 
-`admissible_later_source_carrier_completion_instantiation_path_status` must be emitted as one of:
+- `completed`
+- `not_completed`
+- `deferred`
 
-- `path_defined`
-- `not_yet_defined`
+### 10.4 Named Residual Carrier Completion Outcome Status
+
+`named_residual_carrier_completion_status` must be emitted as one of:
+
+- `completed`
+- `not_yet_completed`
 - `denied`
 - `deferred`
 
-`path_defined` means only:
+`completed` means only:
 
-- the minimum honest path by which the named residual carrier condition could later be completed is now fixed narrowly enough
+- the named residual carrier condition now counts as completed under the fixed Gate11O path
 
 It does not mean:
 
-- a later source is admitted
-- one admissible later source is already present
+- one admissible later source is already admitted by doctrine leap
 - reopening is eligible
 
 ## 11. Outcome Ladder
 
-Gate11O outcomes are limited to these four.
+Gate11P outcomes are limited to these four.
 
-### 11.1 Path Defined
+### 11.1 Completed
 
-Use `path_defined` only if:
+Use `completed` only if:
 
 - the named residual carrier condition remains preserved
-- the minimum residual carrier completion rule is fixed
-- the residual-completion boundary remains intact
+- a completion marker is explicit
+- same-source completion is actually instantiated
+- the completion boundary remains intact
 - no falsifier fires
 
-### 11.2 Not Yet Defined
+### 11.2 Not Yet Completed
 
-Use `not_yet_defined` if:
+Use `not_yet_completed` if:
 
-- the line remains preserved through Gate11N
-- but the residual carrier-completion path is not yet fixed narrowly enough
+- the line remains preserved through Gate11O
+- but the named residual carrier condition is not yet actually completed under the fixed path
 
 ### 11.3 Denied
 
 Use `denied` if:
 
-- the path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the completion depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
 ### 11.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks residual carrier-completion path judgment
+- the frozen source evidence is incomplete or contradictory in a way that blocks named residual completion judgment
 
 ## 12. Forbidden
 
-The following remain forbidden in Gate11O:
+The following remain forbidden in Gate11P:
 
-- no later-source admission
-- no one-admissible-later-source explicit-presence judgment
+- no later-source admission leap
+- no explicit-presence judgment leap
 - no candidate declaration
 - no explicit-declaration existence judgment
 - no reopening-eligibility judgment
@@ -492,7 +520,7 @@ The following remain forbidden in Gate11O:
 - no prior-path redesign
 - no graph-wide operator
 - no broader trusted-tree settlement promotion
-- no retroactive rewrite of Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, or Gate11N
+- no retroactive rewrite of Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, or Gate11O
 - no repo-wide mining outside the controlling source run
 - no worker-side source selection
 - no scalar comeback
@@ -530,11 +558,11 @@ If the spec is insufficient, the work must stop and report the gap rather than i
 
 ## 14. Memory Hook
 
-The Gate11O sentence is:
+The Gate11P sentence is:
 
-- Gate11O does not complete the residual carrier condition
-- it fixes the minimum honest path by which the named residual carrier condition could later be completed under the fixed Gate11N line
+- Gate11P does not reopen the line
+- it asks whether the named residual carrier condition now counts as completed under the fixed Gate11O path
 
 The shortest acceptable memory hook is:
 
-- `Gate11O does not complete the residual carrier condition; it fixes the minimum honest path by which that named residual could later be completed under the fixed Gate11N line.`
+- `Gate11P does not reopen the line; it asks whether the named residual carrier condition now counts as completed under the fixed Gate11O path.`
