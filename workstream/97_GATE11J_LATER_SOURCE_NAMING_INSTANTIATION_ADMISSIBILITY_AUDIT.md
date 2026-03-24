@@ -1,7 +1,7 @@
 # Gate11J Later-Source Naming-Instantiation Admissibility Audit
 
 Status: spec-only draft
-Role: later-source naming-instantiation admissibility audit, not one later-source explicit-naming existence judgment, candidate declaration, explicit-declaration existence judgment, reopening-eligibility judgment, or operator reopening
+Role: later-source naming-instantiation admissibility audit, not one later-source explicit-naming existence judgment beyond admissible presence, candidate declaration, explicit-declaration existence judgment, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
 Gate11J proceeds from:
@@ -54,6 +54,7 @@ Gate11J does:
 
 Gate11J does not:
 
+- decide one-later-source naming existence beyond admissible presence as carrier of the fixed Gate11I path
 - declare that one later-source naming instance already exists
 - declare a bounded-line insufficiency candidate
 - declare that explicit declaration already exists
@@ -85,6 +86,10 @@ So Gate11J must treat the current controlling source as:
 
 - a path-defined source
 - but not yet a source with one admissible later source unless that same frozen run explicitly names one
+
+Under the current frozen Gate11I line, the default honest outcome is therefore:
+
+- `not_yet_admissible`
 
 The worker must not:
 
@@ -141,6 +146,13 @@ One later source counts as admissibly present only if all of the following are t
 - no shortcut or worker-side synthesis is required to understand it
 
 If any of those conditions is absent, Gate11J must not promote the source into later-source naming-instantiation admissibility.
+
+The minimum audit is therefore exactly:
+
+1. `later_source_naming_status`
+2. `later_source_cardinality_status`
+3. `same_source_path_attachment_status`
+4. `anti_shortcut_boundary_status`
 
 ## 5. Required Later-Source Conditions
 
@@ -495,3 +507,7 @@ The Gate11J sentence is:
 The shortest acceptable memory hook is:
 
 - `Gate11J does not admit a naming instance; it asks whether one later source is now admissibly present as the carrier of the fixed Gate11I path into a later one-later-source explicit-naming audit.`
+
+The shortest acceptable scope sentence is:
+
+- `Gate11J audits only whether one later source is now admissibly present as the carrier of the fixed Gate11I path, without declaring a naming instance, a candidate, or reopening eligibility.`
