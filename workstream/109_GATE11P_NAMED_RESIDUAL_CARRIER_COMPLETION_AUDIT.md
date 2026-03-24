@@ -1,6 +1,6 @@
 # Gate11P Named Residual Carrier Completion Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: named residual carrier completion audit, not later-source admission, explicit-presence judgment leap, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
@@ -44,7 +44,17 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11P implementation consumer has not landed yet.
+The first Gate11P named residual carrier completion audit consumer now exists in:
+
+- `tools/run_gate11p_named_residual_carrier_completion_audit.py`
+
+The first tracked Gate11P named residual carrier completion smoke read is now recorded in:
+
+- `110_GATE11P_NAMED_RESIDUAL_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+
+The next narrow Gate11Q named residual completion-marker surface audit slice is now tracked in:
+
+- `111_GATE11Q_NAMED_RESIDUAL_COMPLETION_MARKER_SURFACE_AUDIT.md`
 
 ## 0. Scope
 
@@ -88,7 +98,7 @@ Gate11P does not:
 
 ## 1. Controlling Source Run
 
-When implemented, Gate11P must consume exactly this controlling source run:
+Gate11P consumes exactly this controlling source run:
 
 - `runs/gate11o_admissible_later_source_carrier_completion_instantiation_path_audit_smoke_from_gate11n`
 
