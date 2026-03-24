@@ -149,6 +149,19 @@ class RunGate11SExplicitResidualCompletionMarkerInstantiationPathAuditTest(unitt
         self.assertEqual(compare[0]["source_gate11r_run_id"], "gate11r_run")
         self.assertEqual(compare[0]["explicit_residual_completion_marker_instantiation_path_status"], "path_defined")
 
+    def test_report_for_path_defined_does_not_fall_back_to_not_yet_defined_sentence(self) -> None:
+        status = gate11s.build_status_payload(
+            make_gate11r_manifest(),
+            make_gate11r_status(),
+            "Gate11R preserves the marker-not-yet-present line with blocker no_explicit_residual_completion_marker.",
+        )
+        registry = gate11s.build_registry(make_gate11r_manifest(), status)
+        compare = gate11s.build_policy_compare(registry)
+        report = gate11s.build_report("gate11s_run", make_gate11r_manifest(), compare, status)
+
+        self.assertIn("minimum same-source marker-instantiation path is fixed narrowly enough", report)
+        self.assertNotIn("is not yet fixed narrowly enough", report)
+
 
 if __name__ == "__main__":
     unittest.main()

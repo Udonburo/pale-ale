@@ -89,6 +89,7 @@ def source_is_incomplete(
 
 def blocker_sentence(blocker: str) -> str:
     mapping = {
+        "": "the marker-not-yet-present line remains preserved, and the minimum honest path is fixed narrowly enough for one explicit residual completion marker to later be instantiated on one same source without widening the line",
         "no_explicit_residual_completion_marker": "the minimum honest path is fixed narrowly: one same later source must carry one explicit residual completion marker together with one explicit later_source_id or later_frozen_run_id, one later source and only one later source, one explicit same-source completion status, one bounded read-prefix declaration for the marker, repeated bounded residual_completion_surface rows for the required same-source elements, one explicit admissible later-source presence marker, one declaration marker, one candidate id, one class, one explicit host-failure sentence, and matched status, registry, and read surfaces",
         "same_source_residual_completion_marker_binding_not_explicit": "the marker line remains not yet present, and the missing same-source additions are fixed narrowly: one same later source must carry one explicit later_source_id or later_frozen_run_id, one later source and only one later source, one explicit same-source completion status, and the bounded same-source surface rows required to bind the marker without widening the line",
         "bounded_read_prefix_not_attached": "the marker line remains not yet present, and the missing bounded read-prefix attachment is fixed narrowly: one same later source must carry one bounded read-prefix declaration for the marker and repeated bounded residual_completion_surface rows for the required same-source elements without widening the line",
@@ -524,7 +525,7 @@ def build_report(
 
     outcome = status_payload["explicit_residual_completion_marker_instantiation_path_status"]
     if outcome == "path_defined":
-        lines.append(f"- {blocker_sentence(source_status_value(status_payload, 'next_named_blocker') or source_status_value({'next_named_blocker': ''}, 'next_named_blocker'))}")
+        lines.append(f"- {blocker_sentence(source_status_value(status_payload, 'next_named_blocker'))}")
         lines.append("- the minimum same-source marker-instantiation path is fixed narrowly enough for a later audit, without instantiating a marker now")
     elif outcome == "not_yet_defined":
         lines.append("- the marker-not-yet-present line remains preserved, but the minimum same-source marker-instantiation path is not yet fixed narrowly enough")
