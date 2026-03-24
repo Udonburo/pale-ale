@@ -187,6 +187,14 @@ The twenty-first narrow Gate11U explicit residual completion-marker carrier-comp
 
 - `119_GATE11U_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_AUDIT.md`
 
+The first tracked Gate11U explicit residual completion-marker carrier-completion smoke read is now recorded in:
+
+- `120_GATE11U_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+
+The twenty-second narrow Gate11V explicit residual completion-marker carrier-completion instantiation path audit slice is now tracked in:
+
+- `121_GATE11V_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -282,6 +290,7 @@ The target is therefore:
 - explicit residual completion-marker instantiation path audit nineteenth
 - one explicit residual completion-marker path-instantiation audit twentieth
 - explicit residual completion-marker carrier-completion audit twenty-first
+- explicit residual completion-marker carrier-completion instantiation path audit twenty-second
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
