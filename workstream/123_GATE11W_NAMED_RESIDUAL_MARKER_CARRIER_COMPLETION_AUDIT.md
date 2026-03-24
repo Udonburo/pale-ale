@@ -1,10 +1,10 @@
-# Gate11V Explicit Residual Completion-Marker Carrier-Completion Instantiation Path Audit
+# Gate11W Named Residual Marker-Carrier Completion Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: explicit residual completion-marker carrier-completion instantiation path audit, not residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: named residual marker-carrier completion audit, not residual completion judgment leap, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-25
 
-Gate11V proceeds from:
+Gate11W proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -50,31 +50,23 @@ Gate11V proceeds from:
 - `118_GATE11T_ONE_EXPLICIT_RESIDUAL_COMPLETION_MARKER_PATH_INSTANTIATION_AUDIT_SMOKE.md`
 - `119_GATE11U_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_AUDIT.md`
 - `120_GATE11U_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+- `121_GATE11V_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT.md`
+- `122_GATE11V_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11V explicit residual completion-marker carrier-completion instantiation path audit consumer now exists in:
-
-- `tools/run_gate11v_explicit_residual_completion_marker_carrier_completion_instantiation_path_audit.py`
-
-The first tracked Gate11V explicit residual completion-marker carrier-completion instantiation path smoke read is now recorded in:
-
-- `122_GATE11V_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
-
-The next narrow Gate11W named residual marker-carrier completion audit slice is now tracked in:
-
-- `123_GATE11W_NAMED_RESIDUAL_MARKER_CARRIER_COMPLETION_AUDIT.md`
+The first Gate11W implementation consumer has not landed yet.
 
 ## 0. Scope
 
-Gate11V is the twenty-second narrow Gate11 slice.
+Gate11W is the twenty-third narrow Gate11 slice.
 
-Gate11V does:
+Gate11W does:
 
-- ask what is the minimum honest path by which the named residual marker-carrier condition could later be completed under the fixed Gate11U line
+- ask whether the named residual marker-carrier condition now actually counts as completed under the fixed Gate11V path
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -96,11 +88,12 @@ Gate11V does:
 - preserve the Gate11S `path_defined` result exactly as already recorded
 - preserve the Gate11T `not_yet_present` result exactly as already recorded
 - preserve the Gate11U `residual_named` result exactly as already recorded
-- define only the minimum same-source additions by which the named residual marker-carrier condition could later become honestly completed
+- preserve the Gate11V `path_defined` result exactly as already recorded
+- decide only whether the named residual marker-carrier condition is now actually completed under the fixed Gate11V path
 
-Gate11V does not:
+Gate11W does not:
 
-- judge residual completion
+- leap to residual completion beyond the fixed Gate11V path
 - admit a later source
 - decide one-admissible-later-source explicit-presence judgment
 - declare a bounded-line insufficiency candidate
@@ -111,49 +104,49 @@ Gate11V does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, or Gate11U memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, or Gate11V memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11V consumes exactly this controlling source run:
+When implemented, Gate11W must consume exactly this controlling source run:
 
-- `runs/gate11u_explicit_residual_completion_marker_carrier_completion_audit_smoke_from_gate11t`
+- `runs/gate11v_explicit_residual_completion_marker_carrier_completion_instantiation_path_audit_smoke_from_gate11u`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11U source, the recorded upstream result is:
+Under the currently frozen Gate11V source, the recorded upstream result is:
 
-- `gate11t_not_yet_present_state_preservation_status = preserved`
-- `explicit_marker_carrier_completion_status = missing`
-- `marker_singularity_carrier_completion_status = missing`
-- `same_source_path_attachment_carrier_completion_status = missing`
+- `gate11u_residual_named_state_preservation_status = preserved`
+- `named_residual_marker_carrier_condition_preservation_status = preserved`
+- `minimum_same_source_carrier_completion_rule_status = defined`
+- `bounded_read_prefix_completion_requirement_status = defined`
 - `carrier_completion_boundary_status = confirmed`
-- `explicit_residual_completion_marker_carrier_completion_status = residual_named`
-- `next_named_blocker = no_explicit_residual_completion_marker`
+- `explicit_residual_completion_marker_carrier_completion_instantiation_path_status = path_defined`
+- `next_named_blocker = `
 
-So Gate11V must treat the current controlling source as:
+So Gate11W must treat the current controlling source as:
 
-- a residual marker-carrier named source
-- not a source where that residual marker-carrier condition is already completed
+- a fixed marker-carrier completion-path source
+- not a source where that named residual marker-carrier condition is already completed
 
 The worker must not:
 
-- invent a marker
-- convert residual naming into completion
+- invent a completion marker
+- convert path definition into completion
 - treat generic prose as completion
-- resolve completion gaps by worker-side synthesis
+- resolve completion ambiguity by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11V question is:
+The Gate11W question is:
 
-- `what is the minimum honest path by which the named residual marker-carrier condition could later be completed under the fixed Gate11U line?`
+- `does the named residual marker-carrier condition now count as completed under the fixed Gate11V path or not?`
 
 This is narrower than:
 
-- residual completion judgment
+- residual completion judgment beyond the fixed Gate11V path
 - later-source admission
 - one-admissible-later-source explicit-presence judgment
 - candidate declaration itself
@@ -162,56 +155,35 @@ This is narrower than:
 
 It is only:
 
-- the paired path-definition gate for how the named residual marker-carrier condition could later be honestly completed
+- the paired existence/completion gate for whether the fixed Gate11V path is now actually completed
 
-## 3. Why Gate11V Exists
+## 3. Why Gate11W Exists
 
-Gate11U earned:
+Gate11V earned:
 
-- the residual marker-carrier condition is now named narrowly
-- the correct current result is `residual_named`
-- the next named blocker remains `no_explicit_residual_completion_marker`
+- the named residual marker-carrier condition remains preserved
+- the minimum same-source completion path is now fixed narrowly
+- the correct current result is `path_defined`
 
 So the next honest move is not:
 
-- declare a marker present anyway
-- judge the residual completed
+- declare completion from path prose alone
 - admit a later source
 - declare one explicit admissible presence
 - declare reopening eligible
 
 It is:
 
-- define the minimum honest path by which the named residual marker-carrier condition could later be completed
+- ask whether the named residual marker-carrier condition now actually counts as completed under the fixed Gate11V path
 
-## 4. Path Discipline
+## 4. Completion Discipline
 
-Gate11V must define path conditions, not completion itself.
+Gate11W must judge completion only from bounded same-source completion evidence.
 
-The residual marker-carrier completion path counts as defined only if all of the following are fixed:
-
-- the Gate11U `residual_named` line remains explicitly preserved
-- the minimum same-source additions required to complete that named residual are fixed explicitly
-- the carrier-completion boundary remains intact
-
-If those conditions are not fixed, Gate11V must not promote the line into marker-carrier completion path definition.
-
-## 5. Required Path Conditions
-
-### 5.1 Named Residual Marker-Carrier Condition Is Preserved
-
-The path counts as defined only if the controlling source preserves explicitly that the named residual marker-carrier condition remains:
-
-- no explicit residual completion marker
-- no single marker and only one marker
-- no same-source path attachment under the fixed Gate11T line
-
-### 5.2 Minimum Same-Source Marker-Carrier Completion Rule Is Fixed
-
-The path counts as defined only if the rule requires one same later source carrying:
+The named residual marker-carrier condition counts as completed only if all of the following are explicit on the same later source:
 
 - one explicit residual completion marker
-- one explicit `later_source_id` or `later_frozen_run_id`
+- one explicit later-source identifier
 - one marker and only one marker
 - one explicit same-source path-attachment status
 - one bounded read-prefix declaration for the marker
@@ -222,70 +194,58 @@ The path counts as defined only if the rule requires one same later source carry
 - one class
 - one explicit host-failure sentence
 - matched status, registry, and read surfaces
-
-Those additions must stay on the same later source and complete the named residual marker-carrier condition without widening the line.
-
-### 5.3 Carrier-Completion Boundary Remains Intact
-
-The path counts as defined only if it forbids reliance on:
-
-- shortcut
-- inflation
-- retroactive rewrite
-- graph-wide leap
-- worker-side synthesis
-
-## 6. Current Default
-
-Under the current frozen Gate11U source, the honest default is:
-
-- `explicit_residual_completion_marker_carrier_completion_status = residual_named`
-- `next_named_blocker = no_explicit_residual_completion_marker`
-
-So the most likely Gate11V result under the current source is:
-
-- `path_defined` if the minimum marker-carrier completion rule can be fixed narrowly from the Gate11U line
-- otherwise `not_yet_defined`
-
-Gate11V must not convert Gate11U residual naming into actual completion.
-
-## 7. Outcome Ladder
-
-Gate11V outcomes are limited to these four.
-
-### 7.1 Path Defined
-
-Use `path_defined` if:
-
-- the Gate11U `residual_named` line remains preserved
-- the minimum same-source marker-carrier completion rule is fixed narrowly enough for a later audit
 - the carrier-completion boundary remains intact
 
-### 7.2 Not Yet Defined
+Path prose, hypothetical examples, and worker-side synthesis do not count as completion.
 
-Use `not_yet_defined` if:
+## 5. Current Default
 
-- the current source still does not define the marker-carrier completion path narrowly enough
+Under the current frozen Gate11V source, the honest default is:
 
-### 7.3 Denied
+- `explicit_residual_completion_marker_carrier_completion_instantiation_path_status = path_defined`
+
+So the most likely Gate11W result under the current source is:
+
+- `not_yet_completed`
+
+Gate11W must not convert Gate11V path definition into actual completion.
+
+## 6. Outcome Ladder
+
+Gate11W outcomes are limited to these four.
+
+### 6.1 Completed
+
+Use `completed` if:
+
+- the named residual marker-carrier condition is completed explicitly under the fixed Gate11V path
+
+### 6.2 Not Yet Completed
+
+Use `not_yet_completed` if:
+
+- the fixed Gate11V path remains preserved
+- but explicit same-source completion evidence is still absent
+
+### 6.3 Denied
 
 Use `denied` if:
 
-- the proposed path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the proposed completion depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
-### 7.4 Deferred
+### 6.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks path definition
+- the frozen source evidence is incomplete or contradictory in a way that blocks honest completion judgment
 
-## 8. Memory Hook
+## 7. Memory Hook
 
-The Gate11V sentence is:
+The Gate11W sentence is:
 
-- Gate11V does not say the residual is completed
-- it asks what is the minimum honest path by which the named residual marker-carrier condition could later be completed under the fixed Gate11U line
+- Gate11W does not widen the line beyond the fixed Gate11V path
+- it asks whether the named residual marker-carrier condition now actually counts as completed under that path
 
 The shortest acceptable memory hook is:
 
-- `Gate11V does not say the residual is completed; it asks what is the minimum honest path by which the named residual marker-carrier condition could later be completed under the fixed Gate11U line.`
+- `Gate11W does not widen the line beyond the fixed Gate11V path; it asks whether the named residual marker-carrier condition now actually counts as completed under that path.`
