@@ -115,6 +115,14 @@ The twelfth narrow Gate11L admissible later-source explicit-presence instantiati
 
 - `101_GATE11L_ADMISSIBLE_LATER_SOURCE_EXPLICIT_PRESENCE_INSTANTIATION_PATH_AUDIT.md`
 
+The first tracked Gate11L admissible later-source explicit-presence instantiation path smoke read is now recorded in:
+
+- `102_GATE11L_ADMISSIBLE_LATER_SOURCE_EXPLICIT_PRESENCE_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The thirteenth narrow Gate11M one admissible later-source explicit-presence path-instantiation audit slice is now tracked in:
+
+- `103_GATE11M_ONE_ADMISSIBLE_LATER_SOURCE_EXPLICIT_PRESENCE_PATH_INSTANTIATION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -201,6 +209,7 @@ The target is therefore:
 - later-source naming-instantiation admissibility audit tenth
 - one admissible later-source explicit-presence audit eleventh
 - admissible later-source explicit-presence instantiation path audit twelfth
+- one admissible later-source explicit-presence path-instantiation audit thirteenth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
@@ -406,6 +415,7 @@ That staged slice order may include:
 - later-source naming-instantiation admissibility audit
 - one admissible later-source explicit-presence audit
 - admissible later-source explicit-presence instantiation path audit
+- one admissible later-source explicit-presence path-instantiation audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
