@@ -1,7 +1,7 @@
 # Gate11Q Named Residual Completion-Marker Surface Audit
 
 Status: spec-only draft
-Role: named residual completion-marker surface audit, not residual completion itself, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Role: residual completion-marker surface audit, not residual completion itself, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-24
 
 Gate11Q proceeds from:
@@ -54,7 +54,7 @@ Gate11Q is the seventeenth narrow Gate11 slice.
 
 Gate11Q does:
 
-- ask what would count as a valid explicit completion-marker surface for the named residual carrier condition under the fixed Gate11P line
+- ask what would count as a valid explicit residual completion-marker surface under the fixed Gate11P line
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -71,7 +71,7 @@ Gate11Q does:
 - preserve the Gate11N `residual_named` result exactly as already recorded
 - preserve the Gate11O `path_defined` result exactly as already recorded
 - preserve the Gate11P `not_yet_completed` result exactly as already recorded
-- define only the explicit marker surface by which named residual completion could later be honestly recognized
+- define only the bounded marker surface by which named residual completion could later be honestly recognized
 
 Gate11Q does not:
 
@@ -89,6 +89,10 @@ Gate11Q does not:
 - retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, or Gate11P memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
+
+The shortest acceptable label for Gate11Q is:
+
+- `residual completion-marker surface audit`
 
 ## 1. Controlling Source Run
 
@@ -118,6 +122,7 @@ The worker must not:
 - invent a completion marker
 - convert path-definition language into marker surface
 - convert hypothetical example text into marker surface
+- convert read narrative into marker evidence unless it appears on the bounded completion-marker surface itself
 - resolve marker ambiguity by worker-side synthesis
 
 ## 2. Public Question
@@ -138,6 +143,12 @@ This is narrower than:
 It is only:
 
 - the surface-definition gate for how a later explicit residual completion marker could honestly count
+
+Gate11Q does not ask:
+
+- whether the residual is already completed
+- whether one later source is already admissibly present
+- whether reopening eligibility is already earned
 
 ## 3. Why Gate11Q Exists
 
@@ -168,6 +179,7 @@ The named residual completion-marker surface counts as defined only if all of th
 - the explicit marker shape is bounded
 - the marker remains singular
 - the marker binds to the same named residual carrier condition
+- the marker binds to the same-source completion rows
 - the boundary remains intact
 
 If any of those conditions is not fixed, Gate11Q must not promote the line into surface definition.
@@ -182,16 +194,19 @@ The marker surface counts as defined only if it requires explicit bounded marker
 - `residual_completion_later_source_id: ...` or `residual_completion_later_frozen_run_id: ...`
 - `residual_completion_same_source_status: completed`
 - repeated `residual_completion_surface: ...` rows for the required same-source elements
+- a bounded read-prefix declaration that the residual completion marker is being stated on that same completion surface
 
 Narrative future-language alone does not count.
 Hypothetical example text does not count.
 Worker-side inference does not count.
+Path-definition prose does not count.
 
 ### 5.2 Single-Marker Singularity
 
 The marker surface counts as defined only if:
 
 - one completion marker and only one completion marker is allowed per run
+- one later source and only one later source may be bound to that marker
 - competing marker rows or multiple later-source bindings defer the judgment rather than forcing worker choice
 
 ### 5.3 Marker-To-Residual Binding Shape
@@ -206,6 +221,9 @@ The marker surface counts as defined only if the same bounded surface binds the 
 - one class
 - one explicit host-failure sentence
 - matched status, registry, and read surfaces
+
+The read side must therefore do more than mention future completion in prose.
+It must carry a bounded completion-marker prefix that explicitly matches the same source and the same residual-completion rows.
 
 The surface must remain same-source.
 Cross-run stitching does not count.
@@ -222,7 +240,7 @@ The marker surface counts as defined only if it forbids reliance on:
 
 ## 6. Required Judgment Checks
 
-Gate11Q may recognize a marker surface only if all of the following remain clear.
+Gate11Q may recognize a marker surface only if all of the following remain clear:
 
 - Gate10 closeout remains preserved as recorded
 - Gate11A absence remains preserved as recorded
@@ -254,7 +272,7 @@ Under the current frozen Gate11P source, the honest default is:
 
 So the most likely Gate11Q result under the current source is:
 
-- `surface_defined` if the marker surface can be fixed narrowly from Gate11P’s bounded-completion contract
+- `surface_defined` if the marker surface can be fixed narrowly from Gate11P's bounded-completion contract
 - otherwise `not_yet_defined`
 
 Gate11Q must not convert Gate11P non-completion into actual completion.
@@ -269,6 +287,7 @@ Use `surface_defined` if:
 
 - the explicit residual completion-marker surface is fixed narrowly enough for a later audit
 - the surface remains singular and same-source
+- the read-prefix and same-source binding are explicit
 - the boundary remains intact
 
 ### 8.2 Not Yet Defined
