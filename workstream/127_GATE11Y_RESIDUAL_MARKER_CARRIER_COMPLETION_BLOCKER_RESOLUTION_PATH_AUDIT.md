@@ -1,10 +1,10 @@
-# Gate11X Residual Marker-Carrier Completion Blocker Audit
+# Gate11Y Residual Marker-Carrier Completion Blocker Resolution Path Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: residual marker-carrier completion blocker audit, not residual completion judgment leap, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: residual marker-carrier completion blocker resolution path audit, not residual completion judgment leap, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-25
 
-Gate11X proceeds from:
+Gate11Y proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -54,31 +54,23 @@ Gate11X proceeds from:
 - `122_GATE11V_EXPLICIT_RESIDUAL_COMPLETION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 - `123_GATE11W_NAMED_RESIDUAL_MARKER_CARRIER_COMPLETION_AUDIT.md`
 - `124_GATE11W_NAMED_RESIDUAL_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+- `125_GATE11X_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT.md`
+- `126_GATE11X_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11X residual marker-carrier completion blocker audit consumer now exists in:
-
-- `tools/run_gate11x_residual_marker_carrier_completion_blocker_audit.py`
-
-The first tracked Gate11X residual marker-carrier completion blocker smoke read is now recorded in:
-
-- `126_GATE11X_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
-
-The next narrow Gate11Y residual marker-carrier completion blocker resolution path audit slice is now tracked in:
-
-- `127_GATE11Y_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+The first Gate11Y implementation consumer has not landed yet.
 
 ## 0. Scope
 
-Gate11X is the twenty-fourth narrow Gate11 slice.
+Gate11Y is the twenty-fifth narrow Gate11 slice.
 
-Gate11X does:
+Gate11Y does:
 
-- ask which residual marker-carrier completion blocker still blocks completion under the fixed Gate11W line
+- ask what is the minimum honest path by which the named residual marker-carrier completion blocker could later be resolved under the fixed Gate11X line
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -102,11 +94,12 @@ Gate11X does:
 - preserve the Gate11U `residual_named` result exactly as already recorded
 - preserve the Gate11V `path_defined` result exactly as already recorded
 - preserve the Gate11W `not_yet_completed` result exactly as already recorded
-- name only the residual marker-carrier completion blocker that still blocks completion
+- preserve the Gate11X `blocker_named` result exactly as already recorded
+- define only the minimum same-source additions by which the named residual marker-carrier completion blocker could later become honestly resolved
 
-Gate11X does not:
+Gate11Y does not:
 
-- judge residual completion beyond naming the blocker
+- judge residual completion
 - admit a later source
 - decide one-admissible-later-source explicit-presence judgment
 - declare a bounded-line insufficiency candidate
@@ -117,45 +110,44 @@ Gate11X does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, or Gate11W memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, or Gate11X memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11X consumes exactly this controlling source run:
+When implemented, Gate11Y must consume exactly this controlling source run:
 
-- `runs/gate11w_named_residual_marker_carrier_completion_audit_smoke_from_gate11v`
+- `runs/gate11x_residual_marker_carrier_completion_blocker_audit_smoke_from_gate11w`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11W source, the recorded upstream result is:
+Under the currently frozen Gate11X source, the recorded upstream result is:
 
-- `gate11v_path_defined_state_preservation_status = preserved`
-- `named_residual_marker_carrier_condition_preservation_status = preserved`
-- `explicit_carrier_completion_marker_status = absent`
-- `same_source_carrier_completion_status = not_completed`
+- `gate11w_not_yet_completed_state_preservation_status = preserved`
+- `explicit_completion_marker_blocker_status = named`
+- `same_source_carrier_completion_blocker_status = named`
 - `carrier_completion_boundary_status = confirmed`
-- `named_residual_marker_carrier_completion_status = not_yet_completed`
+- `residual_marker_carrier_completion_blocker_status = blocker_named`
 - `next_named_blocker = no_explicit_residual_completion_marker`
 
-So Gate11X must treat the current controlling source as:
+So Gate11Y must treat the current controlling source as:
 
-- a fixed residual marker-carrier completion source
-- not a source where that residual is already completed
+- a blocker-named source
+- not a source where that blocker is already resolved
 
 The worker must not:
 
-- invent completion evidence
-- convert non-completion into completion
-- treat path prose as blocker resolution
-- resolve blocker ambiguity by worker-side synthesis
+- invent resolution evidence
+- convert blocker naming into resolution
+- treat generic prose as blocker resolution
+- resolve path gaps by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11X question is:
+The Gate11Y question is:
 
-- `which residual marker-carrier completion blocker still blocks completion under the fixed Gate11W line?`
+- `what is the minimum honest path by which the named residual marker-carrier completion blocker could later be resolved under the fixed Gate11X line?`
 
 This is narrower than:
 
@@ -168,86 +160,129 @@ This is narrower than:
 
 It is only:
 
-- the residual follow-up gate for naming what still blocks completion under the fixed Gate11W line
+- the paired path-definition gate for how the named residual marker-carrier completion blocker could later be honestly resolved
 
-## 3. Why Gate11X Exists
+## 3. Why Gate11Y Exists
 
-Gate11W earned:
+Gate11X earned:
 
-- the fixed Gate11V path remains preserved
-- the correct current result is `not_yet_completed`
+- the residual marker-carrier completion blocker is now named narrowly
+- the correct current result is `blocker_named`
 - the next named blocker remains `no_explicit_residual_completion_marker`
 
 So the next honest move is not:
 
-- declare the residual completed anyway
+- declare the blocker resolved anyway
 - admit a later source
 - declare one explicit admissible presence
 - declare reopening eligible
 
 It is:
 
-- name the residual marker-carrier completion blocker that still blocks completion under the fixed Gate11W line
+- define the minimum honest path by which the named residual marker-carrier completion blocker could later be resolved
 
-## 4. Blocker Discipline
+## 4. Path Discipline
 
-Gate11X must name the blocker, not resolve it.
+Gate11Y must define path conditions, not blocker resolution itself.
 
-The blocker counts as named only if all of the following remain explicit:
+The blocker-resolution path counts as defined only if all of the following are fixed:
 
-- the named residual marker-carrier condition remains preserved
-- one explicit carrier-completion marker is still absent
-- same-source carrier completion is still not completed
+- the Gate11X `blocker_named` line remains explicitly preserved
+- the minimum same-source additions required to resolve that named blocker are fixed explicitly
 - the carrier-completion boundary remains intact
 
-If those conditions are not named explicitly, Gate11X must not promote the line into blocker naming.
+If those conditions are not fixed, Gate11Y must not promote the line into blocker-resolution path definition.
 
-## 5. Current Default
+## 5. Required Path Conditions
 
-Under the current frozen Gate11W source, the honest default is:
+### 5.1 Named Blocker Is Preserved
 
-- `named_residual_marker_carrier_completion_status = not_yet_completed`
+The path counts as defined only if the controlling source preserves explicitly that the named blocker remains:
+
+- no explicit residual completion marker
+- no same-source carrier completion
+- no blocker resolution under the fixed Gate11W line
+
+### 5.2 Minimum Same-Source Blocker-Resolution Rule Is Fixed
+
+The path counts as defined only if the rule requires one same later source carrying:
+
+- one explicit residual completion marker
+- one explicit `later_source_id` or `later_frozen_run_id`
+- one marker and only one marker
+- one explicit same-source carrier-completion status marked completed
+- one bounded read-prefix declaration for the marker
+- repeated bounded `residual_completion_surface` rows for the required same-source elements
+- one explicit admissible later-source presence marker
+- one declaration marker
+- one candidate id
+- one class
+- one explicit host-failure sentence
+- matched status, registry, and read surfaces
+
+Those additions must stay on the same later source and resolve the named blocker without widening the line.
+
+### 5.3 Carrier-Completion Boundary Remains Intact
+
+The path counts as defined only if it forbids reliance on:
+
+- shortcut
+- inflation
+- retroactive rewrite
+- graph-wide leap
+- worker-side synthesis
+
+## 6. Current Default
+
+Under the current frozen Gate11X source, the honest default is:
+
+- `residual_marker_carrier_completion_blocker_status = blocker_named`
 - `next_named_blocker = no_explicit_residual_completion_marker`
 
-So the most likely Gate11X result under the current source is:
+So the most likely Gate11Y result under the current source is:
 
-- `blocker_named`
+- `path_defined` if the minimum blocker-resolution rule can be fixed narrowly from the Gate11X line
+- otherwise `not_yet_defined`
 
-## 6. Outcome Ladder
+Gate11Y must not convert Gate11X blocker naming into actual blocker resolution.
 
-Gate11X outcomes are limited to these four.
+## 7. Outcome Ladder
 
-### 6.1 Blocker Named
+Gate11Y outcomes are limited to these four.
 
-Use `blocker_named` if:
+### 7.1 Path Defined
 
-- the residual marker-carrier completion blocker is now named narrowly enough for a later paired path slice
+Use `path_defined` if:
 
-### 6.2 Not Yet Named
+- the Gate11X `blocker_named` line remains preserved
+- the minimum same-source blocker-resolution rule is fixed narrowly enough for a later audit
+- the carrier-completion boundary remains intact
 
-Use `not_yet_named` if:
+### 7.2 Not Yet Defined
 
-- the current source still does not name the blocker narrowly enough
+Use `not_yet_defined` if:
 
-### 6.3 Denied
+- the current source still does not define the blocker-resolution path narrowly enough
+
+### 7.3 Denied
 
 Use `denied` if:
 
-- the proposed blocker depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the proposed path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
-### 6.4 Deferred
+### 7.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks blocker naming
+- the frozen source evidence is incomplete or contradictory in a way that blocks path definition
 
-## 7. Memory Hook
+## 8. Memory Hook
 
-The Gate11X sentence is:
+The Gate11Y sentence is:
 
-- Gate11X does not say the residual is completed
-- it asks which residual marker-carrier completion blocker still blocks completion under the fixed Gate11W line
+- Gate11Y does not say the blocker is resolved
+- it asks what is the minimum honest path by which the named residual marker-carrier completion blocker could later be resolved under the fixed Gate11X line
 
 The shortest acceptable memory hook is:
 
-- `Gate11X does not say the residual is completed; it asks which residual marker-carrier completion blocker still blocks completion under the fixed Gate11W line.`
+- `Gate11Y does not say the blocker is resolved; it asks what is the minimum honest path by which the named residual marker-carrier completion blocker could later be resolved under the fixed Gate11X line.`

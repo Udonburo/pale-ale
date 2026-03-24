@@ -211,6 +211,14 @@ The twenty-fourth narrow Gate11X residual marker-carrier completion blocker audi
 
 - `125_GATE11X_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT.md`
 
+The first tracked Gate11X residual marker-carrier completion blocker smoke read is now recorded in:
+
+- `126_GATE11X_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
+
+The twenty-fifth narrow Gate11Y residual marker-carrier completion blocker resolution path audit slice is now tracked in:
+
+- `127_GATE11Y_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -309,6 +317,7 @@ The target is therefore:
 - explicit residual completion-marker carrier-completion instantiation path audit twenty-second
 - named residual marker-carrier completion audit twenty-third
 - residual marker-carrier completion blocker audit twenty-fourth
+- residual marker-carrier completion blocker resolution path audit twenty-fifth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
