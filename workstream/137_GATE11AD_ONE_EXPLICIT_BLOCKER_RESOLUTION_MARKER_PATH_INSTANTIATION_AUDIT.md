@@ -1,10 +1,10 @@
-# Gate11AC Explicit Blocker-Resolution Marker Instantiation Path Audit
+# Gate11AD One Explicit Blocker-Resolution Marker Path-Instantiation Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: explicit blocker-resolution marker instantiation path audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: one explicit blocker-resolution marker path-instantiation audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
-Gate11AC proceeds from:
+Gate11AD proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -64,31 +64,23 @@ Gate11AC proceeds from:
 - `132_GATE11AA_NAMED_BLOCKER_RESOLUTION_MARKER_SURFACE_AUDIT_SMOKE.md`
 - `133_GATE11AB_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_AUDIT.md`
 - `134_GATE11AB_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_AUDIT_SMOKE.md`
+- `135_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT.md`
+- `136_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11AC implementation consumer now exists in:
-
-- `tools/run_gate11ac_explicit_blocker_resolution_marker_instantiation_path_audit.py`
-
-The first tracked Gate11AC explicit blocker-resolution marker instantiation-path smoke read is now recorded in:
-
-- `136_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT_SMOKE.md`
-
-The next narrow Gate11AD one explicit blocker-resolution marker path-instantiation audit slice is now tracked in:
-
-- `137_GATE11AD_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_PATH_INSTANTIATION_AUDIT.md`
+The first Gate11AD implementation consumer has not landed yet.
 
 ## 0. Scope
 
-Gate11AC is the twenty-ninth narrow Gate11 slice.
+Gate11AD is the thirtieth narrow Gate11 slice.
 
-Gate11AC does:
+Gate11AD does:
 
-- ask what is the minimum honest path by which one explicit blocker-resolution marker could later be instantiated under the fixed Gate11AB line
+- ask whether one explicit blocker-resolution marker now exists that instantiates the fixed Gate11AC path
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -117,9 +109,10 @@ Gate11AC does:
 - preserve the Gate11Z `not_yet_resolved` result exactly as already recorded
 - preserve the Gate11AA `surface_defined` result exactly as already recorded
 - preserve the Gate11AB `not_yet_present` result exactly as already recorded
-- define only the minimum same-source additions by which one explicit blocker-resolution marker could later become honestly instantiated
+- preserve the Gate11AC `path_defined` result exactly as already recorded
+- decide only whether one explicit blocker-resolution marker is now actually instantiated under that fixed path
 
-Gate11AC does not:
+Gate11AD does not:
 
 - judge blocker resolution
 - judge residual completion
@@ -133,45 +126,44 @@ Gate11AC does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, or Gate11AB memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, or Gate11AC memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11AC consumes exactly this controlling source run:
+Gate11AD consumes exactly this controlling source run:
 
-- `runs/gate11ab_one_explicit_blocker_resolution_marker_audit_smoke_from_gate11aa`
+- `runs/gate11ac_explicit_blocker_resolution_marker_instantiation_path_audit_smoke_from_gate11ab`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11AB source, the recorded upstream result is:
+Under the currently frozen Gate11AC source, the recorded upstream result is:
 
-- `gate11aa_surface_defined_state_preservation_status = preserved`
-- `explicit_blocker_resolution_marker_status = absent`
-- `blocker_resolution_marker_singularity_status = none`
-- `same_source_blocker_resolution_marker_binding_status = not_explicit`
+- `gate11ab_not_yet_present_state_preservation_status = preserved`
+- `missing_blocker_resolution_marker_instantiation_components_status = named`
+- `minimum_same_source_blocker_resolution_marker_instantiation_rule_status = defined`
+- `bounded_read_prefix_instantiation_requirement_status = defined`
 - `blocker_resolution_marker_boundary_status = confirmed`
-- `one_explicit_blocker_resolution_marker_status = not_yet_present`
-- `next_named_blocker = no_explicit_blocker_resolution_marker`
+- `explicit_blocker_resolution_marker_instantiation_path_status = path_defined`
 
-So Gate11AC must treat the current controlling source as:
+So Gate11AD must treat the current controlling source as:
 
-- a marker-surface-preserved but marker-not-yet-present source
-- not a source where one explicit blocker-resolution marker is already instantiated
+- a fixed blocker-resolution marker-instantiation path source
+- but not a source where one explicit blocker-resolution marker already exists unless that same frozen run explicitly instantiates it
 
 The worker must not:
 
-- invent a marker
-- convert non-presence into presence
-- treat generic prose as instantiation
-- resolve path gaps by worker-side synthesis
+- invent a blocker-resolution marker
+- convert path definition into marker existence
+- treat hypothetical example text as instantiation
+- resolve multiple marker candidates by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11AC question is:
+The Gate11AD question is:
 
-- `what is the minimum honest path by which one explicit blocker-resolution marker could later be instantiated under the fixed Gate11AB line?`
+- `does one explicit blocker-resolution marker now exist that instantiates the fixed Gate11AC path or not?`
 
 This is narrower than:
 
@@ -185,125 +177,93 @@ This is narrower than:
 
 It is only:
 
-- the paired path-definition gate for how one explicit blocker-resolution marker could later be honestly instantiated
+- the blocker-resolution marker path-instantiation gate for whether one explicit blocker-resolution marker is now actually instantiated
 
-## 3. Why Gate11AC Exists
+## 3. Why Gate11AD Exists
 
-Gate11AB earned:
+Gate11AC earned:
 
-- the fixed Gate11AA surface remains preserved
-- the correct current result is `not_yet_present`
-- the next named blocker remains `no_explicit_blocker_resolution_marker`
+- the blocker-resolution marker-not-yet-present line remains preserved
+- the correct current result is `path_defined`
+- the minimum honest path by which one explicit blocker-resolution marker could later be instantiated is now fixed
 
 So the next honest move is not:
 
-- declare a marker present anyway
-- judge the blocker resolved
-- judge the residual completed
+- declare the blocker resolved anyway
+- declare the residual completed anyway
 - admit a later source
+- declare one explicit admissible presence
 - declare reopening eligible
 
 It is:
 
-- define the minimum honest path by which one explicit blocker-resolution marker could later be instantiated
+- ask whether one explicit blocker-resolution marker now exists that instantiates that fixed path
 
-## 4. Path Discipline
+## 4. Marker Path-Instantiation Discipline
 
-Gate11AC must define path conditions, not marker existence itself.
+Gate11AD must audit actual marker instantiation, not redesign the path.
 
-The marker-instantiation path counts as defined only if all of the following are fixed:
+One explicit blocker-resolution marker counts as instantiated only if all of the following are true:
 
-- the Gate11AB `not_yet_present` line remains explicitly preserved
-- the minimum same-source additions required to instantiate one explicit blocker-resolution marker are fixed explicitly
+- an explicit blocker-resolution marker is present
+- the marker is singular
+- the same-source path attachment is explicit
 - the blocker-resolution marker boundary remains intact
 
-If those conditions are not fixed, Gate11AC must not promote the line into marker-instantiation path definition.
+If any of those conditions is absent, Gate11AD must not promote the line into marker-present status.
 
-## 5. Required Path Conditions
+The minimum audit is therefore exactly:
 
-### 5.1 Gate11AB Not-Yet-Present Line Is Preserved
+1. `explicit_blocker_resolution_marker_status`
+2. `blocker_resolution_marker_singularity_status`
+3. `same_source_marker_path_attachment_status`
+4. `blocker_resolution_marker_boundary_status`
 
-The path counts as defined only if the controlling source preserves explicitly that:
+## 5. Current Default
 
-- no explicit blocker-resolution marker is yet present
-- no single marker is yet instantiated
-- no same-source marker binding is yet explicit
+Under the current frozen Gate11AC source, the honest default is:
 
-### 5.2 Minimum Same-Source Marker Instantiation Rule Is Fixed
+- `explicit_blocker_resolution_marker_instantiation_path_status = path_defined`
+- but no explicit blocker-resolution marker is yet instantiated there
 
-The path counts as defined only if the rule requires one same later source carrying:
+So the most likely Gate11AD result under the current source is:
 
-- one explicit blocker-resolution marker
-- one explicit `later_source_id` or `later_frozen_run_id`
-- one later source and only one later source
-- one explicit same-source completion status
-- one bounded read-prefix declaration for the marker
-- repeated bounded `residual_completion_surface` rows for the required same-source elements
-- one explicit residual completion marker
-- one explicit admissible later-source presence marker
-- one declaration marker
-- one candidate id
-- one class
-- one explicit host-failure sentence
-- matched status, registry, and read surfaces
+- `not_yet_present`
 
-Those additions must stay on the same later source and instantiate one explicit blocker-resolution marker without widening the line.
+## 6. Outcome Ladder
 
-### 5.3 Marker Boundary Remains Intact
+Gate11AD outcomes are limited to these four.
 
-The path counts as defined only if it forbids reliance on:
+### 6.1 Present
 
-- shortcut
-- inflation
-- retroactive rewrite
-- graph-wide leap
-- worker-side synthesis
+Use `present` if:
 
-## 6. Current Default
+- one explicit blocker-resolution marker is now instantiated under the fixed Gate11AC path
+- the marker is singular
+- the same-source path attachment is explicit
+- the blocker-resolution marker boundary remains intact
 
-Under the current frozen Gate11AB source, the honest default is:
+### 6.2 Not Yet Present
 
-- `one_explicit_blocker_resolution_marker_status = not_yet_present`
+Use `not_yet_present` if:
 
-So the most likely Gate11AC result under the current source is:
+- the fixed Gate11AC path remains preserved
+- but no explicit blocker-resolution marker is yet instantiated under that path
 
-- `path_defined` if the minimum same-source marker-instantiation rule can be fixed narrowly from the Gate11AB line
-- otherwise `not_yet_defined`
-
-## 7. Outcome Ladder
-
-Gate11AC outcomes are limited to these four.
-
-### 7.1 Path Defined
-
-Use `path_defined` if:
-
-- the minimum honest path by which one explicit blocker-resolution marker could later be instantiated is fixed narrowly enough for a later audit
-
-### 7.2 Not Yet Defined
-
-Use `not_yet_defined` if:
-
-- the current source still does not fix that marker-instantiation path narrowly enough
-
-### 7.3 Denied
+### 6.3 Denied
 
 Use `denied` if:
 
-- the proposed path depends on shortcut, inflation, retroactive rewrite, graph-wide leap, or worker-side synthesis
+- the attempted marker-instantiation read depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
-### 7.4 Deferred
+### 6.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks path definition
+- the frozen source evidence is incomplete or contradictory in a way that blocks marker-instantiation judgment
 
-## 8. Memory Hook
-
-The Gate11AC sentence is:
-
-- Gate11AC does not say the blocker is resolved; it asks what is the minimum honest path by which one explicit blocker-resolution marker could later be instantiated under the fixed Gate11AB line
+## 7. Memory Hook
 
 The shortest acceptable memory hook is:
 
-- `Gate11AC does not say the blocker is resolved; it asks what is the minimum honest path by which one explicit blocker-resolution marker could later be instantiated under the fixed Gate11AB line.`
+- `Gate11AD does not say the blocker is resolved; it asks only whether one explicit blocker-resolution marker now exists that instantiates the fixed Gate11AC path.`
