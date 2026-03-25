@@ -219,6 +219,14 @@ The twenty-fifth narrow Gate11Y residual marker-carrier completion blocker resol
 
 - `127_GATE11Y_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
 
+The first tracked Gate11Y residual marker-carrier completion blocker resolution path smoke read is now recorded in:
+
+- `128_GATE11Y_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
+
+The twenty-sixth narrow Gate11Z named residual marker-carrier completion blocker resolution audit slice is now tracked in:
+
+- `129_GATE11Z_NAMED_RESIDUAL_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -318,6 +326,7 @@ The target is therefore:
 - named residual marker-carrier completion audit twenty-third
 - residual marker-carrier completion blocker audit twenty-fourth
 - residual marker-carrier completion blocker resolution path audit twenty-fifth
+- named residual marker-carrier completion blocker resolution audit twenty-sixth
 - operator-reopening eligibility only after those narrower declaration gates are established
 
 Any positive Gate11 result may earn only:
