@@ -307,6 +307,14 @@ The thirty-sixth narrow Gate11AJ blocker-resolution marker carrier-completion bl
 
 - `149_GATE11AJ_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT.md`
 
+The first tracked Gate11AJ blocker-resolution marker carrier-completion blocker resolution smoke read is now recorded in:
+
+- `150_GATE11AJ_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The thirty-seventh narrow Gate11AK blocker-resolution marker carrier-completion blocker-resolution blocker audit slice is now tracked in:
+
+- `151_GATE11AK_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -629,6 +637,7 @@ That staged slice order may include:
 - blocker-resolution marker carrier-completion blocker audit
 - blocker-resolution marker carrier-completion blocker resolution path audit
 - blocker-resolution marker carrier-completion blocker resolution audit
+- blocker-resolution marker carrier-completion blocker-resolution blocker audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
