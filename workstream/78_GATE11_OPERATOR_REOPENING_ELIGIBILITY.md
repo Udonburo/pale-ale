@@ -569,6 +569,7 @@ That staged slice order may include:
 - one explicit blocker-resolution marker path-instantiation audit
 - explicit blocker-resolution marker carrier-completion audit
 - explicit blocker-resolution marker carrier-completion instantiation path audit
+- named blocker-resolution marker carrier-completion audit
 - and only later any reopening-eligibility read that proceeds from those preserved gates
 
 but those belong in narrow Gate11 slice specs rather than in this constitution.
