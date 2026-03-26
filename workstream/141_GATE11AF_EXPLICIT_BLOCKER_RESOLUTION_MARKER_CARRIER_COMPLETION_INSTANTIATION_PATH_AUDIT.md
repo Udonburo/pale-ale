@@ -1,10 +1,10 @@
-# Gate11AE Explicit Blocker-Resolution Marker Carrier-Completion Audit
+# Gate11AF Explicit Blocker-Resolution Marker Carrier-Completion Instantiation Path Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: explicit blocker-resolution marker carrier-completion audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: explicit blocker-resolution marker carrier-completion instantiation path audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
-Gate11AE proceeds from:
+Gate11AF proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -68,31 +68,23 @@ Gate11AE proceeds from:
 - `136_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 - `137_GATE11AD_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_PATH_INSTANTIATION_AUDIT.md`
 - `138_GATE11AD_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_PATH_INSTANTIATION_AUDIT_SMOKE.md`
+- `139_GATE11AE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT.md`
+- `140_GATE11AE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11AE implementation consumer now exists in:
-
-- `tools/run_gate11ae_explicit_blocker_resolution_marker_carrier_completion_audit.py`
-
-The first tracked Gate11AE explicit blocker-resolution marker carrier-completion smoke read is now recorded in:
-
-- `140_GATE11AE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
-
-The next narrow Gate11AF explicit blocker-resolution marker carrier-completion instantiation path audit slice is now tracked in:
-
-- `141_GATE11AF_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT.md`
+No Gate11AF consumer exists yet. This file is the frozen spec-only draft.
 
 ## 0. Scope
 
-Gate11AE is the thirty-first narrow Gate11 slice.
+Gate11AF is the thirty-second narrow Gate11 slice.
 
-Gate11AE does:
+Gate11AF does:
 
-- ask which explicit blocker-resolution marker carrier condition still blocks one marker from being actually present under the fixed Gate11AD line
+- ask what is the minimum honest path by which the named blocker-resolution marker carrier condition could later be completed under the fixed Gate11AE line
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -123,9 +115,10 @@ Gate11AE does:
 - preserve the Gate11AB `not_yet_present` result exactly as already recorded
 - preserve the Gate11AC `path_defined` result exactly as already recorded
 - preserve the Gate11AD `not_yet_present` result exactly as already recorded
-- name only the residual carrier condition that still blocks one explicit blocker-resolution marker from being actually present
+- preserve the Gate11AE `residual_named` result exactly as already recorded
+- define only the minimum same-source additions by which the named blocker-resolution marker carrier condition could later become honestly completed
 
-Gate11AE does not:
+Gate11AF does not:
 
 - judge blocker resolution
 - judge residual completion
@@ -139,45 +132,45 @@ Gate11AE does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, or Gate11AD memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, Gate11AD, or Gate11AE memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11AE consumes exactly this controlling source run:
+Gate11AF consumes exactly this controlling source run:
 
-- `runs/gate11ad_one_explicit_blocker_resolution_marker_path_instantiation_audit_smoke_from_gate11ac`
+- `runs/gate11ae_explicit_blocker_resolution_marker_carrier_completion_audit_smoke_from_gate11ad`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11AD source, the recorded upstream result is:
+Under the currently frozen Gate11AE source, the recorded upstream result is:
 
-- `gate11ac_path_defined_state_preservation_status = preserved`
-- `explicit_blocker_resolution_marker_status = absent`
-- `blocker_resolution_marker_singularity_status = none`
-- `same_source_marker_path_attachment_status = not_instantiated`
-- `blocker_resolution_marker_boundary_status = confirmed`
-- `one_explicit_blocker_resolution_marker_path_instantiation_status = not_yet_present`
+- `gate11ad_not_yet_present_state_preservation_status = preserved`
+- `explicit_marker_carrier_completion_status = missing`
+- `marker_singularity_carrier_completion_status = missing`
+- `same_source_path_attachment_carrier_completion_status = missing`
+- `carrier_completion_boundary_status = confirmed`
+- `explicit_blocker_resolution_marker_carrier_completion_status = residual_named`
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
-So Gate11AE must treat the current controlling source as:
+So Gate11AF must treat the current controlling source as:
 
-- a fixed blocker-resolution marker-instantiation-path source
-- but not a source where one explicit blocker-resolution marker is already present
+- a residual blocker-resolution marker carrier source
+- not a source where that named carrier condition is already completed
 
 The worker must not:
 
-- invent a marker
-- convert non-presence into presence
-- treat path prose as carrier completion
-- resolve residual ambiguity by worker-side synthesis
+- invent completion evidence
+- convert residual naming into completion
+- treat generic prose as carrier completion
+- resolve path gaps by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11AE question is:
+The Gate11AF question is:
 
-- `which explicit blocker-resolution marker carrier condition still blocks one marker from being actually present under the fixed Gate11AD line?`
+- `what is the minimum honest path by which the named blocker-resolution marker carrier condition could later be completed under the fixed Gate11AE line?`
 
 This is narrower than:
 
@@ -191,19 +184,19 @@ This is narrower than:
 
 It is only:
 
-- the residual carrier-completion gate for what still blocks one explicit blocker-resolution marker from being actually present
+- the paired path-definition gate for how the named blocker-resolution marker carrier condition could later be honestly completed
 
-## 3. Why Gate11AE Exists
+## 3. Why Gate11AF Exists
 
-Gate11AD earned:
+Gate11AE earned:
 
-- the fixed Gate11AC path remains preserved
-- the correct current result is `not_yet_present`
+- the blocker-resolution marker carrier condition is now named narrowly
+- the correct current result is `residual_named`
 - the next named blocker remains `no_explicit_blocker_resolution_marker`
 
 So the next honest move is not:
 
-- declare a marker present anyway
+- declare a blocker-resolution marker present anyway
 - judge the blocker resolved
 - judge the residual completed
 - admit a later source
@@ -211,62 +204,106 @@ So the next honest move is not:
 
 It is:
 
-- name which residual carrier condition still blocks one explicit blocker-resolution marker from being actually present
+- define the minimum honest path by which the named blocker-resolution marker carrier condition could later be completed
 
-## 4. Residual Carrier Discipline
+## 4. Path Discipline
 
-Gate11AE must name the residual carrier condition, not instantiate the marker.
+Gate11AF must define path conditions, not carrier completion itself.
 
-The residual counts as named only if all of the following remain explicit:
+The blocker-resolution marker carrier-completion path counts as defined only if all of the following are fixed:
 
-- one explicit blocker-resolution marker is still absent
-- one single marker is still absent
-- one same-source path attachment is still absent
-- the blocker-resolution marker boundary remains intact
+- the Gate11AE `residual_named` line remains explicitly preserved
+- the minimum same-source additions required to complete that named carrier condition are fixed explicitly
+- the carrier-completion boundary remains intact
 
-If those conditions are not named explicitly, Gate11AE must not promote the line into residual naming.
+If those conditions are not fixed, Gate11AF must not promote the line into blocker-resolution marker carrier-completion path definition.
 
-## 5. Current Default
+## 5. Required Path Conditions
 
-Under the current frozen Gate11AD source, the honest default is:
+### 5.1 Gate11AE Residual-Named Line Is Preserved
 
-- `one_explicit_blocker_resolution_marker_path_instantiation_status = not_yet_present`
+The path counts as defined only if the controlling source preserves explicitly that the named blocker-resolution marker carrier condition remains:
+
+- no explicit blocker-resolution marker
+- no single blocker-resolution marker and only one blocker-resolution marker
+- no same-source path attachment under the fixed Gate11AD line
+
+### 5.2 Minimum Same-Source Carrier-Completion Rule Is Fixed
+
+The path counts as defined only if the rule requires one same later source carrying:
+
+- one explicit blocker-resolution marker
+- one explicit `later_source_id` or `later_frozen_run_id`
+- one blocker-resolution marker and only one blocker-resolution marker
+- one explicit same-source path-attachment status marked completed
+- one bounded read-prefix declaration for the blocker-resolution marker
+- repeated bounded `residual_completion_surface` rows for the required same-source elements
+- one explicit residual completion marker
+- one explicit admissible later-source presence marker
+- one declaration marker
+- one candidate id
+- one class
+- one explicit host-failure sentence
+- matched status, registry, and read surfaces
+
+Those additions must stay on the same later source and complete the named blocker-resolution marker carrier condition without widening the line.
+
+### 5.3 Carrier-Completion Boundary Remains Intact
+
+The path counts as defined only if it forbids reliance on:
+
+- shortcut
+- inflation
+- retroactive rewrite
+- graph-wide leap
+- worker-side synthesis
+
+## 6. Current Default
+
+Under the current frozen Gate11AE source, the honest default is:
+
+- `explicit_blocker_resolution_marker_carrier_completion_status = residual_named`
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
-So the most likely Gate11AE result under the current source is:
+So the most likely Gate11AF result under the current source is:
 
-- `residual_named`
+- `path_defined` if the minimum blocker-resolution marker carrier-completion rule can be fixed narrowly from the Gate11AE line
+- otherwise `not_yet_defined`
 
-## 6. Outcome Ladder
+Gate11AF must not convert Gate11AE residual naming into actual carrier completion.
 
-Gate11AE outcomes are limited to these four.
+## 7. Outcome Ladder
 
-### 6.1 Residual Named
+Gate11AF outcomes are limited to these four.
 
-Use `residual_named` if:
+### 7.1 Path Defined
 
-- the missing explicit blocker-resolution marker carrier condition is now named narrowly enough for a later paired path slice
+Use `path_defined` if:
 
-### 6.2 Not Yet Named
+- the Gate11AE `residual_named` line remains preserved
+- the minimum same-source blocker-resolution marker carrier-completion rule is fixed
+- the carrier-completion boundary remains intact
 
-Use `not_yet_named` if:
+### 7.2 Not Yet Defined
 
-- the current source still does not name the missing carrier condition narrowly enough
+Use `not_yet_defined` if:
 
-### 6.3 Denied
+- the path cannot yet be fixed narrowly from the frozen Gate11AE line
+
+### 7.3 Denied
 
 Use `denied` if:
 
-- the proposed residual depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the proposed path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
-### 6.4 Deferred
+### 7.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks residual naming
+- the frozen source evidence is incomplete or contradictory in a way that blocks narrow path definition
 
-## 7. Memory Hook
+## 8. Memory Hook
 
 The shortest acceptable memory hook is:
 
-- `Gate11AE does not say a blocker-resolution marker exists; it asks which explicit blocker-resolution marker carrier condition still blocks one marker from being actually present under the fixed Gate11AD line.`
+- `Gate11AF does not say the blocker-resolution marker carrier condition is completed; it fixes only the minimum honest path by which the named blocker-resolution marker carrier condition could later be completed under the fixed Gate11AE line.`
