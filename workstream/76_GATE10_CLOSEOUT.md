@@ -15,7 +15,6 @@ The repo-level Gate6-Gate10 overview is now tracked in:
 The next narrow chapter is now tracked in:
 
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
-
 The Gate10 settlement court is recorded in:
 
 - `63_GATE10_TRUSTED_TREE_SETTLEMENT_COURT.md`
