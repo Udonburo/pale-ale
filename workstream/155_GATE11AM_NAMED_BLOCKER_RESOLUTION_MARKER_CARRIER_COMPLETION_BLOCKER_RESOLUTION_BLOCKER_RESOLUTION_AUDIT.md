@@ -1,10 +1,10 @@
-# Gate11AL Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker Resolution Path Audit
+# Gate11AM Named Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker Resolution Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: blocker-resolution marker carrier-completion blocker-resolution blocker resolution path audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: named blocker-resolution marker carrier-completion blocker-resolution blocker resolution audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-27
 
-Gate11AL proceeds from:
+Gate11AM proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -82,35 +82,21 @@ Gate11AL proceeds from:
 - `150_GATE11AJ_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
 - `151_GATE11AK_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
 - `152_GATE11AK_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+- `153_GATE11AL_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+- `154_GATE11AL_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-Consumer implementation:
-
-- `tools/run_gate11al_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_path_audit.py`
-
-Regression coverage:
-
-- `tools/test_run_gate11al_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_path_audit.py`
-
-The first tracked Gate11AL smoke handoff is now recorded in:
-
-- `154_GATE11AL_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
-
-The next narrow Gate11AM named blocker-resolution marker carrier-completion blocker-resolution blocker resolution audit slice is now tracked in:
-
-- `155_GATE11AM_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
-
 ## 0. Scope
 
-Gate11AL is the thirty-eighth narrow Gate11 slice.
+Gate11AM is the thirty-ninth narrow Gate11 slice.
 
-Gate11AL does:
+Gate11AM does:
 
-- ask what is the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker could later be resolved under the fixed Gate11AK line
+- ask whether the named blocker-resolution marker carrier-completion blocker-resolution blocker now actually counts as resolved under the fixed Gate11AL path
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -147,13 +133,14 @@ Gate11AL does:
 - preserve the Gate11AH `blocker_named` result exactly as already recorded
 - preserve the Gate11AI `path_defined` result exactly as already recorded
 - preserve the Gate11AJ `not_yet_resolved` result exactly as already recorded
-- define only the minimum same-source additions by which the named blocker-resolution marker carrier-completion blocker-resolution blocker could later become honestly resolved
+- preserve the Gate11AK `blocker_named` result exactly as already recorded
+- decide only whether the named blocker-resolution marker carrier-completion blocker-resolution blocker is now actually resolved under the fixed Gate11AL path
 
-Gate11AL does not:
+Gate11AM does not:
 
-- judge blocker-resolution marker carrier-completion judgment
-- judge blocker-resolution judgment
-- judge residual completion
+- leap to blocker-resolution marker carrier-completion judgment beyond the fixed Gate11AL path
+- leap to blocker-resolution judgment beyond the fixed Gate11AL path
+- leap to residual completion judgment beyond the fixed Gate11AL path
 - admit a later source
 - decide one-admissible-later-source explicit-presence judgment
 - declare a bounded-line insufficiency candidate
@@ -164,51 +151,51 @@ Gate11AL does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, Gate11AD, Gate11AE, Gate11AF, Gate11AG, Gate11AH, Gate11AI, Gate11AJ, or Gate11AK memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, Gate11AD, Gate11AE, Gate11AF, Gate11AG, Gate11AH, Gate11AI, Gate11AJ, Gate11AK, or Gate11AL memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11AL consumes exactly this controlling source run:
+Gate11AM consumes exactly this controlling source run:
 
-- `runs/gate11ak_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_audit_smoke_from_gate11aj`
+- `runs/gate11al_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_path_audit_smoke_from_gate11ak`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11AK source, the recorded upstream result is:
+Under the currently frozen Gate11AL source, the recorded upstream result is:
 
-- `gate11aj_not_yet_resolved_state_preservation_status = preserved`
-- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_condition_preservation_status = preserved`
-- `explicit_blocker_resolution_marker_blocker_status = named`
-- `same_source_blocker_resolution_blocker_status = named`
-- `blocker_resolution_blocker_boundary_status = confirmed`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_status = blocker_named`
-- `next_named_blocker = no_explicit_blocker_resolution_marker`
+- `gate11ak_blocker_named_state_preservation_status = preserved`
+- `named_blocker_preservation_status = preserved`
+- `minimum_same_source_blocker_resolution_rule_status = defined`
+- `bounded_read_prefix_resolution_requirement_status = defined`
+- `blocker_resolution_boundary_status = confirmed`
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_path_status = path_defined`
+- `next_named_blocker = `
 
-So Gate11AL must treat the current controlling source as:
+So Gate11AM must treat the current controlling source as:
 
-- a blocker-named source
-- not a source where that blocker is already resolved
+- a fixed blocker-resolution path source
+- not a source where that named blocker is already resolved
 
 The worker must not:
 
 - invent resolution evidence
-- convert blocker naming into resolution
+- convert path definition into blocker resolution
 - treat generic prose as blocker resolution
-- resolve path gaps by worker-side synthesis
+- resolve ambiguity by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11AL question is:
+The Gate11AM question is:
 
-- `what is the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker could later be resolved under the fixed Gate11AK line?`
+- `does the named blocker-resolution marker carrier-completion blocker-resolution blocker now actually count as resolved under the fixed Gate11AL path or not?`
 
 This is narrower than:
 
-- blocker-resolution marker carrier-completion judgment
-- blocker-resolution judgment
-- residual completion judgment
+- blocker-resolution marker carrier-completion judgment beyond the fixed Gate11AL path
+- blocker-resolution judgment beyond the fixed Gate11AL path
+- residual completion judgment beyond the fixed Gate11AL path
 - later-source admission
 - one-admissible-later-source explicit-presence judgment
 - candidate declaration itself
@@ -217,54 +204,34 @@ This is narrower than:
 
 It is only:
 
-- the paired path-definition gate for how the named blocker-resolution marker carrier-completion blocker-resolution blocker could later be honestly resolved
+- the paired existence/resolution gate for whether the fixed Gate11AL path is now actually resolved
 
-## 3. Why Gate11AL Exists
+## 3. Why Gate11AM Exists
 
-Gate11AK earned:
+Gate11AL earned:
 
-- the blocker-resolution marker carrier-completion blocker-resolution blocker is now named narrowly
-- the correct current result is `blocker_named`
-- the next named blocker remains `no_explicit_blocker_resolution_marker`
+- the named blocker remains preserved
+- the minimum same-source blocker-resolution path is now fixed narrowly
+- the correct current result is `path_defined`
 
 So the next honest move is not:
 
-- declare the blocker resolved anyway
+- declare the blocker resolved from path prose alone
 - admit a later source
 - declare reopening eligible
 
 It is:
 
-- define the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker could later be resolved
+- ask whether the named blocker-resolution marker carrier-completion blocker-resolution blocker now actually counts as resolved under the fixed Gate11AL path
 
-## 4. Path Discipline
+## 4. Resolution Discipline
 
-Gate11AL must define path conditions, not blocker resolution itself.
+Gate11AM must judge blocker resolution only from bounded same-source resolution evidence.
 
-The blocker-resolution path counts as defined only if all of the following are fixed:
-
-- the Gate11AK `blocker_named` line remains explicitly preserved
-- the minimum same-source additions required to resolve that named blocker are fixed explicitly
-- the blocker-resolution boundary remains intact
-
-If those conditions are not fixed, Gate11AL must not promote the line into blocker-resolution path definition.
-
-## 5. Required Path Conditions
-
-### 5.1 Named Blocker Is Preserved
-
-The path counts as defined only if the controlling source preserves explicitly that the named blocker remains:
-
-- no explicit blocker-resolution marker
-- no same-source blocker resolution
-- no blocker-resolution marker carrier-completion blocker resolution under the fixed Gate11AJ line
-
-### 5.2 Minimum Same-Source Blocker-Resolution Rule Is Fixed
-
-The path counts as defined only if the rule requires one same later source carrying:
+The named blocker-resolution marker carrier-completion blocker-resolution blocker counts as resolved only if all of the following are explicit on the same later source:
 
 - one explicit blocker-resolution marker
-- one explicit `later_source_id` or `later_frozen_run_id`
+- one explicit later-source identifier
 - one blocker-resolution marker and only one blocker-resolution marker
 - one explicit same-source blocker-resolution status marked resolved
 - one bounded read-prefix declaration for the blocker-resolution marker
@@ -276,66 +243,54 @@ The path counts as defined only if the rule requires one same later source carry
 - one class
 - one explicit host-failure sentence
 - matched status, registry, and read surfaces
-
-Those additions must stay on the same later source and resolve the named blocker without widening the line.
-
-### 5.3 Blocker-Resolution Boundary Remains Intact
-
-The path counts as defined only if it forbids reliance on:
-
-- shortcut
-- inflation
-- retroactive rewrite
-- graph-wide leap
-- worker-side synthesis
-
-## 6. Current Default
-
-Under the current frozen Gate11AK source, the honest default is:
-
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_status = blocker_named`
-- `next_named_blocker = no_explicit_blocker_resolution_marker`
-
-So the most likely Gate11AL result under the current source is:
-
-- `path_defined` if the minimum blocker-resolution rule can be fixed narrowly from the Gate11AK line
-- otherwise `not_yet_defined`
-
-Gate11AL must not convert Gate11AK blocker naming into actual blocker resolution.
-
-## 7. Outcome Ladder
-
-Gate11AL outcomes are limited to these four.
-
-### 7.1 Path Defined
-
-Use `path_defined` if:
-
-- the Gate11AK `blocker_named` line remains preserved
-- the minimum same-source blocker-resolution rule is fixed narrowly enough for a later audit
 - the blocker-resolution boundary remains intact
 
-### 7.2 Not Yet Defined
+Path prose, hypothetical examples, and worker-side synthesis do not count as blocker resolution.
 
-Use `not_yet_defined` if:
+## 5. Current Default
 
-- the current source still does not define the blocker-resolution path narrowly enough
+Under the current frozen Gate11AL source, the honest default is:
 
-### 7.3 Denied
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_path_status = path_defined`
+
+So the most likely Gate11AM result under the current source is:
+
+- `not_yet_resolved`
+
+Gate11AM must not convert Gate11AL path definition into actual blocker resolution.
+
+## 6. Outcome Ladder
+
+Gate11AM outcomes are limited to these four.
+
+### 6.1 Resolved
+
+Use `resolved` if:
+
+- the named blocker-resolution marker carrier-completion blocker-resolution blocker is resolved explicitly under the fixed Gate11AL path
+
+### 6.2 Not Yet Resolved
+
+Use `not_yet_resolved` if:
+
+- the fixed Gate11AL path remains preserved
+- but explicit same-source resolution evidence is still absent
+
+### 6.3 Denied
 
 Use `denied` if:
 
-- the proposed path depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the proposed resolution depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
-### 7.4 Deferred
+### 6.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks path definition
+- the frozen source evidence is incomplete or contradictory in a way that blocks honest resolution judgment
 
-## 8. Memory Hook
+## 7. Memory Hook
 
-Gate11AL is not a reopening chapter.
+Gate11AM is not a reopening chapter.
 
 It is not:
 
@@ -350,8 +305,8 @@ It is not:
 
 It is:
 
-- the paired path-definition gate for what minimum honest path could later resolve the named blocker-resolution marker carrier-completion blocker-resolution blocker under the fixed Gate11AK line
+- the narrow Gate11 court for whether the named blocker-resolution marker carrier-completion blocker-resolution blocker now actually counts as resolved under the fixed Gate11AL path
 
 The memory sentence to preserve is:
 
-- `Gate11AL does not say the blocker is resolved; it asks what is the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker could later be resolved under the fixed Gate11AK line.`
+- `Gate11AM does not widen the line beyond the fixed Gate11AL path; it asks whether the named blocker-resolution marker carrier-completion blocker-resolution blocker now actually counts as resolved under that path.`
