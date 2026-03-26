@@ -251,6 +251,50 @@ The twenty-ninth narrow Gate11AC explicit blocker-resolution marker instantiatio
 
 - `135_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT.md`
 
+The first tracked Gate11AC explicit blocker-resolution marker instantiation path smoke read is now recorded in:
+
+- `136_GATE11AC_EXPLICIT_BLOCKER_RESOLUTION_MARKER_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The thirtieth narrow Gate11AD one explicit blocker-resolution marker path-instantiation audit slice is now tracked in:
+
+- `137_GATE11AD_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_PATH_INSTANTIATION_AUDIT.md`
+
+The first tracked Gate11AD one explicit blocker-resolution marker path-instantiation smoke read is now recorded in:
+
+- `138_GATE11AD_ONE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_PATH_INSTANTIATION_AUDIT_SMOKE.md`
+
+The thirty-first narrow Gate11AE explicit blocker-resolution marker carrier-completion audit slice is now tracked in:
+
+- `139_GATE11AE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT.md`
+
+The first tracked Gate11AE explicit blocker-resolution marker carrier-completion smoke read is now recorded in:
+
+- `140_GATE11AE_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+
+The thirty-second narrow Gate11AF explicit blocker-resolution marker carrier-completion instantiation path audit slice is now tracked in:
+
+- `141_GATE11AF_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT.md`
+
+The first tracked Gate11AF explicit blocker-resolution marker carrier-completion instantiation path smoke read is now recorded in:
+
+- `142_GATE11AF_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
+
+The thirty-third narrow Gate11AG named blocker-resolution marker carrier-completion audit slice is now tracked in:
+
+- `143_GATE11AG_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT.md`
+
+The first tracked Gate11AG named blocker-resolution marker carrier-completion smoke read is now recorded in:
+
+- `144_GATE11AG_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+
+The thirty-fourth narrow Gate11AH blocker-resolution marker carrier-completion blocker audit slice is now tracked in:
+
+- `145_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT.md`
+
+The first tracked Gate11AH blocker-resolution marker carrier-completion blocker smoke read is now recorded in:
+
+- `146_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
+
 ## 0. Scope
 
 Gate11 is not an operator chapter.

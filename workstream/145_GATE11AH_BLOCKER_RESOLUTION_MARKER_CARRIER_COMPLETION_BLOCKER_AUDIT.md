@@ -1,6 +1,6 @@
 # Gate11AH Blocker-Resolution Marker Carrier-Completion Blocker Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: blocker-resolution marker carrier-completion blocker audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
@@ -80,7 +80,14 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-No Gate11AH consumer exists yet. This file is the frozen spec-only draft.
+The first Gate11AH implementation consumer now exists in:
+
+- `tools/run_gate11ah_blocker_resolution_marker_carrier_completion_blocker_audit.py`
+- `tools/test_run_gate11ah_blocker_resolution_marker_carrier_completion_blocker_audit.py`
+
+The first tracked Gate11AH smoke handoff is now recorded in:
+
+- `146_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
 
 ## 0. Scope
 
