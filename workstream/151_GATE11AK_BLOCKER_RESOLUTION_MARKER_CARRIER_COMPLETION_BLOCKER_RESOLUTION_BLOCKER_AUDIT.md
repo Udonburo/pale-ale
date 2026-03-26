@@ -1,6 +1,6 @@
 # Gate11AK Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker Audit
 
-Status: spec-only draft
+Status: first implementation landed and first smoke execution recorded
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
@@ -86,6 +86,22 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
+Consumer implementation:
+
+- `tools/run_gate11ak_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_audit.py`
+
+Regression coverage:
+
+- `tools/test_run_gate11ak_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_audit.py`
+
+The first tracked Gate11AK smoke handoff is now recorded in:
+
+- `152_GATE11AK_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+The next narrow Gate11AL blocker-resolution marker carrier-completion blocker-resolution blocker resolution path audit slice is now tracked in:
+
+- `153_GATE11AL_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+
 ## 0. Scope
 
 Gate11AK is the thirty-seventh narrow Gate11 slice.
@@ -151,21 +167,25 @@ Gate11AK does not:
 
 ## 1. Controlling Source Run
 
-Gate11AK is defined against the first tracked Gate11AJ smoke handoff:
+Gate11AK consumes exactly this controlling source run:
 
 - `runs/gate11aj_named_blocker_resolution_marker_carrier_completion_blocker_resolution_audit_smoke_from_gate11ai`
 
-If Gate11AJ preserves the current fixed Gate11AI path without explicit same-source resolution evidence, the carried line into Gate11AK is expected to remain:
+No additional source run is in scope.
+
+Under the currently frozen Gate11AJ source, the recorded upstream result is:
 
 - `gate11ai_path_defined_state_preservation_status = preserved`
 - `named_blocker_preservation_status = preserved`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_path_status = path_defined`
 - `named_blocker_resolution_marker_carrier_completion_blocker_resolution_status = not_yet_resolved`
+- `explicit_blocker_resolution_marker_status = absent`
+- `same_source_blocker_resolution_status = not_resolved`
+- `blocker_resolution_boundary_status = confirmed`
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
-So Gate11AK should treat the expected controlling source as:
+So Gate11AK must treat the current controlling source as:
 
-- a fixed blocker-resolution path source
+- a fixed blocker-resolution source
 - not a source where that named blocker is already resolved
 
 The worker must not:
@@ -198,11 +218,15 @@ It is only:
 
 ## 3. Why Gate11AK Exists
 
-Gate11AJ is expected to ask:
+Gate11AJ earned:
 
 - whether the named blocker-resolution marker carrier-completion blocker now actually counts as resolved under the fixed Gate11AI path
 
-If the honest default remains `not_yet_resolved`, the next honest move is not:
+and the honest current result is:
+
+- `not_yet_resolved`
+
+So the next honest move is not:
 
 - declare the blocker resolved anyway
 - admit a later source
