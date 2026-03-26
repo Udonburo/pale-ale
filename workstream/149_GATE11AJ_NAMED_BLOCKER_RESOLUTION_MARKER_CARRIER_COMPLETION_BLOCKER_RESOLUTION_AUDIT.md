@@ -1,6 +1,6 @@
 # Gate11AJ Named Blocker-Resolution Marker Carrier-Completion Blocker Resolution Audit
 
-Status: spec-only draft
+Status: in-worktree implementation landed and smoke snapshot recorded
 Role: named blocker-resolution marker carrier-completion blocker resolution audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
@@ -83,6 +83,22 @@ The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
+
+Consumer implementation:
+
+- `tools/run_gate11aj_named_blocker_resolution_marker_carrier_completion_blocker_resolution_audit.py`
+
+Regression coverage:
+
+- `tools/test_run_gate11aj_named_blocker_resolution_marker_carrier_completion_blocker_resolution_audit.py`
+
+The first tracked Gate11AJ smoke handoff is now recorded in:
+
+- `150_GATE11AJ_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The next narrow Gate11AK blocker-resolution marker carrier-completion blocker-resolution blocker audit slice is now tracked in:
+
+- `151_GATE11AK_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
 
 ## 0. Scope
 
