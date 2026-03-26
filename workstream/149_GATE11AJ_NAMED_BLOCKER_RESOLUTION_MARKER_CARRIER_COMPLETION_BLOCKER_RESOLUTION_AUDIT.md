@@ -1,10 +1,10 @@
-# Gate11AH Blocker-Resolution Marker Carrier-Completion Blocker Audit
+# Gate11AJ Named Blocker-Resolution Marker Carrier-Completion Blocker Resolution Audit
 
-Status: first implementation landed and first smoke execution recorded
-Role: blocker-resolution marker carrier-completion blocker audit, not blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: named blocker-resolution marker carrier-completion blocker resolution audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-26
 
-Gate11AH proceeds from:
+Gate11AJ proceeds from:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
@@ -74,32 +74,23 @@ Gate11AH proceeds from:
 - `142_GATE11AF_EXPLICIT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_INSTANTIATION_PATH_AUDIT_SMOKE.md`
 - `143_GATE11AG_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT.md`
 - `144_GATE11AG_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_AUDIT_SMOKE.md`
+- `145_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT.md`
+- `146_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
+- `147_GATE11AI_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+- `148_GATE11AI_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-The first Gate11AH implementation consumer now exists in:
-
-- `tools/run_gate11ah_blocker_resolution_marker_carrier_completion_blocker_audit.py`
-- `tools/test_run_gate11ah_blocker_resolution_marker_carrier_completion_blocker_audit.py`
-
-The first tracked Gate11AH smoke handoff is now recorded in:
-
-- `146_GATE11AH_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_AUDIT_SMOKE.md`
-
-The next narrow Gate11AI blocker-resolution marker carrier-completion blocker resolution path audit slice is now tracked in:
-
-- `147_GATE11AI_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
-
 ## 0. Scope
 
-Gate11AH is the thirty-fourth narrow Gate11 slice.
+Gate11AJ is the thirty-sixth narrow Gate11 slice.
 
-Gate11AH does:
+Gate11AJ does:
 
-- ask which blocker-resolution marker carrier-completion blocker still blocks completion under the fixed Gate11AG line
+- ask whether the named blocker-resolution marker carrier-completion blocker now actually counts as resolved under the fixed Gate11AI path
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -133,13 +124,14 @@ Gate11AH does:
 - preserve the Gate11AE `residual_named` result exactly as already recorded
 - preserve the Gate11AF `path_defined` result exactly as already recorded
 - preserve the Gate11AG `not_yet_completed` result exactly as already recorded
-- name only the blocker-resolution marker carrier-completion blocker that still blocks completion
+- preserve the Gate11AH `blocker_named` result exactly as already recorded
+- decide only whether the named blocker-resolution marker carrier-completion blocker is now actually resolved under the fixed Gate11AI path
 
-Gate11AH does not:
+Gate11AJ does not:
 
-- judge blocker-resolution marker carrier completion beyond naming the blocker
-- judge blocker resolution
-- judge residual completion
+- leap to blocker-resolution marker carrier-completion judgment beyond the fixed Gate11AI path
+- leap to blocker-resolution judgment beyond the fixed Gate11AI path
+- leap to residual completion judgment beyond the fixed Gate11AI path
 - admit a later source
 - decide one-admissible-later-source explicit-presence judgment
 - declare a bounded-line insufficiency candidate
@@ -150,52 +142,51 @@ Gate11AH does not:
 - redesign prior paths
 - declare graph-wide operator behavior earned
 - settle broader trusted-tree settlement
-- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, Gate11AD, Gate11AE, Gate11AF, or Gate11AG memory
+- retroactively reinterpret Gate9, Gate10, Gate11A, Gate11B, Gate11C, Gate11D, Gate11E, Gate11F, Gate11G, Gate11H, Gate11I, Gate11J, Gate11K, Gate11L, Gate11M, Gate11N, Gate11O, Gate11P, Gate11Q, Gate11R, Gate11S, Gate11T, Gate11U, Gate11V, Gate11W, Gate11X, Gate11Y, Gate11Z, Gate11AA, Gate11AB, Gate11AC, Gate11AD, Gate11AE, Gate11AF, Gate11AG, Gate11AH, or Gate11AI memory
 - mine the repo outside the controlling source run
 - choose a later source worker-side
 
 ## 1. Controlling Source Run
 
-Gate11AH consumes exactly this controlling source run:
+Gate11AJ consumes exactly this controlling source run:
 
-- `runs/gate11ag_named_blocker_resolution_marker_carrier_completion_audit_smoke_from_gate11af`
+- `runs/gate11ai_blocker_resolution_marker_carrier_completion_blocker_resolution_path_audit_smoke_from_gate11ah`
 
 No additional source run is in scope.
 
-Under the currently frozen Gate11AG source, the recorded upstream result is:
+Under the currently frozen Gate11AI source, the recorded upstream result is:
 
-- `gate11af_path_defined_state_preservation_status = preserved`
-- `named_blocker_resolution_marker_carrier_condition_preservation_status = preserved`
-- `explicit_blocker_resolution_marker_status = absent`
-- `blocker_resolution_marker_singularity_status = none`
-- `same_source_carrier_completion_status = not_completed`
-- `carrier_completion_boundary_status = confirmed`
-- `named_blocker_resolution_marker_carrier_completion_status = not_yet_completed`
-- `next_named_blocker = no_explicit_blocker_resolution_marker`
+- `gate11ah_blocker_named_state_preservation_status = preserved`
+- `named_blocker_preservation_status = preserved`
+- `minimum_same_source_blocker_resolution_rule_status = defined`
+- `bounded_read_prefix_resolution_requirement_status = defined`
+- `blocker_resolution_boundary_status = confirmed`
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_path_status = path_defined`
+- `next_named_blocker = `
 
-So Gate11AH must treat the current controlling source as:
+So Gate11AJ must treat the current controlling source as:
 
-- a fixed blocker-resolution marker carrier-completion source
-- not a source where that named carrier condition is already completed
+- a fixed blocker-resolution path source
+- not a source where that named blocker is already resolved
 
 The worker must not:
 
-- invent completion evidence
-- convert non-completion into completion
-- treat path prose as blocker resolution
-- resolve blocker ambiguity by worker-side synthesis
+- invent resolution evidence
+- convert path definition into blocker resolution
+- treat generic prose as blocker resolution
+- resolve ambiguity by worker-side synthesis
 
 ## 2. Public Question
 
-The Gate11AH question is:
+The Gate11AJ question is:
 
-- `which blocker-resolution marker carrier-completion blocker still blocks completion under the fixed Gate11AG line?`
+- `does the named blocker-resolution marker carrier-completion blocker now actually count as resolved under the fixed Gate11AI path or not?`
 
 This is narrower than:
 
-- blocker-resolution marker carrier-completion judgment
-- blocker-resolution judgment
-- residual completion judgment
+- blocker-resolution marker carrier-completion judgment beyond the fixed Gate11AI path
+- blocker-resolution judgment beyond the fixed Gate11AI path
+- residual completion judgment beyond the fixed Gate11AI path
 - later-source admission
 - one-admissible-later-source explicit-presence judgment
 - candidate declaration itself
@@ -204,85 +195,109 @@ This is narrower than:
 
 It is only:
 
-- the residual follow-up gate for naming what still blocks completion under the fixed Gate11AG line
+- the paired existence/resolution gate for whether the fixed Gate11AI path is now actually resolved
 
-## 3. Why Gate11AH Exists
+## 3. Why Gate11AJ Exists
 
-Gate11AG earned:
+Gate11AI earned:
 
-- the fixed Gate11AF path remains preserved
-- the correct current result is `not_yet_completed`
-- the next named blocker remains `no_explicit_blocker_resolution_marker`
+- the named blocker remains preserved
+- the minimum same-source blocker-resolution path is now fixed narrowly
+- the correct current result is `path_defined`
 
 So the next honest move is not:
 
-- declare the named carrier condition completed anyway
+- declare the blocker resolved from path prose alone
 - admit a later source
 - declare reopening eligible
 
 It is:
 
-- name the blocker-resolution marker carrier-completion blocker that still blocks completion under the fixed Gate11AG line
+- ask whether the named blocker-resolution marker carrier-completion blocker now actually counts as resolved under the fixed Gate11AI path
 
-## 4. Blocker Discipline
+## 4. Resolution Discipline
 
-Gate11AH must name the blocker, not resolve it.
+Gate11AJ must judge blocker resolution only from bounded same-source resolution evidence.
 
-The blocker counts as named only if all of the following remain explicit:
+The named blocker-resolution marker carrier-completion blocker counts as resolved only if all of the following are explicit on the same later source:
 
-- the named blocker-resolution marker carrier condition remains preserved
-- one explicit blocker-resolution marker is still absent
-- same-source carrier completion is still not completed
-- the carrier-completion boundary remains intact
+- one explicit blocker-resolution marker
+- one explicit later-source identifier
+- one blocker-resolution marker and only one blocker-resolution marker
+- one explicit same-source carrier-completion status marked completed
+- one bounded read-prefix declaration for the blocker-resolution marker
+- repeated bounded `residual_completion_surface` rows for the required same-source elements
+- one explicit residual completion marker
+- one explicit admissible later-source presence marker
+- one declaration marker
+- one candidate id
+- one class
+- one explicit host-failure sentence
+- matched status, registry, and read surfaces
+- the blocker-resolution boundary remains intact
 
-If those conditions are not named explicitly, Gate11AH must not promote the line into blocker naming.
+Path prose, hypothetical examples, and worker-side synthesis do not count as blocker resolution.
 
 ## 5. Current Default
 
-Under the current frozen Gate11AG source, the honest default is:
+Under the current frozen Gate11AI source, the honest default is:
 
-- `named_blocker_resolution_marker_carrier_completion_status = not_yet_completed`
-- `next_named_blocker = no_explicit_blocker_resolution_marker`
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_path_status = path_defined`
 
-So the most likely Gate11AH result under the current source is:
+So the most likely Gate11AJ result under the current source is:
 
-- `blocker_named`
+- `not_yet_resolved`
+
+Gate11AJ must not convert Gate11AI path definition into actual blocker resolution.
 
 ## 6. Outcome Ladder
 
-Gate11AH outcomes are limited to these four.
+Gate11AJ outcomes are limited to these four.
 
-### 6.1 Blocker Named
+### 6.1 Resolved
 
-Use `blocker_named` if:
+Use `resolved` if:
 
-- the blocker-resolution marker carrier-completion blocker is now named narrowly enough for a later paired path slice
+- the named blocker-resolution marker carrier-completion blocker is resolved explicitly under the fixed Gate11AI path
 
-### 6.2 Not Yet Named
+### 6.2 Not Yet Resolved
 
-Use `not_yet_named` if:
+Use `not_yet_resolved` if:
 
-- the current source still does not name the blocker narrowly enough
+- the fixed Gate11AI path remains preserved
+- but explicit same-source resolution evidence is still absent
 
 ### 6.3 Denied
 
 Use `denied` if:
 
-- the proposed blocker depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
+- the proposed resolution depends on shortcut, inflation, rewrite, graph-wide leap, or worker-side synthesis
 
 ### 6.4 Deferred
 
 Use `deferred` if:
 
-- the frozen source evidence is incomplete or contradictory in a way that blocks blocker naming
+- the frozen source evidence is incomplete or contradictory in a way that blocks honest resolution judgment
 
 ## 7. Memory Hook
 
-The Gate11AH sentence is:
+Gate11AJ is not a reopening chapter.
 
-- Gate11AH does not say the named carrier condition is completed
-- it asks which blocker-resolution marker carrier-completion blocker still blocks completion under the fixed Gate11AG line
+It is not:
 
-The shortest acceptable memory hook is:
+- blocker-resolution marker carrier-completion judgment
+- blocker-resolution judgment
+- residual completion judgment
+- later-source admission
+- explicit-presence judgment
+- candidate declaration
+- reopening-eligibility judgment
+- operator reopening
 
-- `Gate11AH does not say the named carrier condition is completed; it asks which blocker-resolution marker carrier-completion blocker still blocks completion under the fixed Gate11AG line.`
+It is:
+
+- the narrow Gate11 court for whether the named blocker-resolution marker carrier-completion blocker now actually counts as resolved under the fixed Gate11AI path
+
+The memory sentence to preserve is:
+
+- `Gate11AJ does not widen the line beyond the fixed Gate11AI path; it asks whether the named blocker-resolution marker carrier-completion blocker now actually counts as resolved under that path.`

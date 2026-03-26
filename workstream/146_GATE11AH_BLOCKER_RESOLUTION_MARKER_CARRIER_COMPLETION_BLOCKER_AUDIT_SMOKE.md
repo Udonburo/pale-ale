@@ -228,4 +228,10 @@ The next honest move is not:
 - reopening-eligibility promotion
 - operator reopening
 
-No next narrow Gate11 slice is tracked yet.
+The next honest move is:
+
+- define the minimum honest path by which the named blocker-resolution marker carrier-completion blocker could later be resolved under the fixed Gate11AH line
+
+That next narrow slice is now tracked in:
+
+- `147_GATE11AI_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT.md`

@@ -91,6 +91,10 @@ The first tracked Gate11AI smoke handoff is now recorded in:
 
 - `148_GATE11AI_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
 
+The next narrow Gate11AJ blocker-resolution marker carrier-completion blocker resolution audit slice is now tracked in:
+
+- `149_GATE11AJ_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_AUDIT.md`
+
 ## 0. Scope
 
 Gate11AI is the thirty-fifth narrow Gate11 slice.
