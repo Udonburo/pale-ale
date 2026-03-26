@@ -362,7 +362,6 @@ The first tracked Gate11AP named blocker-resolution marker carrier-completion bl
 The forty-third narrow Gate11AQ blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
 
 - `163_GATE11AQ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
-
 ## 0. Scope
 
 Gate11 is not an operator chapter.

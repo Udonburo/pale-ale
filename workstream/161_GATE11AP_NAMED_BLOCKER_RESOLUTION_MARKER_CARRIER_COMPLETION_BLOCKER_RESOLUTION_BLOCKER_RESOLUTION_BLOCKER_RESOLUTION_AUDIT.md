@@ -39,7 +39,6 @@ The first tracked Gate11AP smoke handoff is now recorded in:
 The next narrow Gate11AQ blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
 
 - `163_GATE11AQ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
-
 ## 0. Scope
 
 Gate11AP is the forty-second narrow Gate11 slice.
