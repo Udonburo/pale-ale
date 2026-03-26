@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Regression tests for Gate11F later-source instantiation admissibility helpers."""
+
+from pathlib import Path
+import sys
+import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import run_gate11f_later_source_instantiation_admissibility_audit as gate11f
+
+
+def make_gate11e_manifest(run_id: str = "gate11e_run") -> dict:
+    return {"run_id": run_id, "code_git_commit": "abc123"}
+
+
+def make_gate11e_status(
+    gate10_closeout_preservation_status: str = "preserved",
+    gate11a_absence_result_preservation_status: str = "preserved",
+    gate11c_declaration_surface_preservation_status: str = "preserved",
+    gate11d_not_yet_declared_state_preservation_status: str = "preserved",
+    broader_trusted_tree_settlement_still_unearned_status: str = "confirmed",
+    operator_admission_still_denied_status: str = "confirmed",
+    retroactive_reinterpretation_forbidden_status: str = "confirmed",
+    missing_surface_component_naming_status: str = "named",
+    minimal_later_source_instantiation_rule_status: str = "defined",
+    anti_shortcut_boundary_status: str = "confirmed",
+    explicit_declaration_instantiation_path_status: str = "path_defined",
+) -> dict:
+    return {
+        "gate10_closeout_preservation_status": gate10_closeout_preservation_status,
+        "gate11a_absence_result_preservation_status": gate11a_absence_result_preservation_status,
+        "gate11c_declaration_surface_preservation_status": gate11c_declaration_surface_preservation_status,
+        "gate11d_not_yet_declared_state_preservation_status": gate11d_not_yet_declared_state_preservation_status,
+        "broader_trusted_tree_settlement_still_unearned_status": broader_trusted_tree_settlement_still_unearned_status,
+        "operator_admission_still_denied_status": operator_admission_still_denied_status,
+        "retroactive_reinterpretation_forbidden_status": retroactive_reinterpretation_forbidden_status,
+        "missing_surface_component_naming_status": missing_surface_component_naming_status,
+        "minimal_later_source_instantiation_rule_status": minimal_later_source_instantiation_rule_status,
+        "anti_shortcut_boundary_status": anti_shortcut_boundary_status,
+        "explicit_declaration_instantiation_path_status": explicit_declaration_instantiation_path_status,
+    }
+
+
+class RunGate11FLaterSourceInstantiationAdmissibilityAuditTest(unittest.TestCase):
+    def test_not_yet_admissible_when_no_later_source_is_named(self) -> None:
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(),
+            make_gate11e_status(),
+            "Gate11E fixes the path but names no later source carrier.",
+        )
+
+        self.assertEqual(status["gate11e_path_defined_state_preservation_status"], "preserved")
+        self.assertEqual(status["later_source_naming_status"], "absent")
+        self.assertEqual(status["later_source_cardinality_status"], "none")
+        self.assertEqual(status["same_source_path_attachment_status"], "not_attached")
+        self.assertEqual(status["later_source_instantiation_admissibility_status"], "not_yet_admissible")
+        self.assertEqual(status["next_named_blocker"], "no_later_source_named")
+
+    def test_instantiation_admissible_when_one_named_later_source_carries_full_path(self) -> None:
+        report_text = "\n".join(
+            [
+                "later_source_id = gate11g_future_run",
+                "one declaration marker",
+                "one and only one bounded_line_insufficiency_candidate_id",
+                "one and only one Gate11B class",
+                "the current bounded line cannot honestly host <candidate_id>",
+                "match status payload, registry row, and read sentence",
+            ]
+        )
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(), make_gate11e_status(), report_text
+        )
+
+        self.assertEqual(status["later_source_naming_status"], "present")
+        self.assertEqual(status["later_source_cardinality_status"], "single")
+        self.assertEqual(status["same_source_path_attachment_status"], "attached")
+        self.assertEqual(status["later_source_instantiation_admissibility_status"], "instantiation_admissible")
+        self.assertEqual(status["next_named_blocker"], "")
+
+    def test_multiple_later_sources_defer(self) -> None:
+        report_text = "\n".join(
+            [
+                "later_source_id = gate11g_future_run",
+                "later_source_id = gate11h_future_run",
+                "one declaration marker",
+                "one and only one bounded_line_insufficiency_candidate_id",
+                "one and only one Gate11B class",
+                "the current bounded line cannot honestly host <candidate_id>",
+                "match status payload, registry row, and read sentence",
+            ]
+        )
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(), make_gate11e_status(), report_text
+        )
+
+        self.assertEqual(status["later_source_cardinality_status"], "multiple")
+        self.assertEqual(status["same_source_path_attachment_status"], "deferred")
+        self.assertEqual(status["later_source_instantiation_admissibility_status"], "deferred")
+        self.assertEqual(status["next_named_blocker"], "multiple_later_sources")
+
+    def test_denied_when_anti_shortcut_boundary_breaks(self) -> None:
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(),
+            make_gate11e_status(anti_shortcut_boundary_status="denied"),
+            "later_source_id = gate11g_future_run",
+        )
+
+        self.assertEqual(status["anti_shortcut_boundary_status"], "denied")
+        self.assertEqual(status["later_source_instantiation_admissibility_status"], "denied")
+        self.assertEqual(status["next_named_blocker"], "anti_shortcut_boundary_not_intact")
+
+    def test_deferred_when_source_is_incomplete(self) -> None:
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(run_id=""),
+            make_gate11e_status(),
+            "",
+        )
+
+        self.assertEqual(status["later_source_naming_status"], "deferred")
+        self.assertEqual(status["later_source_cardinality_status"], "deferred")
+        self.assertEqual(status["same_source_path_attachment_status"], "deferred")
+        self.assertEqual(status["later_source_instantiation_admissibility_status"], "deferred")
+        self.assertEqual(status["next_named_blocker"], "controlling_source_incomplete")
+
+    def test_policy_compare_echoes_single_source_row(self) -> None:
+        status = gate11f.build_status_payload(
+            make_gate11e_manifest(),
+            make_gate11e_status(),
+            "Gate11E fixes the path but names no later source carrier.",
+        )
+        registry = gate11f.build_registry(make_gate11e_manifest(), make_gate11e_status(), status)
+        compare = gate11f.build_policy_compare(registry)
+
+        self.assertEqual(len(compare), 1)
+        self.assertEqual(compare[0]["source_gate11e_run_id"], "gate11e_run")
+        self.assertEqual(compare[0]["later_source_instantiation_admissibility_status"], "not_yet_admissible")
+
+
+if __name__ == "__main__":
+    unittest.main()
