@@ -1,6 +1,6 @@
 # Gate11AW Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker Audit
 
-Status: spec drafted
+Status: first implementation landed and first smoke execution recorded
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit, not blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-27
 
@@ -17,6 +17,22 @@ The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
+
+Consumer implementation:
+
+- `tools/run_gate11aw_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+
+Regression coverage:
+
+- `tools/test_run_gate11aw_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+
+The first tracked Gate11AW smoke handoff is now recorded in:
+
+- `176_GATE11AW_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+The next narrow Gate11AX blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution path audit slice is now tracked in:
+
+- `177_GATE11AX_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
 
 ## 0. Scope
 
@@ -167,3 +183,5 @@ Gate11AV ends with:
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
 So the next honest step is not another path slice and not a leap into resolution. The next honest step is the paired blocker follow-up slice that names what still blocks resolution under the fixed Gate11AV line.
+
+No later narrow Gate11 slice is currently tracked.
