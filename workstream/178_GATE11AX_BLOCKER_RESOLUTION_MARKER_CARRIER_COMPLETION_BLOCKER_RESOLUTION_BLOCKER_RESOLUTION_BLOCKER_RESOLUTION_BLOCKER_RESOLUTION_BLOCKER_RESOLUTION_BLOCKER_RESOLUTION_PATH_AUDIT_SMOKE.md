@@ -38,3 +38,7 @@ Notes:
 - Gate11AX defines only the minimum honest same-source path by which the named Gate11AW blocker could later be resolved.
 - Gate11AX does not resolve the blocker.
 - The committed-code smoke rerun preserved the fixed Gate11AW blocker-named line while returning `path_defined`.
+
+Next spec-only slice:
+
+- `179_GATE11AY_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`

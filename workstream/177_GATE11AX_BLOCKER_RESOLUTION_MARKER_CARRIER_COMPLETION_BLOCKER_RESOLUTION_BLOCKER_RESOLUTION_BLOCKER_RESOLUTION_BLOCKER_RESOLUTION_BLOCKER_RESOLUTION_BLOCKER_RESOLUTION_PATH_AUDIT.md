@@ -18,6 +18,22 @@ The frozen Gate10 closeout-support line remains recorded in:
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
+Consumer implementation:
+
+- `tools/run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
+
+Regression coverage:
+
+- `tools/test_run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
+
+The first tracked Gate11AX smoke handoff is now recorded in:
+
+- `178_GATE11AX_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
+
+The next narrow Gate11AY named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution audit slice is now tracked in:
+
+- `179_GATE11AY_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
+
 Gate11AX is the fiftieth narrow Gate11 slice.
 
 Gate11AX does:
