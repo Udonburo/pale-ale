@@ -7,6 +7,7 @@ This directory holds the numbered tracked workstream memory for the repo.
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
 - the latest tracked Gate11 handoff is `182`
+- the current in-worktree Gate11 snapshot extends through `184`
 - the next tracked spec-only Gate11 slice is `183`
 
 Local-only notes are kept separately under `workstream/local/`.
