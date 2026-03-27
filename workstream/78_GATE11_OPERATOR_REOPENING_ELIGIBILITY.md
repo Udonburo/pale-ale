@@ -355,6 +355,45 @@ The forty-second narrow Gate11AP named blocker-resolution marker carrier-complet
 
 - `161_GATE11AP_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
 
+The first tracked Gate11AP named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker resolution smoke read is now recorded in:
+
+- `162_GATE11AP_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The forty-third narrow Gate11AQ blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
+
+- `163_GATE11AQ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
+
+The first tracked Gate11AQ blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker smoke read is now recorded in:
+
+- `164_GATE11AQ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+The forty-fourth narrow Gate11AR blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution path audit slice is now tracked in:
+
+- `165_GATE11AR_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+
+The first tracked Gate11AR blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution path smoke read is now recorded in:
+
+- `166_GATE11AR_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
+
+The forty-fifth narrow Gate11AS named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution audit slice is now tracked in:
+
+- `167_GATE11AS_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
+
+The first tracked Gate11AS named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution smoke read is now recorded in:
+
+- `168_GATE11AS_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The forty-sixth narrow Gate11AT blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
+
+- `169_GATE11AT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
+
+The first tracked Gate11AT blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker smoke read is now recorded in:
+
+- `170_GATE11AT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+The forty-seventh narrow Gate11AU blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker resolution path audit slice is now tracked in:
+
+- `171_GATE11AU_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
 ## 0. Scope
 
 Gate11 is not an operator chapter.
