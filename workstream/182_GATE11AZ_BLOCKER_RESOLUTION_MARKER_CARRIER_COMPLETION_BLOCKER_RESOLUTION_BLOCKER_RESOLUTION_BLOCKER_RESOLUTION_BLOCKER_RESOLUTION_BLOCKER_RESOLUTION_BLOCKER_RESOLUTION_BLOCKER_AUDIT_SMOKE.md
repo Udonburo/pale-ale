@@ -1,0 +1,44 @@
+# Gate11AZ Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker Audit Smoke
+
+Status: first committed-code smoke execution recorded
+Date: 2026-03-28
+
+Tracked spec:
+
+- `181_GATE11AZ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
+
+Implementation:
+
+- `../tools/run_gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+- `../tools/test_run_gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+
+Controlling source run:
+
+- `../runs/gate11ay_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit_smoke_from_gate11ax/`
+
+Smoke command:
+
+```powershell
+c:/Users/aoika/Documents/GitHub/pale-ale/.venv/Scripts/python.exe tools/run_gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py --gate11ay-dir runs/gate11ay_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit_smoke_from_gate11ax --out-dir runs/gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit_smoke_from_gate11ay
+```
+
+Expected frozen-source result:
+
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_status = blocker_named`
+- `explicit_blocker_resolution_marker_blocker_status = named`
+- `same_source_blocker_resolution_blocker_status = named`
+- `next_named_blocker = no_explicit_blocker_resolution_marker`
+
+Manifest bind:
+
+- `43b5ffd470e94b4444b226a6b0ed3d9ae66b0670`
+
+Notes:
+
+- Gate11AZ names only the residual blocker over the fixed Gate11AY line.
+- Gate11AZ must not turn `not_yet_resolved` into actual resolution.
+- The committed-code smoke rerun preserved the fixed Gate11AY not-yet-resolved line while returning `blocker_named`.
+
+Next spec-only slice:
+
+- `183_GATE11BA_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
