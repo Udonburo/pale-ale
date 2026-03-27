@@ -1,6 +1,6 @@
 # Gate11AZ Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker Audit
 
-Status: spec-only draft
+Status: in-worktree implementation snapshot; committed-code smoke rerun pending
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit, not blocker-resolution marker carrier-completion blocker-resolution path judgment, blocker-resolution marker carrier-completion blocker-resolution judgment, blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-28
 
@@ -198,3 +198,11 @@ The default honest read from the current frozen Gate11AY source is:
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
 That default is narrow and honest because Gate11AY still ends at `not_yet_resolved`, and Gate11AZ only names the blocker that still prevents resolution under the fixed Gate11AX path.
+
+Current in-worktree implementation snapshot:
+
+- consumer runner: `../tools/run_gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+- regression tests: `../tools/test_run_gate11az_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+- post-commit smoke handoff target: `182_GATE11AZ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+No later narrow Gate11 slice is currently tracked.
