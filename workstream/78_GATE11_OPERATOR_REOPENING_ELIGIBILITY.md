@@ -378,6 +378,14 @@ The first tracked Gate11AR blocker-resolution marker carrier-completion blocker-
 The forty-fifth narrow Gate11AS named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution audit slice is now tracked in:
 
 - `167_GATE11AS_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
+
+The first tracked Gate11AS named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker resolution smoke read is now recorded in:
+
+- `168_GATE11AS_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The forty-sixth narrow Gate11AT blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
+
+- `169_GATE11AT_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
 ## 0. Scope
 
 Gate11 is not an operator chapter.
