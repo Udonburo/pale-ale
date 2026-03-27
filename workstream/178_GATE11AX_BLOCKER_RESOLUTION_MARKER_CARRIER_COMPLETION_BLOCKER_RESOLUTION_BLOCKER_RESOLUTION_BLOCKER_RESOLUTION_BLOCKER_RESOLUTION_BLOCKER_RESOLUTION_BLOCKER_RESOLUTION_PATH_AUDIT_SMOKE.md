@@ -1,6 +1,6 @@
 # Gate11AX Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Path Audit Smoke
 
-Status: pre-commit smoke snapshot only; committed-code rerun pending
+Status: first committed-code smoke execution recorded
 Date: 2026-03-27
 
 Tracked spec:
@@ -31,10 +31,10 @@ Expected frozen-source result:
 
 Manifest bind:
 
-- pending committed-code rerun
+- `74fe4396ed91f2d1483fadf3d0c9d31d357f5a91`
 
 Notes:
 
 - Gate11AX defines only the minimum honest same-source path by which the named Gate11AW blocker could later be resolved.
 - Gate11AX does not resolve the blocker.
-- This file must be refreshed from the committed-code rerun before closeout is considered landed.
+- The committed-code smoke rerun preserved the fixed Gate11AW blocker-named line while returning `path_defined`.

@@ -1,6 +1,6 @@
 # Gate11AX Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Path Audit
 
-Status: in-worktree implementation snapshot; committed-code smoke rerun pending
+Status: first implementation landed and first committed-code smoke execution recorded
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution path audit, not blocker-resolution marker carrier-completion blocker-resolution judgment, blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-27
 
@@ -196,10 +196,10 @@ The default honest read from the current frozen Gate11AW source is:
 
 That default is narrow and honest because Gate11AW already names the blocker, while Gate11AX only fixes the minimum later same-source path by which that blocker could honestly be resolved.
 
-Current in-worktree implementation snapshot:
+Implementation landing:
 
 - consumer runner: `../tools/run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
 - regression tests: `../tools/test_run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
-- post-commit smoke handoff target: `178_GATE11AX_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
+- first smoke handoff: `178_GATE11AX_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
 
 No later narrow Gate11 slice is currently tracked.
