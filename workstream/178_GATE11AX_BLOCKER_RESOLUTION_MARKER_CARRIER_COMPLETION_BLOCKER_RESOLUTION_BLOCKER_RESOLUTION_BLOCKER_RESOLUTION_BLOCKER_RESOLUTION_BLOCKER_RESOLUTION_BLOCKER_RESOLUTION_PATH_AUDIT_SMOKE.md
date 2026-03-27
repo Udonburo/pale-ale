@@ -1,0 +1,40 @@
+# Gate11AX Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Path Audit Smoke
+
+Status: pre-commit smoke snapshot only; committed-code rerun pending
+Date: 2026-03-27
+
+Tracked spec:
+
+- `177_GATE11AX_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+
+Implementation:
+
+- `../tools/run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
+- `../tools/test_run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
+
+Controlling source run:
+
+- `../runs/gate11aw_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit_smoke_from_gate11av/`
+
+Smoke command:
+
+```powershell
+c:/Users/aoika/Documents/GitHub/pale-ale/.venv/Scripts/python.exe tools/run_gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py --gate11aw-dir runs/gate11aw_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit_smoke_from_gate11av --out-dir runs/gate11ax_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit_smoke_from_gate11aw
+```
+
+Expected frozen-source result:
+
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_status = path_defined`
+- `minimum_same_source_blocker_resolution_rule_status = defined`
+- `bounded_read_prefix_resolution_requirement_status = defined`
+- `next_named_blocker =`
+
+Manifest bind:
+
+- pending committed-code rerun
+
+Notes:
+
+- Gate11AX defines only the minimum honest same-source path by which the named Gate11AW blocker could later be resolved.
+- Gate11AX does not resolve the blocker.
+- This file must be refreshed from the committed-code rerun before closeout is considered landed.
