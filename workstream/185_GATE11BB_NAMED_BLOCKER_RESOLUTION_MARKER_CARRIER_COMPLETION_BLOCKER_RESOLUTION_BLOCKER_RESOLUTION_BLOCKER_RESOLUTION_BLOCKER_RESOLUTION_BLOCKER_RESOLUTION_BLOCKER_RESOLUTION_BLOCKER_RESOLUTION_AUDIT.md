@@ -1,44 +1,28 @@
-# Gate11BA Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Path Audit
+# Gate11BB Named Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Audit
 
-Status: first implementation landed and first committed-code smoke execution recorded
-Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution path audit, not blocker-resolution marker carrier-completion blocker-resolution blocker judgment, blocker-resolution marker carrier-completion blocker-resolution path judgment, blocker-resolution marker carrier-completion blocker-resolution judgment, blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
+Status: spec-only draft
+Role: named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution audit, not blocker-resolution marker carrier-completion blocker-resolution blocker path judgment, blocker-resolution marker carrier-completion blocker-resolution blocker judgment, blocker-resolution marker carrier-completion blocker-resolution path judgment, blocker-resolution marker carrier-completion blocker-resolution judgment, blocker-resolution marker carrier-completion judgment, blocker-resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-28
 
-Gate11BA proceeds from the tracked Gate11 line, including:
+Gate11BB proceeds from the tracked Gate11 line, including:
 
 - `76_GATE10_CLOSEOUT.md`
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
-- `179_GATE11AY_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
-- `180_GATE11AY_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
 - `181_GATE11AZ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
 - `182_GATE11AZ_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+- `183_GATE11BA_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT.md`
+- `184_GATE11BA_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
 
 The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
 
-Consumer implementation:
+Gate11BB is the fifty-fourth narrow Gate11 slice.
 
-- `tools/run_gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
+Gate11BB does:
 
-Regression coverage:
-
-- `tools/test_run_gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
-
-The first tracked Gate11BA smoke handoff is now recorded in:
-
-- `184_GATE11BA_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
-
-The next narrow Gate11BB named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution audit slice is now tracked in:
-
-- `185_GATE11BB_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
-
-Gate11BA is the fifty-third narrow Gate11 slice.
-
-Gate11BA does:
-
-- ask what is the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker could later be resolved under the fixed Gate11AZ line
+- ask whether the named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker now counts as resolved under the fixed Gate11BA path or not
 - preserve the Gate10 closeout sentence exactly as already earned
 - preserve the Gate11A absence result exactly as already recorded
 - preserve the Gate11C `surface_defined` result exactly as already recorded
@@ -91,15 +75,17 @@ Gate11BA does:
 - preserve the Gate11AX `path_defined` result exactly as already recorded
 - preserve the Gate11AY `not_yet_resolved` result exactly as already recorded
 - preserve the Gate11AZ `blocker_named` result exactly as already recorded
-- define only the minimum same-source path by which the named blocker could later be resolved
+- preserve the Gate11BA `path_defined` result exactly as already recorded
+- judge only whether the named blocker now counts as resolved under the fixed Gate11BA path
+- require explicit blocker-resolution marker evidence before returning `resolved`
+- require explicit same-source blocker-resolution path attachment before returning `resolved`
 - preserve the blocker-resolution boundary exactly as already recorded
 
-Gate11BA does not:
+Gate11BB does not:
 
-- resolve the named blocker
-- redesign the Gate11AZ blocker slice
-- judge blocker-resolution marker carrier-completion blocker-resolution blocker existence itself
-- judge blocker-resolution marker carrier-completion blocker-resolution path definition outside this paired path slice
+- redesign the Gate11BA path
+- judge blocker-resolution marker carrier-completion blocker-resolution blocker path definition outside this paired existence/resolution slice
+- judge blocker-resolution marker carrier-completion blocker-resolution blocker judgment outside this named slice
 - admit any later source
 - reopen operator admission
 - earn reopening eligibility
@@ -109,20 +95,20 @@ Gate11BA does not:
 
 The public question is:
 
-> What is the minimum honest path by which the named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker could later be resolved under the fixed Gate11AZ line?
+> Does the named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker now count as resolved under the fixed Gate11BA path or not?
 
 The controlling source is:
 
-- the frozen Gate11AZ run
-- especially its named blocker result and blocker-resolution boundary outputs
+- the frozen Gate11BA run
+- especially its named blocker preservation, minimum same-source blocker-resolution rule, bounded read-prefix resolution requirement, and blocker-resolution boundary outputs
 - without importing any broader graph-wide or worker-synthesized material
 
 The required outputs are:
 
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_status.json`
-- `gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_read.md`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_registry.jsonl`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_policy_compare.csv`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_status.json`
+- `gate11bb_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_read.md`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_registry.jsonl`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_policy_compare.csv`
 - `manifest.json`
 - `checksums.json`
 
@@ -180,46 +166,39 @@ The required status fields are:
 - `gate11ax_path_defined_state_preservation_status`
 - `gate11ay_not_yet_resolved_state_preservation_status`
 - `gate11az_blocker_named_state_preservation_status`
+- `gate11ba_path_defined_state_preservation_status`
 - `broader_trusted_tree_settlement_still_unearned_status`
 - `operator_admission_still_denied_status`
 - `retroactive_reinterpretation_forbidden_status`
 - `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`
-- `minimum_same_source_blocker_resolution_rule_status`
-- `bounded_read_prefix_resolution_requirement_status`
+- `explicit_blocker_resolution_marker_status`
+- `same_source_blocker_resolution_status`
 - `blocker_resolution_boundary_status`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_status`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_status`
 - `next_named_blocker`
 
 The allowed values are:
 
 - `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`: `preserved | broken | deferred`
-- `minimum_same_source_blocker_resolution_rule_status`: `defined | not_yet_defined | denied | deferred`
-- `bounded_read_prefix_resolution_requirement_status`: `defined | not_yet_defined | denied | deferred`
+- `explicit_blocker_resolution_marker_status`: `present | absent | denied | deferred`
+- `same_source_blocker_resolution_status`: `resolved | not_resolved | denied | deferred`
 - `blocker_resolution_boundary_status`: `confirmed | denied | deferred`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_status`: `path_defined | not_yet_defined | denied | deferred`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_status`: `resolved | not_yet_resolved | denied | deferred`
 
 The required judgment rule is:
 
-- return `path_defined` only when the named blocker from Gate11AZ is preserved, the minimum same-source blocker-resolution rule is defined, the bounded read-prefix resolution requirement is defined, and the blocker-resolution boundary remains confirmed
-- return `not_yet_defined` when any required path component remains not yet defined without any shortcut or inflation
-- return `denied` when the attempted path depends on broader settlement promotion, retroactive reinterpretation, graph-wide leap, or worker-side synthesis
+- return `resolved` only when the named blocker from Gate11AZ remains preserved, an explicit blocker-resolution marker is present, same-source blocker resolution is explicit under the fixed Gate11BA path, and the blocker-resolution boundary remains confirmed
+- return `not_yet_resolved` when the named blocker remains preserved but explicit blocker-resolution evidence is still absent or same-source resolution remains not resolved
+- return `denied` when the attempted resolution depends on broader settlement promotion, retroactive reinterpretation, graph-wide leap, or worker-side synthesis
 - return `deferred` when source incompleteness or contradiction prevents a narrow worker-side judgment
 
-The default honest read from the current frozen Gate11AZ source is:
+The default honest read from the current frozen Gate11BA source is:
 
 - `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status = preserved`
-- `minimum_same_source_blocker_resolution_rule_status = defined`
-- `bounded_read_prefix_resolution_requirement_status = defined`
+- `explicit_blocker_resolution_marker_status = absent`
+- `same_source_blocker_resolution_status = not_resolved`
 - `blocker_resolution_boundary_status = confirmed`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_status = path_defined`
-- `next_named_blocker =`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_status = not_yet_resolved`
+- `next_named_blocker = no_explicit_blocker_resolution_marker`
 
-That default is narrow and honest because Gate11AZ already names the blocker, while Gate11BA only fixes the minimum later same-source path by which that blocker could honestly be resolved.
-
-Current in-worktree implementation snapshot:
-
-- consumer runner: `../tools/run_gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
-- regression tests: `../tools/test_run_gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit.py`
-- post-commit smoke handoff target: `184_GATE11BA_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_PATH_AUDIT_SMOKE.md`
-
-No later narrow Gate11 slice is currently tracked.
+That default is narrow and honest because Gate11BA fixes only the minimum same-source path, while the current frozen source still does not instantiate explicit blocker-resolution evidence that would resolve the named blocker.
