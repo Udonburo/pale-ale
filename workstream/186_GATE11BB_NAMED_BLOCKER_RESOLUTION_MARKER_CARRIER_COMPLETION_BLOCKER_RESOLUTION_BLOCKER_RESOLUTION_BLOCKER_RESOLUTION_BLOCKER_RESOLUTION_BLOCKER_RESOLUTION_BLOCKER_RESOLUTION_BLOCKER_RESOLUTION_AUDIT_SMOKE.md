@@ -1,0 +1,44 @@
+# Gate11BB Named Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Audit Smoke
+
+Status: first committed-code smoke execution recorded
+Date: 2026-03-28
+
+Tracked spec:
+
+- `185_GATE11BB_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
+
+Implementation:
+
+- `../tools/run_gate11bb_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+- `../tools/test_run_gate11bb_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+
+Controlling source run:
+
+- `../runs/gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit_smoke_from_gate11az/`
+
+Smoke command:
+
+```powershell
+c:/Users/aoika/Documents/GitHub/pale-ale/.venv/Scripts/python.exe tools/run_gate11bb_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py --gate11ba-dir runs/gate11ba_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_path_audit_smoke_from_gate11az --out-dir runs/gate11bb_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit_smoke_from_gate11ba
+```
+
+Expected frozen-source result:
+
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_status = not_yet_resolved`
+- `explicit_blocker_resolution_marker_status = absent`
+- `same_source_blocker_resolution_status = not_resolved`
+- `next_named_blocker = no_explicit_blocker_resolution_marker`
+
+Manifest bind:
+
+- `dc9e56dc8ecc0a2957b0f77d85857615dd8a00d8`
+
+Notes:
+
+- Gate11BB judges only actual same-source resolution over the fixed Gate11BA path.
+- Gate11BB committed-code smoke rerun preserved the fixed Gate11BA `path_defined` line while returning `not_yet_resolved`.
+- Gate11BB must not let `path_defined` prose earn `resolved`.
+
+The next narrow Gate11BC blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit slice is now tracked in:
+
+- `187_GATE11BC_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
