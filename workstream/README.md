@@ -2,12 +2,12 @@
 
 This directory holds the numbered tracked workstream memory for the repo.
 
-- `06` through `191` are the tracked Gate6-Gate11 line, kept in numeric order
+- `06` through `193` are the tracked Gate6-Gate11 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
-- the latest tracked Gate11 handoff is `190`
-- the latest tracked Gate11 slice is `191`
+- the latest tracked Gate11 handoff is `192`
+- the latest tracked Gate11 slice is `193`
 - no later in-worktree Gate11 snapshot is currently pending
 
 Local-only notes are kept separately under `workstream/local/`.

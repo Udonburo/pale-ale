@@ -1,6 +1,6 @@
 # Gate11BE Named Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Resolution Audit
 
-Status: spec-only draft
+Status: first implementation landed and first committed-code smoke execution recorded
 Role: named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution resolution audit, not blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker audit, blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker_resolution path judgment, blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker_resolution judgment, blocker-resolution marker carrier-completion blocker-resolution blocker_resolution judgment, blocker-resolution marker carrier-completion blocker_resolution judgment, blocker_resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-28
 
@@ -19,6 +19,22 @@ The frozen Gate10 closeout-support line remains recorded in:
 
 - `74_GATE10F_PRE_CLOSEOUT_JUDGMENT.md`
 - `75_GATE10F_PRE_CLOSEOUT_JUDGMENT_SMOKE.md`
+
+Consumer implementation:
+
+- `tools/run_gate11be_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+
+Regression coverage:
+
+- `tools/test_run_gate11be_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+
+The first tracked Gate11BE smoke handoff is now recorded in:
+
+- `192_GATE11BE_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+The next narrow Gate11BF blocker-resolution marker carrier-completion blocker-resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution resolution blocker audit slice is now tracked in:
+
+- `193_GATE11BF_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
 
 Gate11BE is the fifty-seventh narrow Gate11 slice.
 
@@ -114,8 +130,8 @@ Required outputs:
 
 The allowed values are:
 
-- `gate11bd_path_defined_state_preservation_status`: `preserved | broken | deferred`
-- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`: `preserved | broken | deferred`
+- `gate11bd_path_defined_state_preservation_status`: `preserved | not_preserved | deferred`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`: `preserved | not_preserved | deferred`
 - `explicit_blocker_resolution_marker_status`: `present | absent | denied | deferred`
 - `same_source_blocker_resolution_status`: `resolved | not_resolved | denied | deferred`
 - `blocker_resolution_boundary_status`: `confirmed | denied | deferred`
@@ -139,3 +155,11 @@ The default honest read from the current frozen Gate11BD source is:
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
 That default is narrow and honest because Gate11BD fixes only the minimum same-source path, while the current frozen source still does not instantiate explicit blocker-resolution evidence that would resolve the named blocker.
+
+Current in-worktree implementation snapshot:
+
+- `../tools/run_gate11be_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+- `../tools/test_run_gate11be_named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_audit.py`
+- `192_GATE11BE_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+This snapshot remains pre-commit only. It consumes only the frozen Gate11BD controlling-source run and restores Gate11BB-style strict bounded same-source resolution evidence so Gate11BD path-definition prose cannot earn `resolved` worker-side.
