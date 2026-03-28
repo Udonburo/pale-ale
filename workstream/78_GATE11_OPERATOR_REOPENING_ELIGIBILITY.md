@@ -450,6 +450,12 @@ The first tracked Gate11BA blocker-resolution marker carrier-completion blocker-
 The fifty-fourth narrow Gate11BB named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution audit slice is now tracked in:
 
 - `185_GATE11BB_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT.md`
+
+The current in-worktree Gate11BB smoke snapshot target is:
+
+- `186_GATE11BB_NAMED_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_AUDIT_SMOKE.md`
+
+No later narrow Gate11 slice is currently tracked.
 ## 0. Scope
 
 Gate11 is not an operator chapter.
