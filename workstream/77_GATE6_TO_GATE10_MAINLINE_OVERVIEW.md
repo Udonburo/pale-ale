@@ -193,6 +193,10 @@ That next chapter is tracked separately in:
 
 - `78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`
 
+That Gate11 admissibility line is now closed as a membrane rather than extended as a theory-building site:
+
+- `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
+
 ## 6. Final Compression
 
 The cleanest repo-level Gate6-Gate10 sentence is:
