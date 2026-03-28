@@ -482,6 +482,14 @@ The first tracked Gate11BE named blocker-resolution marker carrier-completion bl
 The fifty-eighth narrow Gate11BF blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution resolution blocker audit slice is now tracked in:
 
 - `193_GATE11BF_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT.md`
+
+The first tracked Gate11BF blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution resolution blocker audit smoke read is now recorded in:
+
+- `194_GATE11BF_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+Gate11 now closes as an admissibility membrane rather than extending into another narrow Gate11 slice:
+
+- `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
 ## 0. Scope
 
 Gate11 is not an operator chapter.
@@ -873,3 +881,13 @@ The Gate11 sentence is:
 The shortest acceptable memory hook is:
 
 - `Gate11 does not reopen the operator line; it asks whether a real operator-pressure case exists at all, and only then whether reopening could ever become eligible.`
+
+## 15. Freeze Boundary
+
+Gate11 is now recorded as an admissibility membrane rather than as the site of further theory construction.
+
+The Gate11 membrane freeze note is:
+
+- `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
+
+A further Gate11 slice is forbidden unless it names a mathematical object outside Gate11 that cannot be written under the current connection-free language.

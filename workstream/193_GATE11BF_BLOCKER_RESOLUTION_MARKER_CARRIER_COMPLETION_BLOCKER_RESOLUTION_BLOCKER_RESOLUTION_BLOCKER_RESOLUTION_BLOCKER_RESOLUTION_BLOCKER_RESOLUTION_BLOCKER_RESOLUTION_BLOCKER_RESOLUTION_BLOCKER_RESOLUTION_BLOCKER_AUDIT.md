@@ -1,6 +1,6 @@
 # Gate11BF Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Resolution Blocker Audit
 
-Status: first implementation landed
+Status: first implementation landed and first committed-code smoke execution recorded
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution resolution blocker audit, not named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker_resolution audit, blocker-resolution marker carrier-completion blocker-resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution resolution path judgment, blocker-resolution marker carrier-completion blocker_resolution judgment, blocker_resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-28
 
@@ -147,3 +147,11 @@ The first tracked implementation for this slice is now:
 - `../tools/test_run_gate11bf_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
 
 This landed implementation still consumes only the frozen Gate11BE controlling-source run and names blockers only; it does not convert the fixed Gate11BE `not_yet_resolved` line into resolution.
+
+The first committed-code smoke handoff for this slice is now recorded in:
+
+- `194_GATE11BF_BLOCKER_RESOLUTION_MARKER_CARRIER_COMPLETION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_RESOLUTION_BLOCKER_AUDIT_SMOKE.md`
+
+Gate11BF is treated as the last in-flight Gate11 slice before the Gate11 membrane freeze note:
+
+- `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
