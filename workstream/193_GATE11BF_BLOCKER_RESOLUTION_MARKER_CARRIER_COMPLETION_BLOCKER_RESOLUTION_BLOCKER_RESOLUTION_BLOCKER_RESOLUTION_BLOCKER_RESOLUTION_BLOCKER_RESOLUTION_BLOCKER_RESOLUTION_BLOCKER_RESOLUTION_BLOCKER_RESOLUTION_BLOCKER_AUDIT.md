@@ -1,6 +1,6 @@
 # Gate11BF Blocker-Resolution Marker Carrier-Completion Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Blocker-Resolution Resolution Blocker Audit
 
-Status: spec-only draft
+Status: first implementation landed
 Role: blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution resolution blocker audit, not named blocker-resolution marker carrier-completion blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker-resolution blocker_resolution audit, blocker-resolution marker carrier-completion blocker-resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution blocker_resolution resolution path judgment, blocker-resolution marker carrier-completion blocker_resolution judgment, blocker_resolution judgment, residual completion judgment, later-source admission, explicit-presence judgment, candidate declaration, reopening-eligibility judgment, or operator reopening
 Date: 2026-03-28
 
@@ -115,17 +115,17 @@ Required outputs:
 
 The allowed values are:
 
-- `gate11be_not_yet_resolved_state_preservation_status`: `preserved | broken | deferred`
-- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`: `preserved | broken | deferred`
+- `gate11be_not_yet_resolved_state_preservation_status`: `preserved | not_preserved | deferred`
+- `named_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_condition_preservation_status`: `preserved | not_preserved | deferred`
 - `explicit_blocker_resolution_marker_blocker_status`: `named | not_named | deferred`
 - `same_source_blocker_resolution_blocker_status`: `named | not_named | deferred`
 - `blocker_resolution_blocker_boundary_status`: `confirmed | denied | deferred`
-- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_status`: `blocker_named | no_blocker | denied | deferred`
+- `blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_status`: `blocker_named | not_yet_named | denied | deferred`
 
 The required judgment rule is:
 
 - return `blocker_named` only when the Gate11BE line remains preserved, the blocker is named narrowly enough from the absence of explicit blocker-resolution marker or same-source blocker-resolution evidence, and the blocker-resolution boundary remains confirmed
-- return `no_blocker` only when the controlling source no longer leaves any narrow blocker to name
+- return `not_yet_named` when the controlling source no longer leaves any narrow blocker named narrowly enough
 - return `denied` when the attempted blocker naming depends on broader settlement promotion, retroactive reinterpretation, graph-wide leap, or worker-side synthesis
 - return `deferred` when source incompleteness or contradiction prevents a narrow worker-side judgment
 
@@ -140,3 +140,10 @@ The default honest read from the current frozen Gate11BE source is:
 - `next_named_blocker = no_explicit_blocker_resolution_marker`
 
 That default is narrow and honest because Gate11BE still ends at `not_yet_resolved`, and Gate11BF only names the blocker that still prevents resolution under the fixed Gate11BD path.
+
+The first tracked implementation for this slice is now:
+
+- `../tools/run_gate11bf_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+- `../tools/test_run_gate11bf_blocker_resolution_marker_carrier_completion_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_resolution_blocker_audit.py`
+
+This landed implementation still consumes only the frozen Gate11BE controlling-source run and names blockers only; it does not convert the fixed Gate11BE `not_yet_resolved` line into resolution.
