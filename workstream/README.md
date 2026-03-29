@@ -9,6 +9,9 @@ This directory holds the numbered tracked workstream memory for the repo.
 - the latest tracked Gate11 handoff is `194`
 - the latest tracked Gate11 slice is `193`
 - the Gate11 membrane freeze note is `195`
+- the current in-worktree Gate12 constitution draft is `196`
+- the current in-worktree Gate12 implementation contract draft is `197`
+- the current in-worktree Gate12A first runner spec draft is `198`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
