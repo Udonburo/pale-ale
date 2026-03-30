@@ -19,6 +19,10 @@ The current tracked briefing_v1 family empirical memo is now recorded in:
 
 - `201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
 
+The current tracked cross-family comparison memo is now recorded in:
+
+- `202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md`
+
 ## 0. Scope
 
 This memo records a first empirical finding from the current Gate12A local run surface.

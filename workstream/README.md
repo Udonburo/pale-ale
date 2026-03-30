@@ -2,7 +2,7 @@
 
 This directory holds the numbered tracked workstream memory for the repo.
 
-- `06` through `201` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `202` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -15,6 +15,7 @@ This directory holds the numbered tracked workstream memory for the repo.
 - the tracked Gate12A first empirical memo is `199`
 - the tracked Gate12A transcript_v1 family replication memo is `200`
 - the tracked Gate12A briefing_v1 family empirical memo is `201`
+- the tracked Gate12A cross-family comparison memo is `202`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
