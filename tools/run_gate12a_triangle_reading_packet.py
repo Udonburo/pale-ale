@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--triangle-text-audit-dir", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--balanced-per-band", type=int, default=0)
     return parser.parse_args()
 
 
@@ -131,10 +132,19 @@ def build_packet_rows(
     joined_rows: Sequence[Mapping[str, Any]],
     *,
     limit: int,
+    balanced_per_band: int,
 ) -> List[Dict[str, Any]]:
     joined_map = {str(row["cycle_id"]): row for row in joined_rows}
+    selected_queue_rows: List[Mapping[str, str]]
+    if balanced_per_band > 0:
+        high_rows = [row for row in queue_rows if str(row["provisional_closure_band"]) == "high_tension"]
+        flat_rows = [row for row in queue_rows if str(row["provisional_closure_band"]) == "flat"]
+        selected_queue_rows = high_rows[:balanced_per_band] + flat_rows[:balanced_per_band]
+    else:
+        selected_queue_rows = list(queue_rows)
+
     packet_rows: List[Dict[str, Any]] = []
-    for queue_row in queue_rows:
+    for queue_row in selected_queue_rows:
         cycle_id = str(queue_row["cycle_id"])
         joined = joined_map[cycle_id]
         packet_rows.append(
@@ -162,7 +172,7 @@ def build_packet_rows(
             }
         )
     packet_rows.sort(key=lambda row: int(row["queue_rank"]))
-    if limit > 0:
+    if balanced_per_band <= 0 and limit > 0:
         return packet_rows[:limit]
     return packet_rows
 
@@ -216,6 +226,7 @@ def run_triangle_reading_packet(
     triangle_text_audit_dir: Path,
     out_dir: Path,
     limit: int,
+    balanced_per_band: int,
 ) -> Dict[str, Any]:
     reading_queue_dir = Path(reading_queue_dir)
     triangle_text_audit_dir = Path(triangle_text_audit_dir)
@@ -225,7 +236,12 @@ def run_triangle_reading_packet(
     queue_manifest = read_json(reading_queue_dir / "manifest.json")
     queue_rows = read_csv(reading_queue_dir / "triangle_reading_queue.csv")
     joined_rows = read_jsonl(triangle_text_audit_dir / "triangle_text_surface_joined.jsonl")
-    packet_rows = build_packet_rows(queue_rows, joined_rows, limit=int(limit))
+    packet_rows = build_packet_rows(
+        queue_rows,
+        joined_rows,
+        limit=int(limit),
+        balanced_per_band=int(balanced_per_band),
+    )
 
     manifest_path = out_dir / DEFAULT_MANIFEST
     status_path = out_dir / DEFAULT_STATUS
@@ -286,6 +302,7 @@ def main() -> int:
         triangle_text_audit_dir=Path(args.triangle_text_audit_dir),
         out_dir=Path(args.out_dir),
         limit=int(args.limit),
+        balanced_per_band=int(args.balanced_per_band),
     )
     return 0
 
