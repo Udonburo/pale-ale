@@ -10,6 +10,10 @@ Gate12A proceeds from:
 - `197_GATE12A_DISCRETE_CONNECTION_IMPLEMENTATION_CONTRACT.md`
 - `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
 
+The current in-worktree Gate12A empirical memo draft is now recorded in:
+
+- `199_GATE12A_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
+
 ## 0. Scope
 
 Gate12A is the first runner-spec draft under the Gate12 constitution and implementation contract.
