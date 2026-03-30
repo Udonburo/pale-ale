@@ -1,5 +1,7 @@
 # Gate12A First Replication Checkpoint: Zenodo Metadata Draft
 
+Status: used for published Zenodo dataset `10.5281/zenodo.19340221`
+
 ## Recommended Title
 
 Primary:
@@ -29,6 +31,13 @@ Rationale:
 - this deposit is best treated as a reproducible empirical checkpoint bundle
 - the software repo remains separately available through Git and GitHub
 - the key `runs/` evidence is git-ignored locally, so this checkpoint should use manual Zenodo upload rather than GitHub auto-sync alone
+
+## Published Record
+
+- DOI: `10.5281/zenodo.19340221`
+- Record URL: `https://zenodo.org/records/19340221`
+- Title used for publication: `Gate12A anchor-rich closure tension observable surface: transcript_v1 + briefing_v1 first replication checkpoint`
+- Authors used for publication: `Aoi Kawasaki (Independent Researcher)`
 
 ## Fixed Release Tag
 
@@ -73,7 +82,11 @@ Do not claim:
 
 ## Creators
 
-Fill with the final author list used for the GitHub release and repository metadata.
+Used for the published record:
+
+- `Aoi Kawasaki (Independent Researcher)`
+
+Suggested normalized fields for later reuse:
 
 Suggested fields:
 
@@ -110,7 +123,13 @@ Recommended internal shortlist:
 
 ## Related Identifiers
 
-Fill these only after the release tag exists on `origin/main`.
+Used for the published record:
+
+- GitHub repository URL: `https://github.com/Udonburo/pale-ale`
+- GitHub release URL: `https://github.com/Udonburo/pale-ale/releases/tag/gate12a-first-replication-checkpoint-2026-03-31`
+- Git tag URL: `https://github.com/Udonburo/pale-ale/tree/gate12a-first-replication-checkpoint-2026-03-31`
+
+Optional later identifiers:
 
 Recommended identifiers:
 

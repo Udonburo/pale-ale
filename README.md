@@ -1,5 +1,7 @@
 # pale-ale
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19340221.svg)](https://doi.org/10.5281/zenodo.19340221)
+
 **pale-ale is a deterministic observation-and-transport lab for local non-integrability in symbolic trajectories.**
 
 The repo no longer treats its mainline problem as "finding a better score."

@@ -1,11 +1,11 @@
 # Gate12A First Replication Checkpoint Bundle
 
-Status: release-prep draft
-Scope: supplemental bundle for a Zenodo replication checkpoint, not a general software release and not a final theory claim
+Status: published replication checkpoint bundle
+Scope: supplemental bundle for a published Zenodo replication checkpoint, not a general software release and not a final theory claim
 
 ## Upload Mode
 
-This checkpoint should be uploaded to Zenodo as a manual dataset deposit.
+This checkpoint was uploaded to Zenodo as a manual dataset deposit.
 
 Reason:
 
@@ -14,8 +14,8 @@ Reason:
 
 So for this checkpoint:
 
-- GitHub release/tag can still be used as the software-side reference point
-- the Zenodo record itself should be created with `+ New upload` and a manually assembled bundle zip
+- GitHub release/tag is the software-side reference point
+- the Zenodo record is a manual dataset deposit built from a manually assembled bundle zip
 
 ## What This Bundle Is
 
@@ -43,6 +43,8 @@ This checkpoint is bound to the release tag:
 - Repository: `https://github.com/Udonburo/pale-ale`
 - Tag URL: `https://github.com/Udonburo/pale-ale/tree/gate12a-first-replication-checkpoint-2026-03-31`
 - Release URL: `https://github.com/Udonburo/pale-ale/releases/tag/gate12a-first-replication-checkpoint-2026-03-31`
+- Zenodo DOI: `10.5281/zenodo.19340221`
+- Zenodo record: `https://zenodo.org/records/19340221`
 
 The exact tagged commit hash is intentionally recorded in:
 
@@ -111,7 +113,7 @@ This bundle should be shipped with:
 - `SHA256SUMS.txt`
 - `RELEASE_BINDING.json`
 
-Generate `SHA256SUMS.txt` after the bundle directory is assembled, using:
+`SHA256SUMS.txt` is generated after the bundle directory is assembled, using:
 
 - `make_sha256sums.ps1`
 
