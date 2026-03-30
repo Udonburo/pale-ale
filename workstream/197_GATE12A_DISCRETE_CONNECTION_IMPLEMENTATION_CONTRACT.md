@@ -11,7 +11,7 @@ Gate12A proceeds from:
 - `26_GATE9_GRAPH_GAUGE_CONSTITUTION.md`
 - `08_GATE6A_ARTIFACT_SCHEMA.md`
 
-The current in-worktree Gate12A first runner spec draft is now recorded in:
+The current tracked Gate12A first runner spec is now recorded in:
 
 - `198_GATE12A_DISCRETE_CONNECTION_AUDIT.md`
 

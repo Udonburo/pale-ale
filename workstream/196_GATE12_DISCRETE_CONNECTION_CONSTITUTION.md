@@ -11,11 +11,11 @@ Gate12 proceeds from:
 - `76_GATE10_CLOSEOUT.md`
 - `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
 
-The current in-worktree Gate12 implementation contract draft is now recorded in:
+The current tracked Gate12 implementation contract is now recorded in:
 
 - `197_GATE12A_DISCRETE_CONNECTION_IMPLEMENTATION_CONTRACT.md`
 
-The current in-worktree Gate12A first runner spec draft is now recorded in:
+The current tracked Gate12A first runner spec is now recorded in:
 
 - `198_GATE12A_DISCRETE_CONNECTION_AUDIT.md`
 
