@@ -2,7 +2,8 @@ param(
     [string]$RepoRoot = ".",
     [string]$ReleasePrepDir = "docs/release/gate12a_first_replication_checkpoint",
     [string]$OutputRoot = "dist/zenodo",
-    [string]$BundleName = "gate12a_first_replication_checkpoint_bundle"
+    [string]$BundleName = "gate12a_first_replication_checkpoint_bundle",
+    [string]$TagName = ""
 )
 
 $repoRootPath = (Resolve-Path -Path $RepoRoot).Path
@@ -69,6 +70,22 @@ Get-ChildItem -Path $bundleRootPath -Recurse -File | Sort-Object FullName | ForE
     $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
     $hashRows += "$hash  $relativePath"
 }
+
+if ($TagName -eq "") {
+    $TagName = "gate12a-first-replication-checkpoint-2026-03-31"
+}
+
+$headCommit = (git -C $repoRootPath rev-parse HEAD).Trim()
+$binding = [ordered]@{
+    repository = "https://github.com/Udonburo/pale-ale"
+    tag_name = $TagName
+    tag_url = "https://github.com/Udonburo/pale-ale/tree/$TagName"
+    release_url = "https://github.com/Udonburo/pale-ale/releases/tag/$TagName"
+    commit_hash = $headCommit
+    bundle_created_utc = (Get-Date).ToUniversalTime().ToString("o")
+}
+
+($binding | ConvertTo-Json -Depth 3) | Set-Content -Path (Join-Path $bundleRootPath "RELEASE_BINDING.json") -Encoding utf8
 
 Set-Content -Path (Join-Path $bundleRootPath "SHA256SUMS.txt") -Value $hashRows -Encoding ascii
 

@@ -30,6 +30,14 @@ Rationale:
 - the software repo remains separately available through Git and GitHub
 - the key `runs/` evidence is git-ignored locally, so this checkpoint should use manual Zenodo upload rather than GitHub auto-sync alone
 
+## Fixed Release Tag
+
+Use this tag for the first replication checkpoint:
+
+```text
+gate12a-first-replication-checkpoint-2026-03-31
+```
+
 ## Abstract
 
 ```text
@@ -133,3 +141,10 @@ Do not attach:
 - incomplete future-family runs
 - Rust refactor planning notes
 - a GitHub tag snapshot without the supplemental run-artifact bundle
+
+## Release Binding Note
+
+The exact tagged commit hash should be taken from:
+
+- the final git tag target on `origin/main`
+- the generated `RELEASE_BINDING.json` inside the assembled bundle

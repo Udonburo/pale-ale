@@ -37,11 +37,17 @@ It does not claim:
 
 ## Exact Release Binding
 
-Fill these fields after the release tag is created from `origin/main`.
+This checkpoint is bound to the release tag:
 
-- Release tag: `<fill_after_origin_main_tag>`
-- Release commit: `<fill_after_origin_main_commit>`
+- Release tag: `gate12a-first-replication-checkpoint-2026-03-31`
 - Repository: `https://github.com/Udonburo/pale-ale`
+- Tag URL: `https://github.com/Udonburo/pale-ale/tree/gate12a-first-replication-checkpoint-2026-03-31`
+- Release URL: `https://github.com/Udonburo/pale-ale/releases/tag/gate12a-first-replication-checkpoint-2026-03-31`
+
+The exact tagged commit hash is intentionally recorded in:
+
+- the git tag target itself
+- `RELEASE_BINDING.json` generated from the clean tagged checkout during bundle assembly
 
 ## Included Material
 
@@ -103,6 +109,7 @@ This bundle should be shipped with:
 
 - `BUNDLE_FILE_LIST.txt`
 - `SHA256SUMS.txt`
+- `RELEASE_BINDING.json`
 
 Generate `SHA256SUMS.txt` after the bundle directory is assembled, using:
 

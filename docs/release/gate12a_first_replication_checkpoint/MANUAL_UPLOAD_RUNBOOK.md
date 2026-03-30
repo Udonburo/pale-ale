@@ -26,25 +26,43 @@ Before assembling the bundle:
 3. the files listed in `BUNDLE_FILE_LIST.txt` must all exist locally
 4. local-only drafting files must stay excluded
 
-## Step 1: Fill Release Binding
+## Step 1: Finalize Release Binding
 
-Update these placeholders in:
+Use the fixed tag name:
+
+- `gate12a-first-replication-checkpoint-2026-03-31`
+
+Update the release-prep docs so that they carry:
 
 - `CHECKPOINT_README.md`
 - `ZENODO_METADATA_DRAFT.md`
 
 with:
 
-- final release tag
-- final release commit
-- final release URL once it exists
+- final release tag name
+- deterministic tag URL
+- deterministic release URL
 
-## Step 2: Assemble The Bundle
+Do not try to hard-code the final tagged commit hash into a tracked file.
+Instead, let the bundle assembly step generate `RELEASE_BINDING.json` from the clean tagged checkout.
+
+## Step 2: Tag The Final Commit
+
+After the metadata finalize commit exists on `origin/main`, create the tag:
+
+```powershell
+git tag gate12a-first-replication-checkpoint-2026-03-31
+git push origin gate12a-first-replication-checkpoint-2026-03-31
+```
+
+Confirm the worktree is clean before assembling the bundle.
+
+## Step 3: Assemble The Bundle
 
 From the repository root, run:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File docs\release\gate12a_first_replication_checkpoint\assemble_bundle.ps1 -RepoRoot . -OutputRoot dist\zenodo -BundleName gate12a_first_replication_checkpoint_bundle
+powershell -NoProfile -ExecutionPolicy Bypass -File docs\release\gate12a_first_replication_checkpoint\assemble_bundle.ps1 -RepoRoot . -OutputRoot dist\zenodo -BundleName gate12a_first_replication_checkpoint_bundle -TagName gate12a-first-replication-checkpoint-2026-03-31
 ```
 
 Expected outputs:
@@ -57,21 +75,23 @@ The assembled directory should include:
 - `CHECKPOINT_README.md`
 - `BUNDLE_FILE_LIST.txt`
 - `ZENODO_METADATA_DRAFT.md`
+- `RELEASE_BINDING.json`
 - `SHA256SUMS.txt`
 - the tracked memo/spec files
 - the transcript-side run artifacts
 - the briefing-side run artifacts
 
-## Step 3: Sanity Check The Bundle
+## Step 4: Sanity Check The Bundle
 
 Confirm:
 
 - `SHA256SUMS.txt` exists
+- `RELEASE_BINDING.json` exists
 - file count looks plausible
 - transcript-side and briefing-side run files are both present
 - no local-only `tense` drafts are included
 
-## Step 4: Create The Zenodo Record
+## Step 5: Create The Zenodo Record
 
 In Zenodo:
 
@@ -81,7 +101,7 @@ In Zenodo:
 4. copy the title and abstract from `ZENODO_METADATA_DRAFT.md`
 5. fill creators, keywords, and related identifiers
 
-## Step 5: Final Cross-Check Before Publish
+## Step 6: Final Cross-Check Before Publish
 
 Before publishing, verify:
 
