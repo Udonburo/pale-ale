@@ -220,6 +220,26 @@ def build_readme(packet_rows: Sequence[Mapping[str, Any]], queue_manifest: Mappi
     return "\n".join(lines)
 
 
+def build_selection_metadata(
+    packet_rows: Sequence[Mapping[str, Any]],
+    *,
+    limit: int,
+    balanced_per_band: int,
+) -> Dict[str, Any]:
+    selection_mode = "balanced_per_band" if balanced_per_band > 0 else "queue_prefix"
+    return {
+        "selection_mode": selection_mode,
+        "queue_limit": int(limit),
+        "balanced_per_band": int(balanced_per_band),
+        "selected_high_tension_count": sum(
+            1 for row in packet_rows if str(row["provisional_closure_band"]) == "high_tension"
+        ),
+        "selected_flat_count": sum(
+            1 for row in packet_rows if str(row["provisional_closure_band"]) == "flat"
+        ),
+    }
+
+
 def run_triangle_reading_packet(
     *,
     reading_queue_dir: Path,
@@ -242,6 +262,11 @@ def run_triangle_reading_packet(
         limit=int(limit),
         balanced_per_band=int(balanced_per_band),
     )
+    selection_metadata = build_selection_metadata(
+        packet_rows,
+        limit=int(limit),
+        balanced_per_band=int(balanced_per_band),
+    )
 
     manifest_path = out_dir / DEFAULT_MANIFEST
     status_path = out_dir / DEFAULT_STATUS
@@ -254,11 +279,22 @@ def run_triangle_reading_packet(
         "packet_row_count": len(packet_rows),
         "high_tension_packet_count": sum(1 for row in packet_rows if row["provisional_closure_band"] == "high_tension"),
         "flat_packet_count": sum(1 for row in packet_rows if row["provisional_closure_band"] == "flat"),
+        **selection_metadata,
     }
     write_json(status_path, status_payload)
     write_csv(
         policy_compare_path,
-        ("run_id", "packet_row_count", "high_tension_packet_count", "flat_packet_count"),
+        (
+            "run_id",
+            "packet_row_count",
+            "high_tension_packet_count",
+            "flat_packet_count",
+            "selection_mode",
+            "queue_limit",
+            "balanced_per_band",
+            "selected_high_tension_count",
+            "selected_flat_count",
+        ),
         [{"run_id": out_dir.name, **status_payload}],
     )
     write_jsonl(packet_rows_path, packet_rows)
@@ -274,6 +310,7 @@ def run_triangle_reading_packet(
         "source_reading_queue_run_id": str(queue_manifest.get("run_id") or ""),
         "source_reading_queue_code_git_commit": str(queue_manifest.get("code_git_commit") or ""),
         "source_triangle_text_audit_manifest_path": repo_relative_or_posix(triangle_text_audit_dir / "manifest.json"),
+        "packet_selection": selection_metadata,
         "paths": {
             DEFAULT_STATUS: repo_relative_or_posix(status_path),
             DEFAULT_POLICY_COMPARE: repo_relative_or_posix(policy_compare_path),

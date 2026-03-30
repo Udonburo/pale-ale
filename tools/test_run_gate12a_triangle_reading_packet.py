@@ -58,12 +58,22 @@ class Gate12ATriangleReadingPacketTest(unittest.TestCase):
             self.assertEqual(result["status"]["packet_row_count"], 2)
             self.assertEqual(result["status"]["high_tension_packet_count"], 1)
             self.assertEqual(result["status"]["flat_packet_count"], 1)
+            self.assertEqual(result["status"]["selection_mode"], "queue_prefix")
+            self.assertEqual(result["status"]["queue_limit"], 2)
+            self.assertEqual(result["status"]["balanced_per_band"], 0)
+            self.assertEqual(result["status"]["selected_high_tension_count"], 1)
+            self.assertEqual(result["status"]["selected_flat_count"], 1)
 
             packet_rows = result["packet_rows"]
             self.assertEqual([row["queue_rank"] for row in packet_rows], [1, 2])
             self.assertEqual(packet_rows[0]["prompt_text"], "Prompt one")
             self.assertEqual(packet_rows[0]["answer_text"], "Answer one")
             self.assertEqual(packet_rows[1]["support_anchor_text"], "Support two")
+
+            manifest = result["manifest"]
+            self.assertEqual(manifest["packet_selection"]["selection_mode"], "queue_prefix")
+            self.assertEqual(manifest["packet_selection"]["queue_limit"], 2)
+            self.assertEqual(manifest["packet_selection"]["balanced_per_band"], 0)
 
             read_text = (out_dir / reading_packet.DEFAULT_READ).read_text(encoding="utf-8")
             self.assertIn("Queue 1", read_text)
@@ -104,6 +114,12 @@ class Gate12ATriangleReadingPacketTest(unittest.TestCase):
             self.assertEqual(len(packet_rows), 2)
             self.assertEqual([row["provisional_closure_band"] for row in packet_rows], ["high_tension", "flat"])
             self.assertEqual([row["queue_rank"] for row in packet_rows], [1, 3])
+            self.assertEqual(result["status"]["selection_mode"], "balanced_per_band")
+            self.assertEqual(result["status"]["queue_limit"], 2)
+            self.assertEqual(result["status"]["balanced_per_band"], 1)
+            self.assertEqual(result["status"]["selected_high_tension_count"], 1)
+            self.assertEqual(result["status"]["selected_flat_count"], 1)
+            self.assertEqual(result["manifest"]["packet_selection"]["selection_mode"], "balanced_per_band")
 
     def _build_queue_fixture(self, root: Path) -> Path:
         queue_dir = root / "queue"
