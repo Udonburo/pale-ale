@@ -168,6 +168,24 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 - [`workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`](workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md): tracked Gate12A briefing_v1 family empirical memo
 - [`workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md`](workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md): tracked Gate12A cross-family comparison memo
 
+## Current Gate12A Line
+
+The current active implementation and empirical reading line is the Gate12A Python-side artifact pipeline.
+
+In practical terms, the current line is:
+
+- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/202`
+- the narrow Python-side consumers and audit runners in `tools/`
+- the local manifest/status/csv evidence emitted under `runs/`
+
+At the current checkpoint, this line is where the repo records:
+
+- the current discrete-connection observable surface
+- the transcript_v1 and briefing_v1 family replication memos
+- the current cross-family comparison checkpoint
+
+This current Gate12A line is the primary research surface for the present checkpoint.
+
 If you need the forward-basis adoption line:
 
 - [`workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md`](workstream/58_GATE9P_DECLARED_SPLIT_ADOPT_OR_DEFER_JUDGMENT.md)
@@ -337,7 +355,20 @@ The older Gate1-4 material remains relevant as implementation and historical bac
 
 ## Workspace Structure
 
-Core Rust workspace:
+Current Gate12A workflow surfaces:
+
+- `workstream/`: numbered tracked workstream memory and closeouts
+- `workstream/local/`: ignored local-only notes; never pushed by convention and hook
+- `tools/`: narrow Python-side consumers, audits, and smoke runners
+- `runs/`: local emitted manifest/status/read/csv surfaces for the current line
+- `specs/`: public/internal constitutions and historical implementation checklists
+- `docs/`: non-sequential reference docs and design drafts
+- `attestations/`: evidence snapshots and run summaries
+
+Retained Rust infrastructure:
+
+The Rust workspace remains retained infrastructure and legacy-classic stack support.
+It is still kept buildable, but it is not the current primary Gate12A empirical surface and is not being refactored in this checkpoint.
 
 ```text
 crates/
@@ -348,16 +379,9 @@ crates/
   modelspec/   model specification and verification
 ```
 
-Research workflow surfaces:
-
-- `workstream/`: numbered tracked workstream memory and closeouts
-- `workstream/local/`: ignored local-only notes; never pushed by convention and hook
-- `specs/`: public/internal constitutions and historical implementation checklists
-- `tools/`: narrow consumers, audits, and smoke runners
-- `docs/`: non-sequential reference docs and design drafts
-- `attestations/`: evidence snapshots and run summaries
-
 ## Build And Test
+
+Retained Rust infrastructure:
 
 ```bash
 cargo build -p pale-ale-cli --release
@@ -365,7 +389,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-Python-side narrow consumers are usually validated per file with:
+Current Gate12A line:
 
 ```bash
 python -B -m py_compile tools\\some_consumer.py tools\\test_some_consumer.py
