@@ -43,7 +43,13 @@ If you need the current operator boundary:
 
 - [`workstream/31_GATE9C_OPERATOR_ADMISSION.md`](workstream/31_GATE9C_OPERATOR_ADMISSION.md)
 
-If you need the current Gate11 admissibility line rather than the current boundary:
+If you need only the Gate11 membrane rather than the full historical slice chain, start here:
+
+- [`workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`](workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md): Gate11 admissibility constitution
+- [`workstream/195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`](workstream/195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md): Gate11 membrane freeze
+- [`workstream/README.md`](workstream/README.md): full tracked Gate11/Gate12 index and reading order
+
+If you need the full Gate11 admissibility history rather than the current boundary:
 
 - [`workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md`](workstream/78_GATE11_OPERATOR_REOPENING_ELIGIBILITY.md)
 - [`workstream/83_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT.md`](workstream/83_GATE11C_BOUNDED_LINE_INSUFFICIENCY_DECLARATION_SURFACE_AUDIT.md)
@@ -353,7 +359,7 @@ Research/internal entry points:
 - [`workstream/10_GATE6_STANDING_AND_OUTCOME.md`](workstream/10_GATE6_STANDING_AND_OUTCOME.md)
 - [`workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md`](workstream/12_GATE7_MOTIF_BAKEOFF_AND_OUTCOME.md)
 
-The older Gate1-4 material remains relevant as implementation and historical background, but it is no longer the best starting point for understanding the current research mainline.
+The older Gate1-4 material, including the earlier Cl+(8)/rotor-centered surface, remains relevant as implementation and historical background, but it is no longer the best starting point for understanding the current research mainline.
 
 ## Workspace Structure
 
@@ -367,7 +373,7 @@ Current Gate12A workflow surfaces:
 - `docs/`: non-sequential reference docs and design drafts
 - `attestations/`: evidence snapshots and run summaries
 
-Retained Rust infrastructure:
+Retained Rust infrastructure and legacy-classic stack:
 
 The Rust workspace remains retained infrastructure and legacy-classic stack support.
 It is still kept buildable, but it is not the current primary Gate12A empirical surface and is not being refactored in this checkpoint.
