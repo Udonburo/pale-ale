@@ -15,6 +15,10 @@ The current tracked transcript_v1 family replication memo is now recorded in:
 
 - `200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md`
 
+The current tracked briefing_v1 family empirical memo is now recorded in:
+
+- `201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
+
 ## 0. Scope
 
 This memo records a first empirical finding from the current Gate12A local run surface.

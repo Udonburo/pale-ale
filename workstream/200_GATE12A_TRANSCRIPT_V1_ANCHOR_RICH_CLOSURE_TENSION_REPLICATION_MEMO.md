@@ -12,6 +12,10 @@ This memo proceeds from:
 - `199_GATE12A_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
 - `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
 
+The current tracked briefing_v1 family empirical memo is now recorded in:
+
+- `201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
+
 ## 0. Scope
 
 This memo asks a narrower question than `199`.
