@@ -163,6 +163,7 @@ If you need the next construction-line draft after the Gate11 membrane freeze:
 - [`workstream/196_GATE12_DISCRETE_CONNECTION_CONSTITUTION.md`](workstream/196_GATE12_DISCRETE_CONNECTION_CONSTITUTION.md): current in-worktree Gate12 constitution draft
 - [`workstream/197_GATE12A_DISCRETE_CONNECTION_IMPLEMENTATION_CONTRACT.md`](workstream/197_GATE12A_DISCRETE_CONNECTION_IMPLEMENTATION_CONTRACT.md): current in-worktree Gate12 implementation contract draft
 - [`workstream/198_GATE12A_DISCRETE_CONNECTION_AUDIT.md`](workstream/198_GATE12A_DISCRETE_CONNECTION_AUDIT.md): current in-worktree Gate12A first runner spec draft
+- [`workstream/199_GATE12A_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`](workstream/199_GATE12A_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md): current in-worktree Gate12A empirical memo draft
 
 If you need the forward-basis adoption line:
 
