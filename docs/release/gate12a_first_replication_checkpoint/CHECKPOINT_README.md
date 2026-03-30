@@ -3,6 +3,20 @@
 Status: release-prep draft
 Scope: supplemental bundle for a Zenodo replication checkpoint, not a general software release and not a final theory claim
 
+## Upload Mode
+
+This checkpoint should be uploaded to Zenodo as a manual dataset deposit.
+
+Reason:
+
+- the key `runs/` evidence is intentionally ignored by git in this repository
+- a GitHub-tag-only Zenodo sync would omit the local run artifacts that carry the checkpoint evidence
+
+So for this checkpoint:
+
+- GitHub release/tag can still be used as the software-side reference point
+- the Zenodo record itself should be created with `+ New upload` and a manually assembled bundle zip
+
 ## What This Bundle Is
 
 This bundle fixes the first cross-family replication checkpoint for the Gate12A anchor-rich closure tension observable surface in `pale-ale`.

@@ -28,6 +28,7 @@ Rationale:
 
 - this deposit is best treated as a reproducible empirical checkpoint bundle
 - the software repo remains separately available through Git and GitHub
+- the key `runs/` evidence is git-ignored locally, so this checkpoint should use manual Zenodo upload rather than GitHub auto-sync alone
 
 ## Abstract
 
@@ -131,3 +132,4 @@ Do not attach:
 - local-only `tense` drafts
 - incomplete future-family runs
 - Rust refactor planning notes
+- a GitHub tag snapshot without the supplemental run-artifact bundle
