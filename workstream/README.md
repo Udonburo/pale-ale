@@ -17,6 +17,7 @@ This directory holds the numbered tracked workstream memory for the repo.
 - the tracked Gate12A briefing_v1 family empirical memo is `201`
 - the tracked Gate12A cross-family comparison memo is `202`
 - the current Gate12A archive_v1 first-pass break-candidate memo draft is `203`
+- the current Gate12A SmolLM2-360M transcript_v1 open dense fallback baseline memo draft is `204`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
