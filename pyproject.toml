@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "pale-ale"
 version = "1.0.1"
-description = "Pale Ale (Rust core): deterministic Spin(3) rotor distance kernels"
+description = "Retained core-infrastructure package for pale-ale's Rust/Python engine surface."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

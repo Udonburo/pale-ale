@@ -180,6 +180,9 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 
 The current active implementation and empirical reading line is the Gate12A Python-side artifact pipeline.
 
+For public repo reading, this is the current research surface.
+The retained Rust/Python package metadata and buildable CLI stack are infrastructure, not the current checkpoint claim surface.
+
 In practical terms, the current line is:
 
 - the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/202`

@@ -27,6 +27,8 @@ It preserves a reproducible observable surface and its first cross-family compar
 - `transcript_v1`
 - `briefing_v1`
 
+The Zenodo DOI for this record points to this Gate12A replication checkpoint surface, not to the repository as a whole and not to a final theory release.
+
 It does not claim:
 
 - a universal law

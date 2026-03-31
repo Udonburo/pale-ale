@@ -4,11 +4,11 @@ version = "1.0.1"
 edition = "2021"
 rust-version = "1.65"
 license = "MPL-2.0"
-description = "Geometric auditing engine for LLMs using E8 lattices and Geometric Algebra."
+description = "Retained Rust core infrastructure for pale-ale's engine surface; the current empirical checkpoint is tracked separately in the repo."
 homepage = "https://github.com/Udonburo/pale-ale"
 repository = "https://github.com/Udonburo/pale-ale"
 readme = "README.md"
-keywords = ["ai", "audit", "e8", "geometric-algebra"]
+keywords = ["ai", "audit", "infrastructure", "geometric-algebra"]
 include = [
   "src/**",
   "Cargo.toml",
