@@ -29,6 +29,7 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
             gate12a_top_k=3,
             balanced_per_band=6,
             reading_limit=0,
+            out_root=Path("runs"),
         )
 
         self.assertEqual(len(commands), 6)
@@ -60,6 +61,7 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
             gate12a_top_k=5,
             balanced_per_band=4,
             reading_limit=12,
+            out_root=Path("tmp/custom_runs"),
         )
 
         self.assertEqual(len(commands), 2)
@@ -70,6 +72,30 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
         self.assertIn("4", replay_command)
         self.assertIn("--reading-limit", replay_command)
         self.assertIn("12", replay_command)
+        self.assertIn("--out-root", replay_command)
+        self.assertIn("tmp\\custom_runs", replay_command)
+
+    def test_out_root_propagates_to_spawned_gate8_and_replay_commands(self) -> None:
+        commands = harness.build_commands(
+            model_id="Qwen/Qwen2.5-0.5B",
+            model_label="qwen",
+            family_names=["transcript_v1"],
+            device="cpu",
+            topk=128,
+            seed=7,
+            gate12a_top_k=3,
+            balanced_per_band=6,
+            reading_limit=0,
+            out_root=Path("tmp/custom_root"),
+        )
+
+        self.assertEqual(len(commands), 2)
+        gate8_command, replay_command = commands
+        self.assertIn("--out-root", gate8_command)
+        self.assertIn("tmp\\custom_root", gate8_command)
+        self.assertIn("--out-root", replay_command)
+        self.assertIn("tmp\\custom_root", replay_command)
+        self.assertCommandContains(replay_command, "tmp\\custom_root\\gate8cm_qwen_transcript_128r_candidate_execution")
 
 
 if __name__ == "__main__":

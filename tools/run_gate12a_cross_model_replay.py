@@ -137,13 +137,14 @@ def build_commands(
     gate12a_top_k: int,
     balanced_per_band: int,
     reading_limit: int,
+    out_root: Path,
 ) -> List[List[str]]:
     python_exe = sys.executable
     commands: List[List[str]] = []
     for family_name in family_names:
         config = FAMILY_CONFIGS[family_name]
         run_prefix = build_run_prefix(model_label, config)
-        gate8_execution_dir = Path("runs") / f"{run_prefix}_candidate_execution"
+        gate8_execution_dir = out_root / f"{run_prefix}_candidate_execution"
         commands.append(
             [
                 python_exe,
@@ -160,6 +161,8 @@ def build_commands(
                 str(seed),
                 "--rendering-family",
                 config.rendering_family,
+                "--out-root",
+                str(out_root),
                 "--model-id",
                 model_id,
             ]
@@ -169,6 +172,8 @@ def build_commands(
             str((TOOLS_DIR / "run_gate12a_family_replay.py").resolve()),
             "--gate8-execution-dir",
             str(gate8_execution_dir),
+            "--out-root",
+            str(out_root),
             "--top-k",
             str(gate12a_top_k),
         ]
@@ -282,6 +287,7 @@ def main() -> int:
         gate12a_top_k=args.gate12a_top_k,
         balanced_per_band=args.balanced_per_band,
         reading_limit=args.reading_limit,
+        out_root=out_root,
     )
     for command in commands:
         run_subprocess(command)
