@@ -175,6 +175,7 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 - [`workstream/200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md`](workstream/200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md): tracked Gate12A transcript_v1 family replication memo
 - [`workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`](workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md): tracked Gate12A briefing_v1 family empirical memo
 - [`workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md`](workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md): tracked Gate12A cross-family comparison memo
+- [`workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`](workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md): current archive_v1 first-pass break-candidate memo draft
 
 ## Current Gate12A Line
 
@@ -196,6 +197,10 @@ At the current checkpoint, this line is where the repo records:
 - the current cross-family comparison checkpoint
 
 This current Gate12A line is the primary research surface for the present checkpoint.
+
+The current post-checkpoint follow-up draft is:
+
+- the current archive_v1 first-pass break-candidate memo draft
 
 If you need the forward-basis adoption line:
 

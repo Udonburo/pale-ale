@@ -14,6 +14,10 @@ This memo proceeds from:
 - `201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`
 - `195_GATE11_ADMISSIBILITY_MEMBRANE_FREEZE.md`
 
+The current archive_v1 first-pass break-candidate memo draft is now recorded in:
+
+- `203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`
+
 ## 0. Scope
 
 This memo asks only:
