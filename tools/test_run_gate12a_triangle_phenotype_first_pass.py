@@ -18,7 +18,7 @@ import run_gate12a_triangle_phenotype_first_pass as first_pass
 
 
 class RunGate12ATrianglePhenotypeFirstPassTest(unittest.TestCase):
-    def write_reviewed_csv(self, path: Path) -> None:
+    def write_reviewed_csv(self, path: Path, *, second_tag: str = "conflict_respected") -> None:
         rows = [
             {
                 "queue_rank": "1",
@@ -41,7 +41,7 @@ class RunGate12ATrianglePhenotypeFirstPassTest(unittest.TestCase):
                 "provisional_closure_band": "flat",
                 "holonomy_residual_fro": "0.01",
                 "residual_percentile": "0.0",
-                "reviewed_phenotype_tag": "conflict_respected",
+                "reviewed_phenotype_tag": second_tag,
                 "reviewed_phenotype_notes": "Flat conflict-respecting row.",
                 "prompt_path": "runs/b/prompt.txt",
                 "answer_path": "runs/b/answer.txt",
@@ -163,6 +163,29 @@ class RunGate12ATrianglePhenotypeFirstPassTest(unittest.TestCase):
             ]
             with mock.patch("sys.argv", argv):
                 with self.assertRaisesRegex(ValueError, "reviewed rows do not match source packet identifiers"):
+                    first_pass.main()
+
+    def test_main_fails_when_any_reviewed_tag_is_blank(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            reviewed_csv = tmp / "reviewed.csv"
+            source_packet_dir = tmp / "source_packet"
+            out_dir = tmp / "first_pass"
+            source_packet_dir.mkdir(parents=True)
+            self.write_reviewed_csv(reviewed_csv, second_tag="")
+            self.write_source_packet_rows(source_packet_dir / "triangle_reading_packet_rows.jsonl")
+
+            argv = [
+                "prog",
+                "--reviewed-csv",
+                str(reviewed_csv),
+                "--source-packet-dir",
+                str(source_packet_dir),
+                "--out-dir",
+                str(out_dir),
+            ]
+            with mock.patch("sys.argv", argv):
+                with self.assertRaisesRegex(ValueError, "missing reviewed_phenotype_tag values"):
                     first_pass.main()
 
 

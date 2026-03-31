@@ -116,6 +116,19 @@ def validate_reviewed_rows_against_packet(
         raise ValueError("reviewed rows do not match source packet identifiers")
 
 
+def validate_reviewed_rows_are_complete(reviewed_rows: Sequence[Mapping[str, Any]]) -> None:
+    missing_identifiers = [
+        identifier_tuple(row)
+        for row in reviewed_rows
+        if not str(row.get("reviewed_phenotype_tag", "")).strip()
+    ]
+    if missing_identifiers:
+        raise ValueError(
+            "reviewed rows are missing reviewed_phenotype_tag values for "
+            f"{len(missing_identifiers)} row(s)"
+        )
+
+
 def build_status(rows: List[Mapping[str, Any]], source_packet_row_count: int) -> Dict[str, Any]:
     packet_row_count = len(rows)
     band_counts = Counter(str(row.get("provisional_closure_band", "")).strip() for row in rows)
@@ -190,6 +203,7 @@ def main() -> int:
     rows = read_rows(reviewed_csv)
     packet_rows = read_packet_rows(source_packet_dir)
     validate_reviewed_rows_against_packet(rows, packet_rows)
+    validate_reviewed_rows_are_complete(rows)
     status = build_status(rows, source_packet_row_count=len(packet_rows))
 
     csv_path = out_dir / DEFAULT_CSV
