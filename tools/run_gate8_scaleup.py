@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topk", type=int, default=128)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--rendering-family", default="archive_v1")
+    parser.add_argument("--out-root", default="runs")
     parser.add_argument(
         "--skip-execution",
         action="store_true",
@@ -51,9 +52,10 @@ def run_subprocess(command: Sequence[str]) -> None:
 
 def main() -> int:
     args = parse_args()
-    constitution_dir = Path("runs") / f"{args.run_prefix}_constitution"
-    benchmark_dir = Path("runs") / f"{args.run_prefix}_benchmark"
-    execution_dir = Path("runs") / f"{args.run_prefix}_candidate_execution"
+    out_root = Path(args.out_root)
+    constitution_dir = out_root / f"{args.run_prefix}_constitution"
+    benchmark_dir = out_root / f"{args.run_prefix}_benchmark"
+    execution_dir = out_root / f"{args.run_prefix}_candidate_execution"
 
     run_subprocess(
         [

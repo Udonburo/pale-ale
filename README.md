@@ -175,6 +175,8 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 - [`workstream/200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md`](workstream/200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md): tracked Gate12A transcript_v1 family replication memo
 - [`workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md`](workstream/201_GATE12A_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_EMPIRICAL_MEMO.md): tracked Gate12A briefing_v1 family empirical memo
 - [`workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md`](workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md): tracked Gate12A cross-family comparison memo
+- [`workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`](workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md): tracked Gate12A archive_v1 post-checkpoint first-pass break-candidate memo
+- [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md): tracked Gate12A SmolLM2-360M transcript_v1 post-checkpoint fallback baseline memo
 
 ## Current Gate12A Line
 
@@ -185,7 +187,7 @@ The retained Rust/Python package metadata and buildable CLI stack are infrastruc
 
 In practical terms, the current line is:
 
-- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/202`
+- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/204`, with the current published checkpoint boundary held at `workstream/202`
 - the narrow Python-side consumers and audit runners in `tools/`
 - the local manifest/status/csv evidence emitted under `runs/`
 
@@ -196,6 +198,11 @@ At the current checkpoint, this line is where the repo records:
 - the current cross-family comparison checkpoint
 
 This current Gate12A line is the primary research surface for the present checkpoint.
+
+The current tracked post-checkpoint follow-up memos are:
+
+- [`workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`](workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md)
+- [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md)
 
 If you need the forward-basis adoption line:
 
