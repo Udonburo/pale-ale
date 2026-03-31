@@ -122,7 +122,13 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (first_pass_root / "gate12a_triangle_phenotype_first_pass_status.json").write_text(
-                '{"reviewed_tag_counts":[{"reviewed_phenotype_tag":"surface_noise_only","count":2}]}\n',
+                (
+                    '{"reviewed_tag_counts":[{"reviewed_phenotype_tag":"surface_noise_only","count":2}],'
+                    '"reviewed_tag_counts_by_band":['
+                    '{"provisional_closure_band":"high_tension","reviewed_phenotype_tag":"surface_noise_only","count":1},'
+                    '{"provisional_closure_band":"flat","reviewed_phenotype_tag":"conflict_respected","count":1}'
+                    ']}\n'
+                ),
                 encoding="utf-8",
             )
 
@@ -146,7 +152,7 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
             self.assertTrue(summary_csv.exists())
             text = summary_csv.read_text(encoding="utf-8")
             self.assertIn("available", text)
-            self.assertIn("surface_noise_only=2", text)
+            self.assertIn("high_tension:surface_noise_only=1|flat:conflict_respected=1", text)
 
 
 if __name__ == "__main__":

@@ -212,11 +212,27 @@ def summarize_first_pass(replay_dirs: Mapping[str, Path]) -> tuple[str, str]:
     if not status_path.exists():
         return "pending_local_read", ""
     status = read_json(status_path)
-    reviewed_counts = status.get("reviewed_tag_counts") or []
-    detail = ";".join(
-        f"{row.get('reviewed_phenotype_tag')}={row.get('count')}"
-        for row in reviewed_counts
-    )
+    reviewed_counts_by_band = status.get("reviewed_tag_counts_by_band") or []
+    if reviewed_counts_by_band:
+        grouped: Dict[str, List[str]] = {}
+        for row in reviewed_counts_by_band:
+            band = str(row.get("provisional_closure_band", "")).strip()
+            tag = str(row.get("reviewed_phenotype_tag", "")).strip()
+            count = row.get("count")
+            if not band or not tag:
+                continue
+            grouped.setdefault(band, []).append(f"{tag}={count}")
+        detail = "|".join(
+            f"{band}:{';'.join(grouped[band])}"
+            for band in ("high_tension", "flat")
+            if grouped.get(band)
+        )
+    else:
+        reviewed_counts = status.get("reviewed_tag_counts") or []
+        detail = ";".join(
+            f"{row.get('reviewed_phenotype_tag')}={row.get('count')}"
+            for row in reviewed_counts
+        )
     return "available", detail
 
 
