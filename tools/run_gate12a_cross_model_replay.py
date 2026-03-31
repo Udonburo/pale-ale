@@ -59,6 +59,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reading-limit", type=int, default=0)
     parser.add_argument("--out-root", default="runs")
     parser.add_argument("--summary-run-id", help="Optional explicit summary run id under the out root.")
+    parser.add_argument(
+        "--summarize-only",
+        action="store_true",
+        help="Do not spawn Gate8/Gate12A runs; only summarize an existing fixed family set under the out root.",
+    )
     return parser.parse_args()
 
 
@@ -233,7 +238,8 @@ def build_family_summary_rows(
 
         gate12a_status = read_json(replay_dirs["gate12a"] / "gate12a_discrete_connection_status.json")
         calibration_status = read_json(replay_dirs["calibration"] / "gate12a_calibration_seed_audit_status.json")
-        quantile_rows = list(csv.DictReader((replay_dirs["calibration"] / "transport_gap_quantiles_by_subregime.csv").open("r", encoding="utf-8")))
+        with (replay_dirs["calibration"] / "transport_gap_quantiles_by_subregime.csv").open("r", encoding="utf-8") as handle:
+            quantile_rows = list(csv.DictReader(handle))
         quantiles_by_subregime = {str(row["subregime"]): row for row in quantile_rows}
         first_pass_status, first_pass_detail = summarize_first_pass(replay_dirs)
 
@@ -289,8 +295,9 @@ def main() -> int:
         reading_limit=args.reading_limit,
         out_root=out_root,
     )
-    for command in commands:
-        run_subprocess(command)
+    if not args.summarize_only:
+        for command in commands:
+            run_subprocess(command)
 
     summary_rows = build_family_summary_rows(
         out_root=out_root,
@@ -337,6 +344,7 @@ def main() -> int:
         "family_set": list(args.families),
         "balanced_per_band": args.balanced_per_band,
         "reading_limit": args.reading_limit,
+        "summarize_only": bool(args.summarize_only),
         "paths": {
             DEFAULT_STATUS: repo_relative_or_posix(summary_path),
         },

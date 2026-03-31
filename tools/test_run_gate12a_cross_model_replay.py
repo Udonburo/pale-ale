@@ -2,6 +2,7 @@
 """Tests for Gate12A cross-model replay harness."""
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -96,6 +97,56 @@ class RunGate12ACrossModelReplayTest(unittest.TestCase):
         self.assertIn("--out-root", replay_command)
         self.assertIn("tmp\\custom_root", replay_command)
         self.assertCommandContains(replay_command, "tmp\\custom_root\\gate8cm_qwen_transcript_128r_candidate_execution")
+
+    def test_summarize_only_skips_spawning_replays(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            summary_root = tmp / "runs"
+            family_root = summary_root / "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_transcript_128r_gate9k"
+            calibration_root = summary_root / "gate12a_calibration_seed_audit_recheck_from_gate12a_upstream_gate8cm_qwen_transcript_128r_gate9k"
+            packet_root = summary_root / "gate12a_triangle_reading_packet_balanced_recheck_from_gate12a_upstream_gate8cm_qwen_transcript_128r_gate9k"
+            first_pass_root = summary_root / "gate12a_triangle_phenotype_first_pass_recheck_from_gate12a_upstream_gate8cm_qwen_transcript_128r_gate9k"
+            for path in (family_root, calibration_root, packet_root, first_pass_root):
+                path.mkdir(parents=True, exist_ok=True)
+
+            (family_root / "gate12a_discrete_connection_status.json").write_text(
+                '{"defined_triangle_holonomy_count": 2}\n',
+                encoding="utf-8",
+            )
+            (calibration_root / "gate12a_calibration_seed_audit_status.json").write_text(
+                '{"zero_overlap_count": 0, "triangles_with_any_anchor_count": 2, "triangles_with_all_anchor_count": 0}\n',
+                encoding="utf-8",
+            )
+            (calibration_root / "transport_gap_quantiles_by_subregime.csv").write_text(
+                "subregime,median\ntrusted_tree,1.0\nresidual_chord,0.5\nanchor_qualified,0.4\nplain,0.9\n",
+                encoding="utf-8",
+            )
+            (first_pass_root / "gate12a_triangle_phenotype_first_pass_status.json").write_text(
+                '{"reviewed_tag_counts":[{"reviewed_phenotype_tag":"surface_noise_only","count":2}]}\n',
+                encoding="utf-8",
+            )
+
+            argv = [
+                "prog",
+                "--model-id",
+                "Qwen/Qwen2.5-0.5B",
+                "--model-label",
+                "qwen",
+                "--families",
+                "transcript_v1",
+                "--out-root",
+                str(summary_root),
+                "--summarize-only",
+            ]
+            with mock.patch("sys.argv", argv), mock.patch.object(harness, "run_subprocess") as mocked_run:
+                self.assertEqual(harness.main(), 0)
+                mocked_run.assert_not_called()
+
+            summary_csv = summary_root / "gate12a_cross_model_replay_qwen" / "cross_model_family_summary.csv"
+            self.assertTrue(summary_csv.exists())
+            text = summary_csv.read_text(encoding="utf-8")
+            self.assertIn("available", text)
+            self.assertIn("surface_noise_only=2", text)
 
 
 if __name__ == "__main__":
