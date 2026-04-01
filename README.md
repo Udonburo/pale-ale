@@ -177,6 +177,7 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 - [`workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md`](workstream/202_GATE12A_TRANSCRIPT_V1_VS_BRIEFING_V1_ANCHOR_RICH_CLOSURE_TENSION_COMPARISON_MEMO.md): tracked Gate12A cross-family comparison memo
 - [`workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`](workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md): tracked Gate12A archive_v1 post-checkpoint first-pass break-candidate memo
 - [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md): tracked Gate12A SmolLM2-360M transcript_v1 post-checkpoint fallback baseline memo
+- [`workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md`](workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md): tracked Gate12A Llama-3.2-1B-Instruct transcript_v1 post-checkpoint replication memo
 
 ## Current Gate12A Line
 
@@ -187,7 +188,7 @@ The retained Rust/Python package metadata and buildable CLI stack are infrastruc
 
 In practical terms, the current line is:
 
-- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/204`, with the current published checkpoint boundary held at `workstream/202`
+- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/205`, with the current published checkpoint boundary held at `workstream/202`
 - the narrow Python-side consumers and audit runners in `tools/`
 - the local manifest/status/csv evidence emitted under `runs/`
 
@@ -203,6 +204,7 @@ The current tracked post-checkpoint follow-up memos are:
 
 - [`workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md`](workstream/203_GATE12A_ARCHIVE_V1_ANCHOR_RICH_CLOSURE_TENSION_FIRST_PASS_BREAK_CANDIDATE_MEMO.md)
 - [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md)
+- [`workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md`](workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md)
 
 If you need the forward-basis adoption line:
 
