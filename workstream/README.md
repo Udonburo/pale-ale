@@ -2,7 +2,7 @@
 
 This directory holds the numbered tracked workstream memory for the repo.
 
-- `06` through `205` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `206` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -19,6 +19,7 @@ This directory holds the numbered tracked workstream memory for the repo.
 - the tracked Gate12A archive_v1 post-checkpoint first-pass break-candidate memo is `203`
 - the tracked Gate12A SmolLM2-360M transcript_v1 post-checkpoint fallback baseline memo is `204`
 - the tracked Gate12A Llama-3.2-1B-Instruct transcript_v1 post-checkpoint replication memo is `205`
+- the tracked Gate12A Llama-3.2-1B-Instruct fixed family-set post-checkpoint replication memo is `206`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
