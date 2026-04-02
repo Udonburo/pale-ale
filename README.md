@@ -179,6 +179,7 @@ If you need the current tracked Gate12 construction line after the Gate11 membra
 - [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md): tracked Gate12A SmolLM2-360M transcript_v1 post-checkpoint fallback baseline memo
 - [`workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md`](workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md): tracked Gate12A Llama-3.2-1B-Instruct transcript_v1 post-checkpoint replication memo
 - [`workstream/206_GATE12A_LLAMA_3_2_1B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md`](workstream/206_GATE12A_LLAMA_3_2_1B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md): tracked Gate12A Llama-3.2-1B-Instruct fixed family-set post-checkpoint replication memo
+- [`workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md`](workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md): tracked Gate12A Qwen2.5-1.5B-Instruct transcript_v1 imported GPU post-checkpoint replication memo
 
 ## Current Gate12A Line
 
@@ -189,7 +190,7 @@ The retained Rust/Python package metadata and buildable CLI stack are infrastruc
 
 In practical terms, the current line is:
 
-- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/206`, with the current published checkpoint boundary held at `workstream/202`
+- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/207`, with the current published checkpoint boundary held at `workstream/202`
 - the narrow Python-side consumers and audit runners in `tools/`
 - the local manifest/status/csv evidence emitted under `runs/`
 
@@ -207,6 +208,7 @@ The current tracked post-checkpoint follow-up memos are:
 - [`workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md`](workstream/204_GATE12A_SMOLLM2_360M_TRANSCRIPT_V1_OPEN_DENSE_FALLBACK_BASELINE_MEMO.md)
 - [`workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md`](workstream/205_GATE12A_LLAMA_3_2_1B_INSTRUCT_TRANSCRIPT_V1_REPLICATION_MEMO.md)
 - [`workstream/206_GATE12A_LLAMA_3_2_1B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md`](workstream/206_GATE12A_LLAMA_3_2_1B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md)
+- [`workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md`](workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md)
 
 If you need the forward-basis adoption line:
 
