@@ -22,7 +22,9 @@ except ImportError as exc:  # pragma: no cover - user environment dependent
     ) from exc
 
 PROJ_ID = "fwht_pad_pow2_take8_v1"
-SPLUS_DEF_ID = "attn_lastlayer_weighted_hidden_v1"
+ATTN_WEIGHTED_SPLUS_DEF_ID = "attn_lastlayer_weighted_hidden_v1"
+ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID = "prefix_mean_hidden_v1"
+SPLUS_DEF_ID = ATTN_WEIGHTED_SPLUS_DEF_ID
 SMINUS_DEF_ID_TEMPLATE = "lm_head_row_expectation_topk{topk}_v1"
 RAW_NATIVE_SCHEMA_ID = "triality_raw_native_v1"
 NORM_EPS = 1e-12
@@ -288,16 +290,24 @@ def topk_probs_and_entropy(logits: torch.Tensor, topk: int) -> Tuple[torch.Tenso
 
 
 def compute_splus_from_past(
-    attn_to_past: torch.Tensor, hidden_past: torch.Tensor, hidden_dim: int
+    attn_to_past: Optional[torch.Tensor], hidden_past: torch.Tensor, hidden_dim: int
 ) -> torch.Tensor:
-    # attn_to_past: [num_heads, t], hidden_past: [t, hidden]
+    # attn_to_past: [num_heads, t] or None, hidden_past: [t, hidden]
     if int(hidden_past.shape[0]) <= 0:
         return torch.zeros(
             hidden_dim,
             device=hidden_past.device,
             dtype=hidden_past.dtype,
         )
-    weights = attn_to_past.mean(dim=0)
+    if attn_to_past is None:
+        weights = torch.full(
+            (int(hidden_past.shape[0]),),
+            1.0 / float(hidden_past.shape[0]),
+            device=hidden_past.device,
+            dtype=hidden_past.dtype,
+        )
+    else:
+        weights = attn_to_past.mean(dim=0)
     return torch.matmul(weights, hidden_past)
 
 
@@ -366,6 +376,7 @@ def run_autoregressive_extraction(
     topk: int,
     emit_native_raw: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    global SPLUS_DEF_ID
     encoded = tokenizer(prompt, return_tensors="pt")
     input_ids = encoded["input_ids"].to(device)
     if int(input_ids.shape[1]) <= 0:
@@ -401,6 +412,13 @@ def run_autoregressive_extraction(
 
         hidden_last_layer = out.hidden_states[-1][0]  # [seq, hidden]
         v_raw = hidden_last_layer[-1]
+        attentions = getattr(out, "attentions", None)
+        uses_attention = attentions is not None
+        SPLUS_DEF_ID = (
+            ATTN_WEIGHTED_SPLUS_DEF_ID
+            if uses_attention
+            else ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID
+        )
 
         seq_len = int(hidden_last_layer.shape[0])
         if seq_len <= 1:
@@ -410,7 +428,9 @@ def run_autoregressive_extraction(
                 dtype=hidden_last_layer.dtype,
             )
         else:
-            attn_to_past = out.attentions[-1][0, :, -1, :-1]  # [heads, seq-1]
+            attn_to_past = (
+                attentions[-1][0, :, -1, :-1] if uses_attention else None
+            )
             hidden_past = hidden_last_layer[:-1, :]
             splus_raw = compute_splus_from_past(
                 attn_to_past=attn_to_past,
@@ -476,6 +496,7 @@ def run_teacher_forcing_extraction(
     topk: int,
     emit_native_raw: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    global SPLUS_DEF_ID
     if not getattr(tokenizer, "is_fast", False):
         raise RuntimeError(
             "Teacher forcing requires a fast tokenizer (offset mapping support)."
@@ -541,6 +562,13 @@ def run_teacher_forcing_extraction(
         )
 
     hidden_last = out.hidden_states[-1][0]  # [seq, hidden]
+    attentions = getattr(out, "attentions", None)
+    uses_attention = attentions is not None
+    SPLUS_DEF_ID = (
+        ATTN_WEIGHTED_SPLUS_DEF_ID
+        if uses_attention
+        else ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID
+    )
     rows: List[Dict[str, Any]] = []
 
     for local_step, abs_t in enumerate(target_token_indices):
@@ -549,7 +577,7 @@ def run_teacher_forcing_extraction(
             raise RuntimeError("teacher forcing encountered t<=0 after BOS handling")
 
         v_raw = hidden_last[t, :]
-        attn_to_past = out.attentions[-1][0, :, t, :t]  # [heads, t]
+        attn_to_past = attentions[-1][0, :, t, :t] if uses_attention else None
         hidden_past = hidden_last[:t, :]
         splus_raw = compute_splus_from_past(
             attn_to_past=attn_to_past,
