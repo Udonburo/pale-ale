@@ -58,6 +58,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Include raw native V/Splus/Sminus vectors alongside 8D projection output.",
     )
+    parser.add_argument(
+        "--allow-attentionless-splus-fallback",
+        action="store_true",
+        help=(
+            "Explicitly allow prefix_mean_hidden_v1 when the model does not return "
+            "attention maps. Keep disabled for the frozen mainline regime."
+        ),
+    )
     args = parser.parse_args()
 
     if args.max_new_tokens <= 0:
@@ -311,6 +319,22 @@ def compute_splus_from_past(
     return torch.matmul(weights, hidden_past)
 
 
+def resolve_splus_surface(
+    attentions: Optional[Any],
+    *,
+    allow_attentionless_splus_fallback: bool,
+) -> Tuple[bool, str]:
+    if attentions is not None:
+        return True, ATTN_WEIGHTED_SPLUS_DEF_ID
+    if not allow_attentionless_splus_fallback:
+        raise RuntimeError(
+            "model did not return attentions for the current Splus surface; "
+            "rerun only with explicit attentionless sidecar opt-in "
+            "(--allow-attentionless-splus-fallback) to use prefix_mean_hidden_v1"
+        )
+    return False, ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID
+
+
 def select_target_token_indices_from_offsets(
     offsets: Sequence[Sequence[int]], answer_char_start: int
 ) -> List[int]:
@@ -375,6 +399,7 @@ def run_autoregressive_extraction(
     max_new_tokens: int,
     topk: int,
     emit_native_raw: bool = False,
+    allow_attentionless_splus_fallback: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     global SPLUS_DEF_ID
     encoded = tokenizer(prompt, return_tensors="pt")
@@ -413,12 +438,11 @@ def run_autoregressive_extraction(
         hidden_last_layer = out.hidden_states[-1][0]  # [seq, hidden]
         v_raw = hidden_last_layer[-1]
         attentions = getattr(out, "attentions", None)
-        uses_attention = attentions is not None
-        SPLUS_DEF_ID = (
-            ATTN_WEIGHTED_SPLUS_DEF_ID
-            if uses_attention
-            else ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID
+        uses_attention, splus_def_id = resolve_splus_surface(
+            attentions,
+            allow_attentionless_splus_fallback=allow_attentionless_splus_fallback,
         )
+        SPLUS_DEF_ID = splus_def_id
 
         seq_len = int(hidden_last_layer.shape[0])
         if seq_len <= 1:
@@ -495,6 +519,7 @@ def run_teacher_forcing_extraction(
     device: torch.device,
     topk: int,
     emit_native_raw: bool = False,
+    allow_attentionless_splus_fallback: bool = False,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     global SPLUS_DEF_ID
     if not getattr(tokenizer, "is_fast", False):
@@ -563,12 +588,11 @@ def run_teacher_forcing_extraction(
 
     hidden_last = out.hidden_states[-1][0]  # [seq, hidden]
     attentions = getattr(out, "attentions", None)
-    uses_attention = attentions is not None
-    SPLUS_DEF_ID = (
-        ATTN_WEIGHTED_SPLUS_DEF_ID
-        if uses_attention
-        else ATTNLESS_PREFIX_MEAN_SPLUS_DEF_ID
+    uses_attention, splus_def_id = resolve_splus_surface(
+        attentions,
+        allow_attentionless_splus_fallback=allow_attentionless_splus_fallback,
     )
+    SPLUS_DEF_ID = splus_def_id
     rows: List[Dict[str, Any]] = []
 
     for local_step, abs_t in enumerate(target_token_indices):
@@ -684,6 +708,9 @@ def main() -> int:
             device=device,
             topk=args.topk,
             emit_native_raw=bool(args.emit_native_raw),
+            allow_attentionless_splus_fallback=bool(
+                args.allow_attentionless_splus_fallback
+            ),
         )
     else:
         result_rows, result_meta = run_autoregressive_extraction(
@@ -694,6 +721,9 @@ def main() -> int:
             max_new_tokens=args.max_new_tokens,
             topk=args.topk,
             emit_native_raw=bool(args.emit_native_raw),
+            allow_attentionless_splus_fallback=bool(
+                args.allow_attentionless_splus_fallback
+            ),
         )
     rows = result_rows
     effective_topk = int(result_meta["topk_effective"])

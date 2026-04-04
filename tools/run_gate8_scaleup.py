@@ -27,6 +27,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rendering-family", default="archive_v1")
     parser.add_argument("--out-root", default="runs")
     parser.add_argument(
+        "--allow-attentionless-splus-fallback",
+        action="store_true",
+        help=(
+            "Explicitly allow prefix_mean_hidden_v1 when the loaded model does not "
+            "return attentions. Keep disabled for the frozen mainline regime."
+        ),
+    )
+    parser.add_argument(
         "--skip-execution",
         action="store_true",
         help="Only generate scaffold + materialized benchmark, do not run candidate execution.",
@@ -102,6 +110,8 @@ def main() -> int:
         ]
         if args.model_id:
             command.extend(["--model-id", args.model_id])
+        if args.allow_attentionless_splus_fallback:
+            command.append("--allow-attentionless-splus-fallback")
         run_subprocess(command)
     return 0
 

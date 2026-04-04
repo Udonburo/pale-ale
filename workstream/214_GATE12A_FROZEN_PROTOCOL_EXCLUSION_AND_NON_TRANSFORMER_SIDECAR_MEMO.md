@@ -129,7 +129,7 @@ The current extractor uses:
 and directly reads `out.attentions`.
 
 `Mamba` does not return that surface.
-So the extractor was extended with an explicit fallback:
+So the extractor was extended with an explicit opt-in fallback:
 
 - `prefix_mean_hidden_v1`
 
@@ -152,7 +152,7 @@ The sample-level sidecar metadata records:
 So the current `Mamba` run is a valid sidecar transcript run.
 It is not a valid mainline dense-transformer replication.
 
-## 5. Mamba Sidecar Gate12A Replay Did Not Preserve Structural Replay
+## 5. Mamba Sidecar Diverged Upstream Before The Terminal Gate12A Readout
 
 The local Gate12A replay surfaces are:
 
@@ -163,44 +163,67 @@ The local Gate12A replay surfaces are:
 - `runs/gate12a_triangle_reading_packet_balanced_recheck_from_gate12a_upstream_gate8cm_state_spaces_mamba_2_8b_hf_transcript_128r_gate9k/`
 - `runs/gate12a_triangle_phenotype_tag_prep_recheck_from_gate12a_upstream_gate8cm_state_spaces_mamba_2_8b_hf_transcript_128r_gate9k/`
 
-The decisive machine-side counts are:
+The terminal Gate12A discrete read is not, by itself, decisive here.
+
+Its terminal counts match the positive dense-transformer transcript pattern at the same surface shape:
 
 - `defined_triangle_holonomy_count = 320`
 - `defined_triangle_holonomy_within_threshold_count = 0`
 - `zero_overlap_count = 0`
-- `compatible_transport_count = 0`
-- `incompatible_transport_count = 4265`
-- `triangles_with_any_anchor_count = 320`
-- `triangles_with_all_anchor_count = 0`
-
-The packet stage still closed:
-
 - `packet_row_count = 12`
-- `high_tension_packet_count = 6`
-- `flat_packet_count = 6`
 
-But the structural result is not the dense-transformer result.
+So the negative sidecar reading is anchored earlier in the path.
 
-Under the sidecar fallback surface:
+At `Gate9J`, the current `Mamba` transcript line binds as:
 
-- structural replay did not survive
+- `distributed_underactivation_status = clear`
+- `distributed_consistent_branch_status = clear`
+- `direct_baseline_answer_suppression_status = clear`
+- `gap_loss_explained_as_token_only_status = not_yet_denied`
+
+where the current dense-transformer transcript lines instead bind with the stronger underactivation/suppression pattern, e.g. `Qwen3-4B` records:
+
+- `distributed_underactivation_status = triggered`
+- `distributed_consistent_branch_status = underactivated`
+- `direct_baseline_answer_suppression_status = triggered`
+- `gap_loss_explained_as_token_only_status = denied`
+
+That divergence persists at `Gate9K`.
+
+`Mamba 2.8B` binds there as:
+
+- `distributed_underactivation_status_at_bind = clear`
+- `distributed_consistent_branch_status_at_bind = clear`
+
+while the current dense-transformer transcript lines bind the same location with:
+
+- `distributed_underactivation_status_at_bind = triggered`
+- `distributed_consistent_branch_status_at_bind = underactivated`
+
+So the current narrow negative sentence is not:
+
+- `the terminal Gate12A discrete count alone proved failure`
+
+It is:
+
+- `under prefix_mean_hidden_v1, the Mamba sidecar can be carried through Gate8 and Gate12A, but it does not preserve the current dense-transformer transcript path signature through Gate9J/Gate9K`
 
 So the current narrow sidecar sentence is:
 
-- `Mamba 2.8B can be carried through Gate8 and Gate12A under a prefix-mean hidden fallback surface, but that sidecar surface does not reproduce the current dense-transformer structural replay.`
+- `Mamba 2.8B can be carried through Gate8 and Gate12A under a prefix-mean hidden fallback surface, but that sidecar surface does not reproduce the current dense-transformer transcript path signature.`
 
 ## 6. What This Memo Earns
 
 This memo earns only the following narrow sentence:
 
-- `the current main dense-transformer evidence set remains clean because Gemma 4 and RWKV were excluded by frozen-protocol and dependency-admission rules, while Mamba 2.8B completed only as a sidecar under prefix_mean_hidden_v1 and failed to preserve the current structural replay.`
+- `the current main dense-transformer evidence set remains clean because Gemma 4 and RWKV were excluded by frozen-protocol and dependency-admission rules, while Mamba 2.8B completed only as a sidecar under prefix_mean_hidden_v1 and did not preserve the current dense-transformer transcript path signature through Gate9J/Gate9K.`
 
 This is enough to say:
 
 - the current admission rule is real rather than rhetorical
 - not every promising contemporary model was quietly folded into the main evidence set
 - the first non-transformer sidecar did produce evidence
-- that evidence is negative with respect to the current dense-transformer structural replay claim
+- that evidence is negative with respect to the current dense-transformer transcript path signature claim
 
 This is not enough to say:
 
