@@ -192,7 +192,7 @@ The retained Rust/Python package metadata and buildable CLI stack are infrastruc
 
 In practical terms, the current line is:
 
-- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/209`, with the current published checkpoint boundary held at `workstream/202`
+- the tracked Gate12/Gate12A workstream line in `workstream/196` through `workstream/212`, with the current published checkpoint boundary held at `workstream/202`
 - the narrow Python-side consumers and audit runners in `tools/`
 - the local manifest/status/csv evidence emitted under `runs/`
 
@@ -213,6 +213,9 @@ The current tracked post-checkpoint follow-up memos are:
 - [`workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md`](workstream/207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md)
 - [`workstream/208_GATE12A_QWEN_2_5_3B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md`](workstream/208_GATE12A_QWEN_2_5_3B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md)
 - [`workstream/209_GATE12A_MISTRAL_7B_INSTRUCT_V0_3_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md`](workstream/209_GATE12A_MISTRAL_7B_INSTRUCT_V0_3_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md)
+- [`workstream/210_GATE12A_QWEN_2_5_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md`](workstream/210_GATE12A_QWEN_2_5_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md)
+- [`workstream/211_GATE12A_LLAMA_3_2_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md`](workstream/211_GATE12A_LLAMA_3_2_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md)
+- [`workstream/212_GATE12A_QWEN3_4B_FIXED_FAMILY_SET_REPLICATION_MEMO.md`](workstream/212_GATE12A_QWEN3_4B_FIXED_FAMILY_SET_REPLICATION_MEMO.md)
 
 If you need the forward-basis adoption line:
 
