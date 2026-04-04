@@ -110,6 +110,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--topk", type=int, default=DEFAULT_TOPK)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--sample-limit", type=int)
+    parser.add_argument(
+        "--allow-attentionless-splus-fallback",
+        action="store_true",
+        help=(
+            "Explicitly allow prefix_mean_hidden_v1 when the loaded model does not "
+            "return attentions. Keep disabled for the frozen mainline regime."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -792,6 +800,7 @@ def materialize_samples(
     device: Any,
     topk: int,
     seed: int,
+    allow_attentionless_splus_fallback: bool,
 ) -> Tuple[List[Dict[str, Any]], Dict[int, Dict[str, Any]], Dict[int, Dict[str, Any]]]:
     registry_by_benchmark_id = {
         str(row["benchmark_sample_id"]): row for row in registry_rows
@@ -834,6 +843,7 @@ def materialize_samples(
             device=device,
             topk=topk,
             emit_native_raw=True,
+            allow_attentionless_splus_fallback=allow_attentionless_splus_fallback,
         )
         ndjson_sha = extractor.write_ndjson(triplets_path, triplet_rows)
         mode_details = triplet_meta["mode_details"]
@@ -891,6 +901,7 @@ def materialize_samples(
             device=device,
             topk=topk,
             emit_native_raw=True,
+            allow_attentionless_splus_fallback=allow_attentionless_splus_fallback,
         )
         support_anchor_ndjson_sha = extractor.write_ndjson(
             support_anchor_triplets_path,
@@ -962,6 +973,7 @@ def materialize_samples(
                     device=device,
                     topk=topk,
                     emit_native_raw=True,
+                    allow_attentionless_splus_fallback=allow_attentionless_splus_fallback,
                 )
             )
             conflict_anchor_ndjson_sha = extractor.write_ndjson(
@@ -2189,6 +2201,9 @@ def main() -> int:
         device=device,
         topk=args.topk,
         seed=args.seed,
+        allow_attentionless_splus_fallback=bool(
+            args.allow_attentionless_splus_fallback
+        ),
     )
     write_jsonl(extraction_results_path, extraction_rows)
 
