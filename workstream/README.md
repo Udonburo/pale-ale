@@ -2,6 +2,14 @@
 
 This directory holds the numbered tracked workstream memory for the repo.
 
+If you are new to the repo, do not start here blind. Start with:
+
+- [`../README.md`](../README.md): root landing page
+- [`../ABOUT/README.md`](../ABOUT/README.md): orientation hub
+- [`../ABOUT/WORKSTREAM_AND_GATES.md`](../ABOUT/WORKSTREAM_AND_GATES.md): what Gate and Workstream mean in this repo
+
+Then come back here for the full tracked index.
+
 - `06` through `214` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
