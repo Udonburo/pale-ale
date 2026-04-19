@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Plan or run read-only evaluation-factory checks by standing tier.
 
-This entrypoint does not introduce analytical methods, change Gate12A doctrine,
-or invoke model/GPU execution.
+This entrypoint does not introduce analytical methods or change Gate12A
+doctrine. Model/GPU execution is only allowed for the explicit
+``--tier l4-smoke --execute`` lane.
 """
 
 from __future__ import annotations
@@ -10,12 +11,13 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -60,6 +62,20 @@ class CrossModelSummary:
 
 
 @dataclass(frozen=True)
+class L4SmokeConfig:
+    model_id: str
+    model_label: str
+    families: tuple[str, ...]
+    device: str
+    topk: int
+    seed: int
+    gate12a_top_k: int
+    balanced_per_band: int
+    reading_limit: int
+    summary_run_id: str
+
+
+@dataclass(frozen=True)
 class TrackedMemoSurface:
     model_label: str
     model_id: str
@@ -76,6 +92,19 @@ LEVEL_FAIL = "FAIL"
 FAMILY_SET = ("transcript_v1", "briefing_v1", "archive_v1")
 
 L4_SMOKE_BOUNDARY = "0.5B fixed family boundary set: transcript_v1, briefing_v1, archive_v1"
+L4_SMOKE_CONFIG = L4SmokeConfig(
+    model_id="Qwen/Qwen2.5-0.5B",
+    model_label="qwen_qwen2_5_0_5b",
+    families=FAMILY_SET,
+    device="cuda",
+    topk=128,
+    seed=7,
+    gate12a_top_k=3,
+    balanced_per_band=6,
+    reading_limit=0,
+    summary_run_id="gate12a_cross_model_replay_qwen_qwen2_5_0_5b",
+)
+L4_SMOKE_STATUS_FILENAME = "eval_factory_l4_smoke_status.json"
 
 L4_WEEKLY_SURFACES = (
     "current 3B/4B dense-transformer family-set surfaces under the frozen Gate12A observable contract"
@@ -185,7 +214,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run read-only evaluation-factory checks or print a plan for one standing tier. "
-            "This entrypoint never invokes GPU/model execution."
+            "GPU/model execution is only available for --tier l4-smoke --execute."
         )
     )
     parser.add_argument(
@@ -199,9 +228,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=True,
         help=(
-            "Compatibility flag. L4 tiers are plan-only; read-only tiers inspect existing local files "
-            "without running jobs."
+            "Compatibility flag. Default behavior is non-executing; read-only tiers inspect existing "
+            "local files without running jobs."
         ),
+    )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute the l4-smoke lane. Only supported with --tier l4-smoke and an explicit --out-dir.",
+    )
+    parser.add_argument(
+        "--out-dir",
+        help="Required output root for --tier l4-smoke --execute. Generated files are not committed by this tool.",
     )
     return parser
 
@@ -239,19 +277,19 @@ def plan_l4_smoke() -> TierPlan:
         intent="small standing smoke lane aligned with the 0.5B boundary set",
         resource_posture="single L4 posture; explicitly cheap and repeatable",
         planned_actions=(
-            f"plan checks for {L4_SMOKE_BOUNDARY}",
-            "confirm expected fixed-family inputs before any future dispatch",
-            "reserve only a narrow smoke-lane path for later cheap model execution wiring",
+            f"dry-run or execute checks for {L4_SMOKE_BOUNDARY}",
+            "use the committed Gate12A cross-model replay entrypoint for the 0.5B fixed family set",
+            "require --execute and an explicit --out-dir before any model/GPU execution",
         ),
         out_of_scope=(
             "full dense-transformer family-set expansion",
             "7B FP32",
+            *L4_WEEKLY_EXCLUDED_CANDIDATES,
             "new analytical methods",
         ),
         not_implemented_yet=(
-            "0.5B smoke dispatch",
-            "artifact completeness checks for the smoke lane",
-            "result summarization handoff",
+            "automated scheduling",
+            "l4-weekly execution",
         ),
     )
 
@@ -595,6 +633,245 @@ def render_check_report(plan: TierPlan, checks: Sequence[CheckResult]) -> str:
     return "\n".join(lines)
 
 
+def l4_smoke_entrypoints(repo_root: Path) -> tuple[Path, ...]:
+    return (
+        repo_root / "tools" / "run_gate12a_cross_model_replay.py",
+        repo_root / "tools" / "run_gate8_scaleup.py",
+        repo_root / "tools" / "run_gate12a_family_replay.py",
+    )
+
+
+def build_l4_smoke_command(repo_root: Path, out_dir: Path) -> list[str]:
+    entrypoint = repo_root / "tools" / "run_gate12a_cross_model_replay.py"
+    return [
+        sys.executable,
+        str(entrypoint.resolve()),
+        "--model-id",
+        L4_SMOKE_CONFIG.model_id,
+        "--model-label",
+        L4_SMOKE_CONFIG.model_label,
+        "--families",
+        *L4_SMOKE_CONFIG.families,
+        "--device",
+        L4_SMOKE_CONFIG.device,
+        "--topk",
+        str(L4_SMOKE_CONFIG.topk),
+        "--seed",
+        str(L4_SMOKE_CONFIG.seed),
+        "--gate12a-top-k",
+        str(L4_SMOKE_CONFIG.gate12a_top_k),
+        "--balanced-per-band",
+        str(L4_SMOKE_CONFIG.balanced_per_band),
+        "--reading-limit",
+        str(L4_SMOKE_CONFIG.reading_limit),
+        "--out-root",
+        str(out_dir),
+        "--summary-run-id",
+        L4_SMOKE_CONFIG.summary_run_id,
+    ]
+
+
+def render_l4_smoke_header(repo_root: Path, out_dir: Path | None, mode: str) -> str:
+    out_dir_text = str(out_dir) if out_dir is not None else "<required for --execute>"
+    command = build_l4_smoke_command(repo_root, out_dir or Path("<out-dir>"))
+    lines = [
+        f"tier: {Tier.L4_SMOKE.value}",
+        f"mode: {mode}",
+        "fixed target set:",
+        f"  boundary: {L4_SMOKE_BOUNDARY}",
+        f"  model: {L4_SMOKE_CONFIG.model_id}",
+        "  families: " + ", ".join(L4_SMOKE_CONFIG.families),
+        f"  device: {L4_SMOKE_CONFIG.device}",
+        "actual entrypoints selected:",
+    ]
+    lines.extend(f"  - {repo_relative(repo_root, path)}" for path in l4_smoke_entrypoints(repo_root))
+    lines.extend(
+        [
+            f"out-dir: {out_dir_text}",
+            "planned command:",
+            "  " + " ".join(command),
+            "out of scope:",
+            "  - 1B / 1.5B / 3B / 4B execution",
+            "  - 7B FP32",
+        ]
+    )
+    lines.extend(f"  - {item}" for item in L4_WEEKLY_EXCLUDED_CANDIDATES)
+    return "\n".join(lines)
+
+
+def render_l4_smoke_dry_run(repo_root: Path) -> str:
+    return "\n".join(
+        [
+            render_l4_smoke_header(repo_root, None, "dry-run"),
+            "dispatch:",
+            "  - not executed; pass --execute --out-dir <path> to run the committed l4-smoke lane",
+            "final summary:",
+            "  result: dry-run",
+        ]
+    )
+
+
+def validate_l4_smoke_execute_preconditions(repo_root: Path, out_dir: Path | None) -> list[str]:
+    errors: list[str] = []
+    if out_dir is None:
+        errors.append("--out-dir is required for --tier l4-smoke --execute")
+    elif out_dir.exists() and not out_dir.is_dir():
+        errors.append(f"--out-dir points to a file, not a directory: {out_dir}")
+
+    missing_entrypoints = [repo_relative(repo_root, path) for path in l4_smoke_entrypoints(repo_root) if not path.exists()]
+    if missing_entrypoints:
+        errors.append("missing committed entrypoint(s): " + ", ".join(missing_entrypoints))
+    return errors
+
+
+def status_artifact_path(out_dir: Path) -> Path:
+    return out_dir / L4_SMOKE_STATUS_FILENAME
+
+
+def write_status_artifact(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(dict(payload), ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+
+
+def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[dict[str, str]], list[str]]:
+    summary_dir = out_dir / L4_SMOKE_CONFIG.summary_run_id
+    summary_path = summary_dir / CROSS_MODEL_SUMMARY_FILENAME
+    if not summary_path.exists():
+        return [], [f"missing summary: {repo_relative(repo_root, summary_path)}"]
+    try:
+        rows, fieldnames = read_csv_rows(summary_path)
+    except (OSError, csv.Error, UnicodeDecodeError) as exc:
+        return [], [f"summary unreadable: {exc}"]
+
+    notes: list[str] = []
+    missing_columns = [
+        column
+        for column in ("rendering_family", "model_id", *STRUCTURAL_FLAG_COLUMNS, "extreme_band_first_pass_status")
+        if column not in fieldnames
+    ]
+    if missing_columns:
+        notes.append("missing columns: " + ", ".join(missing_columns))
+
+    by_family = {str(row.get("rendering_family", "")).strip(): row for row in rows}
+    results: list[dict[str, str]] = []
+    for family in L4_SMOKE_CONFIG.families:
+        row = by_family.get(family)
+        if row is None:
+            results.append(
+                {
+                    "family": family,
+                    "dispatch": "missing-summary-row",
+                    "structural_flags_all_true": "n/a",
+                    "runs_first_pass_status": "n/a",
+                }
+            )
+            notes.append(f"missing summary row for {family}")
+            continue
+        structural_all_true = all(bool_cell(row.get(column)) for column in STRUCTURAL_FLAG_COLUMNS)
+        results.append(
+            {
+                "family": family,
+                "dispatch": "completed",
+                "structural_flags_all_true": str(structural_all_true),
+                "runs_first_pass_status": str(row.get("extreme_band_first_pass_status", "unreported") or "unreported"),
+            }
+        )
+    return results, notes
+
+
+def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: Sequence[str], completed_returncode: int) -> str:
+    fail_count = sum(
+        1
+        for row in family_results
+        if row.get("dispatch") != "completed" or row.get("structural_flags_all_true") != "True"
+    )
+    lines = [
+        "per-family dispatch/result summary:",
+    ]
+    for row in family_results:
+        lines.append(
+            "  - "
+            f"{row.get('family')}: dispatch={row.get('dispatch')}; "
+            f"structural_flags_all_true={row.get('structural_flags_all_true')}; "
+            f"runs_first_pass_status={row.get('runs_first_pass_status')}"
+        )
+    if not family_results:
+        lines.append("  - none")
+    if notes:
+        lines.append("notes:")
+        lines.extend(f"  - {note}" for note in notes)
+    lines.extend(
+        [
+            "final pass/fail summary:",
+            f"  subprocess_returncode: {completed_returncode}",
+            f"  families_expected: {len(L4_SMOKE_CONFIG.families)}",
+            f"  families_reported: {len(family_results)}",
+            f"  fail: {fail_count}",
+            f"  result: {'pass' if completed_returncode == 0 and fail_count == 0 and not notes else 'fail'}",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_l4_smoke_precondition_failure(repo_root: Path, out_dir: Path | None, errors: Sequence[str]) -> str:
+    return "\n".join(
+        [
+            render_l4_smoke_header(repo_root, out_dir, "execute"),
+            "precondition errors:",
+            *(f"  - {error}" for error in errors),
+            "final pass/fail summary:",
+            "  result: fail",
+        ]
+    )
+
+
+def run_l4_smoke_execute(
+    repo_root: Path,
+    out_dir: Path | None,
+    run_command: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> int:
+    errors = validate_l4_smoke_execute_preconditions(repo_root, out_dir)
+    if errors:
+        print(render_l4_smoke_precondition_failure(repo_root, out_dir, errors))
+        return 2
+
+    assert out_dir is not None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    command = build_l4_smoke_command(repo_root, out_dir)
+    print(render_l4_smoke_header(repo_root, out_dir, "execute"))
+    completed = run_command(
+        command,
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    family_results, notes = parse_l4_smoke_family_results(repo_root, out_dir) if completed.returncode == 0 else ([], [])
+    if completed.returncode != 0:
+        if completed.stdout:
+            notes.append("subprocess stdout: " + completed.stdout.strip()[-1000:])
+        if completed.stderr:
+            notes.append("subprocess stderr: " + completed.stderr.strip()[-1000:])
+    print(render_l4_smoke_results(family_results, notes, int(completed.returncode)))
+
+    status_payload = {
+        "tier": Tier.L4_SMOKE.value,
+        "mode": "execute",
+        "model_id": L4_SMOKE_CONFIG.model_id,
+        "model_label": L4_SMOKE_CONFIG.model_label,
+        "families": list(L4_SMOKE_CONFIG.families),
+        "entrypoint": repo_relative(repo_root, repo_root / "tools" / "run_gate12a_cross_model_replay.py"),
+        "command": command,
+        "out_dir": str(out_dir),
+        "returncode": int(completed.returncode),
+        "family_results": list(family_results),
+        "notes": list(notes),
+    }
+    write_status_artifact(status_artifact_path(out_dir), status_payload)
+    return 0 if completed.returncode == 0 and family_results and not notes and all(row.get("structural_flags_all_true") == "True" for row in family_results) else 1
+
+
 def render_summarize_existing(repo_root: Path) -> str:
     plan = plan_summarize_existing()
     workstream_root = repo_root / "workstream"
@@ -686,10 +963,18 @@ def run_summarize_existing(repo_root: Path) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     tier = Tier(args.tier)
+    if args.execute and tier != Tier.L4_SMOKE:
+        print(f"error: --execute is only supported for --tier {Tier.L4_SMOKE.value}")
+        return 2
     if tier == Tier.CPU_NIGHTLY:
         return run_cpu_nightly(REPO_ROOT)
     if tier == Tier.SUMMARIZE_EXISTING:
         return run_summarize_existing(REPO_ROOT)
+    if tier == Tier.L4_SMOKE:
+        if args.execute:
+            return run_l4_smoke_execute(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
+        print(render_l4_smoke_dry_run(REPO_ROOT))
+        return 0
 
     plan = dispatch(tier)
     print(render_plan(plan))
