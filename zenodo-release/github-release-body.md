@@ -10,6 +10,12 @@ Date: 2026-04-09
 
 https://doi.org/10.5281/zenodo.19483162
 
+This DOI is the frozen paper release DOI for the April 2026 Gate12A technical
+report surface. The associated transport-first mathematical telemetry note is a
+separate citable surface at https://doi.org/10.5281/zenodo.19569052. The earlier
+replication checkpoint / prior release surface remains available at
+https://doi.org/10.5281/zenodo.19340221.
+
 ## Included assets
 
 - `paper.pdf`
@@ -19,8 +25,9 @@ https://doi.org/10.5281/zenodo.19483162
 ## Summary
 
 This release accompanies the frozen technical report describing structural
-replay under a frozen FP32 dense-transformer regime, including closed 3B/4B
-mainline evidence, transcript-level extensions, and boundary results.
+replay under a frozen FP32 dense-transformer regime. It is the paper-facing
+release bundle for the current Gate12A report surface, with selected manifests
+and checksums included for provenance and boundary-condition inspection.
 
 The downstream Gate12A cross-model replay summaries and structural quartet
 verdicts are frozen under:

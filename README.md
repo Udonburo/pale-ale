@@ -1,10 +1,19 @@
 # pale-ale
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19340221.svg)](https://doi.org/10.5281/zenodo.19340221)
+[![Gate12A frozen technical report DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19483162.svg)](https://doi.org/10.5281/zenodo.19483162)
+[![Transport-first telemetry note DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19569052.svg)](https://doi.org/10.5281/zenodo.19569052)
 
 **pale-ale is a public-facing research sandbox for structural approaches to local observation, consistency, and learned systems.**
 
 Its current public checkpoints are LLM-centered. The main report surface is the Gate12A line: a frozen FP32 dense-transformer replay regime used to test one narrow part of a broader structural research program through structural replay evidence and boundary cases.
+
+## Current Citable Releases
+
+| Surface | DOI | Role | When to cite |
+| --- | --- | --- | --- |
+| Gate12A frozen technical report | [10.5281/zenodo.19483162](https://doi.org/10.5281/zenodo.19483162) | Main April 2026 frozen FP32 dense-transformer technical report and release bundle. | Cite for the current frozen Gate12A paper/release surface and its selected manifest/checksum bundle. |
+| Transport-first telemetry note | [10.5281/zenodo.19569052](https://doi.org/10.5281/zenodo.19569052) | Mathematical telemetry note associated with the Gate12A line; not a revision of the empirical report. | Cite for the transport-first closure-defect formulation. |
+| Earlier checkpoint / prior release surface | [10.5281/zenodo.19340221](https://doi.org/10.5281/zenodo.19340221) | Earlier replication checkpoint / prior release surface. | Cite only when referring to that earlier checkpoint record or comparing release surfaces. |
 
 ## About
 
@@ -22,9 +31,12 @@ If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.
 
 ### The current report and artifacts
 
+- [`zenodo-release/README.txt`](zenodo-release/README.txt)
+- [`zenodo-release/CHECKSUMS-SHA256.txt`](zenodo-release/CHECKSUMS-SHA256.txt)
+- [`zenodo-release-transport-first-defect-telemetry/README.txt`](zenodo-release-transport-first-defect-telemetry/README.txt)
+- [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
 - [`workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
 - [`workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
-- [`runs/`](runs/)
 - [`tools/`](tools/)
 
 ### A human-readable explanation of the repo
@@ -55,7 +67,9 @@ The repo is being shaped so that this release surface is easy to find and does n
 
 - [`ABOUT/`](ABOUT/README.md): human-facing explanation and release guidance
 - [`workstream/`](workstream/README.md): numbered tracked research memory
-- [`runs/`](runs/): artifacts, manifests, checksums, statuses, and replay outputs
+- [`zenodo-release/`](zenodo-release/README.txt): frozen Gate12A paper release bundle and checksum surface
+- [`zenodo-release-transport-first-defect-telemetry/`](zenodo-release-transport-first-defect-telemetry/README.txt): formal telemetry-note release bundle
+- `runs/`: local/generated working outputs; not the tracked public evidence surface
 - [`tools/`](tools/): current narrow Python-side runner and audit surface
 - [`src/`](src/) and [`crates/`](crates/): retained implementation and infrastructure
 - [`docs/`](docs/) and [`specs/`](specs/): longer-form design and specification material

@@ -18,12 +18,16 @@ That is the release surface a reader should be able to cite, download, and inspe
 
 Today, the ingredients already present in the repo are mainly:
 
+- [`../zenodo-release/README.txt`](../zenodo-release/README.txt): the April 2026 Gate12A frozen technical report release bundle
+- [`../zenodo-release-transport-first-defect-telemetry/README.txt`](../zenodo-release-transport-first-defect-telemetry/README.txt): the separate mathematical telemetry-note release bundle
+- [`../docs/reproduce_gate12a.md`](../docs/reproduce_gate12a.md): the short release/reproducibility guide
 - [`../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
 - [`../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
-- [`../runs/`](../runs/): artifact roots, manifests, statuses, summaries, and checksums
 - [`../tools/`](../tools/): current narrow runner and audit surface
 
-When the full paper source is added, it should live as its own dedicated paper surface rather than being buried inside the numbered workstream memory.
+Local `runs/` directories are generated working outputs and are not the tracked
+public evidence surface. Public release navigation should point to the DOI-bound
+release bundles, selected manifests, checksums, and commit bindings first.
 
 ## How GitHub And Zenodo Should Line Up
 
