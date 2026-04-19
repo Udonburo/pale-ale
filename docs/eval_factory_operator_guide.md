@@ -25,12 +25,19 @@ evidence source.
 | --- | --- | --- | --- |
 | `cpu-nightly` | Lightweight validation. | Checks expected repo files, tracked memo presence, tier shape, L4 weekly exclusions, and shallow existing summary/manifests when `runs/` is present. | Does not invoke GPU/model execution or refresh Gate12A evidence. |
 | `summarize-existing` | Read-only rollup. | Reports memo-facing surfaces, tracked memo model surfaces, and runs-derived materialized cross-model summaries from existing local files. | Does not generate new runs or turn `runs/` status into public memo status. |
-| `l4-smoke` | Narrow execution lane for the 0.5B boundary set. | Prints the standing plan for the `0.5B` fixed family boundary set. In this entrypoint, the lane is still plan-only. | Does not dispatch the 0.5B smoke run yet, and does not expand the frozen protocol surface. |
+| `l4-smoke` | Narrow execution lane for the 0.5B boundary set. | Prints a dry-run by default; with `--execute` and an explicit `--out-dir`, runs the fixed 0.5B lane. | Does not expand beyond the fixed 0.5B family set, and does not promote a new checkpoint. |
 | `l4-weekly` | Still bounded mainline standing lane. | Prints the standing plan for current 3B/4B dense-transformer family-set surfaces under the frozen Gate12A observable contract. | Does not include 7B FP32, sidecar candidates, quantized candidates, protocol-expanding candidates, or Gate12B promotion. |
 
 The L4 tiers describe operational lanes. They are not claim surfaces by
 themselves. Treat their output as planning or local status text unless a
 tracked memo or release document separately records a result.
+
+## L4-smoke Runbook
+
+Use [`l4_smoke_runbook.md`](l4_smoke_runbook.md) before operating the
+`l4-smoke` lane. Local Windows use is for dry-run and lightweight inspection;
+real `--execute` posture is expected on the GCP L4 VM. Do not confuse local
+Windows Python with the VM interpreter.
 
 ## Example Commands
 
@@ -58,8 +65,10 @@ For `cpu-nightly`, `PASS`, `WARN`, and `FAIL` are validation statuses for the
 checkout. A passing check is not a new empirical result. A warning about a
 missing local summary does not remove a tracked memo result.
 
-For `l4-smoke` and `l4-weekly`, current output is a plan. Do not read the plan
-text as proof that a run has been executed.
+For `l4-smoke`, dry-run output is a plan, while `--execute` output is
+runs-derived operator status for the fixed smoke lane. For `l4-weekly`, current
+output is still a plan. Do not read plan text as proof that a run has been
+executed.
 
 ## Interpretation discipline
 
