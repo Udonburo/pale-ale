@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: >-
+  If you use pale-ale, cite this repository entry and the relevant release
+  surface. Use 10.5281/zenodo.19483162 for the April 2026 Gate12A frozen
+  technical report, 10.5281/zenodo.19569052 for the transport-first telemetry
+  note, and 10.5281/zenodo.19340221 only for the earlier replication
+  checkpoint / prior release surface.
+title: "pale-ale"
+type: software
+authors:
+  - family-names: "Kawasaki"
+    given-names: "Aoi"
+repository-code: "https://github.com/Udonburo/pale-ale"
+url: "https://github.com/Udonburo/pale-ale"
+license: "MPL-2.0"
+abstract: >-
+  pale-ale is a public-facing research sandbox for structural approaches to
+  local observation, consistency, and learned systems. The current citable
+  release surfaces are role-separated: 10.5281/zenodo.19483162 is the main
+  frozen Gate12A technical report, 10.5281/zenodo.19569052 is the mathematical
+  transport-first telemetry note, and 10.5281/zenodo.19340221 is an earlier
+  replication checkpoint / prior release surface.
+references:
+  - type: report
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "Structural Replay in Dense Transformers Under a Frozen FP32 Regime: Evidence from Closed 3B/4B Models and Boundary Results"
+    year: 2026
+    date-released: "2026-04-09"
+    doi: "10.5281/zenodo.19483162"
+    url: "https://doi.org/10.5281/zenodo.19483162"
+  - type: report
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "Transport-First Defect Telemetry on Replay Artifact Graphs: A Minimal Gauge-Covariant Formulation of Closure Inconsistency"
+    year: 2026
+    date-released: "2026-04-14"
+    doi: "10.5281/zenodo.19569052"
+    url: "https://doi.org/10.5281/zenodo.19569052"
+  - type: software
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "pale-ale Gate12A first replication checkpoint"
+    year: 2026
+    doi: "10.5281/zenodo.19340221"
+    url: "https://doi.org/10.5281/zenodo.19340221"
