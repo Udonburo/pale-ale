@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Tests for the evaluation-factory runner scaffold."""
+"""Tests for the evaluation-factory runner."""
 
 from __future__ import annotations
 
 import io
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -32,17 +33,76 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("quantized candidates", plan.out_of_scope)
         self.assertIn("sidecar candidates", plan.out_of_scope)
 
-    def test_main_prints_dry_run_plan(self) -> None:
+    def test_l4_smoke_remains_plan_only(self) -> None:
         output = io.StringIO()
 
         with redirect_stdout(output):
-            self.assertEqual(runner.main(["--tier", "cpu-nightly"]), 0)
+            self.assertEqual(runner.main(["--tier", "l4-smoke"]), 0)
 
         text = output.getvalue()
-        self.assertIn("tier: cpu-nightly", text)
-        self.assertIn("expected resource posture:", text)
+        self.assertIn("tier: l4-smoke", text)
         self.assertIn("planned actions:", text)
         self.assertIn("not implemented yet:", text)
+        self.assertIn("0.5B fixed family boundary set", text)
+
+    def test_summarize_existing_parses_materialized_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            summary_dir = repo / "runs" / "gate12a_cross_model_replay_demo"
+            summary_dir.mkdir(parents=True)
+            (summary_dir / "cross_model_family_summary.csv").write_text(
+                (
+                    "model_label,model_id,rendering_family,"
+                    "zero_overlap_clear,all_defined_triangles_anchor_rich,"
+                    "trusted_tree_gt_residual_chord,plain_gt_anchor_qualified,"
+                    "extreme_band_first_pass_status\n"
+                    "demo,Demo/Model,transcript_v1,True,True,True,True,available\n"
+                    "demo,Demo/Model,briefing_v1,True,True,True,True,pending_local_read\n"
+                ),
+                encoding="utf-8",
+            )
+            (summary_dir / "manifest.json").write_text(
+                (
+                    '{"paths": {'
+                    '"cross_model_family_summary.csv": '
+                    '"runs/gate12a_cross_model_replay_demo/cross_model_family_summary.csv"'
+                    '}, "model_id": "Demo/Model", "model_label": "demo"}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            text = runner.render_summarize_existing(repo)
+
+        self.assertIn("tier: summarize-existing", text)
+        self.assertIn("gate12a_cross_model_replay_demo", text)
+        self.assertIn("model=Demo/Model", text)
+        self.assertIn("families=transcript_v1, briefing_v1", text)
+        self.assertIn("structural_flags_all_true=2/2", text)
+        self.assertIn("first_pass=available=1, pending_local_read=1", text)
+        self.assertIn("missing families: archive_v1", text)
+
+    def test_cpu_nightly_reports_missing_required_files_as_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            checks = runner.build_cpu_nightly_checks(Path(tmpdir))
+
+        self.assertTrue(any(check.level == runner.LEVEL_FAIL for check in checks))
+
+    def test_cpu_nightly_accepts_minimal_required_surface_with_warnings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
+        self.assertTrue(any(check.level == runner.LEVEL_WARN for check in checks))
 
 
 if __name__ == "__main__":
