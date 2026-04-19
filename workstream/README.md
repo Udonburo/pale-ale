@@ -10,7 +10,7 @@ If you are new to the repo, do not start here blind. Start with:
 
 Then come back here for the full tracked index.
 
-- `06` through `214` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `215` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -36,6 +36,7 @@ Then come back here for the full tracked index.
 - the tracked Gate12A Qwen3-4B fixed family-set post-checkpoint replication memo is `212`
 - the tracked Gate12A single-GPU FP32 dense-transformer technical report draft is `213`
 - the tracked Gate12A frozen-protocol exclusion and non-transformer sidecar memo is `214`
+- the tracked Gate12A Qwen2.5-0.5B fixed family-set lower-bound post-checkpoint replication memo is `215`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
