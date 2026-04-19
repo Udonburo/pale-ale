@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import io
+import csv
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -41,9 +43,77 @@ class RunEvalChecksTest(unittest.TestCase):
 
         text = output.getvalue()
         self.assertIn("tier: l4-smoke", text)
-        self.assertIn("planned actions:", text)
-        self.assertIn("not implemented yet:", text)
+        self.assertIn("mode: dry-run", text)
+        self.assertIn("actual entrypoints selected:", text)
+        self.assertIn("tools/run_gate12a_cross_model_replay.py", text)
+        self.assertIn("not executed; pass --execute --out-dir <path>", text)
         self.assertIn("0.5B fixed family boundary set", text)
+
+    def test_execute_requires_out_dir_and_l4_smoke_tier(self) -> None:
+        missing_out = io.StringIO()
+        with redirect_stdout(missing_out):
+            self.assertEqual(runner.main(["--tier", "l4-smoke", "--execute"]), 2)
+        self.assertIn("--out-dir is required", missing_out.getvalue())
+
+        wrong_tier = io.StringIO()
+        with redirect_stdout(wrong_tier):
+            self.assertEqual(runner.main(["--tier", "l4-weekly", "--execute", "--out-dir", "tmp/out"]), 2)
+        self.assertIn("--execute is only supported for --tier l4-smoke", wrong_tier.getvalue())
+
+    def test_l4_smoke_command_uses_committed_cross_model_entrypoint(self) -> None:
+        command = runner.build_l4_smoke_command(runner.REPO_ROOT, Path("tmp/l4-smoke"))
+
+        self.assertIn("run_gate12a_cross_model_replay.py", command[1])
+        self.assertIn("--model-id", command)
+        self.assertIn("Qwen/Qwen2.5-0.5B", command)
+        self.assertIn("--families", command)
+        families_index = command.index("--families") + 1
+        self.assertEqual(command[families_index : families_index + 3], ["transcript_v1", "briefing_v1", "archive_v1"])
+        self.assertIn("--device", command)
+        self.assertIn("cuda", command)
+
+    def test_l4_smoke_execute_uses_fake_subprocess_and_reports_families(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "l4_smoke"
+
+            def fake_run(command, cwd, capture_output, text, check):
+                summary_dir = out_dir / runner.L4_SMOKE_CONFIG.summary_run_id
+                summary_dir.mkdir(parents=True)
+                summary_path = summary_dir / runner.CROSS_MODEL_SUMMARY_FILENAME
+                with summary_path.open("w", encoding="utf-8", newline="") as handle:
+                    fieldnames = [
+                        "model_id",
+                        "rendering_family",
+                        *runner.STRUCTURAL_FLAG_COLUMNS,
+                        "extreme_band_first_pass_status",
+                    ]
+                    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                    writer.writeheader()
+                    for family in runner.L4_SMOKE_CONFIG.families:
+                        writer.writerow(
+                            {
+                                "model_id": runner.L4_SMOKE_CONFIG.model_id,
+                                "rendering_family": family,
+                                "zero_overlap_clear": "True",
+                                "all_defined_triangles_anchor_rich": "True",
+                                "trusted_tree_gt_residual_chord": "True",
+                                "plain_gt_anchor_qualified": "True",
+                                "extreme_band_first_pass_status": "pending_local_read",
+                            }
+                        )
+                return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(runner.run_l4_smoke_execute(runner.REPO_ROOT, out_dir, run_command=fake_run), 0)
+
+            text = output.getvalue()
+            self.assertIn("mode: execute", text)
+            self.assertIn("model: Qwen/Qwen2.5-0.5B", text)
+            self.assertIn("per-family dispatch/result summary:", text)
+            self.assertIn("transcript_v1: dispatch=completed; structural_flags_all_true=True", text)
+            self.assertIn("result: pass", text)
+            self.assertTrue((out_dir / runner.L4_SMOKE_STATUS_FILENAME).exists())
 
     def test_summarize_existing_parses_materialized_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
