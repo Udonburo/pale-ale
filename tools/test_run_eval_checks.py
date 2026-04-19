@@ -8,6 +8,7 @@ import csv
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -18,6 +19,63 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import run_eval_checks as runner
+
+
+class FakeCuda:
+    def __init__(self, available: bool, count: int = 0, names: tuple[str, ...] = ()) -> None:
+        self.available = available
+        self.count = count
+        self.names = names
+
+    def is_available(self) -> bool:
+        return self.available
+
+    def device_count(self) -> int:
+        return self.count
+
+    def get_device_name(self, index: int) -> str:
+        return self.names[index]
+
+
+def fake_torch(available: bool, count: int = 0, names: tuple[str, ...] = ()) -> types.SimpleNamespace:
+    cuda_version = "12.1" if available else None
+    return types.SimpleNamespace(
+        __version__="2.5.0+cu121",
+        version=types.SimpleNamespace(cuda=cuda_version),
+        cuda=FakeCuda(available, count, names),
+    )
+
+
+def make_preflight(
+    posture: str = runner.POSTURE_REMOTE_CUDA_READY,
+    ok: bool = True,
+    os_name: str = "Linux",
+    torch_importable: bool = True,
+    cuda_available: bool | None = True,
+    gpu_count: int | None = 1,
+    gpu_names: tuple[str, ...] = ("NVIDIA L4",),
+) -> runner.L4SmokePreflight:
+    return runner.L4SmokePreflight(
+        sys_executable="python",
+        python_version="3.11-test",
+        cwd=str(runner.REPO_ROOT),
+        platform="test-platform",
+        os_name=os_name,
+        torch_importable=torch_importable,
+        torch_version="2.5.0+cu121" if torch_importable else "unavailable",
+        torch_cuda_available=cuda_available,
+        torch_cuda_version="12.1" if cuda_available else "unavailable",
+        gpu_count=gpu_count,
+        gpu_names=gpu_names,
+        nvidia_smi_available=ok,
+        nvidia_smi_path="/usr/bin/nvidia-smi" if ok else "",
+        nvidia_smi_summary=("NVIDIA L4, 23034 MiB, 550.54",) if ok else (),
+        nvidia_smi_error="",
+        posture_classification=posture,
+        preflight_ok=ok,
+        remediation_hints=() if ok else ("Run this lane on the GCP L4 VM instead of local Windows.",),
+        errors=() if ok else (f"posture classification is {posture}, expected {runner.POSTURE_REMOTE_CUDA_READY}",),
+    )
 
 
 class RunEvalChecksTest(unittest.TestCase):
@@ -46,7 +104,8 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("mode: dry-run", text)
         self.assertIn("actual entrypoints selected:", text)
         self.assertIn("tools/run_gate12a_cross_model_replay.py", text)
-        self.assertIn("not executed; pass --execute --out-dir <path>", text)
+        self.assertIn("not executed; pass --preflight-only", text)
+        self.assertIn("pass --execute --out-dir <path>", text)
         self.assertIn("0.5B fixed family boundary set", text)
 
     def test_execute_requires_out_dir_and_l4_smoke_tier(self) -> None:
@@ -59,6 +118,19 @@ class RunEvalChecksTest(unittest.TestCase):
         with redirect_stdout(wrong_tier):
             self.assertEqual(runner.main(["--tier", "l4-weekly", "--execute", "--out-dir", "tmp/out"]), 2)
         self.assertIn("--execute is only supported for --tier l4-smoke", wrong_tier.getvalue())
+
+        wrong_preflight_tier = io.StringIO()
+        with redirect_stdout(wrong_preflight_tier):
+            self.assertEqual(runner.main(["--tier", "cpu-nightly", "--preflight-only"]), 2)
+        self.assertIn("--preflight-only is only supported for --tier l4-smoke", wrong_preflight_tier.getvalue())
+
+        conflicting_modes = io.StringIO()
+        with redirect_stdout(conflicting_modes):
+            self.assertEqual(
+                runner.main(["--tier", "l4-smoke", "--preflight-only", "--execute", "--out-dir", "tmp/out"]),
+                2,
+            )
+        self.assertIn("--execute and --preflight-only cannot be used together", conflicting_modes.getvalue())
 
     def test_l4_smoke_command_uses_committed_cross_model_entrypoint(self) -> None:
         command = runner.build_l4_smoke_command(runner.REPO_ROOT, Path("tmp/l4-smoke"))
@@ -105,15 +177,132 @@ class RunEvalChecksTest(unittest.TestCase):
 
             output = io.StringIO()
             with redirect_stdout(output):
-                self.assertEqual(runner.run_l4_smoke_execute(runner.REPO_ROOT, out_dir, run_command=fake_run), 0)
+                self.assertEqual(
+                    runner.run_l4_smoke_execute(
+                        runner.REPO_ROOT,
+                        out_dir,
+                        run_command=fake_run,
+                        preflight_provider=lambda repo: make_preflight(),
+                    ),
+                    0,
+                )
 
             text = output.getvalue()
             self.assertIn("mode: execute", text)
             self.assertIn("model: Qwen/Qwen2.5-0.5B", text)
+            self.assertIn("classification: remote_cuda_ready", text)
             self.assertIn("per-family dispatch/result summary:", text)
             self.assertIn("transcript_v1: dispatch=completed; structural_flags_all_true=True", text)
             self.assertIn("result: pass", text)
+            self.assertTrue((out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME).exists())
             self.assertTrue((out_dir / runner.L4_SMOKE_STATUS_FILENAME).exists())
+
+    def test_preflight_classifies_local_windows_no_cuda(self) -> None:
+        preflight = runner.collect_l4_smoke_preflight(
+            runner.REPO_ROOT,
+            torch_loader=lambda: fake_torch(False),
+            platform_system=lambda: "Windows",
+            platform_string=lambda: "Windows-10-test",
+            cwd_getter=lambda: runner.REPO_ROOT,
+            which=lambda name: None,
+        )
+
+        self.assertEqual(preflight.posture_classification, runner.POSTURE_LOCAL_WINDOWS_NO_CUDA)
+        self.assertFalse(preflight.preflight_ok)
+        self.assertIn("Run this lane on the GCP L4 VM instead of local Windows.", preflight.remediation_hints)
+
+    def test_preflight_classifies_missing_torch(self) -> None:
+        def missing_torch():
+            raise ImportError("No module named torch")
+
+        preflight = runner.collect_l4_smoke_preflight(
+            runner.REPO_ROOT,
+            torch_loader=missing_torch,
+            platform_system=lambda: "Linux",
+            platform_string=lambda: "Linux-test",
+            cwd_getter=lambda: runner.REPO_ROOT,
+            which=lambda name: None,
+        )
+
+        self.assertEqual(preflight.posture_classification, runner.POSTURE_PYTHON_MISSING_TORCH)
+        self.assertFalse(preflight.torch_importable)
+        self.assertFalse(preflight.preflight_ok)
+        self.assertIn("torch import failed", "\n".join(preflight.errors))
+
+    def test_preflight_classifies_cuda_ready_with_nvidia_smi_summary(self) -> None:
+        def fake_smi(command, capture_output, text, check, timeout):
+            return subprocess.CompletedProcess(command, 0, stdout="NVIDIA L4, 23034 MiB, 550.54\n", stderr="")
+
+        preflight = runner.collect_l4_smoke_preflight(
+            runner.REPO_ROOT,
+            torch_loader=lambda: fake_torch(True, 1, ("NVIDIA L4",)),
+            platform_system=lambda: "Linux",
+            platform_string=lambda: "Linux-test",
+            cwd_getter=lambda: runner.REPO_ROOT,
+            which=lambda name: "/usr/bin/nvidia-smi",
+            run_command=fake_smi,
+        )
+
+        self.assertEqual(preflight.posture_classification, runner.POSTURE_REMOTE_CUDA_READY)
+        self.assertTrue(preflight.preflight_ok)
+        self.assertEqual(preflight.gpu_names, ("NVIDIA L4",))
+        self.assertEqual(preflight.nvidia_smi_summary, ("NVIDIA L4, 23034 MiB, 550.54",))
+
+    def test_execute_blocks_on_failed_preflight_without_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "l4_smoke"
+
+            def fake_run(*args, **kwargs):
+                raise AssertionError("subprocess should not be invoked when preflight fails")
+
+            failed_preflight = make_preflight(
+                posture=runner.POSTURE_LOCAL_WINDOWS_NO_CUDA,
+                ok=False,
+                os_name="Windows",
+                cuda_available=False,
+                gpu_count=0,
+                gpu_names=(),
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = runner.run_l4_smoke_execute(
+                    runner.REPO_ROOT,
+                    out_dir,
+                    run_command=fake_run,
+                    preflight_provider=lambda repo: failed_preflight,
+                )
+
+            text = output.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("classification: local_windows_no_cuda", text)
+            self.assertIn("downstream subprocess: not invoked", text)
+            self.assertIn("Run this lane on the GCP L4 VM instead of local Windows.", text)
+            self.assertTrue((out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME).exists())
+            self.assertFalse((out_dir / runner.L4_SMOKE_STATUS_FILENAME).exists())
+
+    def test_preflight_only_writes_artifact_and_stable_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "preflight"
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = runner.run_l4_smoke_preflight_only(
+                    runner.REPO_ROOT,
+                    out_dir,
+                    preflight_provider=lambda repo: make_preflight(),
+                )
+
+            text = output.getvalue()
+            artifact = out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME
+            payload = runner.read_json(artifact)
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("mode: preflight-only", text)
+        self.assertIn("environment diagnostics:", text)
+        self.assertIn("posture classification:", text)
+        self.assertIn("preflight result:", text)
+        self.assertIn("classification: remote_cuda_ready", text)
+        self.assertEqual(payload["posture_classification"], runner.POSTURE_REMOTE_CUDA_READY)
+        self.assertTrue(payload["preflight_ok"])
 
     def test_summarize_existing_parses_materialized_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
