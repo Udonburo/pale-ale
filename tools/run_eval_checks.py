@@ -59,6 +59,15 @@ class CrossModelSummary:
     notes: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class TrackedMemoSurface:
+    model_label: str
+    model_id: str
+    memo_id: str
+    memo_file: str
+    tracked_scope: str
+
+
 TIER_VALUES = tuple(tier.value for tier in Tier)
 LEVEL_PASS = "PASS"
 LEVEL_WARN = "WARN"
@@ -101,6 +110,51 @@ EXPECTED_SUMMARY_RUNS = (
     "gate12a_cross_model_replay_qwen_qwen2_5_3b_instruct",
     "gate12a_cross_model_replay_meta_llama_llama_3_2_3b_instruct",
     "gate12a_cross_model_replay_qwen_qwen3_4b",
+)
+
+TRACKED_MEMO_SURFACES = (
+    TrackedMemoSurface(
+        model_label="qwen_qwen2_5_3b_instruct",
+        model_id="Qwen/Qwen2.5-3B-Instruct",
+        memo_id="210",
+        memo_file="210_GATE12A_QWEN_2_5_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md",
+        tracked_scope="mainline dense-transformer fixed-family-set memo",
+    ),
+    TrackedMemoSurface(
+        model_label="meta_llama_llama_3_2_3b_instruct",
+        model_id="meta-llama/Llama-3.2-3B-Instruct",
+        memo_id="211",
+        memo_file="211_GATE12A_LLAMA_3_2_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md",
+        tracked_scope="mainline dense-transformer fixed-family-set memo",
+    ),
+    TrackedMemoSurface(
+        model_label="qwen_qwen3_4b",
+        model_id="Qwen/Qwen3-4B",
+        memo_id="212",
+        memo_file="212_GATE12A_QWEN3_4B_FIXED_FAMILY_SET_REPLICATION_MEMO.md",
+        tracked_scope="mainline dense-transformer fixed-family-set memo",
+    ),
+    TrackedMemoSurface(
+        model_label="qwen_qwen2_5_0_5b",
+        model_id="Qwen/Qwen2.5-0.5B",
+        memo_id="215",
+        memo_file="215_GATE12A_QWEN_2_5_0_5B_FIXED_FAMILY_SET_REPLICATION_MEMO.md",
+        tracked_scope="post-checkpoint lower-bound family-set memo",
+    ),
+    TrackedMemoSurface(
+        model_label="meta_llama_llama_3_2_1b_instruct",
+        model_id="meta-llama/Llama-3.2-1B-Instruct",
+        memo_id="206",
+        memo_file="206_GATE12A_LLAMA_3_2_1B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md",
+        tracked_scope="post-checkpoint fixed-family-set memo",
+    ),
+    TrackedMemoSurface(
+        model_label="qwen_qwen2_5_1_5b_instruct",
+        model_id="Qwen/Qwen2.5-1.5B-Instruct",
+        memo_id="207",
+        memo_file="207_GATE12A_QWEN_2_5_1_5B_INSTRUCT_TRANSCRIPT_V1_GPU_IMPORT_REPLICATION_MEMO.md",
+        tracked_scope="post-checkpoint transcript-only follow-up memo",
+    ),
 )
 
 REQUIRED_CPU_FILES = (
@@ -572,9 +626,20 @@ def render_summarize_existing(repo_root: Path) -> str:
     else:
         lines.append("  missing tracked memos: none")
 
+    lines.append("tracked memo model surfaces:")
+    for surface in TRACKED_MEMO_SURFACES:
+        memo_path = workstream_root / surface.memo_file
+        memo_status = "present" if memo_path.exists() else "missing"
+        matching_run_summary = next((summary.run_id for summary in summaries if summary.model_label == surface.model_label), "none")
+        lines.append(
+            "  - "
+            f"model={surface.model_id}; memo={surface.memo_id}; memo_status={memo_status}; "
+            f"tracked_scope={surface.tracked_scope}; matching_runs_summary={matching_run_summary}"
+        )
+
     lines.extend(
         [
-            "materialized cross-model summaries:",
+            "runs-derived materialized cross-model summaries:",
             f"  discovered: {len(summaries)}",
         ]
     )
@@ -584,10 +649,10 @@ def render_summarize_existing(repo_root: Path) -> str:
             notes = "; ".join(summary.notes) if summary.notes else "none"
             lines.append(
                 "  - "
-                f"{summary.run_id}: status={summary.status}; model={summary.model_id}; "
+                f"{summary.run_id}: runs_status={summary.status}; model={summary.model_id}; "
                 f"families={families}; rows={summary.row_count}; "
-                f"structural_flags_all_true={summary.structural_flags_all_true}; "
-                f"first_pass={summary.first_pass_statuses}; notes={notes}"
+                f"runs_structural_flags_all_true={summary.structural_flags_all_true}; "
+                f"runs_first_pass_status={summary.first_pass_statuses}; notes={notes}"
             )
     else:
         lines.append("  - none")
