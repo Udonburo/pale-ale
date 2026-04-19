@@ -33,7 +33,7 @@ first-pass read, this atlas preserves that limitation.
 
 ## Summary Matrix
 
-| Model | Scale | Family coverage | Structural replay status | First-pass phenotype portability | Tracked memo pointer |
+| Model | Scale | Family coverage | Structural replay status | First-pass phenotype readout | Tracked memo pointer |
 | --- | --- | --- | --- | --- | --- |
 | `Qwen/Qwen2.5-3B-Instruct` | 3B | Mainline dense-transformer fixed family set: `transcript_v1 / briefing_v1 / archive_v1` | Held across the full family set at machine scope under the unchanged Gate12A observable surface. | Family-conditioned. Transcript remains scale-sensitive; briefing preserves a Qwen-style high-tension split while shifting flat-band minority; archive remains break-bearing but mixed. | [`210`](../workstream/210_GATE12A_QWEN_2_5_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md) |
 | `meta-llama/Llama-3.2-3B-Instruct` | 3B | Mainline dense-transformer fixed family set: `transcript_v1 / briefing_v1 / archive_v1` | Held across the full family set at machine scope under the unchanged Gate12A observable surface. | Family-conditioned. The first-pass surface does not simply reproduce the smaller Llama line or the Qwen2.5-3B line; archive remains break-bearing at high tension while flat becomes surface-noise-only in the memo read. | [`211`](../workstream/211_GATE12A_LLAMA_3_2_3B_INSTRUCT_FIXED_FAMILY_SET_REPLICATION_MEMO.md) |
