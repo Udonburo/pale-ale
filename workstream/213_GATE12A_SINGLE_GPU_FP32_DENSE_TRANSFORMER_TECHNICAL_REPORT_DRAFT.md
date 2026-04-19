@@ -91,6 +91,8 @@ Supporting but secondary context remains available from:
 
 Those secondary lines help interpret the current results, but the present report does not need them to establish its main narrow claim.
 
+The later `215` follow-up now records `Qwen/Qwen2.5-0.5B` as a lower-bound dense-transformer family-set closure under the same frozen Gate12A observable surface; its first-pass readings remain packet-local / memo-local and do not revise the main 3B/4B claim.
+
 ## 3. Structural Result
 
 Across the current 3B/4B full-family-set evidence, the machine-side structural checkpoints stay live.
