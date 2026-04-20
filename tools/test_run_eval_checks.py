@@ -78,6 +78,44 @@ def make_preflight(
     )
 
 
+def make_family_results() -> list[dict[str, str]]:
+    return [
+        {
+            "family": family,
+            "dispatch": "completed",
+            "structural_flags_all_true": "True",
+            "runs_first_pass_status": "pending_local_read",
+        }
+        for family in runner.L4_SMOKE_CONFIG.families
+    ]
+
+
+def make_status_payload() -> dict[str, object]:
+    created_at = "2026-04-20T00:00:00Z"
+    family_results = make_family_results()
+    downstream_summary = runner.build_downstream_dispatch_summary(family_results, [], 0)
+    return {
+        "schema_id": runner.L4_SMOKE_STATUS_SCHEMA_ID,
+        "schema_version": runner.ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at,
+        "tier": runner.Tier.L4_SMOKE.value,
+        "mode": "execute",
+        "fixed_target_set": runner.l4_smoke_fixed_target_set(),
+        "model_id": runner.L4_SMOKE_CONFIG.model_id,
+        "model_label": runner.L4_SMOKE_CONFIG.model_label,
+        "families": list(runner.L4_SMOKE_CONFIG.families),
+        "entrypoint": "tools/run_gate12a_cross_model_replay.py",
+        "command": ["python", "tools/run_gate12a_cross_model_replay.py"],
+        "out_dir": "tmp/l4_smoke",
+        "returncode": 0,
+        "preflight": runner.build_preflight_artifact_payload(make_preflight(), "execute", created_at=created_at),
+        "downstream_dispatch_summary": downstream_summary,
+        "result": downstream_summary["result"],
+        "family_results": family_results,
+        "notes": [],
+    }
+
+
 class RunEvalChecksTest(unittest.TestCase):
     def test_required_tiers_are_defined(self) -> None:
         self.assertEqual(
@@ -196,6 +234,16 @@ class RunEvalChecksTest(unittest.TestCase):
             self.assertIn("result: pass", text)
             self.assertTrue((out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME).exists())
             self.assertTrue((out_dir / runner.L4_SMOKE_STATUS_FILENAME).exists())
+            preflight_validation = runner.validate_eval_factory_preflight_artifact(
+                runner.REPO_ROOT,
+                out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME,
+            )
+            status_validation = runner.validate_eval_factory_status_artifact(
+                runner.REPO_ROOT,
+                out_dir / runner.L4_SMOKE_STATUS_FILENAME,
+            )
+            self.assertEqual(preflight_validation.status, runner.ARTIFACT_STATUS_VALID)
+            self.assertEqual(status_validation.status, runner.ARTIFACT_STATUS_VALID)
 
     def test_preflight_classifies_local_windows_no_cuda(self) -> None:
         preflight = runner.collect_l4_smoke_preflight(
@@ -303,6 +351,77 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("classification: remote_cuda_ready", text)
         self.assertEqual(payload["posture_classification"], runner.POSTURE_REMOTE_CUDA_READY)
         self.assertTrue(payload["preflight_ok"])
+        self.assertEqual(payload["schema_id"], runner.L4_SMOKE_PREFLIGHT_SCHEMA_ID)
+        self.assertEqual(payload["schema_version"], runner.ARTIFACT_CONTRACT_VERSION)
+        self.assertEqual(payload["tier"], runner.Tier.L4_SMOKE.value)
+        self.assertEqual(payload["fixed_target_set"], runner.l4_smoke_fixed_target_set())
+
+    def test_valid_preflight_artifact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact = repo / runner.L4_SMOKE_PREFLIGHT_FILENAME
+            runner.write_status_artifact(
+                artifact,
+                runner.build_preflight_artifact_payload(
+                    make_preflight(),
+                    "preflight-only",
+                    created_at="2026-04-20T00:00:00Z",
+                ),
+            )
+
+            validation = runner.validate_eval_factory_preflight_artifact(repo, artifact)
+
+        self.assertEqual(validation.source_class, runner.SOURCE_EVAL_FACTORY_PREFLIGHT)
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
+        self.assertEqual(validation.mode, "preflight-only")
+        self.assertEqual(validation.result, "pass")
+        self.assertEqual(validation.posture_classification, runner.POSTURE_REMOTE_CUDA_READY)
+        self.assertEqual(validation.errors, ())
+
+    def test_malformed_preflight_artifact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact = repo / runner.L4_SMOKE_PREFLIGHT_FILENAME
+            payload = runner.build_preflight_artifact_payload(
+                make_preflight(),
+                "preflight-only",
+                created_at="2026-04-20T00:00:00Z",
+            )
+            del payload["schema_id"]
+            runner.write_status_artifact(artifact, payload)
+
+            validation = runner.validate_eval_factory_preflight_artifact(repo, artifact)
+
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_MALFORMED)
+        self.assertIn("missing required field: schema_id", validation.errors)
+
+    def test_valid_status_artifact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact = repo / runner.L4_SMOKE_STATUS_FILENAME
+            runner.write_status_artifact(artifact, make_status_payload())
+
+            validation = runner.validate_eval_factory_status_artifact(repo, artifact)
+
+        self.assertEqual(validation.source_class, runner.SOURCE_EVAL_FACTORY_STATUS)
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
+        self.assertEqual(validation.mode, "execute")
+        self.assertEqual(validation.result, "pass")
+        self.assertEqual(validation.downstream_result, "pass")
+        self.assertEqual(validation.posture_classification, runner.POSTURE_REMOTE_CUDA_READY)
+
+    def test_malformed_status_artifact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact = repo / runner.L4_SMOKE_STATUS_FILENAME
+            payload = make_status_payload()
+            del payload["downstream_dispatch_summary"]
+            runner.write_status_artifact(artifact, payload)
+
+            validation = runner.validate_eval_factory_status_artifact(repo, artifact)
+
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_MALFORMED)
+        self.assertIn("missing required field: downstream_dispatch_summary", validation.errors)
 
     def test_summarize_existing_parses_materialized_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -366,11 +485,89 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("runs-derived materialized cross-model summaries:", text)
         self.assertIn("runs_first_pass_status=pending_local_read=1", text)
 
+    def test_summarize_existing_separates_eval_factory_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact_dir = repo / "local_artifacts"
+            artifact_dir.mkdir()
+            runner.write_status_artifact(
+                artifact_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME,
+                runner.build_preflight_artifact_payload(
+                    make_preflight(),
+                    "preflight-only",
+                    created_at="2026-04-20T00:00:00Z",
+                ),
+            )
+            runner.write_status_artifact(artifact_dir / runner.L4_SMOKE_STATUS_FILENAME, make_status_payload())
+
+            text = runner.render_summarize_existing(repo)
+
+        self.assertIn("tracked memo model surfaces:", text)
+        self.assertIn("runs-derived materialized cross-model summaries:", text)
+        self.assertIn("eval-factory preflight artifact surfaces:", text)
+        self.assertIn("source_class=eval-factory preflight artifact", text)
+        self.assertIn("artifact_status=valid", text)
+        self.assertIn("eval-factory execute/status artifact surfaces:", text)
+        self.assertIn("source_class=eval-factory execute/status artifact", text)
+        self.assertIn("downstream_result=pass", text)
+
     def test_cpu_nightly_reports_missing_required_files_as_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             checks = runner.build_cpu_nightly_checks(Path(tmpdir))
 
         self.assertTrue(any(check.level == runner.LEVEL_FAIL for check in checks))
+
+    def test_cpu_nightly_warns_when_optional_artifacts_are_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_EVAL_FACTORY_PREFLIGHT
+                for check in checks
+            )
+        )
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_EVAL_FACTORY_STATUS
+                for check in checks
+            )
+        )
+        self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
+
+    def test_cpu_nightly_fails_on_malformed_present_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            artifact = repo / "local_artifacts" / runner.L4_SMOKE_PREFLIGHT_FILENAME
+            artifact.parent.mkdir()
+            runner.write_status_artifact(artifact, {"schema_id": "wrong"})
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_FAIL and runner.SOURCE_EVAL_FACTORY_PREFLIGHT in check.label
+                for check in checks
+            )
+        )
 
     def test_cpu_nightly_accepts_minimal_required_surface_with_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
