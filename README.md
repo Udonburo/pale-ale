@@ -37,6 +37,7 @@ If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.
 - [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
 - [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
 - [`docs/eval_factory_operator_guide.md`](docs/eval_factory_operator_guide.md)
+- [`docs/l4_smoke_runbook.md`](docs/l4_smoke_runbook.md)
 - [`workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
 - [`workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
 - [`tools/`](tools/)
