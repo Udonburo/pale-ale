@@ -39,6 +39,21 @@ Use [`l4_smoke_runbook.md`](l4_smoke_runbook.md) before operating the
 real `--execute` posture is expected on the GCP L4 VM. Do not confuse local
 Windows Python with the VM interpreter.
 
+## Artifact Reference
+
+Use [`eval_factory_artifact_reference.md`](eval_factory_artifact_reference.md)
+when interpreting eval-factory outputs. The table below maps each tier to its
+primary output class and interpretation boundary.
+
+| Tier | Primary artifact/output | Source class | Interpretation boundary |
+| --- | --- | --- | --- |
+| `cpu-nightly` | stdout validation report | Checkout validation status | Validates expected files and shallow local shapes; does not create empirical evidence. |
+| `summarize-existing` | stdout rollup of tracked docs and local summaries | Tracked memo status plus runs-derived materialized status | Separates memo-facing status from local `runs/` materialization; does not let `runs/` override tracked memos. |
+| `l4-smoke` dry-run | stdout dry-run plan | Operational plan | Shows fixed target set and command shape; does not execute a model. |
+| `l4-smoke --preflight-only` | stdout diagnostics and optional `eval_factory_l4_smoke_preflight.json` | Eval-factory preflight artifact | Checks interpreter/GPU posture; does not run the replay or update memo status. |
+| `l4-smoke --execute` | stdout, `eval_factory_l4_smoke_preflight.json`, and possibly `eval_factory_l4_smoke_status.json` | Eval-factory preflight artifact plus execute/status artifact | Records one operator execution attempt for the fixed 0.5B lane; does not create a new checkpoint by itself. |
+| `l4-weekly` | stdout plan | Operational plan | Keeps bounded mainline posture visible; does not imply 7B FP32, sidecar, protocol expansion, or Gate12B. |
+
 ## Example Commands
 
 Run commands from the repository root.
