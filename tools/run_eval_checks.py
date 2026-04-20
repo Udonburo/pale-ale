@@ -12,12 +12,14 @@ import argparse
 import csv
 import importlib
 import json
+import os
 import platform
 import shutil
 import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -102,6 +104,20 @@ class L4SmokePreflight:
 
 
 @dataclass(frozen=True)
+class EvalFactoryArtifactValidation:
+    source_class: str
+    artifact_kind: str
+    path: str
+    status: str
+    schema_id: str
+    mode: str
+    result: str
+    posture_classification: str
+    downstream_result: str
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TrackedMemoSurface:
     model_label: str
     model_id: str
@@ -132,12 +148,40 @@ L4_SMOKE_CONFIG = L4SmokeConfig(
 )
 L4_SMOKE_STATUS_FILENAME = "eval_factory_l4_smoke_status.json"
 L4_SMOKE_PREFLIGHT_FILENAME = "eval_factory_l4_smoke_preflight.json"
+ARTIFACT_CONTRACT_VERSION = 1
+L4_SMOKE_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.preflight.v1"
+L4_SMOKE_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.status.v1"
+SOURCE_EVAL_FACTORY_PREFLIGHT = "eval-factory preflight artifact"
+SOURCE_EVAL_FACTORY_STATUS = "eval-factory execute/status artifact"
+ARTIFACT_STATUS_VALID = "valid"
+ARTIFACT_STATUS_MALFORMED = "malformed"
+ARTIFACT_STATUS_MISSING = "missing"
+ARTIFACT_DISCOVERY_EXCLUDED_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "target",
+    "venv",
+}
 
 POSTURE_REMOTE_CUDA_READY = "remote_cuda_ready"
 POSTURE_LOCAL_WINDOWS_NO_CUDA = "local_windows_no_cuda"
 POSTURE_PYTHON_MISSING_TORCH = "python_missing_torch"
 POSTURE_CUDA_UNAVAILABLE = "cuda_unavailable"
 POSTURE_UNKNOWN = "unknown_posture"
+POSTURE_CLASSIFICATIONS = (
+    POSTURE_REMOTE_CUDA_READY,
+    POSTURE_LOCAL_WINDOWS_NO_CUDA,
+    POSTURE_PYTHON_MISSING_TORCH,
+    POSTURE_CUDA_UNAVAILABLE,
+    POSTURE_UNKNOWN,
+)
+RESULT_VALUES = ("pass", "fail")
+PREFLIGHT_ARTIFACT_MODES = ("preflight-only", "execute")
 
 L4_WEEKLY_SURFACES = (
     "current 3B/4B dense-transformer family-set surfaces under the frozen Gate12A observable contract"
@@ -441,6 +485,24 @@ def format_counter(counter: Counter[str]) -> str:
     return ", ".join(f"{key}={counter[key]}" for key in sorted(counter))
 
 
+def utc_created_at() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def l4_smoke_fixed_target_set() -> dict[str, Any]:
+    return {
+        "boundary": L4_SMOKE_BOUNDARY,
+        "model_id": L4_SMOKE_CONFIG.model_id,
+        "model_label": L4_SMOKE_CONFIG.model_label,
+        "families": list(L4_SMOKE_CONFIG.families),
+        "device": L4_SMOKE_CONFIG.device,
+    }
+
+
+def result_from_bool(ok: bool) -> str:
+    return "pass" if ok else "fail"
+
+
 def discover_summary_dirs(repo_root: Path) -> tuple[Path, ...]:
     runs_root = repo_root / "runs"
     if not runs_root.exists():
@@ -455,6 +517,25 @@ def discover_summary_dirs(repo_root: Path) -> tuple[Path, ...]:
             key=lambda item: item.name,
         )
     )
+
+
+def discover_files_by_name(repo_root: Path, filename: str) -> tuple[Path, ...]:
+    if not repo_root.exists():
+        return ()
+    matches: list[Path] = []
+    for current_root, dirnames, filenames in os.walk(repo_root):
+        dirnames[:] = [name for name in dirnames if name not in ARTIFACT_DISCOVERY_EXCLUDED_DIRS]
+        if filename in filenames:
+            matches.append(Path(current_root) / filename)
+    return tuple(sorted(matches, key=lambda path: repo_relative(repo_root, path)))
+
+
+def discover_eval_factory_preflight_artifacts(repo_root: Path) -> tuple[Path, ...]:
+    return discover_files_by_name(repo_root, L4_SMOKE_PREFLIGHT_FILENAME)
+
+
+def discover_eval_factory_status_artifacts(repo_root: Path) -> tuple[Path, ...]:
+    return discover_files_by_name(repo_root, L4_SMOKE_STATUS_FILENAME)
 
 
 def count_shallow_gate12a_run_dirs(repo_root: Path) -> int:
@@ -580,6 +661,362 @@ def validate_manifest_paths(repo_root: Path, manifest_path: Path) -> list[CheckR
     return results
 
 
+def append_missing(errors: list[str], field: str) -> None:
+    errors.append(f"missing required field: {field}")
+
+
+def require_str(
+    payload: Mapping[str, Any],
+    key: str,
+    errors: list[str],
+    prefix: str = "",
+    allow_empty: bool = False,
+) -> str | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if not isinstance(value, str) or (not allow_empty and not value):
+        errors.append(f"field {field} expected non-empty string")
+        return None
+    return value
+
+
+def require_literal(payload: Mapping[str, Any], key: str, expected: Any, errors: list[str], prefix: str = "") -> None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return
+    if payload[key] != expected:
+        errors.append(f"field {field} expected {expected!r}, got {payload[key]!r}")
+
+
+def require_int(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "", expected: int | None = None) -> int | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if type(value) is not int:
+        errors.append(f"field {field} expected integer")
+        return None
+    if expected is not None and value != expected:
+        errors.append(f"field {field} expected {expected!r}, got {value!r}")
+    return value
+
+
+def require_optional_int(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "") -> int | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if value is None:
+        return None
+    if type(value) is not int:
+        errors.append(f"field {field} expected integer or null")
+        return None
+    return value
+
+
+def require_bool(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "") -> bool | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if type(value) is not bool:
+        errors.append(f"field {field} expected boolean")
+        return None
+    return value
+
+
+def require_optional_bool(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "") -> bool | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if value is None:
+        return None
+    if type(value) is not bool:
+        errors.append(f"field {field} expected boolean or null")
+        return None
+    return value
+
+
+def require_string_list(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "") -> list[str] | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        errors.append(f"field {field} expected list of strings")
+        return None
+    return value
+
+
+def require_mapping(payload: Mapping[str, Any], key: str, errors: list[str], prefix: str = "") -> Mapping[str, Any] | None:
+    field = f"{prefix}.{key}" if prefix else key
+    if key not in payload:
+        append_missing(errors, field)
+        return None
+    value = payload[key]
+    if not isinstance(value, dict):
+        errors.append(f"field {field} expected object")
+        return None
+    return value
+
+
+def validate_created_at(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    value = require_str(payload, "created_at", errors, prefix)
+    if value is None:
+        return
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        field = f"{prefix}.created_at" if prefix else "created_at"
+        errors.append(f"field {field} expected ISO-8601 timestamp")
+
+
+def validate_fixed_target_set(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    fixed_target = require_mapping(payload, "fixed_target_set", errors, prefix)
+    if fixed_target is None:
+        return
+    field_prefix = f"{prefix}.fixed_target_set" if prefix else "fixed_target_set"
+    expected = l4_smoke_fixed_target_set()
+    for key in ("boundary", "model_id", "model_label", "device"):
+        require_literal(fixed_target, key, expected[key], errors, field_prefix)
+    families = require_string_list(fixed_target, "families", errors, field_prefix)
+    if families is not None and families != expected["families"]:
+        errors.append(f"field {field_prefix}.families expected {expected['families']!r}, got {families!r}")
+
+
+def validate_preflight_posture_fields(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    require_str(payload, "sys_executable", errors, prefix)
+    require_str(payload, "python_version", errors, prefix)
+    require_str(payload, "cwd", errors, prefix)
+    require_str(payload, "platform", errors, prefix)
+    require_str(payload, "os_name", errors, prefix)
+    require_bool(payload, "torch_importable", errors, prefix)
+    require_str(payload, "torch_version", errors, prefix)
+    require_optional_bool(payload, "torch_cuda_available", errors, prefix)
+    require_str(payload, "torch_cuda_version", errors, prefix)
+    require_optional_int(payload, "gpu_count", errors, prefix)
+    require_string_list(payload, "gpu_names", errors, prefix)
+    require_bool(payload, "nvidia_smi_available", errors, prefix)
+    require_str(payload, "nvidia_smi_path", errors, prefix, allow_empty=True)
+    require_string_list(payload, "nvidia_smi_summary", errors, prefix)
+    require_str(payload, "nvidia_smi_error", errors, prefix, allow_empty=True)
+    posture = require_str(payload, "posture_classification", errors, prefix)
+    if posture is not None and posture not in POSTURE_CLASSIFICATIONS:
+        field = f"{prefix}.posture_classification" if prefix else "posture_classification"
+        errors.append(f"field {field} expected one of {', '.join(POSTURE_CLASSIFICATIONS)}, got {posture!r}")
+    require_bool(payload, "preflight_ok", errors, prefix)
+    require_string_list(payload, "remediation_hints", errors, prefix)
+    require_string_list(payload, "errors", errors, prefix)
+
+
+def validate_preflight_artifact_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", L4_SMOKE_PREFLIGHT_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    validate_created_at(payload, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_SMOKE.value, errors, prefix)
+    mode = require_str(payload, "mode", errors, prefix)
+    if mode is not None and mode not in PREFLIGHT_ARTIFACT_MODES:
+        field = f"{prefix}.mode" if prefix else "mode"
+        errors.append(f"field {field} expected one of {', '.join(PREFLIGHT_ARTIFACT_MODES)}, got {mode!r}")
+    validate_fixed_target_set(payload, errors, prefix)
+    validate_preflight_posture_fields(payload, errors, prefix)
+    result = require_str(payload, "result", errors, prefix)
+    if result is not None and result not in RESULT_VALUES:
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+    preflight_ok = payload.get("preflight_ok")
+    if type(preflight_ok) is bool and result in RESULT_VALUES and result != result_from_bool(preflight_ok):
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} does not match preflight_ok={preflight_ok!r}")
+    return tuple(errors)
+
+
+def validate_downstream_dispatch_summary(payload: Mapping[str, Any], errors: list[str], prefix: str) -> None:
+    summary = require_mapping(payload, "downstream_dispatch_summary", errors, prefix)
+    if summary is None:
+        return
+    field_prefix = f"{prefix}.downstream_dispatch_summary" if prefix else "downstream_dispatch_summary"
+    require_int(summary, "subprocess_returncode", errors, field_prefix)
+    require_int(summary, "families_expected", errors, field_prefix, expected=len(L4_SMOKE_CONFIG.families))
+    require_int(summary, "families_reported", errors, field_prefix)
+    require_int(summary, "fail", errors, field_prefix)
+    result = require_str(summary, "result", errors, field_prefix)
+    if result is not None and result not in RESULT_VALUES:
+        errors.append(f"field {field_prefix}.result expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+
+
+def validate_status_artifact_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", L4_SMOKE_STATUS_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    validate_created_at(payload, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_SMOKE.value, errors, prefix)
+    require_literal(payload, "mode", "execute", errors, prefix)
+    validate_fixed_target_set(payload, errors, prefix)
+    require_str(payload, "entrypoint", errors, prefix)
+    require_string_list(payload, "command", errors, prefix)
+    require_str(payload, "out_dir", errors, prefix)
+    require_int(payload, "returncode", errors, prefix)
+    result = require_str(payload, "result", errors, prefix)
+    if result is not None and result not in RESULT_VALUES:
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+    preflight = require_mapping(payload, "preflight", errors, prefix)
+    if preflight is not None:
+        errors.extend(validate_preflight_artifact_payload(preflight, f"{prefix}.preflight" if prefix else "preflight"))
+    validate_downstream_dispatch_summary(payload, errors, prefix)
+    family_results = payload.get("family_results")
+    field = f"{prefix}.family_results" if prefix else "family_results"
+    if "family_results" not in payload:
+        append_missing(errors, field)
+    elif not isinstance(family_results, list) or any(not isinstance(item, dict) for item in family_results):
+        errors.append(f"field {field} expected list of objects")
+    require_string_list(payload, "notes", errors, prefix)
+    downstream = payload.get("downstream_dispatch_summary")
+    if isinstance(downstream, dict) and result in RESULT_VALUES and downstream.get("result") in RESULT_VALUES and result != downstream.get("result"):
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} does not match downstream_dispatch_summary.result={downstream.get('result')!r}")
+    return tuple(errors)
+
+
+def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[str, str, str, str]:
+    schema_id = str(payload.get("schema_id", ""))
+    mode = str(payload.get("mode", ""))
+    result = str(payload.get("result", ""))
+    posture = ""
+    downstream_result = ""
+    if artifact_kind == "preflight":
+        posture = str(payload.get("posture_classification", ""))
+    else:
+        preflight = payload.get("preflight")
+        if isinstance(preflight, dict):
+            posture = str(preflight.get("posture_classification", ""))
+        downstream = payload.get("downstream_dispatch_summary")
+        if isinstance(downstream, dict):
+            downstream_result = str(downstream.get("result", ""))
+    return schema_id, mode, result, posture or "n/a", downstream_result or "n/a"
+
+
+def validate_eval_factory_artifact_file(repo_root: Path, path: Path, artifact_kind: str) -> EvalFactoryArtifactValidation:
+    source_class = SOURCE_EVAL_FACTORY_PREFLIGHT if artifact_kind == "preflight" else SOURCE_EVAL_FACTORY_STATUS
+    relative_path = repo_relative(repo_root, path)
+    if not path.exists():
+        return EvalFactoryArtifactValidation(
+            source_class=source_class,
+            artifact_kind=artifact_kind,
+            path=relative_path,
+            status=ARTIFACT_STATUS_MISSING,
+            schema_id="",
+            mode="",
+            result="",
+            posture_classification="",
+            downstream_result="",
+            errors=(f"missing artifact: {relative_path}",),
+        )
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return EvalFactoryArtifactValidation(
+            source_class=source_class,
+            artifact_kind=artifact_kind,
+            path=relative_path,
+            status=ARTIFACT_STATUS_MALFORMED,
+            schema_id="",
+            mode="",
+            result="",
+            posture_classification="",
+            downstream_result="",
+            errors=(f"artifact unreadable: {exc}",),
+        )
+
+    errors = (
+        validate_preflight_artifact_payload(payload)
+        if artifact_kind == "preflight"
+        else validate_status_artifact_payload(payload)
+    )
+    schema_id, mode, result, posture, downstream_result = validation_summary(payload, artifact_kind) if isinstance(payload, dict) else ("", "", "", "", "")
+    return EvalFactoryArtifactValidation(
+        source_class=source_class,
+        artifact_kind=artifact_kind,
+        path=relative_path,
+        status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
+        schema_id=schema_id,
+        mode=mode,
+        result=result,
+        posture_classification=posture,
+        downstream_result=downstream_result,
+        errors=errors,
+    )
+
+
+def validate_eval_factory_preflight_artifact(repo_root: Path, path: Path) -> EvalFactoryArtifactValidation:
+    return validate_eval_factory_artifact_file(repo_root, path, "preflight")
+
+
+def validate_eval_factory_status_artifact(repo_root: Path, path: Path) -> EvalFactoryArtifactValidation:
+    return validate_eval_factory_artifact_file(repo_root, path, "status")
+
+
+def discover_and_validate_eval_factory_artifacts(repo_root: Path) -> tuple[tuple[EvalFactoryArtifactValidation, ...], tuple[EvalFactoryArtifactValidation, ...]]:
+    preflight_results = tuple(
+        validate_eval_factory_preflight_artifact(repo_root, path)
+        for path in discover_eval_factory_preflight_artifacts(repo_root)
+    )
+    status_results = tuple(
+        validate_eval_factory_status_artifact(repo_root, path)
+        for path in discover_eval_factory_status_artifacts(repo_root)
+    )
+    return preflight_results, status_results
+
+
+def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
+    if result.status == ARTIFACT_STATUS_VALID:
+        parts = [
+            f"path={result.path}",
+            f"schema={result.schema_id}",
+            f"mode={result.mode}",
+            f"result={result.result}",
+            f"posture={result.posture_classification}",
+        ]
+        if result.artifact_kind == "status":
+            parts.append(f"downstream_result={result.downstream_result}")
+        return "; ".join(parts)
+    return f"path={result.path}; errors=" + " | ".join(result.errors)
+
+
+def append_eval_factory_artifact_checks(checks: list[CheckResult], repo_root: Path) -> None:
+    preflight_results, status_results = discover_and_validate_eval_factory_artifacts(repo_root)
+
+    if not preflight_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_EVAL_FACTORY_PREFLIGHT, f"optional missing: {L4_SMOKE_PREFLIGHT_FILENAME}"))
+    else:
+        for result in preflight_results:
+            level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+            checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_PREFLIGHT} {result.path}", artifact_check_detail(result)))
+
+    if not status_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_EVAL_FACTORY_STATUS, f"optional missing: {L4_SMOKE_STATUS_FILENAME}"))
+    else:
+        for result in status_results:
+            level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+            checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_STATUS} {result.path}", artifact_check_detail(result)))
+
+
 def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
     checks: list[CheckResult] = []
 
@@ -610,6 +1047,8 @@ def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
         checks.append(CheckResult(LEVEL_FAIL, "l4-weekly exclusions", "missing " + ", ".join(missing_exclusions)))
     else:
         checks.append(CheckResult(LEVEL_PASS, "l4-weekly exclusions", ", ".join(required_exclusions)))
+
+    append_eval_factory_artifact_checks(checks, repo_root)
 
     summary_dirs = discover_summary_dirs(repo_root)
     if not (repo_root / "runs").exists():
@@ -867,13 +1306,30 @@ def preflight_to_dict(preflight: L4SmokePreflight) -> dict[str, Any]:
     }
 
 
+def build_preflight_artifact_payload(
+    preflight: L4SmokePreflight,
+    mode: str,
+    created_at: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_id": L4_SMOKE_PREFLIGHT_SCHEMA_ID,
+        "schema_version": ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at or utc_created_at(),
+        "tier": Tier.L4_SMOKE.value,
+        "mode": mode,
+        "fixed_target_set": l4_smoke_fixed_target_set(),
+        **preflight_to_dict(preflight),
+        "result": result_from_bool(preflight.preflight_ok),
+    }
+
+
 def preflight_artifact_path(out_dir: Path) -> Path:
     return out_dir / L4_SMOKE_PREFLIGHT_FILENAME
 
 
-def write_preflight_artifact(out_dir: Path, preflight: L4SmokePreflight) -> None:
+def write_preflight_artifact(out_dir: Path, preflight: L4SmokePreflight, mode: str) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    write_status_artifact(preflight_artifact_path(out_dir), preflight_to_dict(preflight))
+    write_status_artifact(preflight_artifact_path(out_dir), build_preflight_artifact_payload(preflight, mode))
 
 
 def render_l4_smoke_preflight(preflight: L4SmokePreflight) -> str:
@@ -1066,12 +1522,30 @@ def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[
     return results, notes
 
 
-def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: Sequence[str], completed_returncode: int) -> str:
+def build_downstream_dispatch_summary(
+    family_results: Sequence[Mapping[str, str]],
+    notes: Sequence[str],
+    completed_returncode: int,
+) -> dict[str, Any]:
     fail_count = sum(
         1
         for row in family_results
         if row.get("dispatch") != "completed" or row.get("structural_flags_all_true") != "True"
     )
+    families_reported = len(family_results)
+    families_expected = len(L4_SMOKE_CONFIG.families)
+    result = "pass" if completed_returncode == 0 and fail_count == 0 and not notes and families_reported == families_expected else "fail"
+    return {
+        "subprocess_returncode": int(completed_returncode),
+        "families_expected": families_expected,
+        "families_reported": families_reported,
+        "fail": fail_count,
+        "result": result,
+    }
+
+
+def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: Sequence[str], completed_returncode: int) -> str:
+    downstream_summary = build_downstream_dispatch_summary(family_results, notes, completed_returncode)
     lines = [
         "execution dispatch/result summary:",
         "per-family dispatch/result summary:",
@@ -1091,11 +1565,11 @@ def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: 
     lines.extend(
         [
             "final pass/fail summary:",
-            f"  subprocess_returncode: {completed_returncode}",
-            f"  families_expected: {len(L4_SMOKE_CONFIG.families)}",
-            f"  families_reported: {len(family_results)}",
-            f"  fail: {fail_count}",
-            f"  result: {'pass' if completed_returncode == 0 and fail_count == 0 and not notes else 'fail'}",
+            f"  subprocess_returncode: {downstream_summary['subprocess_returncode']}",
+            f"  families_expected: {downstream_summary['families_expected']}",
+            f"  families_reported: {downstream_summary['families_reported']}",
+            f"  fail: {downstream_summary['fail']}",
+            f"  result: {downstream_summary['result']}",
         ]
     )
     return "\n".join(lines)
@@ -1133,7 +1607,7 @@ def run_l4_smoke_preflight_only(
 ) -> int:
     preflight = preflight_provider(repo_root)
     if out_dir is not None:
-        write_preflight_artifact(out_dir, preflight)
+        write_preflight_artifact(out_dir, preflight, "preflight-only")
     print(
         "\n".join(
             [
@@ -1159,7 +1633,7 @@ def run_l4_smoke_execute(
     assert out_dir is not None
     out_dir.mkdir(parents=True, exist_ok=True)
     preflight = preflight_provider(repo_root)
-    write_preflight_artifact(out_dir, preflight)
+    write_preflight_artifact(out_dir, preflight, "execute")
     if not preflight.preflight_ok:
         print(render_l4_smoke_preflight_blocked(repo_root, out_dir, preflight))
         return 1
@@ -1183,9 +1657,15 @@ def run_l4_smoke_execute(
             notes.append("subprocess stderr: " + completed.stderr.strip()[-1000:])
     print(render_l4_smoke_results(family_results, notes, int(completed.returncode)))
 
+    created_at = utc_created_at()
+    downstream_summary = build_downstream_dispatch_summary(family_results, notes, int(completed.returncode))
     status_payload = {
+        "schema_id": L4_SMOKE_STATUS_SCHEMA_ID,
+        "schema_version": ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at,
         "tier": Tier.L4_SMOKE.value,
         "mode": "execute",
+        "fixed_target_set": l4_smoke_fixed_target_set(),
         "model_id": L4_SMOKE_CONFIG.model_id,
         "model_label": L4_SMOKE_CONFIG.model_label,
         "families": list(L4_SMOKE_CONFIG.families),
@@ -1193,12 +1673,14 @@ def run_l4_smoke_execute(
         "command": command,
         "out_dir": str(out_dir),
         "returncode": int(completed.returncode),
-        "preflight": preflight_to_dict(preflight),
+        "preflight": build_preflight_artifact_payload(preflight, "execute", created_at=created_at),
+        "downstream_dispatch_summary": downstream_summary,
+        "result": downstream_summary["result"],
         "family_results": list(family_results),
         "notes": list(notes),
     }
     write_status_artifact(status_artifact_path(out_dir), status_payload)
-    return 0 if completed.returncode == 0 and family_results and not notes and all(row.get("structural_flags_all_true") == "True" for row in family_results) else 1
+    return 0 if downstream_summary["result"] == "pass" and family_results else 1
 
 
 def render_summarize_existing(repo_root: Path) -> str:
@@ -1208,6 +1690,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     missing_memos = [memo for memo in EXPECTED_ATLAS_MEMOS if memo not in present_memos]
     summary_dirs = discover_summary_dirs(repo_root)
     summaries = [parse_cross_model_summary(repo_root, path) for path in summary_dirs]
+    preflight_artifacts, status_artifacts = discover_and_validate_eval_factory_artifacts(repo_root)
     discovered_summary_names = {summary.run_id for summary in summaries}
     missing_expected_summaries = [name for name in EXPECTED_SUMMARY_RUNS if name not in discovered_summary_names]
     docs = (
@@ -1260,6 +1743,54 @@ def render_summarize_existing(repo_root: Path) -> str:
                 f"runs_structural_flags_all_true={summary.structural_flags_all_true}; "
                 f"runs_first_pass_status={summary.first_pass_statuses}; notes={notes}"
             )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
+            "eval-factory preflight artifact surfaces:",
+            f"  discovered: {len(preflight_artifacts)}",
+        ]
+    )
+    if preflight_artifacts:
+        for artifact in preflight_artifacts:
+            if artifact.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    f"schema={artifact.schema_id}; mode={artifact.mode}; result={artifact.result}; "
+                    f"posture={artifact.posture_classification}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    "errors=" + " | ".join(artifact.errors)
+                )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
+            "eval-factory execute/status artifact surfaces:",
+            f"  discovered: {len(status_artifacts)}",
+        ]
+    )
+    if status_artifacts:
+        for artifact in status_artifacts:
+            if artifact.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    f"schema={artifact.schema_id}; mode={artifact.mode}; result={artifact.result}; "
+                    f"posture={artifact.posture_classification}; downstream_result={artifact.downstream_result}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    "errors=" + " | ".join(artifact.errors)
+                )
     else:
         lines.append("  - none")
 
