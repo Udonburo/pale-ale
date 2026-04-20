@@ -81,6 +81,13 @@ class L4SmokeConfig:
 
 
 @dataclass(frozen=True)
+class L4WeeklyTarget:
+    model_id: str
+    model_label: str
+    families: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class L4SmokePreflight:
     sys_executable: str
     python_version: str
@@ -148,9 +155,11 @@ L4_SMOKE_CONFIG = L4SmokeConfig(
 )
 L4_SMOKE_STATUS_FILENAME = "eval_factory_l4_smoke_status.json"
 L4_SMOKE_PREFLIGHT_FILENAME = "eval_factory_l4_smoke_preflight.json"
+L4_WEEKLY_PLAN_FILENAME = "eval_factory_l4_weekly_plan.json"
 ARTIFACT_CONTRACT_VERSION = 1
 L4_SMOKE_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.preflight.v1"
 L4_SMOKE_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.status.v1"
+L4_WEEKLY_PLAN_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.plan.v1"
 SOURCE_EVAL_FACTORY_PREFLIGHT = "eval-factory preflight artifact"
 SOURCE_EVAL_FACTORY_STATUS = "eval-factory execute/status artifact"
 ARTIFACT_STATUS_VALID = "valid"
@@ -196,6 +205,28 @@ L4_WEEKLY_EXCLUDED_CANDIDATES = (
     "protocol-expanding candidates",
     "quantized candidates",
     "sidecar candidates",
+)
+L4_WEEKLY_EXCLUSIONS = (
+    L4_WEEKLY_EXCLUDES_7B_FP32,
+    *L4_WEEKLY_EXCLUDED_CANDIDATES,
+    "Gate12B promotion",
+)
+L4_WEEKLY_TARGETS = (
+    L4WeeklyTarget(
+        model_id="Qwen/Qwen2.5-3B-Instruct",
+        model_label="qwen_qwen2_5_3b_instruct",
+        families=FAMILY_SET,
+    ),
+    L4WeeklyTarget(
+        model_id="meta-llama/Llama-3.2-3B-Instruct",
+        model_label="meta_llama_llama_3_2_3b_instruct",
+        families=FAMILY_SET,
+    ),
+    L4WeeklyTarget(
+        model_id="Qwen/Qwen3-4B",
+        model_label="qwen_qwen3_4b",
+        families=FAMILY_SET,
+    ),
 )
 
 EXPECTED_ATLAS_MEMOS = (
@@ -323,7 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--out-dir",
         help=(
             "Required output root for --tier l4-smoke --execute; optional artifact root for "
-            "--tier l4-smoke --preflight-only. Generated files are not committed by this tool."
+            "--tier l4-smoke --preflight-only and --tier l4-weekly. Generated files are not committed by this tool."
         ),
     )
     return parser
@@ -387,17 +418,13 @@ def plan_l4_weekly() -> TierPlan:
         planned_actions=(
             f"plan checks for {L4_WEEKLY_SURFACES}",
             "confirm the frozen Gate12A observable surface before any future dispatch",
-            "keep weekly planning to repeatable dense-transformer family-set surfaces only",
+            "compile a structured plan for the current 3B/4B dense-transformer mainline only",
         ),
-        out_of_scope=(
-            L4_WEEKLY_EXCLUDES_7B_FP32,
-            *L4_WEEKLY_EXCLUDED_CANDIDATES,
-            "Gate12B promotion",
-        ),
+        out_of_scope=L4_WEEKLY_EXCLUSIONS,
         not_implemented_yet=(
             "3B/4B weekly dispatch",
             "L4 runtime budget enforcement",
-            "standing summary publication",
+            "standing execution summary publication",
         ),
     )
 
@@ -497,6 +524,17 @@ def l4_smoke_fixed_target_set() -> dict[str, Any]:
         "families": list(L4_SMOKE_CONFIG.families),
         "device": L4_SMOKE_CONFIG.device,
     }
+
+
+def l4_weekly_target_matrix() -> list[dict[str, Any]]:
+    return [
+        {
+            "model_id": target.model_id,
+            "model_label": target.model_label,
+            "families": list(target.families),
+        }
+        for target in L4_WEEKLY_TARGETS
+    ]
 
 
 def result_from_bool(ok: bool) -> str:
@@ -894,6 +932,51 @@ def validate_status_artifact_payload(payload: Any, prefix: str = "") -> tuple[st
     return tuple(errors)
 
 
+def validate_l4_weekly_target_matrix(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    field = f"{prefix}.weekly_target_matrix" if prefix else "weekly_target_matrix"
+    if "weekly_target_matrix" not in payload:
+        append_missing(errors, field)
+        return
+    target_matrix = payload["weekly_target_matrix"]
+    if not isinstance(target_matrix, list) or any(not isinstance(item, dict) for item in target_matrix):
+        errors.append(f"field {field} expected list of objects")
+        return
+    expected = l4_weekly_target_matrix()
+    if target_matrix != expected:
+        errors.append(f"field {field} expected current 3B/4B dense-transformer mainline matrix")
+
+
+def validate_l4_weekly_plan_artifact_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", L4_WEEKLY_PLAN_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    validate_created_at(payload, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_WEEKLY.value, errors, prefix)
+    require_literal(payload, "mode", "plan-only", errors, prefix)
+    require_str(payload, "resource_posture", errors, prefix)
+    validate_l4_weekly_target_matrix(payload, errors, prefix)
+    entrypoints = require_string_list(payload, "planned_entrypoints", errors, prefix)
+    expected_entrypoints = [
+        "tools/run_gate12a_cross_model_replay.py",
+        "tools/run_gate8_scaleup.py",
+        "tools/run_gate12a_family_replay.py",
+    ]
+    if entrypoints is not None and entrypoints != expected_entrypoints:
+        field = f"{prefix}.planned_entrypoints" if prefix else "planned_entrypoints"
+        errors.append(f"field {field} expected {expected_entrypoints!r}, got {entrypoints!r}")
+    exclusions = require_string_list(payload, "exclusions", errors, prefix)
+    if exclusions is not None and exclusions != list(L4_WEEKLY_EXCLUSIONS):
+        field = f"{prefix}.exclusions" if prefix else "exclusions"
+        errors.append(f"field {field} expected {list(L4_WEEKLY_EXCLUSIONS)!r}, got {exclusions!r}")
+    result = require_str(payload, "result", errors, prefix)
+    if result is not None and result != "plan-only":
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} expected 'plan-only', got {result!r}")
+    return tuple(errors)
+
+
 def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[str, str, str, str]:
     schema_id = str(payload.get("schema_id", ""))
     mode = str(payload.get("mode", ""))
@@ -1041,7 +1124,7 @@ def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
     )
 
     weekly_plan = plan_l4_weekly()
-    required_exclusions = (L4_WEEKLY_EXCLUDES_7B_FP32, *L4_WEEKLY_EXCLUDED_CANDIDATES)
+    required_exclusions = L4_WEEKLY_EXCLUSIONS
     missing_exclusions = [item for item in required_exclusions if item not in weekly_plan.out_of_scope]
     if missing_exclusions:
         checks.append(CheckResult(LEVEL_FAIL, "l4-weekly exclusions", "missing " + ", ".join(missing_exclusions)))
@@ -1381,6 +1464,133 @@ def l4_smoke_entrypoints(repo_root: Path) -> tuple[Path, ...]:
         repo_root / "tools" / "run_gate8_scaleup.py",
         repo_root / "tools" / "run_gate12a_family_replay.py",
     )
+
+
+def l4_weekly_entrypoints(repo_root: Path) -> tuple[Path, ...]:
+    return (
+        repo_root / "tools" / "run_gate12a_cross_model_replay.py",
+        repo_root / "tools" / "run_gate8_scaleup.py",
+        repo_root / "tools" / "run_gate12a_family_replay.py",
+    )
+
+
+def build_l4_weekly_plan_payload(repo_root: Path, created_at: str | None = None) -> dict[str, Any]:
+    return {
+        "schema_id": L4_WEEKLY_PLAN_SCHEMA_ID,
+        "schema_version": ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at or utc_created_at(),
+        "tier": Tier.L4_WEEKLY.value,
+        "mode": "plan-only",
+        "resource_posture": plan_l4_weekly().resource_posture,
+        "weekly_target_matrix": l4_weekly_target_matrix(),
+        "planned_entrypoints": [repo_relative(repo_root, path) for path in l4_weekly_entrypoints(repo_root)],
+        "exclusions": list(L4_WEEKLY_EXCLUSIONS),
+        "result": "plan-only",
+    }
+
+
+def l4_weekly_plan_artifact_path(out_dir: Path) -> Path:
+    return out_dir / L4_WEEKLY_PLAN_FILENAME
+
+
+def write_l4_weekly_plan_artifact(repo_root: Path, out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_status_artifact(l4_weekly_plan_artifact_path(out_dir), build_l4_weekly_plan_payload(repo_root))
+
+
+def validate_l4_weekly_plan_artifact(repo_root: Path, path: Path) -> EvalFactoryArtifactValidation:
+    relative_path = repo_relative(repo_root, path)
+    if not path.exists():
+        return EvalFactoryArtifactValidation(
+            source_class="eval-factory weekly plan artifact",
+            artifact_kind="weekly-plan",
+            path=relative_path,
+            status=ARTIFACT_STATUS_MISSING,
+            schema_id="",
+            mode="",
+            result="",
+            posture_classification="n/a",
+            downstream_result="n/a",
+            errors=(f"missing artifact: {relative_path}",),
+        )
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return EvalFactoryArtifactValidation(
+            source_class="eval-factory weekly plan artifact",
+            artifact_kind="weekly-plan",
+            path=relative_path,
+            status=ARTIFACT_STATUS_MALFORMED,
+            schema_id="",
+            mode="",
+            result="",
+            posture_classification="n/a",
+            downstream_result="n/a",
+            errors=(f"artifact unreadable: {exc}",),
+        )
+    errors = validate_l4_weekly_plan_artifact_payload(payload)
+    schema_id = str(payload.get("schema_id", "")) if isinstance(payload, dict) else ""
+    mode = str(payload.get("mode", "")) if isinstance(payload, dict) else ""
+    result = str(payload.get("result", "")) if isinstance(payload, dict) else ""
+    return EvalFactoryArtifactValidation(
+        source_class="eval-factory weekly plan artifact",
+        artifact_kind="weekly-plan",
+        path=relative_path,
+        status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
+        schema_id=schema_id,
+        mode=mode,
+        result=result,
+        posture_classification="n/a",
+        downstream_result="n/a",
+        errors=errors,
+    )
+
+
+def render_l4_weekly_plan(repo_root: Path, out_dir: Path | None = None) -> str:
+    plan = plan_l4_weekly()
+    payload = build_l4_weekly_plan_payload(repo_root, created_at="<runtime>")
+    lines = [
+        f"tier: {Tier.L4_WEEKLY.value}",
+        "mode: plan-only",
+        f"intent: {plan.intent}",
+        f"expected resource posture: {plan.resource_posture}",
+        "weekly target matrix:",
+    ]
+    for target in payload["weekly_target_matrix"]:
+        lines.append(
+            "  - "
+            f"model={target['model_id']}; model_label={target['model_label']}; "
+            f"families={', '.join(target['families'])}"
+        )
+    lines.append("per-model planned families:")
+    for target in payload["weekly_target_matrix"]:
+        lines.append(f"  - {target['model_id']}: " + ", ".join(target["families"]))
+    lines.append("planned entrypoints:")
+    lines.extend(f"  - {entrypoint}" for entrypoint in payload["planned_entrypoints"])
+    lines.append("exclusions:")
+    lines.extend(f"  - {exclusion}" for exclusion in payload["exclusions"])
+    lines.append("artifact:")
+    if out_dir is None:
+        lines.append(f"  - not written; pass --out-dir <path> to write {L4_WEEKLY_PLAN_FILENAME}")
+    else:
+        lines.append(f"  - {l4_weekly_plan_artifact_path(out_dir)}")
+    lines.extend(
+        [
+            "execution:",
+            "  - no subprocess execution",
+            "  - no GPU/model execution",
+            "final result:",
+            "  result: plan-only",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def run_l4_weekly(repo_root: Path, out_dir: Path | None) -> int:
+    if out_dir is not None:
+        write_l4_weekly_plan_artifact(repo_root, out_dir)
+    print(render_l4_weekly_plan(repo_root, out_dir))
+    return 0
 
 
 def build_l4_smoke_command(repo_root: Path, out_dir: Path) -> list[str]:
@@ -1843,6 +2053,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_l4_smoke_execute(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
         print(render_l4_smoke_dry_run(REPO_ROOT))
         return 0
+    if tier == Tier.L4_WEEKLY:
+        return run_l4_weekly(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
 
     plan = dispatch(tier)
     print(render_plan(plan))

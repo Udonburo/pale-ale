@@ -130,6 +130,65 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("protocol-expanding candidates", plan.out_of_scope)
         self.assertIn("quantized candidates", plan.out_of_scope)
         self.assertIn("sidecar candidates", plan.out_of_scope)
+        self.assertIn("Gate12B promotion", plan.out_of_scope)
+
+    def test_l4_weekly_target_matrix_contents(self) -> None:
+        matrix = runner.l4_weekly_target_matrix()
+
+        self.assertEqual(
+            [target["model_id"] for target in matrix],
+            [
+                "Qwen/Qwen2.5-3B-Instruct",
+                "meta-llama/Llama-3.2-3B-Instruct",
+                "Qwen/Qwen3-4B",
+            ],
+        )
+        for target in matrix:
+            self.assertEqual(target["families"], ["transcript_v1", "briefing_v1", "archive_v1"])
+
+    def test_l4_weekly_prints_plan_compiler_sections(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            self.assertEqual(runner.main(["--tier", "l4-weekly"]), 0)
+
+        text = output.getvalue()
+        self.assertIn("tier: l4-weekly", text)
+        self.assertIn("mode: plan-only", text)
+        self.assertIn("weekly target matrix:", text)
+        self.assertIn("per-model planned families:", text)
+        self.assertIn("planned entrypoints:", text)
+        self.assertIn("tools/run_gate12a_cross_model_replay.py", text)
+        self.assertIn("exclusions:", text)
+        self.assertIn("7B FP32", text)
+        self.assertIn("protocol-expanding candidates", text)
+        self.assertIn("quantized candidates", text)
+        self.assertIn("sidecar candidates", text)
+        self.assertIn("Gate12B promotion", text)
+        self.assertIn("no subprocess execution", text)
+        self.assertIn("result: plan-only", text)
+
+    def test_l4_weekly_writes_valid_optional_plan_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "weekly"
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(runner.main(["--tier", "l4-weekly", "--out-dir", str(out_dir)]), 0)
+
+            artifact = out_dir / runner.L4_WEEKLY_PLAN_FILENAME
+            artifact_exists = artifact.exists()
+            payload = runner.read_json(artifact)
+            validation = runner.validate_l4_weekly_plan_artifact(runner.REPO_ROOT, artifact)
+
+        self.assertTrue(artifact_exists)
+        self.assertEqual(payload["schema_id"], runner.L4_WEEKLY_PLAN_SCHEMA_ID)
+        self.assertEqual(payload["schema_version"], runner.ARTIFACT_CONTRACT_VERSION)
+        self.assertEqual(payload["tier"], runner.Tier.L4_WEEKLY.value)
+        self.assertEqual(payload["mode"], "plan-only")
+        self.assertEqual(payload["weekly_target_matrix"], runner.l4_weekly_target_matrix())
+        self.assertEqual(payload["exclusions"], list(runner.L4_WEEKLY_EXCLUSIONS))
+        self.assertEqual(payload["result"], "plan-only")
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
 
     def test_l4_smoke_remains_plan_only(self) -> None:
         output = io.StringIO()
