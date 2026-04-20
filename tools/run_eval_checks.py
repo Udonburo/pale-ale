@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib
 import json
+import platform
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -76,6 +79,29 @@ class L4SmokeConfig:
 
 
 @dataclass(frozen=True)
+class L4SmokePreflight:
+    sys_executable: str
+    python_version: str
+    cwd: str
+    platform: str
+    os_name: str
+    torch_importable: bool
+    torch_version: str
+    torch_cuda_available: bool | None
+    torch_cuda_version: str
+    gpu_count: int | None
+    gpu_names: tuple[str, ...]
+    nvidia_smi_available: bool
+    nvidia_smi_path: str
+    nvidia_smi_summary: tuple[str, ...]
+    nvidia_smi_error: str
+    posture_classification: str
+    preflight_ok: bool
+    remediation_hints: tuple[str, ...]
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TrackedMemoSurface:
     model_label: str
     model_id: str
@@ -105,6 +131,13 @@ L4_SMOKE_CONFIG = L4SmokeConfig(
     summary_run_id="gate12a_cross_model_replay_qwen_qwen2_5_0_5b",
 )
 L4_SMOKE_STATUS_FILENAME = "eval_factory_l4_smoke_status.json"
+L4_SMOKE_PREFLIGHT_FILENAME = "eval_factory_l4_smoke_preflight.json"
+
+POSTURE_REMOTE_CUDA_READY = "remote_cuda_ready"
+POSTURE_LOCAL_WINDOWS_NO_CUDA = "local_windows_no_cuda"
+POSTURE_PYTHON_MISSING_TORCH = "python_missing_torch"
+POSTURE_CUDA_UNAVAILABLE = "cuda_unavailable"
+POSTURE_UNKNOWN = "unknown_posture"
 
 L4_WEEKLY_SURFACES = (
     "current 3B/4B dense-transformer family-set surfaces under the frozen Gate12A observable contract"
@@ -238,8 +271,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Execute the l4-smoke lane. Only supported with --tier l4-smoke and an explicit --out-dir.",
     )
     parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="Run only the l4-smoke environment/GPU posture preflight. Does not invoke model execution.",
+    )
+    parser.add_argument(
         "--out-dir",
-        help="Required output root for --tier l4-smoke --execute. Generated files are not committed by this tool.",
+        help=(
+            "Required output root for --tier l4-smoke --execute; optional artifact root for "
+            "--tier l4-smoke --preflight-only. Generated files are not committed by this tool."
+        ),
     )
     return parser
 
@@ -633,6 +674,251 @@ def render_check_report(plan: TierPlan, checks: Sequence[CheckResult]) -> str:
     return "\n".join(lines)
 
 
+def load_torch_module() -> Any:
+    return importlib.import_module("torch")
+
+
+def classify_l4_smoke_posture(
+    os_name: str,
+    torch_importable: bool,
+    torch_cuda_available: bool | None,
+    gpu_count: int | None,
+) -> str:
+    normalized_os = os_name.lower()
+    if not torch_importable:
+        return POSTURE_PYTHON_MISSING_TORCH
+    if normalized_os == "windows" and not torch_cuda_available:
+        return POSTURE_LOCAL_WINDOWS_NO_CUDA
+    if normalized_os == "linux" and torch_cuda_available and (gpu_count or 0) > 0:
+        return POSTURE_REMOTE_CUDA_READY
+    if torch_cuda_available is False:
+        return POSTURE_CUDA_UNAVAILABLE
+    return POSTURE_UNKNOWN
+
+
+def remediation_hints_for_posture(posture: str) -> tuple[str, ...]:
+    common = (
+        'Check `nvidia-smi` on the target machine.',
+        'Check `python -c "import torch; print(torch.cuda.is_available())"` in the same environment.',
+    )
+    if posture == POSTURE_REMOTE_CUDA_READY:
+        return ()
+    if posture == POSTURE_LOCAL_WINDOWS_NO_CUDA:
+        return (
+            "Run this lane on the GCP L4 VM instead of local Windows.",
+            *common,
+            "Confirm the VM Python interpreter is the one used by `tools/run_eval_checks.py`.",
+        )
+    if posture == POSTURE_PYTHON_MISSING_TORCH:
+        return (
+            "Use the GCP L4 VM environment with a CUDA-capable PyTorch installation.",
+            "Install or activate the Python environment that provides `torch` before executing the lane.",
+            *common,
+        )
+    if posture == POSTURE_CUDA_UNAVAILABLE:
+        return (
+            "CUDA was requested for l4-smoke but is not available to this Python interpreter.",
+            *common,
+            "Confirm NVIDIA drivers, CUDA runtime visibility, and the PyTorch build on the VM.",
+        )
+    return (
+        "Posture is mixed or unknown; verify that this is the intended GCP L4 VM environment.",
+        *common,
+    )
+
+
+def query_nvidia_smi(
+    nvidia_smi_path: str,
+    run_command: Callable[..., subprocess.CompletedProcess[str]],
+) -> tuple[tuple[str, ...], str]:
+    try:
+        completed = run_command(
+            [
+                nvidia_smi_path,
+                "--query-gpu=name,memory.total,driver_version",
+                "--format=csv,noheader",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return (), str(exc)
+    stdout = (completed.stdout or "").strip()
+    stderr = (completed.stderr or "").strip()
+    if completed.returncode != 0:
+        return (), stderr or f"nvidia-smi exited with rc={completed.returncode}"
+    if not stdout:
+        return (), ""
+    return tuple(line.strip() for line in stdout.splitlines() if line.strip()), ""
+
+
+def collect_l4_smoke_preflight(
+    repo_root: Path,
+    torch_loader: Callable[[], Any] = load_torch_module,
+    platform_system: Callable[[], str] = platform.system,
+    platform_string: Callable[[], str] = platform.platform,
+    cwd_getter: Callable[[], Path] = Path.cwd,
+    which: Callable[[str], str | None] = shutil.which,
+    run_command: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> L4SmokePreflight:
+    errors: list[str] = []
+    os_name = platform_system()
+    torch_importable = False
+    torch_version = "unavailable"
+    torch_cuda_available: bool | None = None
+    torch_cuda_version = "unavailable"
+    gpu_count: int | None = None
+    gpu_names: tuple[str, ...] = ()
+
+    try:
+        torch_module = torch_loader()
+        torch_importable = True
+        torch_version = str(getattr(torch_module, "__version__", "unknown"))
+        torch_version_obj = getattr(torch_module, "version", None)
+        torch_cuda_version = str(getattr(torch_version_obj, "cuda", "unavailable") or "unavailable")
+        cuda_obj = getattr(torch_module, "cuda", None)
+        if cuda_obj is None:
+            errors.append("torch.cuda is not present")
+            torch_cuda_available = False
+            gpu_count = 0
+        else:
+            torch_cuda_available = bool(cuda_obj.is_available())
+            try:
+                gpu_count = int(cuda_obj.device_count()) if torch_cuda_available else 0
+            except (AttributeError, TypeError, ValueError) as exc:
+                gpu_count = None
+                errors.append(f"torch.cuda.device_count unavailable: {exc}")
+            names: list[str] = []
+            if torch_cuda_available and gpu_count:
+                for index in range(gpu_count):
+                    try:
+                        names.append(str(cuda_obj.get_device_name(index)))
+                    except (AttributeError, RuntimeError, TypeError) as exc:
+                        names.append(f"unavailable:{exc}")
+            gpu_names = tuple(names)
+    except ImportError as exc:
+        errors.append(f"torch import failed: {exc}")
+    except Exception as exc:  # pragma: no cover - defensive against broken torch installs
+        errors.append(f"torch inspection failed: {exc}")
+
+    nvidia_smi_path = which("nvidia-smi") or ""
+    nvidia_smi_available = bool(nvidia_smi_path)
+    nvidia_smi_summary: tuple[str, ...] = ()
+    nvidia_smi_error = ""
+    if nvidia_smi_available:
+        nvidia_smi_summary, nvidia_smi_error = query_nvidia_smi(nvidia_smi_path, run_command)
+
+    posture = classify_l4_smoke_posture(
+        os_name=os_name,
+        torch_importable=torch_importable,
+        torch_cuda_available=torch_cuda_available,
+        gpu_count=gpu_count,
+    )
+    preflight_ok = posture == POSTURE_REMOTE_CUDA_READY
+    if not preflight_ok:
+        errors.append(f"posture classification is {posture}, expected {POSTURE_REMOTE_CUDA_READY}")
+
+    return L4SmokePreflight(
+        sys_executable=sys.executable,
+        python_version=sys.version.replace("\n", " "),
+        cwd=str(cwd_getter()),
+        platform=platform_string(),
+        os_name=os_name,
+        torch_importable=torch_importable,
+        torch_version=torch_version,
+        torch_cuda_available=torch_cuda_available,
+        torch_cuda_version=torch_cuda_version,
+        gpu_count=gpu_count,
+        gpu_names=gpu_names,
+        nvidia_smi_available=nvidia_smi_available,
+        nvidia_smi_path=nvidia_smi_path,
+        nvidia_smi_summary=nvidia_smi_summary,
+        nvidia_smi_error=nvidia_smi_error,
+        posture_classification=posture,
+        preflight_ok=preflight_ok,
+        remediation_hints=remediation_hints_for_posture(posture),
+        errors=tuple(errors),
+    )
+
+
+def preflight_to_dict(preflight: L4SmokePreflight) -> dict[str, Any]:
+    return {
+        "sys_executable": preflight.sys_executable,
+        "python_version": preflight.python_version,
+        "cwd": preflight.cwd,
+        "platform": preflight.platform,
+        "os_name": preflight.os_name,
+        "torch_importable": preflight.torch_importable,
+        "torch_version": preflight.torch_version,
+        "torch_cuda_available": preflight.torch_cuda_available,
+        "torch_cuda_version": preflight.torch_cuda_version,
+        "gpu_count": preflight.gpu_count,
+        "gpu_names": list(preflight.gpu_names),
+        "nvidia_smi_available": preflight.nvidia_smi_available,
+        "nvidia_smi_path": preflight.nvidia_smi_path,
+        "nvidia_smi_summary": list(preflight.nvidia_smi_summary),
+        "nvidia_smi_error": preflight.nvidia_smi_error,
+        "posture_classification": preflight.posture_classification,
+        "preflight_ok": preflight.preflight_ok,
+        "remediation_hints": list(preflight.remediation_hints),
+        "errors": list(preflight.errors),
+    }
+
+
+def preflight_artifact_path(out_dir: Path) -> Path:
+    return out_dir / L4_SMOKE_PREFLIGHT_FILENAME
+
+
+def write_preflight_artifact(out_dir: Path, preflight: L4SmokePreflight) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_status_artifact(preflight_artifact_path(out_dir), preflight_to_dict(preflight))
+
+
+def render_l4_smoke_preflight(preflight: L4SmokePreflight) -> str:
+    lines = [
+        "environment diagnostics:",
+        f"  sys.executable: {preflight.sys_executable}",
+        f"  python_version: {preflight.python_version}",
+        f"  cwd: {preflight.cwd}",
+        f"  platform: {preflight.platform}",
+        f"  os_name: {preflight.os_name}",
+        f"  torch_importable: {preflight.torch_importable}",
+        f"  torch.__version__: {preflight.torch_version}",
+        f"  torch.cuda.is_available(): {preflight.torch_cuda_available}",
+        f"  torch.version.cuda: {preflight.torch_cuda_version}",
+        f"  gpu_count: {preflight.gpu_count}",
+        f"  gpu_names: {', '.join(preflight.gpu_names) if preflight.gpu_names else 'none'}",
+        f"  nvidia-smi available: {preflight.nvidia_smi_available}",
+        f"  nvidia-smi path: {preflight.nvidia_smi_path or 'none'}",
+        "  nvidia-smi summary:",
+    ]
+    if preflight.nvidia_smi_summary:
+        lines.extend(f"    - {row}" for row in preflight.nvidia_smi_summary)
+    else:
+        lines.append("    - none")
+    if preflight.nvidia_smi_error:
+        lines.append(f"  nvidia-smi error: {preflight.nvidia_smi_error}")
+    lines.extend(
+        [
+            "posture classification:",
+            f"  classification: {preflight.posture_classification}",
+            "preflight result:",
+            f"  result: {'pass' if preflight.preflight_ok else 'fail'}",
+        ]
+    )
+    if preflight.errors:
+        lines.append("  errors:")
+        lines.extend(f"    - {error}" for error in preflight.errors)
+    lines.append("remediation hints:")
+    if preflight.remediation_hints:
+        lines.extend(f"  - {hint}" for hint in preflight.remediation_hints)
+    else:
+        lines.append("  - none")
+    return "\n".join(lines)
+
+
 def l4_smoke_entrypoints(repo_root: Path) -> tuple[Path, ...]:
     return (
         repo_root / "tools" / "run_gate12a_cross_model_replay.py",
@@ -704,7 +990,8 @@ def render_l4_smoke_dry_run(repo_root: Path) -> str:
         [
             render_l4_smoke_header(repo_root, None, "dry-run"),
             "dispatch:",
-            "  - not executed; pass --execute --out-dir <path> to run the committed l4-smoke lane",
+            "  - not executed; pass --preflight-only for GPU posture diagnostics",
+            "  - pass --execute --out-dir <path> to run the committed l4-smoke lane after preflight",
             "final summary:",
             "  result: dry-run",
         ]
@@ -786,6 +1073,7 @@ def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: 
         if row.get("dispatch") != "completed" or row.get("structural_flags_all_true") != "True"
     )
     lines = [
+        "execution dispatch/result summary:",
         "per-family dispatch/result summary:",
     ]
     for row in family_results:
@@ -825,10 +1113,43 @@ def render_l4_smoke_precondition_failure(repo_root: Path, out_dir: Path | None, 
     )
 
 
+def render_l4_smoke_preflight_blocked(repo_root: Path, out_dir: Path, preflight: L4SmokePreflight) -> str:
+    return "\n".join(
+        [
+            render_l4_smoke_header(repo_root, out_dir, "execute"),
+            render_l4_smoke_preflight(preflight),
+            "execution dispatch/result summary:",
+            "  downstream subprocess: not invoked",
+            "final pass/fail summary:",
+            "  result: fail",
+        ]
+    )
+
+
+def run_l4_smoke_preflight_only(
+    repo_root: Path,
+    out_dir: Path | None,
+    preflight_provider: Callable[[Path], L4SmokePreflight] = collect_l4_smoke_preflight,
+) -> int:
+    preflight = preflight_provider(repo_root)
+    if out_dir is not None:
+        write_preflight_artifact(out_dir, preflight)
+    print(
+        "\n".join(
+            [
+                render_l4_smoke_header(repo_root, out_dir, "preflight-only"),
+                render_l4_smoke_preflight(preflight),
+            ]
+        )
+    )
+    return 0 if preflight.preflight_ok else 1
+
+
 def run_l4_smoke_execute(
     repo_root: Path,
     out_dir: Path | None,
     run_command: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    preflight_provider: Callable[[Path], L4SmokePreflight] = collect_l4_smoke_preflight,
 ) -> int:
     errors = validate_l4_smoke_execute_preconditions(repo_root, out_dir)
     if errors:
@@ -837,8 +1158,15 @@ def run_l4_smoke_execute(
 
     assert out_dir is not None
     out_dir.mkdir(parents=True, exist_ok=True)
+    preflight = preflight_provider(repo_root)
+    write_preflight_artifact(out_dir, preflight)
+    if not preflight.preflight_ok:
+        print(render_l4_smoke_preflight_blocked(repo_root, out_dir, preflight))
+        return 1
+
     command = build_l4_smoke_command(repo_root, out_dir)
     print(render_l4_smoke_header(repo_root, out_dir, "execute"))
+    print(render_l4_smoke_preflight(preflight))
     completed = run_command(
         command,
         cwd=str(repo_root),
@@ -865,6 +1193,7 @@ def run_l4_smoke_execute(
         "command": command,
         "out_dir": str(out_dir),
         "returncode": int(completed.returncode),
+        "preflight": preflight_to_dict(preflight),
         "family_results": list(family_results),
         "notes": list(notes),
     }
@@ -966,11 +1295,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.execute and tier != Tier.L4_SMOKE:
         print(f"error: --execute is only supported for --tier {Tier.L4_SMOKE.value}")
         return 2
+    if args.preflight_only and tier != Tier.L4_SMOKE:
+        print(f"error: --preflight-only is only supported for --tier {Tier.L4_SMOKE.value}")
+        return 2
+    if args.execute and args.preflight_only:
+        print("error: --execute and --preflight-only cannot be used together")
+        return 2
     if tier == Tier.CPU_NIGHTLY:
         return run_cpu_nightly(REPO_ROOT)
     if tier == Tier.SUMMARIZE_EXISTING:
         return run_summarize_existing(REPO_ROOT)
     if tier == Tier.L4_SMOKE:
+        if args.preflight_only:
+            return run_l4_smoke_preflight_only(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
         if args.execute:
             return run_l4_smoke_execute(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
         print(render_l4_smoke_dry_run(REPO_ROOT))
