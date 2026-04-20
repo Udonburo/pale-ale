@@ -4,6 +4,9 @@ This reference explains how to read eval-factory status sources and artifacts.
 It is for operator interpretation only. It does not add empirical claims,
 revise the Gate12A memo line, or make `runs/` tracked public evidence.
 
+For exact schema ids, required field groups, and JSON examples, see
+[`eval_factory_json_contracts.md`](eval_factory_json_contracts.md).
+
 ## Source Classes
 
 | Source class | What it is | Comes from | Can be used to conclude | Cannot be used to conclude | Typical fields to inspect |
