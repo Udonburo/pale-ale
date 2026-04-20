@@ -1079,7 +1079,11 @@ def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
         if result.artifact_kind == "status":
             parts.append(f"downstream_result={result.downstream_result}")
         return "; ".join(parts)
-    return f"path={result.path}; errors=" + " | ".join(result.errors)
+    return (
+        f"path={result.path}; errors="
+        + " | ".join(result.errors)
+        + "; helper=python tools/manage_eval_factory_artifacts.py --root runs"
+    )
 
 
 def append_eval_factory_artifact_checks(checks: list[CheckResult], repo_root: Path) -> None:
