@@ -39,6 +39,13 @@ Use [`l4_smoke_runbook.md`](l4_smoke_runbook.md) before operating the
 real `--execute` posture is expected on the GCP L4 VM. Do not confuse local
 Windows Python with the VM interpreter.
 
+## L4-weekly Escalation
+
+Use [`l4_weekly_escalation_guide.md`](l4_weekly_escalation_guide.md) before
+moving from the smoke lane into weekly planning. The weekly lane is bounded to
+the current 3B/4B dense-transformer mainline and remains plan-only unless a
+separate execution surface is explicitly added.
+
 ## Artifact Reference
 
 Use [`eval_factory_artifact_reference.md`](eval_factory_artifact_reference.md)
@@ -52,7 +59,7 @@ primary output class and interpretation boundary.
 | `l4-smoke` dry-run | stdout dry-run plan | Operational plan | Shows fixed target set and command shape; does not execute a model. |
 | `l4-smoke --preflight-only` | stdout diagnostics and optional `eval_factory_l4_smoke_preflight.json` | Eval-factory preflight artifact | Checks interpreter/GPU posture; does not run the replay or update memo status. |
 | `l4-smoke --execute` | stdout, `eval_factory_l4_smoke_preflight.json`, and possibly `eval_factory_l4_smoke_status.json` | Eval-factory preflight artifact plus execute/status artifact | Records one operator execution attempt for the fixed 0.5B lane; does not create a new checkpoint by itself. |
-| `l4-weekly` | stdout plan | Operational plan | Keeps bounded mainline posture visible; does not imply 7B FP32, sidecar, protocol expansion, or Gate12B. |
+| `l4-weekly` | stdout plan and optional `eval_factory_l4_weekly_plan.json` | Eval-factory weekly plan artifact | Compiles the bounded current 3B/4B mainline plan; does not execute a model or imply 7B FP32, sidecar, protocol expansion, quantized candidates, or Gate12B. |
 
 ## Example Commands
 
