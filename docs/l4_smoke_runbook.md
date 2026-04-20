@@ -5,6 +5,8 @@ This runbook documents the practical `l4-smoke` lane for
 Gate12A, promote a new checkpoint, or treat local `runs/` material as tracked
 public evidence. For the source-class map, use
 [`eval_factory_artifact_reference.md`](eval_factory_artifact_reference.md).
+For escalation beyond the smoke lane, use
+[`l4_weekly_escalation_guide.md`](l4_weekly_escalation_guide.md).
 
 ## What This Lane Is
 
