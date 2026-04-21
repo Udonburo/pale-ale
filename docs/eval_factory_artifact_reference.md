@@ -6,6 +6,8 @@ revise the Gate12A memo line, or make `runs/` tracked public evidence.
 
 For exact schema ids, required field groups, and JSON examples, see
 [`eval_factory_json_contracts.md`](eval_factory_json_contracts.md).
+For successful VM receipt closeout, see
+[`l4_smoke_receipt_assimilation.md`](l4_smoke_receipt_assimilation.md).
 
 ## Source Classes
 
