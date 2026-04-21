@@ -19,6 +19,7 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import run_eval_checks as runner
+import package_eval_factory_receipt as receipt_helper
 
 
 class FakeCuda:
@@ -114,6 +115,62 @@ def make_status_payload() -> dict[str, object]:
         "family_results": family_results,
         "notes": [],
     }
+
+
+def write_receipt_fixture(repo: Path) -> Path:
+    run_dir = repo / "runs" / "eval_factory_l4_smoke_vm_fixture"
+    run_dir.mkdir(parents=True)
+    runner.write_status_artifact(
+        run_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME,
+        runner.build_preflight_artifact_payload(
+            make_preflight(),
+            "execute",
+            created_at="2026-04-20T00:00:00Z",
+        ),
+    )
+    runner.write_status_artifact(run_dir / runner.L4_SMOKE_STATUS_FILENAME, make_status_payload())
+    (run_dir / "eval_factory_l4_smoke_execute.log").write_text("fixture log\n", encoding="utf-8")
+    summary_dir = run_dir / runner.L4_SMOKE_CONFIG.summary_run_id
+    summary_dir.mkdir()
+    with (summary_dir / runner.CROSS_MODEL_SUMMARY_FILENAME).open("w", encoding="utf-8", newline="") as handle:
+        fieldnames = [
+            "model_label",
+            "model_id",
+            "rendering_family",
+            *runner.STRUCTURAL_FLAG_COLUMNS,
+            "trusted_tree_median",
+            "residual_chord_median",
+            "anchor_qualified_median",
+            "plain_median",
+            "extreme_band_first_pass_status",
+        ]
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for family in runner.FAMILY_SET:
+            writer.writerow(
+                {
+                    "model_label": runner.L4_SMOKE_CONFIG.model_label,
+                    "model_id": runner.L4_SMOKE_CONFIG.model_id,
+                    "rendering_family": family,
+                    "zero_overlap_clear": "True",
+                    "all_defined_triangles_anchor_rich": "True",
+                    "trusted_tree_gt_residual_chord": "True",
+                    "plain_gt_anchor_qualified": "True",
+                    "trusted_tree_median": "1.0",
+                    "residual_chord_median": "0.8",
+                    "anchor_qualified_median": "0.7",
+                    "plain_median": "1.1",
+                    "extreme_band_first_pass_status": "pending_local_read",
+                }
+            )
+    result = receipt_helper.package_receipt(
+        run_dir,
+        repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME,
+        create_tarball=False,
+        created_at="2026-04-20T01:00:00Z",
+        repo_root=repo,
+    )
+    return result.manifest_path
 
 
 class RunEvalChecksTest(unittest.TestCase):
@@ -570,6 +627,24 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("source_class=eval-factory execute/status artifact", text)
         self.assertIn("downstream_result=pass", text)
 
+    def test_summarize_existing_separates_operator_receipt_bundles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            manifest_path = write_receipt_fixture(repo)
+
+            text = runner.render_summarize_existing(repo)
+            manifest_exists = manifest_path.exists()
+
+        self.assertTrue(manifest_exists)
+        self.assertIn("operator/eval-factory receipt bundle surfaces:", text)
+        self.assertIn("source_class=operator/eval-factory receipt bundle", text)
+        self.assertIn("artifact_status=valid", text)
+        self.assertIn("result=pass", text)
+        self.assertIn("posture=remote_cuda_ready", text)
+        self.assertIn("family_count=3", text)
+        self.assertIn("tarball=absent", text)
+        self.assertIn("checksums=present", text)
+
     def test_cpu_nightly_reports_missing_required_files_as_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             checks = runner.build_cpu_nightly_checks(Path(tmpdir))
@@ -602,6 +677,12 @@ class RunEvalChecksTest(unittest.TestCase):
                 for check in checks
             )
         )
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_OPERATOR_RECEIPT
+                for check in checks
+            )
+        )
         self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
 
     def test_cpu_nightly_fails_on_malformed_present_artifact(self) -> None:
@@ -624,6 +705,53 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertTrue(
             any(
                 check.level == runner.LEVEL_FAIL and runner.SOURCE_EVAL_FACTORY_PREFLIGHT in check.label
+                for check in checks
+            )
+        )
+
+    def test_cpu_nightly_validates_operator_receipt_bundles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            write_receipt_fixture(repo)
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_PASS and runner.SOURCE_OPERATOR_RECEIPT in check.label
+                for check in checks
+            )
+        )
+        self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
+
+    def test_cpu_nightly_fails_on_malformed_receipt_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            manifest = repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME / "bad" / runner.RECEIPT_MANIFEST_FILENAME
+            manifest.parent.mkdir(parents=True)
+            runner.write_status_artifact(manifest, {"schema_id": "wrong"})
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_FAIL and runner.SOURCE_OPERATOR_RECEIPT in check.label
                 for check in checks
             )
         )
