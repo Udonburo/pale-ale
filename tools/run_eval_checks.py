@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import importlib
 import json
 import os
@@ -125,6 +126,20 @@ class EvalFactoryArtifactValidation:
 
 
 @dataclass(frozen=True)
+class EvalFactoryReceiptValidation:
+    source_class: str
+    path: str
+    status: str
+    schema_id: str
+    result: str
+    posture_classification: str
+    family_count: int | None
+    tarball_present: bool
+    checksum_present: bool
+    errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class TrackedMemoSurface:
     model_label: str
     model_id: str
@@ -160,8 +175,14 @@ ARTIFACT_CONTRACT_VERSION = 1
 L4_SMOKE_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.preflight.v1"
 L4_SMOKE_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.status.v1"
 L4_WEEKLY_PLAN_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.plan.v1"
+OPERATOR_RECEIPT_SCHEMA_ID = "pale-ale.operator_receipt.eval_factory.l4_smoke.v1"
 SOURCE_EVAL_FACTORY_PREFLIGHT = "eval-factory preflight artifact"
 SOURCE_EVAL_FACTORY_STATUS = "eval-factory execute/status artifact"
+SOURCE_OPERATOR_RECEIPT = "operator/eval-factory receipt bundle"
+RECEIPT_BUNDLES_DIRNAME = "receipt_bundles"
+RECEIPT_MANIFEST_FILENAME = "operator_receipt_manifest.json"
+RECEIPT_REQUIRED_ARTIFACT_CHECKSUMS_FILENAME = "required_receipt_artifacts.sha256"
+RECEIPT_BUNDLE_CHECKSUMS_FILENAME = "receipt_bundle_files.sha256"
 ARTIFACT_STATUS_VALID = "valid"
 ARTIFACT_STATUS_MALFORMED = "malformed"
 ARTIFACT_STATUS_MISSING = "missing"
@@ -304,6 +325,8 @@ REQUIRED_CPU_FILES = (
     "zenodo-release/CHECKSUMS-SHA256.txt",
     "tools/run_eval_checks.py",
     "tools/test_run_eval_checks.py",
+    "tools/package_eval_factory_receipt.py",
+    "tools/test_package_eval_factory_receipt.py",
     "tools/run_gate12a_cross_model_replay.py",
     "tools/run_gate12a_family_replay.py",
 )
@@ -489,6 +512,14 @@ def read_json(path: Path) -> Mapping[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def read_csv_rows(path: Path) -> tuple[list[dict[str, str]], tuple[str, ...]]:
     with open(path, "r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -574,6 +605,14 @@ def discover_eval_factory_preflight_artifacts(repo_root: Path) -> tuple[Path, ..
 
 def discover_eval_factory_status_artifacts(repo_root: Path) -> tuple[Path, ...]:
     return discover_files_by_name(repo_root, L4_SMOKE_STATUS_FILENAME)
+
+
+def discover_operator_receipt_manifests(repo_root: Path) -> tuple[Path, ...]:
+    receipt_root = repo_root / "runs" / RECEIPT_BUNDLES_DIRNAME
+    if not receipt_root.exists():
+        return ()
+    matches = tuple(receipt_root.rglob(RECEIPT_MANIFEST_FILENAME))
+    return tuple(sorted(matches, key=lambda path: repo_relative(repo_root, path)))
 
 
 def count_shallow_gate12a_run_dirs(repo_root: Path) -> int:
@@ -977,6 +1016,130 @@ def validate_l4_weekly_plan_artifact_payload(payload: Any, prefix: str = "") -> 
     return tuple(errors)
 
 
+def validate_receipt_required_artifacts(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    field = f"{prefix}.required_artifacts" if prefix else "required_artifacts"
+    artifacts = payload.get("required_artifacts")
+    if "required_artifacts" not in payload:
+        append_missing(errors, field)
+        return
+    if not isinstance(artifacts, list) or any(not isinstance(item, dict) for item in artifacts):
+        errors.append(f"field {field} expected list of objects")
+        return
+    expected_roles = {
+        "preflight",
+        "status",
+        "execute_log",
+        "cross_model_family_summary",
+    }
+    roles: set[str] = set()
+    for index, artifact in enumerate(artifacts):
+        artifact_prefix = f"{field}[{index}]"
+        role = require_str(artifact, "role", errors, artifact_prefix)
+        if role is not None:
+            roles.add(role)
+        require_str(artifact, "source_path", errors, artifact_prefix)
+        require_str(artifact, "bundled_path", errors, artifact_prefix)
+        require_int(artifact, "size_bytes", errors, artifact_prefix)
+        digest = require_str(artifact, "sha256", errors, artifact_prefix)
+        if digest is not None and len(digest) != 64:
+            errors.append(f"field {artifact_prefix}.sha256 expected 64 hex characters")
+    if roles != expected_roles:
+        errors.append(f"field {field} expected roles {sorted(expected_roles)!r}, got {sorted(roles)!r}")
+
+
+def validate_receipt_manifest_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", OPERATOR_RECEIPT_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    require_literal(payload, "source_class", SOURCE_OPERATOR_RECEIPT, errors, prefix)
+    validate_created_at(payload, errors, prefix)
+    require_str(payload, "source_run_path", errors, prefix)
+    require_str(payload, "bundle_path", errors, prefix)
+    require_literal(payload, "tier", Tier.L4_SMOKE.value, errors, prefix)
+    require_literal(payload, "mode", "execute", errors, prefix)
+    validate_fixed_target_set(payload, errors, prefix)
+    posture = require_str(payload, "posture_classification", errors, prefix)
+    if posture is not None and posture not in POSTURE_CLASSIFICATIONS:
+        field = f"{prefix}.posture_classification" if prefix else "posture_classification"
+        errors.append(f"field {field} expected one of {', '.join(POSTURE_CLASSIFICATIONS)}, got {posture!r}")
+    result = require_str(payload, "execute_result", errors, prefix)
+    if result is not None and result not in RESULT_VALUES:
+        field = f"{prefix}.execute_result" if prefix else "execute_result"
+        errors.append(f"field {field} expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+    require_int(payload, "family_count", errors, prefix, expected=len(FAMILY_SET))
+    families = require_string_list(payload, "families", errors, prefix)
+    if families is not None and families != list(FAMILY_SET):
+        field = f"{prefix}.families" if prefix else "families"
+        errors.append(f"field {field} expected {list(FAMILY_SET)!r}, got {families!r}")
+    require_str(payload, "downstream_summary_path", errors, prefix)
+    require_str(payload, "runs_first_pass_status_note", errors, prefix)
+    require_literal(payload, "not_a_checkpoint", True, errors, prefix)
+    require_literal(payload, "not_a_memo_claim", True, errors, prefix)
+    require_literal(payload, "no_new_model_execution_in_packaging", True, errors, prefix)
+    checksums = require_mapping(payload, "checksums", errors, prefix)
+    if checksums is not None:
+        checksum_prefix = f"{prefix}.checksums" if prefix else "checksums"
+        require_str(checksums, "required_artifacts_sha256", errors, checksum_prefix)
+        require_str(checksums, "bundle_files_sha256", errors, checksum_prefix)
+    tarball = require_mapping(payload, "tarball", errors, prefix)
+    if tarball is not None:
+        tarball_prefix = f"{prefix}.tarball" if prefix else "tarball"
+        present = require_bool(tarball, "present", errors, tarball_prefix)
+        require_str(tarball, "path", errors, tarball_prefix, allow_empty=present is False)
+        require_str(tarball, "sha256_path", errors, tarball_prefix, allow_empty=present is False)
+        require_str(tarball, "sha256", errors, tarball_prefix, allow_empty=present is False)
+        require_optional_int(tarball, "size_bytes", errors, tarball_prefix)
+    validate_receipt_required_artifacts(payload, errors, prefix)
+    return tuple(errors)
+
+
+def manifest_path_to_file(repo_root: Path, manifest_path: Path, value: str) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    candidate = repo_root / path
+    if candidate.exists():
+        return candidate
+    return manifest_path.parent / path
+
+
+def parse_sha256sum_file(path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
+    entries: dict[str, str] = {}
+    errors: list[str] = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        return {}, (f"checksum file unreadable: {exc}",)
+    for index, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        parts = stripped.split(maxsplit=1)
+        if len(parts) != 2 or len(parts[0]) != 64:
+            errors.append(f"checksum line {index} expected '<sha256>  <path>'")
+            continue
+        entries[parts[1].lstrip("*")] = parts[0]
+    return entries, tuple(errors)
+
+
+def validate_sha256sum_file(repo_root: Path, checksum_path: Path) -> tuple[str, ...]:
+    errors: list[str] = []
+    entries, parse_errors = parse_sha256sum_file(checksum_path)
+    errors.extend(parse_errors)
+    for entry_path, expected_digest in entries.items():
+        target_reference = Path(entry_path)
+        target = target_reference if target_reference.is_absolute() else repo_root / target_reference
+        if not target.exists():
+            errors.append(f"checksum target missing: {entry_path}")
+            continue
+        actual_digest = sha256_file(target)
+        if actual_digest != expected_digest:
+            errors.append(f"checksum mismatch for {entry_path}")
+    return tuple(errors)
+
+
 def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[str, str, str, str]:
     schema_id = str(payload.get("schema_id", ""))
     mode = str(payload.get("mode", ""))
@@ -1067,6 +1230,118 @@ def discover_and_validate_eval_factory_artifacts(repo_root: Path) -> tuple[tuple
     return preflight_results, status_results
 
 
+def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFactoryReceiptValidation:
+    relative_path = repo_relative(repo_root, path)
+    if not path.exists():
+        return EvalFactoryReceiptValidation(
+            source_class=SOURCE_OPERATOR_RECEIPT,
+            path=relative_path,
+            status=ARTIFACT_STATUS_MISSING,
+            schema_id="",
+            result="",
+            posture_classification="",
+            family_count=None,
+            tarball_present=False,
+            checksum_present=False,
+            errors=(f"missing receipt manifest: {relative_path}",),
+        )
+    try:
+        payload = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return EvalFactoryReceiptValidation(
+            source_class=SOURCE_OPERATOR_RECEIPT,
+            path=relative_path,
+            status=ARTIFACT_STATUS_MALFORMED,
+            schema_id="",
+            result="",
+            posture_classification="",
+            family_count=None,
+            tarball_present=False,
+            checksum_present=False,
+            errors=(f"receipt manifest unreadable: {exc}",),
+        )
+
+    errors = list(validate_receipt_manifest_payload(payload))
+    schema_id = str(payload.get("schema_id", "")) if isinstance(payload, dict) else ""
+    result = str(payload.get("execute_result", "")) if isinstance(payload, dict) else ""
+    posture = str(payload.get("posture_classification", "")) if isinstance(payload, dict) else ""
+    family_count = payload.get("family_count") if isinstance(payload, dict) else None
+    family_count_value = family_count if type(family_count) is int else None
+    tarball_present = False
+    checksum_present = False
+
+    if isinstance(payload, dict):
+        artifacts = payload.get("required_artifacts")
+        if isinstance(artifacts, list):
+            for index, artifact in enumerate(artifacts):
+                if not isinstance(artifact, dict):
+                    continue
+                bundled_path = artifact.get("bundled_path")
+                expected_size = artifact.get("size_bytes")
+                expected_digest = artifact.get("sha256")
+                if not isinstance(bundled_path, str):
+                    continue
+                target = manifest_path_to_file(repo_root, path, bundled_path)
+                if not target.exists():
+                    errors.append(f"required artifact copy missing: {bundled_path}")
+                    continue
+                if type(expected_size) is int and target.stat().st_size != expected_size:
+                    errors.append(f"required artifact copy size mismatch: {bundled_path}")
+                if isinstance(expected_digest, str) and len(expected_digest) == 64 and sha256_file(target) != expected_digest:
+                    errors.append(f"required artifact copy checksum mismatch: {bundled_path}")
+
+        checksums = payload.get("checksums")
+        if isinstance(checksums, dict):
+            checksum_paths = [
+                value
+                for key in ("required_artifacts_sha256", "bundle_files_sha256")
+                if isinstance((value := checksums.get(key)), str) and value
+            ]
+            checksum_present = bool(checksum_paths)
+            for checksum_value in checksum_paths:
+                checksum_path = manifest_path_to_file(repo_root, path, checksum_value)
+                if not checksum_path.exists():
+                    errors.append(f"checksum file missing: {checksum_value}")
+                    continue
+                errors.extend(validate_sha256sum_file(repo_root, checksum_path))
+        tarball = payload.get("tarball")
+        if isinstance(tarball, dict):
+            tarball_present = tarball.get("present") is True
+            tarball_path_value = tarball.get("path")
+            tarball_checksum_value = tarball.get("sha256_path")
+            if tarball_present:
+                if isinstance(tarball_path_value, str) and tarball_path_value:
+                    tarball_path = manifest_path_to_file(repo_root, path, tarball_path_value)
+                    if not tarball_path.exists():
+                        errors.append(f"tarball missing: {tarball_path_value}")
+                if isinstance(tarball_checksum_value, str) and tarball_checksum_value:
+                    tarball_checksum_path = manifest_path_to_file(repo_root, path, tarball_checksum_value)
+                    if not tarball_checksum_path.exists():
+                        errors.append(f"tarball checksum file missing: {tarball_checksum_value}")
+                    else:
+                        errors.extend(validate_sha256sum_file(repo_root, tarball_checksum_path))
+
+    return EvalFactoryReceiptValidation(
+        source_class=SOURCE_OPERATOR_RECEIPT,
+        path=relative_path,
+        status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
+        schema_id=schema_id,
+        result=result,
+        posture_classification=posture,
+        family_count=family_count_value,
+        tarball_present=tarball_present,
+        checksum_present=checksum_present,
+        errors=tuple(errors),
+    )
+
+
+def discover_and_validate_operator_receipts(repo_root: Path) -> tuple[EvalFactoryReceiptValidation, ...]:
+    return tuple(
+        validate_operator_receipt_manifest(repo_root, path)
+        for path in discover_operator_receipt_manifests(repo_root)
+    )
+
+
 def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
     if result.status == ARTIFACT_STATUS_VALID:
         parts = [
@@ -1086,6 +1361,22 @@ def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
     )
 
 
+def receipt_check_detail(result: EvalFactoryReceiptValidation) -> str:
+    if result.status == ARTIFACT_STATUS_VALID:
+        return "; ".join(
+            [
+                f"path={result.path}",
+                f"schema={result.schema_id}",
+                f"result={result.result}",
+                f"posture={result.posture_classification}",
+                f"family_count={result.family_count}",
+                f"tarball={'present' if result.tarball_present else 'absent'}",
+                f"checksums={'present' if result.checksum_present else 'absent'}",
+            ]
+        )
+    return f"path={result.path}; errors=" + " | ".join(result.errors)
+
+
 def append_eval_factory_artifact_checks(checks: list[CheckResult], repo_root: Path) -> None:
     preflight_results, status_results = discover_and_validate_eval_factory_artifacts(repo_root)
 
@@ -1102,6 +1393,16 @@ def append_eval_factory_artifact_checks(checks: list[CheckResult], repo_root: Pa
         for result in status_results:
             level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
             checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_STATUS} {result.path}", artifact_check_detail(result)))
+
+
+def append_operator_receipt_checks(checks: list[CheckResult], repo_root: Path) -> None:
+    receipt_results = discover_and_validate_operator_receipts(repo_root)
+    if not receipt_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_OPERATOR_RECEIPT, f"optional missing: runs/{RECEIPT_BUNDLES_DIRNAME}/{RECEIPT_MANIFEST_FILENAME}"))
+        return
+    for result in receipt_results:
+        level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+        checks.append(CheckResult(level, f"{SOURCE_OPERATOR_RECEIPT} {result.path}", receipt_check_detail(result)))
 
 
 def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
@@ -1136,6 +1437,7 @@ def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
         checks.append(CheckResult(LEVEL_PASS, "l4-weekly exclusions", ", ".join(required_exclusions)))
 
     append_eval_factory_artifact_checks(checks, repo_root)
+    append_operator_receipt_checks(checks, repo_root)
 
     summary_dirs = discover_summary_dirs(repo_root)
     if not (repo_root / "runs").exists():
@@ -1905,6 +2207,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     summary_dirs = discover_summary_dirs(repo_root)
     summaries = [parse_cross_model_summary(repo_root, path) for path in summary_dirs]
     preflight_artifacts, status_artifacts = discover_and_validate_eval_factory_artifacts(repo_root)
+    receipt_bundles = discover_and_validate_operator_receipts(repo_root)
     discovered_summary_names = {summary.run_id for summary in summaries}
     missing_expected_summaries = [name for name in EXPECTED_SUMMARY_RUNS if name not in discovered_summary_names]
     docs = (
@@ -2004,6 +2307,32 @@ def render_summarize_existing(repo_root: Path) -> str:
                     "  - "
                     f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
                     "errors=" + " | ".join(artifact.errors)
+                )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
+            "operator/eval-factory receipt bundle surfaces:",
+            f"  discovered: {len(receipt_bundles)}",
+        ]
+    )
+    if receipt_bundles:
+        for receipt in receipt_bundles:
+            if receipt.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
+                    f"schema={receipt.schema_id}; result={receipt.result}; posture={receipt.posture_classification}; "
+                    f"family_count={receipt.family_count}; "
+                    f"tarball={'present' if receipt.tarball_present else 'absent'}; "
+                    f"checksums={'present' if receipt.checksum_present else 'absent'}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
+                    "errors=" + " | ".join(receipt.errors)
                 )
     else:
         lines.append("  - none")
