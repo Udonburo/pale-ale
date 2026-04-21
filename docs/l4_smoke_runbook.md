@@ -97,6 +97,18 @@ The `OUT_DIR` value is a concrete directory on the VM. Keep it under `runs/`
 or another clearly local artifact root unless a separate archival procedure has
 been chosen.
 
+After a successful `--execute`, use the committed receipt packager instead of
+ad hoc packaging:
+
+```bash
+python3 tools/package_eval_factory_receipt.py --run-dir "$OUT_DIR"
+```
+
+The packager writes a manifest, checksums, and a tarball under
+`runs/receipt_bundles/` by default. Read that bundle as operator receipt
+packaging only; it is not a tracked memo, checkpoint, release surface, or
+Gate12B signal.
+
 ## Choosing `--out-dir`
 
 Choose an output directory before running `--execute`.
@@ -227,8 +239,11 @@ After a run, summarize only what the operator surface actually says:
 - output directory
 - preflight artifact path
 - status artifact path
+- receipt packager output path, when `tools/package_eval_factory_receipt.py`
+  was used
 - final pass/fail summary
 - any notes emitted by the runner
 
-Do not add model-family, checkpoint, release, or Gate12B claims from the runbook
-alone.
+Do not add model-family, checkpoint, release, memo, or Gate12B claims from the
+runbook or receipt bundle alone. Structural pass status does not turn
+`pending_local_read` into a phenotype read.

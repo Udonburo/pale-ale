@@ -4,10 +4,9 @@ This guide explains how to assimilate a successful VM `l4-smoke --execute`
 receipt into an operator status note. It is not a workstream memo update, a
 checkpoint declaration, a release note, or a Gate12B signal.
 
-Use this only after the run has a concrete output directory on the VM and the
-operator has preserved whatever local artifact bundle they intend to keep.
-Generated `runs/` material remains local operator evidence unless a separate
-tracked memo or release process records it.
+Use this only after the run has a concrete output directory on the VM.
+Generated `runs/` material and receipt bundles remain local operator evidence
+unless a separate tracked memo or release process records them.
 
 ## Source Class
 
@@ -37,6 +36,28 @@ Read the receipt in this order:
 
 Do not start from the CSV. The CSV is useful only after the preflight and
 status artifacts establish the lane, target set, command, and execution result.
+
+## Canonical Packaging Path
+
+After a successful VM `l4-smoke --execute`, package the successful run
+directory with the committed helper:
+
+```bash
+python tools/package_eval_factory_receipt.py --run-dir runs/eval_factory_l4_smoke_vm_20260421T162735Z
+```
+
+The helper packages the run as an operator receipt bundle. By default it writes
+under `runs/receipt_bundles/` and produces:
+
+- `operator_receipt_manifest.json`
+- `required_receipt_artifacts.sha256`
+- `receipt_bundle_files.sha256`
+- a `.tar.gz` copy of the source run directory and its `.sha256` file
+
+Treat the resulting bundle as `operator/eval-factory receipt bundle`
+packaging. It is not a tracked memo, not a release surface, not a checkpoint,
+and not a Gate12B signal. Packaging validates and copies existing artifacts; it
+does not launch model execution or add a phenotype readout.
 
 ## What To Inspect
 
@@ -184,10 +205,15 @@ directory.
 Before writing the final operator note, confirm:
 
 - the output directory is concrete and preserved as needed
+- the successful run directory has been packaged with
+  `tools/package_eval_factory_receipt.py` when a durable receipt bundle is
+  needed
 - preflight JSON is present and valid enough to read
 - status JSON is present and valid enough to read
 - execute log is present when stdout/stderr capture is part of the retained
   bundle
+- `operator_receipt_manifest.json` and checksum files are recorded as operator
+  receipt packaging, not tracked memo status
 - cross-model summary path is recorded only as local materialized status
 - the summary names `eval-factory execute/status artifact` as the source class
 - phenotype remains `pending_local_read` unless a separate readout step exists
