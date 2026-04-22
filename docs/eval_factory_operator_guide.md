@@ -26,7 +26,7 @@ evidence source.
 | `cpu-nightly` | Lightweight validation. | Checks expected repo files, tracked memo presence, tier shape, L4 weekly exclusions, and shallow existing summary/manifests when `runs/` is present. | Does not invoke GPU/model execution or refresh Gate12A evidence. |
 | `summarize-existing` | Read-only rollup. | Reports memo-facing surfaces, tracked memo model surfaces, and runs-derived materialized cross-model summaries from existing local files. | Does not generate new runs or turn `runs/` status into public memo status. |
 | `l4-smoke` | Narrow execution lane for the 0.5B boundary set. | Prints a dry-run by default; with `--execute` and an explicit `--out-dir`, runs the fixed 0.5B lane. | Does not expand beyond the fixed 0.5B family set, and does not promote a new checkpoint. |
-| `l4-weekly` | Still bounded mainline standing lane. | Prints the standing plan for current 3B/4B dense-transformer family-set surfaces under the frozen Gate12A observable contract. | Does not include 7B FP32, sidecar candidates, quantized candidates, protocol-expanding candidates, or Gate12B promotion. |
+| `l4-weekly` | Bounded mainline standing lane. | Prints the standing plan by default; when bounded execution support is present, preflights or executes one current 3B/4B target at a time. | Does not include 7B FP32, sidecar candidates, quantized candidates, protocol-expanding candidates, a new checkpoint, memo promotion, or Gate12B promotion. |
 
 The L4 tiers describe operational lanes. They are not claim surfaces by
 themselves. Treat their output as planning or local status text unless a
@@ -43,8 +43,9 @@ Windows Python with the VM interpreter.
 
 Use [`l4_weekly_escalation_guide.md`](l4_weekly_escalation_guide.md) before
 moving from the smoke lane into weekly planning. The weekly lane is bounded to
-the current 3B/4B dense-transformer mainline and remains plan-only unless a
-separate execution surface is explicitly added.
+the current 3B/4B dense-transformer mainline and remains plan-only by default.
+Use [`l4_weekly_execute_runbook.md`](l4_weekly_execute_runbook.md) for bounded
+one-target-at-a-time weekly preflight or execution once support is present.
 
 ## Artifact Reference
 
@@ -60,6 +61,8 @@ primary output class and interpretation boundary.
 | `l4-smoke --preflight-only` | stdout diagnostics and optional `eval_factory_l4_smoke_preflight.json` | Eval-factory preflight artifact | Checks interpreter/GPU posture; does not run the replay or update memo status. |
 | `l4-smoke --execute` | stdout, `eval_factory_l4_smoke_preflight.json`, and possibly `eval_factory_l4_smoke_status.json` | Eval-factory preflight artifact plus execute/status artifact | Records one operator execution attempt for the fixed 0.5B lane; does not create a new checkpoint by itself. |
 | `l4-weekly` | stdout plan and optional `eval_factory_l4_weekly_plan.json` | Eval-factory weekly plan artifact | Compiles the bounded current 3B/4B mainline plan; does not execute a model or imply 7B FP32, sidecar, protocol expansion, quantized candidates, or Gate12B. |
+| `l4-weekly --preflight-only --target ...` | stdout diagnostics and a weekly preflight artifact when supported | Eval-factory weekly preflight artifact | Checks one target's VM/interpreter/GPU posture; does not run replay or update memo status. |
+| `l4-weekly --execute --target ...` | stdout, weekly preflight artifact, weekly execute/status artifact, and downstream materialized outputs when supported | Eval-factory weekly execute/status artifact plus runs-derived materialized status | Records one bounded target execution attempt; does not create a checkpoint, memo claim, phenotype readout, or Gate12B signal by itself. |
 
 ## Example Commands
 
@@ -88,9 +91,10 @@ checkout. A passing check is not a new empirical result. A warning about a
 missing local summary does not remove a tracked memo result.
 
 For `l4-smoke`, dry-run output is a plan, while `--execute` output is
-runs-derived operator status for the fixed smoke lane. For `l4-weekly`, current
-output is still a plan. Do not read plan text as proof that a run has been
-executed.
+runs-derived operator status for the fixed smoke lane. For `l4-weekly`, default
+output is a plan. Bounded weekly preflight and execute artifacts, when present,
+are operator status for one target at a time. Do not read plan text as proof
+that a run has been executed.
 
 ## Interpretation discipline
 
@@ -99,6 +103,8 @@ executed.
 - Do not widen the dense-transformer mainline with sidecar or
   admission-boundary rows.
 - Do not infer Gate12B from eval-factory tiers.
+- Do not read weekly structural pass status as a phenotype readout unless a
+  separate phenotype read was performed and recorded.
 - Preserve packet-local, memo-local, and family-conditioned wording where the
   tracked memo line uses it.
 
