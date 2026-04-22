@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a successful eval-factory l4-smoke run as an operator receipt.
+"""Package a successful eval-factory run as an operator receipt.
 
 This helper is operational only. It validates existing eval-factory artifacts,
 copies a compact receipt surface, and optionally packs the full run directory.
@@ -29,6 +29,22 @@ class ReceiptArtifactSpec:
 
 
 @dataclass(frozen=True)
+class ReceiptRunProfile:
+    tier: str
+    source_class: str
+    manifest_schema_id: str
+    target: str
+    fixed_target_set: Mapping[str, Any]
+    preflight_filename: str
+    status_filename: str
+    execute_log_filename: str
+    summary_run_id: str
+    required_artifacts: tuple[ReceiptArtifactSpec, ...]
+    preflight_validator: Any
+    status_validator: Any
+
+
+@dataclass(frozen=True)
 class ReceiptBundleResult:
     run_dir: Path
     receipt_root: Path
@@ -38,6 +54,9 @@ class ReceiptBundleResult:
     tarball_path: Path | None
     tarball_checksum_path: Path | None
     inspect_only: bool
+    tier: str
+    target: str
+    source_class: str
     family_count: int
     result: str
 
@@ -46,35 +65,47 @@ class ReceiptPackagingError(RuntimeError):
     """Raised when a run directory cannot be packaged as a receipt."""
 
 
-REQUIRED_RECEIPT_ARTIFACTS = (
-    ReceiptArtifactSpec(
-        "preflight",
-        runner.L4_SMOKE_PREFLIGHT_FILENAME,
-        f"required_artifacts/{runner.L4_SMOKE_PREFLIGHT_FILENAME}",
-    ),
-    ReceiptArtifactSpec(
-        "status",
-        runner.L4_SMOKE_STATUS_FILENAME,
-        f"required_artifacts/{runner.L4_SMOKE_STATUS_FILENAME}",
-    ),
-    ReceiptArtifactSpec(
-        "execute_log",
-        "eval_factory_l4_smoke_execute.log",
-        "required_artifacts/eval_factory_l4_smoke_execute.log",
-    ),
-    ReceiptArtifactSpec(
-        "cross_model_family_summary",
-        f"{runner.L4_SMOKE_CONFIG.summary_run_id}/{runner.CROSS_MODEL_SUMMARY_FILENAME}",
-        f"required_artifacts/{runner.CROSS_MODEL_SUMMARY_FILENAME}",
-    ),
+WEEKLY_EXECUTE_LOG_FILENAME = "eval_factory_l4_weekly_execute_cli.log"
+
+
+def build_required_artifacts(preflight_filename: str, status_filename: str, execute_log_filename: str, summary_run_id: str) -> tuple[ReceiptArtifactSpec, ...]:
+    return (
+        ReceiptArtifactSpec(
+            "preflight",
+            preflight_filename,
+            f"required_artifacts/{preflight_filename}",
+        ),
+        ReceiptArtifactSpec(
+            "status",
+            status_filename,
+            f"required_artifacts/{status_filename}",
+        ),
+        ReceiptArtifactSpec(
+            "execute_log",
+            execute_log_filename,
+            f"required_artifacts/{execute_log_filename}",
+        ),
+        ReceiptArtifactSpec(
+            "cross_model_family_summary",
+            f"{summary_run_id}/{runner.CROSS_MODEL_SUMMARY_FILENAME}",
+            f"required_artifacts/{runner.CROSS_MODEL_SUMMARY_FILENAME}",
+        ),
+    )
+
+
+SMOKE_REQUIRED_RECEIPT_ARTIFACTS = build_required_artifacts(
+    runner.L4_SMOKE_PREFLIGHT_FILENAME,
+    runner.L4_SMOKE_STATUS_FILENAME,
+    "eval_factory_l4_smoke_execute.log",
+    runner.L4_SMOKE_CONFIG.summary_run_id,
 )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Package a successful eval-factory l4-smoke run as a durable operator receipt."
+        description="Package a successful eval-factory l4-smoke or l4-weekly run as a durable operator receipt."
     )
-    parser.add_argument("--run-dir", required=True, help="Successful eval-factory l4-smoke run directory.")
+    parser.add_argument("--run-dir", required=True, help="Successful eval-factory run directory.")
     parser.add_argument(
         "--out-root",
         default=f"runs/{runner.RECEIPT_BUNDLES_DIRNAME}",
@@ -113,8 +144,66 @@ def write_sha256sum(path: Path, entries: Sequence[tuple[str, Path]], repo_root: 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def required_artifact_paths(run_dir: Path) -> dict[str, Path]:
-    return {spec.role: run_dir / spec.source_relative_path for spec in REQUIRED_RECEIPT_ARTIFACTS}
+def detect_receipt_tier(run_dir: Path) -> str:
+    smoke_present = (run_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME).is_file() or (run_dir / runner.L4_SMOKE_STATUS_FILENAME).is_file()
+    weekly_present = (run_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME).is_file() or (run_dir / runner.L4_WEEKLY_STATUS_FILENAME).is_file()
+    if smoke_present and weekly_present:
+        raise ReceiptPackagingError("run directory contains both l4-smoke and l4-weekly receipt artifacts")
+    if weekly_present:
+        return runner.Tier.L4_WEEKLY.value
+    if smoke_present:
+        return runner.Tier.L4_SMOKE.value
+    raise ReceiptPackagingError("run directory does not contain known eval-factory receipt artifacts")
+
+
+def build_smoke_profile() -> ReceiptRunProfile:
+    return ReceiptRunProfile(
+        tier=runner.Tier.L4_SMOKE.value,
+        source_class=runner.SOURCE_OPERATOR_RECEIPT,
+        manifest_schema_id=runner.OPERATOR_RECEIPT_SCHEMA_ID,
+        target="n/a",
+        fixed_target_set=runner.l4_smoke_fixed_target_set(),
+        preflight_filename=runner.L4_SMOKE_PREFLIGHT_FILENAME,
+        status_filename=runner.L4_SMOKE_STATUS_FILENAME,
+        execute_log_filename="eval_factory_l4_smoke_execute.log",
+        summary_run_id=runner.L4_SMOKE_CONFIG.summary_run_id,
+        required_artifacts=SMOKE_REQUIRED_RECEIPT_ARTIFACTS,
+        preflight_validator=runner.validate_preflight_artifact_payload,
+        status_validator=runner.validate_status_artifact_payload,
+    )
+
+
+def build_weekly_profile(status: Mapping[str, Any]) -> ReceiptRunProfile:
+    target_key = status.get("target")
+    if not isinstance(target_key, str) or not target_key:
+        raise ReceiptPackagingError("weekly status artifact is missing target")
+    try:
+        target = runner.l4_weekly_target_for_key(target_key)
+    except ValueError as exc:
+        raise ReceiptPackagingError(str(exc)) from exc
+    return ReceiptRunProfile(
+        tier=runner.Tier.L4_WEEKLY.value,
+        source_class=runner.SOURCE_OPERATOR_WEEKLY_RECEIPT,
+        manifest_schema_id=runner.OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID,
+        target=target.target_key,
+        fixed_target_set=runner.l4_weekly_fixed_target_set(target),
+        preflight_filename=runner.L4_WEEKLY_PREFLIGHT_FILENAME,
+        status_filename=runner.L4_WEEKLY_STATUS_FILENAME,
+        execute_log_filename=WEEKLY_EXECUTE_LOG_FILENAME,
+        summary_run_id=target.summary_run_id,
+        required_artifacts=build_required_artifacts(
+            runner.L4_WEEKLY_PREFLIGHT_FILENAME,
+            runner.L4_WEEKLY_STATUS_FILENAME,
+            WEEKLY_EXECUTE_LOG_FILENAME,
+            target.summary_run_id,
+        ),
+        preflight_validator=runner.validate_l4_weekly_preflight_artifact_payload,
+        status_validator=runner.validate_l4_weekly_status_artifact_payload,
+    )
+
+
+def required_artifact_paths(run_dir: Path, profile: ReceiptRunProfile) -> dict[str, Path]:
+    return {spec.role: run_dir / spec.source_relative_path for spec in profile.required_artifacts}
 
 
 def read_summary_rows(summary_path: Path) -> list[dict[str, str]]:
@@ -125,10 +214,24 @@ def read_summary_rows(summary_path: Path) -> list[dict[str, str]]:
         raise ReceiptPackagingError(f"summary unreadable: {summary_path}: {exc}") from exc
 
 
-def validate_source_run(run_dir: Path) -> tuple[Mapping[str, Any], Mapping[str, Any], list[dict[str, str]]]:
+def validate_source_run(run_dir: Path) -> tuple[ReceiptRunProfile, Mapping[str, Any], Mapping[str, Any], list[dict[str, str]]]:
     if not run_dir.is_dir():
         raise ReceiptPackagingError(f"run directory missing: {run_dir}")
-    paths = required_artifact_paths(run_dir)
+
+    tier = detect_receipt_tier(run_dir)
+    if tier == runner.Tier.L4_SMOKE.value:
+        profile = build_smoke_profile()
+    else:
+        status_path = run_dir / runner.L4_WEEKLY_STATUS_FILENAME
+        if not status_path.is_file():
+            raise ReceiptPackagingError(f"missing required receipt artifact(s): {status_path}")
+        try:
+            status_probe = runner.read_json(status_path)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ReceiptPackagingError(f"weekly status artifact unreadable: {exc}") from exc
+        profile = build_weekly_profile(status_probe)
+
+    paths = required_artifact_paths(run_dir, profile)
     missing = [str(path) for path in paths.values() if not path.is_file()]
     if missing:
         raise ReceiptPackagingError("missing required receipt artifact(s): " + ", ".join(missing))
@@ -139,8 +242,8 @@ def validate_source_run(run_dir: Path) -> tuple[Mapping[str, Any], Mapping[str, 
     except (OSError, json.JSONDecodeError) as exc:
         raise ReceiptPackagingError(f"preflight/status artifact unreadable: {exc}") from exc
 
-    preflight_errors = runner.validate_preflight_artifact_payload(preflight)
-    status_errors = runner.validate_status_artifact_payload(status)
+    preflight_errors = profile.preflight_validator(preflight)
+    status_errors = profile.status_validator(status)
     if preflight_errors:
         raise ReceiptPackagingError("malformed preflight artifact: " + " | ".join(preflight_errors))
     if status_errors:
@@ -155,7 +258,7 @@ def validate_source_run(run_dir: Path) -> tuple[Mapping[str, Any], Mapping[str, 
     families = [row.get("rendering_family", "") for row in rows]
     if families != list(runner.FAMILY_SET):
         raise ReceiptPackagingError(f"summary families expected {list(runner.FAMILY_SET)!r}, got {families!r}")
-    return preflight, status, rows
+    return profile, preflight, status, rows
 
 
 def family_summary(rows: Sequence[Mapping[str, str]]) -> list[dict[str, str]]:
@@ -177,6 +280,7 @@ def family_summary(rows: Sequence[Mapping[str, str]]) -> list[dict[str, str]]:
 
 
 def build_receipt_manifest(
+    profile: ReceiptRunProfile,
     run_dir: Path,
     receipt_root: Path,
     preflight: Mapping[str, Any],
@@ -193,23 +297,24 @@ def build_receipt_manifest(
     tarball_digest = runner.sha256_file(tarball_path) if tarball_path is not None and tarball_path.exists() else ""
     tarball_size = tarball_path.stat().st_size if tarball_path is not None and tarball_path.exists() else None
     return {
-        "schema_id": runner.OPERATOR_RECEIPT_SCHEMA_ID,
+        "schema_id": profile.manifest_schema_id,
         "schema_version": runner.ARTIFACT_CONTRACT_VERSION,
-        "source_class": runner.SOURCE_OPERATOR_RECEIPT,
+        "source_class": profile.source_class,
         "created_at": created_at,
         "source_run_path": repo_relative(run_dir, repo_root),
         "source_run_absolute_path": str(run_dir.resolve()),
         "bundle_path": repo_relative(receipt_root, repo_root),
-        "tier": runner.Tier.L4_SMOKE.value,
+        "tier": profile.tier,
         "mode": "execute",
-        "fixed_target_set": status.get("fixed_target_set"),
+        "target": profile.target,
+        "fixed_target_set": profile.fixed_target_set,
         "posture_classification": preflight.get("posture_classification"),
         "preflight_result": preflight.get("result"),
         "execute_result": status.get("result"),
         "downstream_dispatch_summary": status.get("downstream_dispatch_summary"),
         "family_count": len(rows),
         "families": [row.get("rendering_family", "") for row in rows],
-        "downstream_summary_path": repo_relative(required_artifact_paths(run_dir)["cross_model_family_summary"], repo_root),
+        "downstream_summary_path": repo_relative(required_artifact_paths(run_dir, profile)["cross_model_family_summary"], repo_root),
         "runs_first_pass_status_note": (
             "runs_first_pass_status is pending_local_read for this receipt; "
             "no phenotype interpretation is added here."
@@ -245,7 +350,7 @@ def package_receipt(
     run_dir = run_dir.resolve()
     out_root = out_root.resolve()
     created_at = created_at or utc_created_at()
-    preflight, status, rows = validate_source_run(run_dir)
+    profile, preflight, status, rows = validate_source_run(run_dir)
     receipt_root = out_root / f"{run_dir.name}_receipt_{timestamp_slug(created_at)}"
     required_checksums_path = receipt_root / runner.RECEIPT_REQUIRED_ARTIFACT_CHECKSUMS_FILENAME
     bundle_checksums_path = receipt_root / runner.RECEIPT_BUNDLE_CHECKSUMS_FILENAME
@@ -263,6 +368,9 @@ def package_receipt(
             tarball_path=tarball_path,
             tarball_checksum_path=tarball_checksum_path,
             inspect_only=True,
+            tier=profile.tier,
+            target=profile.target,
+            source_class=profile.source_class,
             family_count=len(rows),
             result=str(status.get("result")),
         )
@@ -270,7 +378,7 @@ def package_receipt(
     receipt_root.mkdir(parents=True, exist_ok=True)
     required_entries: list[dict[str, Any]] = []
     required_checksum_entries: list[tuple[str, Path]] = []
-    for spec in REQUIRED_RECEIPT_ARTIFACTS:
+    for spec in profile.required_artifacts:
         source = run_dir / spec.source_relative_path
         bundled = receipt_root / spec.bundled_relative_path
         bundled.parent.mkdir(parents=True, exist_ok=True)
@@ -296,6 +404,7 @@ def package_receipt(
         write_sha256sum(tarball_checksum_path, [(runner.sha256_file(tarball_path), tarball_path)], repo_root)
 
     manifest = build_receipt_manifest(
+        profile,
         run_dir,
         receipt_root,
         preflight,
@@ -333,6 +442,9 @@ def package_receipt(
         tarball_path=tarball_path,
         tarball_checksum_path=tarball_checksum_path,
         inspect_only=False,
+        tier=profile.tier,
+        target=profile.target,
+        source_class=profile.source_class,
         family_count=len(rows),
         result=str(status.get("result")),
     )
@@ -343,6 +455,9 @@ def render_result(result: ReceiptBundleResult) -> str:
     lines = [
         "eval-factory receipt packager:",
         f"  mode: {mode}",
+        f"  tier: {result.tier}",
+        f"  target: {result.target}",
+        f"  source_class: {result.source_class}",
         f"  source run: {repo_relative(result.run_dir)}",
         f"  receipt root: {repo_relative(result.receipt_root)}",
         f"  result: {result.result}",
