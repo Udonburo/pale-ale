@@ -3,7 +3,8 @@
 This guide explains how to move from local inspection and the fixed
 `l4-smoke` lane into `l4-weekly` planning. It is operator guidance only. It
 does not add a checkpoint, widen the dense-transformer mainline, or revise the
-Gate12A memo surface.
+Gate12A memo surface. For bounded weekly target execution, use
+[`l4_weekly_execute_runbook.md`](l4_weekly_execute_runbook.md).
 
 ## What This Lane Is
 
@@ -15,6 +16,8 @@ It is limited to:
 - current 3B/4B dense-transformer mainline targets
 - `transcript_v1 / briefing_v1 / archive_v1` expected family coverage
 - plan compilation and operator scheduling posture
+- one-target-at-a-time preflight or execution when bounded weekly execution
+  support is present
 
 It is not:
 
@@ -25,9 +28,11 @@ It is not:
 - Gate12B
 - a new checkpoint or release surface
 
-Current `tools/run_eval_checks.py --tier l4-weekly` output is `plan-only`.
-With `--out-dir`, it can write `eval_factory_l4_weekly_plan.json`. That file
-is a planning artifact, not an execution artifact.
+`tools/run_eval_checks.py --tier l4-weekly` remains plan-only by default. With
+`--out-dir`, it can write `eval_factory_l4_weekly_plan.json`. That file is a
+planning artifact, not an execution artifact. When bounded execution support is
+present, use the execute runbook and keep preflight, execute/status, and
+downstream materialized outputs separate.
 
 ## Escalation Discipline
 
@@ -38,6 +43,7 @@ Move through the lanes as operator posture, not as claim escalation.
 | 1 | Local dry-run | Inspect command shape, fixed targets, and docs/tools from a local checkout. | No model execution and no empirical status change. |
 | 2 | Remote `l4-smoke` | Run or preflight the fixed `Qwen/Qwen2.5-0.5B` smoke lane on the GCP L4 VM posture. | Operator/runs-derived status only unless later recorded by a tracked memo. |
 | 3 | `l4-weekly` planning | Compile the bounded weekly plan for current 3B/4B dense-transformer mainline targets. | Weekly planning is not weekly execution and does not imply a new checkpoint. |
+| 4 | `l4-weekly` bounded target execution | Preflight or execute one current weekly target at a time when support is present. | Weekly execute/status artifacts are operator status only unless separately recorded by a tracked memo. |
 
 Do not treat success at one step as a scientific promotion into the next step.
 The move from smoke to weekly is an operator scheduling move, not a doctrinal
@@ -73,6 +79,10 @@ $OUT_DIR/eval_factory_l4_weekly_plan.json
 
 This artifact has `mode: plan-only` and `result: plan-only`. It does not run a
 subprocess, GPU job, or model replay.
+
+Bounded weekly preflight and execute command shapes are documented in
+[`l4_weekly_execute_runbook.md`](l4_weekly_execute_runbook.md). Do not infer
+those modes from plan-only output.
 
 ## Weekly Target Matrix
 
@@ -125,6 +135,8 @@ valid with the exclusions still in force.
 
 - Weekly planning != weekly execution.
 - Weekly execution != new checkpoint.
+- Weekly execute/status artifact != tracked memo.
+- Structural pass != phenotype read.
 - Mainline exclusions remain in force.
 - Evidence Atlas is not a leaderboard.
 - `eval_factory_l4_weekly_plan.json` is a planning artifact, not a tracked
