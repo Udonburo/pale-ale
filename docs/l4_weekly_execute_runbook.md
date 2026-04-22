@@ -110,6 +110,42 @@ Use stdout to find the exact artifact paths for the checkout that produced the
 run. Do not substitute `l4-smoke` artifact names for weekly artifacts unless the
 implementation explicitly writes them.
 
+## First Successful Weekly Pilot
+
+The first successful bounded weekly pilot is the `qwen2_5_3b` VM run under:
+
+```text
+runs/eval_factory_l4_weekly_qwen2_5_3b_vm_20260422T040509Z
+```
+
+Use it as an operator/status surface only. It is not a new checkpoint, not a
+memo claim, not a release surface, and not a Gate12B signal.
+
+The execute command shape was:
+
+```bash
+python3 tools/run_eval_checks.py --tier l4-weekly --execute --target qwen2_5_3b --out-dir runs/eval_factory_l4_weekly_qwen2_5_3b_vm_20260422T040509Z
+```
+
+Read the pilot in this order:
+
+1. `eval_factory_l4_weekly_preflight.json`
+2. `eval_factory_l4_weekly_status.json`
+3. `gate12a_cross_model_replay_qwen_qwen2_5_3b_instruct/cross_model_family_summary.csv`
+
+If the weekly status artifact reports `result: pass`, `families_expected: 3`,
+`families_reported: 3`, and `fail: 0`, that supports a narrow operator
+closeout for the pilot. It does not turn structural pass status into a
+phenotype readout.
+
+If family rows report `runs_first_pass_status: pending_local_read`, preserve:
+
+```text
+phenotype readout: pending_local_read
+```
+
+`pending_local_read` remains not-read.
+
 ### Weekly Preflight Artifact
 
 Use the preflight artifact to answer only environment and posture questions:
