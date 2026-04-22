@@ -141,6 +141,8 @@ class EvalFactoryReceiptValidation:
     path: str
     status: str
     schema_id: str
+    tier: str
+    target: str
     result: str
     posture_classification: str
     family_count: int | None
@@ -190,11 +192,13 @@ L4_WEEKLY_PLAN_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.plan.v1"
 L4_WEEKLY_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.preflight.v1"
 L4_WEEKLY_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.status.v1"
 OPERATOR_RECEIPT_SCHEMA_ID = "pale-ale.operator_receipt.eval_factory.l4_smoke.v1"
+OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID = "pale-ale.operator_receipt.eval_factory.l4_weekly.v1"
 SOURCE_EVAL_FACTORY_PREFLIGHT = "eval-factory preflight artifact"
 SOURCE_EVAL_FACTORY_STATUS = "eval-factory execute/status artifact"
 SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT = "eval-factory l4-weekly preflight artifact"
 SOURCE_EVAL_FACTORY_WEEKLY_STATUS = "eval-factory l4-weekly execute/status artifact"
 SOURCE_OPERATOR_RECEIPT = "operator/eval-factory receipt bundle"
+SOURCE_OPERATOR_WEEKLY_RECEIPT = "operator/eval-factory l4-weekly receipt bundle"
 RECEIPT_BUNDLES_DIRNAME = "receipt_bundles"
 RECEIPT_MANIFEST_FILENAME = "operator_receipt_manifest.json"
 RECEIPT_REQUIRED_ARTIFACT_CHECKSUMS_FILENAME = "required_receipt_artifacts.sha256"
@@ -1231,19 +1235,41 @@ def validate_receipt_required_artifacts(payload: Mapping[str, Any], errors: list
         errors.append(f"field {field} expected roles {sorted(expected_roles)!r}, got {sorted(roles)!r}")
 
 
+def validate_smoke_receipt_manifest_payload(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    require_literal(payload, "schema_id", OPERATOR_RECEIPT_SCHEMA_ID, errors, prefix)
+    require_literal(payload, "source_class", SOURCE_OPERATOR_RECEIPT, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_SMOKE.value, errors, prefix)
+    validate_fixed_target_set(payload, errors, prefix)
+
+
+def validate_weekly_receipt_manifest_payload(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
+    require_literal(payload, "schema_id", OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID, errors, prefix)
+    require_literal(payload, "source_class", SOURCE_OPERATOR_WEEKLY_RECEIPT, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_WEEKLY.value, errors, prefix)
+    target = validate_l4_weekly_target_key(payload, errors, prefix)
+    validate_l4_weekly_fixed_target_set(payload, errors, target, prefix)
+
+
 def validate_receipt_manifest_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
     if not isinstance(payload, dict):
         return (f"{prefix or 'artifact'} expected object",)
     errors: list[str] = []
-    require_literal(payload, "schema_id", OPERATOR_RECEIPT_SCHEMA_ID, errors, prefix)
+    schema_id = require_str(payload, "schema_id", errors, prefix)
     require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
-    require_literal(payload, "source_class", SOURCE_OPERATOR_RECEIPT, errors, prefix)
+    if schema_id == OPERATOR_RECEIPT_SCHEMA_ID:
+        validate_smoke_receipt_manifest_payload(payload, errors, prefix)
+    elif schema_id == OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID:
+        validate_weekly_receipt_manifest_payload(payload, errors, prefix)
+    elif schema_id is not None:
+        field = f"{prefix}.schema_id" if prefix else "schema_id"
+        errors.append(
+            f"field {field} expected one of {OPERATOR_RECEIPT_SCHEMA_ID!r}, "
+            f"{OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID!r}, got {schema_id!r}"
+        )
     validate_created_at(payload, errors, prefix)
     require_str(payload, "source_run_path", errors, prefix)
     require_str(payload, "bundle_path", errors, prefix)
-    require_literal(payload, "tier", Tier.L4_SMOKE.value, errors, prefix)
     require_literal(payload, "mode", "execute", errors, prefix)
-    validate_fixed_target_set(payload, errors, prefix)
     posture = require_str(payload, "posture_classification", errors, prefix)
     if posture is not None and posture not in POSTURE_CLASSIFICATIONS:
         field = f"{prefix}.posture_classification" if prefix else "posture_classification"
@@ -1455,6 +1481,8 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
             path=relative_path,
             status=ARTIFACT_STATUS_MISSING,
             schema_id="",
+            tier="",
+            target="",
             result="",
             posture_classification="",
             family_count=None,
@@ -1470,6 +1498,8 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
             path=relative_path,
             status=ARTIFACT_STATUS_MALFORMED,
             schema_id="",
+            tier="",
+            target="",
             result="",
             posture_classification="",
             family_count=None,
@@ -1480,6 +1510,9 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
 
     errors = list(validate_receipt_manifest_payload(payload))
     schema_id = str(payload.get("schema_id", "")) if isinstance(payload, dict) else ""
+    source_class = str(payload.get("source_class", SOURCE_OPERATOR_RECEIPT)) if isinstance(payload, dict) else SOURCE_OPERATOR_RECEIPT
+    tier = str(payload.get("tier", "")) if isinstance(payload, dict) else ""
+    target = str(payload.get("target", "n/a")) if isinstance(payload, dict) else ""
     result = str(payload.get("execute_result", "")) if isinstance(payload, dict) else ""
     posture = str(payload.get("posture_classification", "")) if isinstance(payload, dict) else ""
     family_count = payload.get("family_count") if isinstance(payload, dict) else None
@@ -1498,13 +1531,13 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
                 expected_digest = artifact.get("sha256")
                 if not isinstance(bundled_path, str):
                     continue
-                target = manifest_path_to_file(repo_root, path, bundled_path)
-                if not target.exists():
+                bundled_file = manifest_path_to_file(repo_root, path, bundled_path)
+                if not bundled_file.exists():
                     errors.append(f"required artifact copy missing: {bundled_path}")
                     continue
-                if type(expected_size) is int and target.stat().st_size != expected_size:
+                if type(expected_size) is int and bundled_file.stat().st_size != expected_size:
                     errors.append(f"required artifact copy size mismatch: {bundled_path}")
-                if isinstance(expected_digest, str) and len(expected_digest) == 64 and sha256_file(target) != expected_digest:
+                if isinstance(expected_digest, str) and len(expected_digest) == 64 and sha256_file(bundled_file) != expected_digest:
                     errors.append(f"required artifact copy checksum mismatch: {bundled_path}")
 
         checksums = payload.get("checksums")
@@ -1539,10 +1572,12 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
                         errors.extend(validate_sha256sum_file(repo_root, tarball_checksum_path))
 
     return EvalFactoryReceiptValidation(
-        source_class=SOURCE_OPERATOR_RECEIPT,
+        source_class=source_class,
         path=relative_path,
         status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
         schema_id=schema_id,
+        tier=tier,
+        target=target or "n/a",
         result=result,
         posture_classification=posture,
         family_count=family_count_value,
@@ -1569,7 +1604,7 @@ def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
             f"result={result.result}",
             f"posture={result.posture_classification}",
         ]
-        if result.artifact_kind == "status":
+        if result.artifact_kind.endswith("status"):
             parts.append(f"downstream_result={result.downstream_result}")
         return "; ".join(parts)
     return (
@@ -1585,6 +1620,8 @@ def receipt_check_detail(result: EvalFactoryReceiptValidation) -> str:
             [
                 f"path={result.path}",
                 f"schema={result.schema_id}",
+                f"tier={result.tier}",
+                f"target={result.target}",
                 f"result={result.result}",
                 f"posture={result.posture_classification}",
                 f"family_count={result.family_count}",
@@ -1633,12 +1670,19 @@ def append_eval_factory_weekly_artifact_checks(checks: list[CheckResult], repo_r
 
 def append_operator_receipt_checks(checks: list[CheckResult], repo_root: Path) -> None:
     receipt_results = discover_and_validate_operator_receipts(repo_root)
-    if not receipt_results:
+    smoke_results = tuple(result for result in receipt_results if result.source_class != SOURCE_OPERATOR_WEEKLY_RECEIPT)
+    weekly_results = tuple(result for result in receipt_results if result.source_class == SOURCE_OPERATOR_WEEKLY_RECEIPT)
+    if not smoke_results:
         checks.append(CheckResult(LEVEL_WARN, SOURCE_OPERATOR_RECEIPT, f"optional missing: runs/{RECEIPT_BUNDLES_DIRNAME}/{RECEIPT_MANIFEST_FILENAME}"))
-        return
-    for result in receipt_results:
+    for result in smoke_results:
         level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
-        checks.append(CheckResult(level, f"{SOURCE_OPERATOR_RECEIPT} {result.path}", receipt_check_detail(result)))
+        checks.append(CheckResult(level, f"{result.source_class} {result.path}", receipt_check_detail(result)))
+
+    if not weekly_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_OPERATOR_WEEKLY_RECEIPT, f"optional missing: runs/{RECEIPT_BUNDLES_DIRNAME}/{RECEIPT_MANIFEST_FILENAME}"))
+    for result in weekly_results:
+        level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+        checks.append(CheckResult(level, f"{result.source_class} {result.path}", receipt_check_detail(result)))
 
 
 def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
@@ -2722,6 +2766,8 @@ def render_summarize_existing(repo_root: Path) -> str:
     preflight_artifacts, status_artifacts = discover_and_validate_eval_factory_artifacts(repo_root)
     weekly_preflight_artifacts, weekly_status_artifacts = discover_and_validate_eval_factory_weekly_artifacts(repo_root)
     receipt_bundles = discover_and_validate_operator_receipts(repo_root)
+    smoke_receipt_bundles = tuple(receipt for receipt in receipt_bundles if receipt.source_class != SOURCE_OPERATOR_WEEKLY_RECEIPT)
+    weekly_receipt_bundles = tuple(receipt for receipt in receipt_bundles if receipt.source_class == SOURCE_OPERATOR_WEEKLY_RECEIPT)
     discovered_summary_names = {summary.run_id for summary in summaries}
     missing_expected_summaries = [name for name in EXPECTED_SUMMARY_RUNS if name not in discovered_summary_names]
     docs = (
@@ -2876,16 +2922,44 @@ def render_summarize_existing(repo_root: Path) -> str:
     lines.extend(
         [
             "operator/eval-factory receipt bundle surfaces:",
-            f"  discovered: {len(receipt_bundles)}",
+            f"  discovered: {len(smoke_receipt_bundles)}",
         ]
     )
-    if receipt_bundles:
-        for receipt in receipt_bundles:
+    if smoke_receipt_bundles:
+        for receipt in smoke_receipt_bundles:
             if receipt.status == ARTIFACT_STATUS_VALID:
                 lines.append(
                     "  - "
                     f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
-                    f"schema={receipt.schema_id}; result={receipt.result}; posture={receipt.posture_classification}; "
+                    f"schema={receipt.schema_id}; tier={receipt.tier}; target={receipt.target}; "
+                    f"result={receipt.result}; posture={receipt.posture_classification}; "
+                    f"family_count={receipt.family_count}; "
+                    f"tarball={'present' if receipt.tarball_present else 'absent'}; "
+                    f"checksums={'present' if receipt.checksum_present else 'absent'}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
+                    "errors=" + " | ".join(receipt.errors)
+                )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
+            "operator/eval-factory l4-weekly receipt bundle surfaces:",
+            f"  discovered: {len(weekly_receipt_bundles)}",
+        ]
+    )
+    if weekly_receipt_bundles:
+        for receipt in weekly_receipt_bundles:
+            if receipt.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
+                    f"schema={receipt.schema_id}; tier={receipt.tier}; target={receipt.target}; "
+                    f"result={receipt.result}; posture={receipt.posture_classification}; "
                     f"family_count={receipt.family_count}; "
                     f"tarball={'present' if receipt.tarball_present else 'absent'}; "
                     f"checksums={'present' if receipt.checksum_present else 'absent'}"

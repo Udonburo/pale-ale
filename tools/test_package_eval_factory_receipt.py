@@ -117,6 +117,92 @@ def write_fixture_run(repo: Path) -> Path:
     return run_dir
 
 
+def write_weekly_fixture_run(repo: Path) -> Path:
+    target = runner.l4_weekly_target_for_key("qwen2_5_3b")
+    run_dir = repo / "runs" / "eval_factory_l4_weekly_qwen2_5_3b_vm_fixture"
+    run_dir.mkdir(parents=True)
+    created_at = "2026-04-22T00:00:00Z"
+    preflight = runner.build_l4_weekly_preflight_artifact_payload(
+        make_preflight(),
+        target,
+        "execute",
+        created_at=created_at,
+    )
+    family_results = [
+        {
+            "family": family,
+            "dispatch": "completed",
+            "structural_flags_all_true": "True",
+            "runs_first_pass_status": "pending_local_read",
+        }
+        for family in target.families
+    ]
+    status = {
+        "schema_id": runner.L4_WEEKLY_STATUS_SCHEMA_ID,
+        "schema_version": runner.ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at,
+        "tier": runner.Tier.L4_WEEKLY.value,
+        "mode": "execute",
+        "target": target.target_key,
+        "fixed_target_set": runner.l4_weekly_fixed_target_set(target),
+        "model_id": target.model_id,
+        "model_label": target.model_label,
+        "families": list(target.families),
+        "entrypoint": "tools/run_gate12a_cross_model_replay.py",
+        "command": ["python", "tools/run_gate12a_cross_model_replay.py"],
+        "out_dir": "runs/eval_factory_l4_weekly_qwen2_5_3b_vm_fixture",
+        "returncode": 0,
+        "preflight": preflight,
+        "downstream_dispatch_summary": runner.build_downstream_dispatch_summary(
+            family_results,
+            [],
+            0,
+            expected_family_count=len(target.families),
+        ),
+        "result": "pass",
+        "family_results": family_results,
+        "notes": [],
+    }
+    runner.write_status_artifact(run_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME, preflight)
+    runner.write_status_artifact(run_dir / runner.L4_WEEKLY_STATUS_FILENAME, status)
+    (run_dir / packager.WEEKLY_EXECUTE_LOG_FILENAME).write_text("successful weekly fixture run\n", encoding="utf-8")
+
+    summary_dir = run_dir / target.summary_run_id
+    summary_dir.mkdir()
+    fieldnames = [
+        "model_label",
+        "model_id",
+        "rendering_family",
+        *runner.STRUCTURAL_FLAG_COLUMNS,
+        "trusted_tree_median",
+        "residual_chord_median",
+        "anchor_qualified_median",
+        "plain_median",
+        "extreme_band_first_pass_status",
+    ]
+    with (summary_dir / runner.CROSS_MODEL_SUMMARY_FILENAME).open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for index, family in enumerate(target.families, start=1):
+            writer.writerow(
+                {
+                    "model_label": target.model_label,
+                    "model_id": target.model_id,
+                    "rendering_family": family,
+                    "zero_overlap_clear": "True",
+                    "all_defined_triangles_anchor_rich": "True",
+                    "trusted_tree_gt_residual_chord": "True",
+                    "plain_gt_anchor_qualified": "True",
+                    "trusted_tree_median": f"1.0{index}",
+                    "residual_chord_median": f"0.8{index}",
+                    "anchor_qualified_median": f"0.7{index}",
+                    "plain_median": f"1.1{index}",
+                    "extreme_band_first_pass_status": "pending_local_read",
+                }
+            )
+    return run_dir
+
+
 class PackageEvalFactoryReceiptTest(unittest.TestCase):
     def test_successful_packaging_writes_manifest_checksums_and_tarball(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -141,11 +227,54 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
 
         self.assertIn("eval_factory_l4_smoke_vm_fixture/eval_factory_l4_smoke_status.json", names)
 
+    def test_successful_weekly_packaging_writes_manifest_checksums_and_tarball(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_weekly_fixture_run(repo)
+            result = packager.package_receipt(
+                run_dir,
+                repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME,
+                created_at="2026-04-22T00:00:00Z",
+                repo_root=repo,
+            )
+            validation = runner.validate_operator_receipt_manifest(repo, result.manifest_path)
+            manifest = runner.read_json(result.manifest_path)
+
+            self.assertTrue(result.manifest_path.exists())
+            self.assertTrue(result.required_checksums_path.exists())
+            self.assertTrue(result.bundle_checksums_path.exists())
+            self.assertIsNotNone(result.tarball_path)
+            self.assertTrue(result.tarball_path.exists())
+            self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
+            with tarfile.open(result.tarball_path, "r:gz") as archive:
+                names = archive.getnames()
+
+        self.assertEqual(manifest["schema_id"], runner.OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID)
+        self.assertEqual(manifest["source_class"], runner.SOURCE_OPERATOR_WEEKLY_RECEIPT)
+        self.assertEqual(manifest["tier"], runner.Tier.L4_WEEKLY.value)
+        self.assertEqual(manifest["target"], "qwen2_5_3b")
+        self.assertEqual(manifest["fixed_target_set"]["model_id"], "Qwen/Qwen2.5-3B-Instruct")
+        self.assertTrue(manifest["not_a_checkpoint"])
+        self.assertTrue(manifest["not_a_memo_claim"])
+        self.assertIn("pending_local_read", manifest["runs_first_pass_status_note"])
+        self.assertIn("eval_factory_l4_weekly_qwen2_5_3b_vm_fixture/eval_factory_l4_weekly_status.json", names)
+
     def test_missing_required_artifact_fails_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             run_dir = write_fixture_run(repo)
             (run_dir / "eval_factory_l4_smoke_execute.log").unlink()
+
+            with self.assertRaises(packager.ReceiptPackagingError) as raised:
+                packager.package_receipt(run_dir, repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME, repo_root=repo)
+
+        self.assertIn("missing required receipt artifact", str(raised.exception))
+
+    def test_missing_weekly_required_artifact_fails_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_weekly_fixture_run(repo)
+            (run_dir / packager.WEEKLY_EXECUTE_LOG_FILENAME).unlink()
 
             with self.assertRaises(packager.ReceiptPackagingError) as raised:
                 packager.package_receipt(run_dir, repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME, repo_root=repo)
@@ -172,6 +301,32 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
             payload = dict(runner.read_json(run_dir / runner.L4_SMOKE_STATUS_FILENAME))
             del payload["downstream_dispatch_summary"]
             runner.write_status_artifact(run_dir / runner.L4_SMOKE_STATUS_FILENAME, payload)
+
+            with self.assertRaises(packager.ReceiptPackagingError) as raised:
+                packager.package_receipt(run_dir, repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME, repo_root=repo)
+
+        self.assertIn("malformed status artifact", str(raised.exception))
+
+    def test_malformed_weekly_preflight_fails_before_writing_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_weekly_fixture_run(repo)
+            payload = dict(runner.read_json(run_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME))
+            del payload["schema_id"]
+            runner.write_status_artifact(run_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME, payload)
+
+            with self.assertRaises(packager.ReceiptPackagingError) as raised:
+                packager.package_receipt(run_dir, repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME, repo_root=repo)
+
+        self.assertIn("malformed preflight artifact", str(raised.exception))
+
+    def test_malformed_weekly_status_fails_before_writing_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_weekly_fixture_run(repo)
+            payload = dict(runner.read_json(run_dir / runner.L4_WEEKLY_STATUS_FILENAME))
+            del payload["downstream_dispatch_summary"]
+            runner.write_status_artifact(run_dir / runner.L4_WEEKLY_STATUS_FILENAME, payload)
 
             with self.assertRaises(packager.ReceiptPackagingError) as raised:
                 packager.package_receipt(run_dir, repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME, repo_root=repo)
@@ -218,6 +373,33 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
 
             self.assertTrue(result.inspect_only)
             self.assertFalse(result.receipt_root.exists())
+
+    def test_weekly_receipt_is_reported_as_distinct_readonly_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_weekly_fixture_run(repo)
+            result = packager.package_receipt(
+                run_dir,
+                repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME,
+                create_tarball=False,
+                created_at="2026-04-22T00:00:00Z",
+                repo_root=repo,
+            )
+
+            text = runner.render_summarize_existing(repo)
+            checks = runner.build_cpu_nightly_checks(repo)
+            manifest_exists = result.manifest_path.exists()
+
+        self.assertTrue(manifest_exists)
+        self.assertIn("operator/eval-factory l4-weekly receipt bundle surfaces:", text)
+        self.assertIn("source_class=operator/eval-factory l4-weekly receipt bundle", text)
+        self.assertIn("target=qwen2_5_3b", text)
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_PASS and runner.SOURCE_OPERATOR_WEEKLY_RECEIPT in check.label
+                for check in checks
+            )
+        )
 
 
 if __name__ == "__main__":
