@@ -34,11 +34,15 @@ ARTIFACT_KIND_BY_FILENAME = {
     eval_checks.L4_SMOKE_PREFLIGHT_FILENAME: "l4_smoke_preflight",
     eval_checks.L4_SMOKE_STATUS_FILENAME: "l4_smoke_status",
     eval_checks.L4_WEEKLY_PLAN_FILENAME: "l4_weekly_plan",
+    eval_checks.L4_WEEKLY_PREFLIGHT_FILENAME: "l4_weekly_preflight",
+    eval_checks.L4_WEEKLY_STATUS_FILENAME: "l4_weekly_status",
 }
 EXPECTED_SCHEMA_BY_KIND = {
     "l4_smoke_preflight": eval_checks.L4_SMOKE_PREFLIGHT_SCHEMA_ID,
     "l4_smoke_status": eval_checks.L4_SMOKE_STATUS_SCHEMA_ID,
     "l4_weekly_plan": eval_checks.L4_WEEKLY_PLAN_SCHEMA_ID,
+    "l4_weekly_preflight": eval_checks.L4_WEEKLY_PREFLIGHT_SCHEMA_ID,
+    "l4_weekly_status": eval_checks.L4_WEEKLY_STATUS_SCHEMA_ID,
 }
 
 
@@ -146,6 +150,10 @@ def validation_errors_for_kind(root: Path, path: Path, artifact_kind: str) -> tu
         return eval_checks.validate_eval_factory_status_artifact(root, path).errors
     if artifact_kind == "l4_weekly_plan":
         return eval_checks.validate_l4_weekly_plan_artifact(root, path).errors
+    if artifact_kind == "l4_weekly_preflight":
+        return eval_checks.validate_eval_factory_weekly_preflight_artifact(root, path).errors
+    if artifact_kind == "l4_weekly_status":
+        return eval_checks.validate_eval_factory_weekly_status_artifact(root, path).errors
     return (f"unsupported eval-factory artifact kind: {artifact_kind}",)
 
 

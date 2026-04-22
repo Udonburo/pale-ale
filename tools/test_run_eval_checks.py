@@ -117,6 +117,56 @@ def make_status_payload() -> dict[str, object]:
     }
 
 
+def make_weekly_status_payload(
+    target: runner.L4WeeklyTarget | None = None,
+    preflight: runner.L4SmokePreflight | None = None,
+) -> dict[str, object]:
+    target = target or runner.l4_weekly_target_for_key("qwen2_5_3b")
+    created_at = "2026-04-20T00:00:00Z"
+    family_results = [
+        {
+            "family": family,
+            "dispatch": "completed",
+            "structural_flags_all_true": "True",
+            "runs_first_pass_status": "pending_local_read",
+        }
+        for family in target.families
+    ]
+    downstream_summary = runner.build_downstream_dispatch_summary(
+        family_results,
+        [],
+        0,
+        expected_family_count=len(target.families),
+    )
+    preflight = preflight or make_preflight()
+    return {
+        "schema_id": runner.L4_WEEKLY_STATUS_SCHEMA_ID,
+        "schema_version": runner.ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at,
+        "tier": runner.Tier.L4_WEEKLY.value,
+        "mode": "execute",
+        "target": target.target_key,
+        "fixed_target_set": runner.l4_weekly_fixed_target_set(target),
+        "model_id": target.model_id,
+        "model_label": target.model_label,
+        "families": list(target.families),
+        "entrypoint": "tools/run_gate12a_cross_model_replay.py",
+        "command": ["python", "tools/run_gate12a_cross_model_replay.py"],
+        "out_dir": "tmp/l4_weekly",
+        "returncode": 0,
+        "preflight": runner.build_l4_weekly_preflight_artifact_payload(
+            preflight,
+            target,
+            "execute",
+            created_at=created_at,
+        ),
+        "downstream_dispatch_summary": downstream_summary,
+        "result": downstream_summary["result"],
+        "family_results": family_results,
+        "notes": [],
+    }
+
+
 def write_receipt_fixture(repo: Path) -> Path:
     run_dir = repo / "runs" / "eval_factory_l4_smoke_vm_fixture"
     run_dir.mkdir(parents=True)
@@ -193,6 +243,10 @@ class RunEvalChecksTest(unittest.TestCase):
         matrix = runner.l4_weekly_target_matrix()
 
         self.assertEqual(
+            [target["target"] for target in matrix],
+            ["qwen2_5_3b", "llama3_2_3b", "qwen3_4b"],
+        )
+        self.assertEqual(
             [target["model_id"] for target in matrix],
             [
                 "Qwen/Qwen2.5-3B-Instruct",
@@ -262,7 +316,7 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("pass --execute --out-dir <path>", text)
         self.assertIn("0.5B fixed family boundary set", text)
 
-    def test_execute_requires_out_dir_and_l4_smoke_tier(self) -> None:
+    def test_execute_preflight_and_target_preconditions(self) -> None:
         missing_out = io.StringIO()
         with redirect_stdout(missing_out):
             self.assertEqual(runner.main(["--tier", "l4-smoke", "--execute"]), 2)
@@ -270,13 +324,28 @@ class RunEvalChecksTest(unittest.TestCase):
 
         wrong_tier = io.StringIO()
         with redirect_stdout(wrong_tier):
-            self.assertEqual(runner.main(["--tier", "l4-weekly", "--execute", "--out-dir", "tmp/out"]), 2)
-        self.assertIn("--execute is only supported for --tier l4-smoke", wrong_tier.getvalue())
+            self.assertEqual(runner.main(["--tier", "cpu-nightly", "--execute", "--out-dir", "tmp/out"]), 2)
+        self.assertIn("--execute is only supported for --tier l4-smoke or l4-weekly", wrong_tier.getvalue())
 
         wrong_preflight_tier = io.StringIO()
         with redirect_stdout(wrong_preflight_tier):
             self.assertEqual(runner.main(["--tier", "cpu-nightly", "--preflight-only"]), 2)
-        self.assertIn("--preflight-only is only supported for --tier l4-smoke", wrong_preflight_tier.getvalue())
+        self.assertIn("--preflight-only is only supported for --tier l4-smoke or l4-weekly", wrong_preflight_tier.getvalue())
+
+        target_on_wrong_tier = io.StringIO()
+        with redirect_stdout(target_on_wrong_tier):
+            self.assertEqual(runner.main(["--tier", "l4-smoke", "--target", "qwen2_5_3b"]), 2)
+        self.assertIn("--target is only supported for --tier l4-weekly", target_on_wrong_tier.getvalue())
+
+        weekly_missing_target = io.StringIO()
+        with redirect_stdout(weekly_missing_target):
+            self.assertEqual(runner.main(["--tier", "l4-weekly", "--execute", "--out-dir", "tmp/out"]), 2)
+        self.assertIn("--target is required", weekly_missing_target.getvalue())
+
+        weekly_missing_out = io.StringIO()
+        with redirect_stdout(weekly_missing_out):
+            self.assertEqual(runner.main(["--tier", "l4-weekly", "--execute", "--target", "qwen2_5_3b"]), 2)
+        self.assertIn("--out-dir is required for --tier l4-weekly --execute", weekly_missing_out.getvalue())
 
         conflicting_modes = io.StringIO()
         with redirect_stdout(conflicting_modes):
@@ -295,6 +364,22 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("--families", command)
         families_index = command.index("--families") + 1
         self.assertEqual(command[families_index : families_index + 3], ["transcript_v1", "briefing_v1", "archive_v1"])
+        self.assertIn("--device", command)
+        self.assertIn("cuda", command)
+
+    def test_l4_weekly_target_enum_routing_and_command(self) -> None:
+        target = runner.l4_weekly_target_for_key("qwen3_4b")
+        command = runner.build_l4_weekly_command(runner.REPO_ROOT, Path("tmp/l4-weekly"), target)
+
+        self.assertEqual(target.model_id, "Qwen/Qwen3-4B")
+        self.assertIn("run_gate12a_cross_model_replay.py", command[1])
+        self.assertIn("--model-id", command)
+        self.assertIn("Qwen/Qwen3-4B", command)
+        self.assertIn("--families", command)
+        families_index = command.index("--families") + 1
+        self.assertEqual(command[families_index : families_index + 3], ["transcript_v1", "briefing_v1", "archive_v1"])
+        self.assertIn("--summary-run-id", command)
+        self.assertIn("gate12a_cross_model_replay_qwen_qwen3_4b", command)
         self.assertIn("--device", command)
         self.assertIn("cuda", command)
 
@@ -360,6 +445,74 @@ class RunEvalChecksTest(unittest.TestCase):
             )
             self.assertEqual(preflight_validation.status, runner.ARTIFACT_STATUS_VALID)
             self.assertEqual(status_validation.status, runner.ARTIFACT_STATUS_VALID)
+
+    def test_l4_weekly_execute_uses_fake_subprocess_for_one_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "l4_weekly"
+            target = runner.l4_weekly_target_for_key("llama3_2_3b")
+
+            def fake_run(command, cwd, capture_output, text, check):
+                summary_dir = out_dir / target.summary_run_id
+                summary_dir.mkdir(parents=True)
+                summary_path = summary_dir / runner.CROSS_MODEL_SUMMARY_FILENAME
+                with summary_path.open("w", encoding="utf-8", newline="") as handle:
+                    fieldnames = [
+                        "model_id",
+                        "rendering_family",
+                        *runner.STRUCTURAL_FLAG_COLUMNS,
+                        "extreme_band_first_pass_status",
+                    ]
+                    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                    writer.writeheader()
+                    for family in target.families:
+                        writer.writerow(
+                            {
+                                "model_id": target.model_id,
+                                "rendering_family": family,
+                                "zero_overlap_clear": "True",
+                                "all_defined_triangles_anchor_rich": "True",
+                                "trusted_tree_gt_residual_chord": "True",
+                                "plain_gt_anchor_qualified": "True",
+                                "extreme_band_first_pass_status": "pending_local_read",
+                            }
+                        )
+                return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(
+                    runner.run_l4_weekly_execute(
+                        runner.REPO_ROOT,
+                        target,
+                        out_dir,
+                        run_command=fake_run,
+                        preflight_provider=lambda repo: make_preflight(),
+                    ),
+                    0,
+                )
+
+            text = output.getvalue()
+            self.assertIn("tier: l4-weekly", text)
+            self.assertIn("mode: execute", text)
+            self.assertIn("target: llama3_2_3b", text)
+            self.assertIn("model: meta-llama/Llama-3.2-3B-Instruct", text)
+            self.assertIn("classification: remote_cuda_ready", text)
+            self.assertIn("per-family dispatch/result summary:", text)
+            self.assertIn("archive_v1: dispatch=completed; structural_flags_all_true=True", text)
+            self.assertIn("artifact paths:", text)
+            self.assertTrue((out_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME).exists())
+            self.assertTrue((out_dir / runner.L4_WEEKLY_STATUS_FILENAME).exists())
+            preflight_validation = runner.validate_eval_factory_weekly_preflight_artifact(
+                runner.REPO_ROOT,
+                out_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME,
+            )
+            status_validation = runner.validate_eval_factory_weekly_status_artifact(
+                runner.REPO_ROOT,
+                out_dir / runner.L4_WEEKLY_STATUS_FILENAME,
+            )
+            self.assertEqual(preflight_validation.status, runner.ARTIFACT_STATUS_VALID)
+            self.assertEqual(status_validation.status, runner.ARTIFACT_STATUS_VALID)
+            self.assertEqual(status_validation.target, "llama3_2_3b")
 
     def test_preflight_classifies_local_windows_no_cuda(self) -> None:
         preflight = runner.collect_l4_smoke_preflight(
@@ -444,6 +597,41 @@ class RunEvalChecksTest(unittest.TestCase):
             self.assertTrue((out_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME).exists())
             self.assertFalse((out_dir / runner.L4_SMOKE_STATUS_FILENAME).exists())
 
+    def test_l4_weekly_execute_blocks_on_failed_preflight_without_subprocess(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "l4_weekly"
+            target = runner.l4_weekly_target_for_key("qwen2_5_3b")
+
+            def fake_run(*args, **kwargs):
+                raise AssertionError("subprocess should not be invoked when weekly preflight fails")
+
+            failed_preflight = make_preflight(
+                posture=runner.POSTURE_LOCAL_WINDOWS_NO_CUDA,
+                ok=False,
+                os_name="Windows",
+                cuda_available=False,
+                gpu_count=0,
+                gpu_names=(),
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = runner.run_l4_weekly_execute(
+                    runner.REPO_ROOT,
+                    target,
+                    out_dir,
+                    run_command=fake_run,
+                    preflight_provider=lambda repo: failed_preflight,
+                )
+
+            text = output.getvalue()
+            self.assertEqual(exit_code, 1)
+            self.assertIn("tier: l4-weekly", text)
+            self.assertIn("target: qwen2_5_3b", text)
+            self.assertIn("classification: local_windows_no_cuda", text)
+            self.assertIn("downstream subprocess: not invoked", text)
+            self.assertTrue((out_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME).exists())
+            self.assertFalse((out_dir / runner.L4_WEEKLY_STATUS_FILENAME).exists())
+
     def test_preflight_only_writes_artifact_and_stable_sections(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             out_dir = Path(tmpdir) / "preflight"
@@ -471,6 +659,34 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertEqual(payload["schema_version"], runner.ARTIFACT_CONTRACT_VERSION)
         self.assertEqual(payload["tier"], runner.Tier.L4_SMOKE.value)
         self.assertEqual(payload["fixed_target_set"], runner.l4_smoke_fixed_target_set())
+
+    def test_l4_weekly_preflight_only_writes_artifact_and_stable_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir) / "weekly_preflight"
+            target = runner.l4_weekly_target_for_key("qwen3_4b")
+            output = io.StringIO()
+            with redirect_stdout(output):
+                exit_code = runner.run_l4_weekly_preflight_only(
+                    runner.REPO_ROOT,
+                    target,
+                    out_dir,
+                    preflight_provider=lambda repo: make_preflight(),
+                )
+
+            text = output.getvalue()
+            artifact = out_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME
+            payload = runner.read_json(artifact)
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("mode: preflight-only", text)
+        self.assertIn("target: qwen3_4b", text)
+        self.assertIn("environment diagnostics:", text)
+        self.assertIn("posture classification:", text)
+        self.assertIn("artifact paths:", text)
+        self.assertEqual(payload["schema_id"], runner.L4_WEEKLY_PREFLIGHT_SCHEMA_ID)
+        self.assertEqual(payload["tier"], runner.Tier.L4_WEEKLY.value)
+        self.assertEqual(payload["target"], "qwen3_4b")
+        self.assertEqual(payload["fixed_target_set"], runner.l4_weekly_fixed_target_set(target))
 
     def test_valid_preflight_artifact_contract(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -539,6 +755,46 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertEqual(validation.status, runner.ARTIFACT_STATUS_MALFORMED)
         self.assertIn("missing required field: downstream_dispatch_summary", validation.errors)
 
+    def test_valid_l4_weekly_artifact_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            target = runner.l4_weekly_target_for_key("qwen2_5_3b")
+            preflight_artifact = repo / runner.L4_WEEKLY_PREFLIGHT_FILENAME
+            status_artifact = repo / runner.L4_WEEKLY_STATUS_FILENAME
+            runner.write_status_artifact(
+                preflight_artifact,
+                runner.build_l4_weekly_preflight_artifact_payload(
+                    make_preflight(),
+                    target,
+                    "preflight-only",
+                    created_at="2026-04-20T00:00:00Z",
+                ),
+            )
+            runner.write_status_artifact(status_artifact, make_weekly_status_payload(target))
+
+            preflight_validation = runner.validate_eval_factory_weekly_preflight_artifact(repo, preflight_artifact)
+            status_validation = runner.validate_eval_factory_weekly_status_artifact(repo, status_artifact)
+
+        self.assertEqual(preflight_validation.source_class, runner.SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT)
+        self.assertEqual(preflight_validation.status, runner.ARTIFACT_STATUS_VALID)
+        self.assertEqual(preflight_validation.target, "qwen2_5_3b")
+        self.assertEqual(status_validation.source_class, runner.SOURCE_EVAL_FACTORY_WEEKLY_STATUS)
+        self.assertEqual(status_validation.status, runner.ARTIFACT_STATUS_VALID)
+        self.assertEqual(status_validation.target, "qwen2_5_3b")
+
+    def test_malformed_l4_weekly_status_artifact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            artifact = repo / runner.L4_WEEKLY_STATUS_FILENAME
+            payload = make_weekly_status_payload()
+            payload["target"] = "unsupported"
+            runner.write_status_artifact(artifact, payload)
+
+            validation = runner.validate_eval_factory_weekly_status_artifact(repo, artifact)
+
+        self.assertEqual(validation.status, runner.ARTIFACT_STATUS_MALFORMED)
+        self.assertIn("field target expected one of", "\n".join(validation.errors))
+
     def test_summarize_existing_parses_materialized_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
@@ -606,6 +862,7 @@ class RunEvalChecksTest(unittest.TestCase):
             repo = Path(tmpdir)
             artifact_dir = repo / "local_artifacts"
             artifact_dir.mkdir()
+            target = runner.l4_weekly_target_for_key("qwen2_5_3b")
             runner.write_status_artifact(
                 artifact_dir / runner.L4_SMOKE_PREFLIGHT_FILENAME,
                 runner.build_preflight_artifact_payload(
@@ -615,6 +872,16 @@ class RunEvalChecksTest(unittest.TestCase):
                 ),
             )
             runner.write_status_artifact(artifact_dir / runner.L4_SMOKE_STATUS_FILENAME, make_status_payload())
+            runner.write_status_artifact(
+                artifact_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME,
+                runner.build_l4_weekly_preflight_artifact_payload(
+                    make_preflight(),
+                    target,
+                    "preflight-only",
+                    created_at="2026-04-20T00:00:00Z",
+                ),
+            )
+            runner.write_status_artifact(artifact_dir / runner.L4_WEEKLY_STATUS_FILENAME, make_weekly_status_payload(target))
 
             text = runner.render_summarize_existing(repo)
 
@@ -626,6 +893,11 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertIn("eval-factory execute/status artifact surfaces:", text)
         self.assertIn("source_class=eval-factory execute/status artifact", text)
         self.assertIn("downstream_result=pass", text)
+        self.assertIn("eval-factory l4-weekly preflight artifact surfaces:", text)
+        self.assertIn("source_class=eval-factory l4-weekly preflight artifact", text)
+        self.assertIn("eval-factory l4-weekly execute/status artifact surfaces:", text)
+        self.assertIn("source_class=eval-factory l4-weekly execute/status artifact", text)
+        self.assertIn("target=qwen2_5_3b", text)
 
     def test_summarize_existing_separates_operator_receipt_bundles(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -683,6 +955,18 @@ class RunEvalChecksTest(unittest.TestCase):
                 for check in checks
             )
         )
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT
+                for check in checks
+            )
+        )
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_EVAL_FACTORY_WEEKLY_STATUS
+                for check in checks
+            )
+        )
         self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
 
     def test_cpu_nightly_fails_on_malformed_present_artifact(self) -> None:
@@ -705,6 +989,71 @@ class RunEvalChecksTest(unittest.TestCase):
         self.assertTrue(
             any(
                 check.level == runner.LEVEL_FAIL and runner.SOURCE_EVAL_FACTORY_PREFLIGHT in check.label
+                for check in checks
+            )
+        )
+
+    def test_cpu_nightly_validates_l4_weekly_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            target = runner.l4_weekly_target_for_key("qwen3_4b")
+            artifact_dir = repo / "weekly"
+            artifact_dir.mkdir()
+            runner.write_status_artifact(
+                artifact_dir / runner.L4_WEEKLY_PREFLIGHT_FILENAME,
+                runner.build_l4_weekly_preflight_artifact_payload(
+                    make_preflight(),
+                    target,
+                    "preflight-only",
+                    created_at="2026-04-20T00:00:00Z",
+                ),
+            )
+            runner.write_status_artifact(artifact_dir / runner.L4_WEEKLY_STATUS_FILENAME, make_weekly_status_payload(target))
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_PASS and runner.SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT in check.label
+                for check in checks
+            )
+        )
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_PASS and runner.SOURCE_EVAL_FACTORY_WEEKLY_STATUS in check.label
+                for check in checks
+            )
+        )
+        self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
+
+    def test_cpu_nightly_fails_on_malformed_l4_weekly_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            for relative_path in runner.REQUIRED_CPU_FILES:
+                path = repo / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            for memo in runner.EXPECTED_ATLAS_MEMOS:
+                path = repo / "workstream" / memo
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("placeholder\n", encoding="utf-8")
+            artifact = repo / "weekly" / runner.L4_WEEKLY_STATUS_FILENAME
+            artifact.parent.mkdir()
+            runner.write_status_artifact(artifact, {"schema_id": "wrong"})
+
+            checks = runner.build_cpu_nightly_checks(repo)
+
+        self.assertTrue(
+            any(
+                check.level == runner.LEVEL_FAIL and runner.SOURCE_EVAL_FACTORY_WEEKLY_STATUS in check.label
                 for check in checks
             )
         )
