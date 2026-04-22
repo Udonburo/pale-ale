@@ -3,7 +3,8 @@
 
 This entrypoint does not introduce analytical methods or change Gate12A
 doctrine. Model/GPU execution is only allowed for the explicit
-``--tier l4-smoke --execute`` lane.
+``--tier l4-smoke --execute`` and bounded one-target-at-a-time
+``--tier l4-weekly --execute`` lanes.
 """
 
 from __future__ import annotations
@@ -83,9 +84,17 @@ class L4SmokeConfig:
 
 @dataclass(frozen=True)
 class L4WeeklyTarget:
+    target_key: str
     model_id: str
     model_label: str
     families: tuple[str, ...]
+    device: str
+    topk: int
+    seed: int
+    gate12a_top_k: int
+    balanced_per_band: int
+    reading_limit: int
+    summary_run_id: str
 
 
 @dataclass(frozen=True)
@@ -119,6 +128,7 @@ class EvalFactoryArtifactValidation:
     status: str
     schema_id: str
     mode: str
+    target: str
     result: str
     posture_classification: str
     downstream_result: str
@@ -171,13 +181,19 @@ L4_SMOKE_CONFIG = L4SmokeConfig(
 L4_SMOKE_STATUS_FILENAME = "eval_factory_l4_smoke_status.json"
 L4_SMOKE_PREFLIGHT_FILENAME = "eval_factory_l4_smoke_preflight.json"
 L4_WEEKLY_PLAN_FILENAME = "eval_factory_l4_weekly_plan.json"
+L4_WEEKLY_STATUS_FILENAME = "eval_factory_l4_weekly_status.json"
+L4_WEEKLY_PREFLIGHT_FILENAME = "eval_factory_l4_weekly_preflight.json"
 ARTIFACT_CONTRACT_VERSION = 1
 L4_SMOKE_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.preflight.v1"
 L4_SMOKE_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_smoke.status.v1"
 L4_WEEKLY_PLAN_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.plan.v1"
+L4_WEEKLY_PREFLIGHT_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.preflight.v1"
+L4_WEEKLY_STATUS_SCHEMA_ID = "pale-ale.eval_factory.l4_weekly.status.v1"
 OPERATOR_RECEIPT_SCHEMA_ID = "pale-ale.operator_receipt.eval_factory.l4_smoke.v1"
 SOURCE_EVAL_FACTORY_PREFLIGHT = "eval-factory preflight artifact"
 SOURCE_EVAL_FACTORY_STATUS = "eval-factory execute/status artifact"
+SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT = "eval-factory l4-weekly preflight artifact"
+SOURCE_EVAL_FACTORY_WEEKLY_STATUS = "eval-factory l4-weekly execute/status artifact"
 SOURCE_OPERATOR_RECEIPT = "operator/eval-factory receipt bundle"
 RECEIPT_BUNDLES_DIRNAME = "receipt_bundles"
 RECEIPT_MANIFEST_FILENAME = "operator_receipt_manifest.json"
@@ -234,21 +250,47 @@ L4_WEEKLY_EXCLUSIONS = (
 )
 L4_WEEKLY_TARGETS = (
     L4WeeklyTarget(
+        target_key="qwen2_5_3b",
         model_id="Qwen/Qwen2.5-3B-Instruct",
         model_label="qwen_qwen2_5_3b_instruct",
         families=FAMILY_SET,
+        device="cuda",
+        topk=128,
+        seed=7,
+        gate12a_top_k=3,
+        balanced_per_band=6,
+        reading_limit=0,
+        summary_run_id="gate12a_cross_model_replay_qwen_qwen2_5_3b_instruct",
     ),
     L4WeeklyTarget(
+        target_key="llama3_2_3b",
         model_id="meta-llama/Llama-3.2-3B-Instruct",
         model_label="meta_llama_llama_3_2_3b_instruct",
         families=FAMILY_SET,
+        device="cuda",
+        topk=128,
+        seed=7,
+        gate12a_top_k=3,
+        balanced_per_band=6,
+        reading_limit=0,
+        summary_run_id="gate12a_cross_model_replay_meta_llama_llama_3_2_3b_instruct",
     ),
     L4WeeklyTarget(
+        target_key="qwen3_4b",
         model_id="Qwen/Qwen3-4B",
         model_label="qwen_qwen3_4b",
         families=FAMILY_SET,
+        device="cuda",
+        topk=128,
+        seed=7,
+        gate12a_top_k=3,
+        balanced_per_band=6,
+        reading_limit=0,
+        summary_run_id="gate12a_cross_model_replay_qwen_qwen3_4b",
     ),
 )
+L4_WEEKLY_TARGET_BY_KEY = {target.target_key: target for target in L4_WEEKLY_TARGETS}
+L4_WEEKLY_TARGET_KEYS = tuple(target.target_key for target in L4_WEEKLY_TARGETS)
 
 EXPECTED_ATLAS_MEMOS = (
     "200_GATE12A_TRANSCRIPT_V1_ANCHOR_RICH_CLOSURE_TENSION_REPLICATION_MEMO.md",
@@ -345,7 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run read-only evaluation-factory checks or print a plan for one standing tier. "
-            "GPU/model execution is only available for --tier l4-smoke --execute."
+            "GPU/model execution is only available for explicit l4-smoke or l4-weekly execute lanes."
         )
     )
     parser.add_argument(
@@ -366,18 +408,30 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--execute",
         action="store_true",
-        help="Execute the l4-smoke lane. Only supported with --tier l4-smoke and an explicit --out-dir.",
+        help=(
+            "Execute a bounded GPU lane. Supported with --tier l4-smoke, or with "
+            "--tier l4-weekly plus --target and an explicit --out-dir."
+        ),
     )
     parser.add_argument(
         "--preflight-only",
         action="store_true",
-        help="Run only the l4-smoke environment/GPU posture preflight. Does not invoke model execution.",
+        help="Run only environment/GPU posture preflight for l4-smoke or one l4-weekly target.",
+    )
+    parser.add_argument(
+        "--target",
+        choices=L4_WEEKLY_TARGET_KEYS,
+        help=(
+            "One l4-weekly target key for --preflight-only or --execute. "
+            "Supported values: " + ", ".join(L4_WEEKLY_TARGET_KEYS)
+        ),
     )
     parser.add_argument(
         "--out-dir",
         help=(
             "Required output root for --tier l4-smoke --execute; optional artifact root for "
-            "--tier l4-smoke --preflight-only and --tier l4-weekly. Generated files are not committed by this tool."
+            "--tier l4-smoke --preflight-only, --tier l4-weekly, and --tier l4-weekly --preflight-only. "
+            "Required for --tier l4-weekly --execute. Generated files are not committed by this tool."
         ),
     )
     return parser
@@ -442,10 +496,11 @@ def plan_l4_weekly() -> TierPlan:
             f"plan checks for {L4_WEEKLY_SURFACES}",
             "confirm the frozen Gate12A observable surface before any future dispatch",
             "compile a structured plan for the current 3B/4B dense-transformer mainline only",
+            "allow one-target-at-a-time preflight or execution when explicitly requested",
         ),
         out_of_scope=L4_WEEKLY_EXCLUSIONS,
         not_implemented_yet=(
-            "3B/4B weekly dispatch",
+            "multi-target batch dispatch",
             "L4 runtime budget enforcement",
             "standing execution summary publication",
         ),
@@ -560,12 +615,31 @@ def l4_smoke_fixed_target_set() -> dict[str, Any]:
 def l4_weekly_target_matrix() -> list[dict[str, Any]]:
     return [
         {
+            "target": target.target_key,
             "model_id": target.model_id,
             "model_label": target.model_label,
             "families": list(target.families),
         }
         for target in L4_WEEKLY_TARGETS
     ]
+
+
+def l4_weekly_target_for_key(target_key: str) -> L4WeeklyTarget:
+    try:
+        return L4_WEEKLY_TARGET_BY_KEY[target_key]
+    except KeyError as exc:
+        raise ValueError(f"unsupported l4-weekly target: {target_key}") from exc
+
+
+def l4_weekly_fixed_target_set(target: L4WeeklyTarget) -> dict[str, Any]:
+    return {
+        "surface": L4_WEEKLY_SURFACES,
+        "target": target.target_key,
+        "model_id": target.model_id,
+        "model_label": target.model_label,
+        "families": list(target.families),
+        "device": target.device,
+    }
 
 
 def result_from_bool(ok: bool) -> str:
@@ -605,6 +679,14 @@ def discover_eval_factory_preflight_artifacts(repo_root: Path) -> tuple[Path, ..
 
 def discover_eval_factory_status_artifacts(repo_root: Path) -> tuple[Path, ...]:
     return discover_files_by_name(repo_root, L4_SMOKE_STATUS_FILENAME)
+
+
+def discover_eval_factory_weekly_preflight_artifacts(repo_root: Path) -> tuple[Path, ...]:
+    return discover_files_by_name(repo_root, L4_WEEKLY_PREFLIGHT_FILENAME)
+
+
+def discover_eval_factory_weekly_status_artifacts(repo_root: Path) -> tuple[Path, ...]:
+    return discover_files_by_name(repo_root, L4_WEEKLY_STATUS_FILENAME)
 
 
 def discover_operator_receipt_manifests(repo_root: Path) -> tuple[Path, ...]:
@@ -871,6 +953,35 @@ def validate_fixed_target_set(payload: Mapping[str, Any], errors: list[str], pre
         errors.append(f"field {field_prefix}.families expected {expected['families']!r}, got {families!r}")
 
 
+def validate_l4_weekly_target_key(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> L4WeeklyTarget | None:
+    target_key = require_str(payload, "target", errors, prefix)
+    if target_key is None:
+        return None
+    target = L4_WEEKLY_TARGET_BY_KEY.get(target_key)
+    if target is None:
+        field = f"{prefix}.target" if prefix else "target"
+        errors.append(f"field {field} expected one of {', '.join(L4_WEEKLY_TARGET_KEYS)}, got {target_key!r}")
+    return target
+
+
+def validate_l4_weekly_fixed_target_set(
+    payload: Mapping[str, Any],
+    errors: list[str],
+    target: L4WeeklyTarget | None,
+    prefix: str = "",
+) -> None:
+    fixed_target = require_mapping(payload, "fixed_target_set", errors, prefix)
+    if fixed_target is None or target is None:
+        return
+    field_prefix = f"{prefix}.fixed_target_set" if prefix else "fixed_target_set"
+    expected = l4_weekly_fixed_target_set(target)
+    for key in ("surface", "target", "model_id", "model_label", "device"):
+        require_literal(fixed_target, key, expected[key], errors, field_prefix)
+    families = require_string_list(fixed_target, "families", errors, field_prefix)
+    if families is not None and families != expected["families"]:
+        errors.append(f"field {field_prefix}.families expected {expected['families']!r}, got {families!r}")
+
+
 def validate_preflight_posture_fields(payload: Mapping[str, Any], errors: list[str], prefix: str = "") -> None:
     require_str(payload, "sys_executable", errors, prefix)
     require_str(payload, "python_version", errors, prefix)
@@ -921,13 +1032,18 @@ def validate_preflight_artifact_payload(payload: Any, prefix: str = "") -> tuple
     return tuple(errors)
 
 
-def validate_downstream_dispatch_summary(payload: Mapping[str, Any], errors: list[str], prefix: str) -> None:
+def validate_downstream_dispatch_summary(
+    payload: Mapping[str, Any],
+    errors: list[str],
+    prefix: str,
+    expected_family_count: int = len(L4_SMOKE_CONFIG.families),
+) -> None:
     summary = require_mapping(payload, "downstream_dispatch_summary", errors, prefix)
     if summary is None:
         return
     field_prefix = f"{prefix}.downstream_dispatch_summary" if prefix else "downstream_dispatch_summary"
     require_int(summary, "subprocess_returncode", errors, field_prefix)
-    require_int(summary, "families_expected", errors, field_prefix, expected=len(L4_SMOKE_CONFIG.families))
+    require_int(summary, "families_expected", errors, field_prefix, expected=expected_family_count)
     require_int(summary, "families_reported", errors, field_prefix)
     require_int(summary, "fail", errors, field_prefix)
     result = require_str(summary, "result", errors, field_prefix)
@@ -1013,6 +1129,74 @@ def validate_l4_weekly_plan_artifact_payload(payload: Any, prefix: str = "") -> 
     if result is not None and result != "plan-only":
         field = f"{prefix}.result" if prefix else "result"
         errors.append(f"field {field} expected 'plan-only', got {result!r}")
+    return tuple(errors)
+
+
+def validate_l4_weekly_preflight_artifact_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", L4_WEEKLY_PREFLIGHT_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    validate_created_at(payload, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_WEEKLY.value, errors, prefix)
+    mode = require_str(payload, "mode", errors, prefix)
+    if mode is not None and mode not in PREFLIGHT_ARTIFACT_MODES:
+        field = f"{prefix}.mode" if prefix else "mode"
+        errors.append(f"field {field} expected one of {', '.join(PREFLIGHT_ARTIFACT_MODES)}, got {mode!r}")
+    target = validate_l4_weekly_target_key(payload, errors, prefix)
+    validate_l4_weekly_fixed_target_set(payload, errors, target, prefix)
+    validate_preflight_posture_fields(payload, errors, prefix)
+    result = require_str(payload, "result", errors, prefix)
+    if result is not None and result not in RESULT_VALUES:
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+    preflight_ok = payload.get("preflight_ok")
+    if type(preflight_ok) is bool and result in RESULT_VALUES and result != result_from_bool(preflight_ok):
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} does not match preflight_ok={preflight_ok!r}")
+    return tuple(errors)
+
+
+def validate_l4_weekly_status_artifact_payload(payload: Any, prefix: str = "") -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return (f"{prefix or 'artifact'} expected object",)
+    errors: list[str] = []
+    require_literal(payload, "schema_id", L4_WEEKLY_STATUS_SCHEMA_ID, errors, prefix)
+    require_int(payload, "schema_version", errors, prefix, expected=ARTIFACT_CONTRACT_VERSION)
+    validate_created_at(payload, errors, prefix)
+    require_literal(payload, "tier", Tier.L4_WEEKLY.value, errors, prefix)
+    require_literal(payload, "mode", "execute", errors, prefix)
+    target = validate_l4_weekly_target_key(payload, errors, prefix)
+    validate_l4_weekly_fixed_target_set(payload, errors, target, prefix)
+    require_str(payload, "entrypoint", errors, prefix)
+    require_string_list(payload, "command", errors, prefix)
+    require_str(payload, "out_dir", errors, prefix)
+    require_int(payload, "returncode", errors, prefix)
+    result = require_str(payload, "result", errors, prefix)
+    if result is not None and result not in RESULT_VALUES:
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} expected one of {', '.join(RESULT_VALUES)}, got {result!r}")
+    preflight = require_mapping(payload, "preflight", errors, prefix)
+    if preflight is not None:
+        errors.extend(validate_l4_weekly_preflight_artifact_payload(preflight, f"{prefix}.preflight" if prefix else "preflight"))
+    validate_downstream_dispatch_summary(
+        payload,
+        errors,
+        prefix,
+        expected_family_count=len(target.families) if target is not None else len(FAMILY_SET),
+    )
+    family_results = payload.get("family_results")
+    field = f"{prefix}.family_results" if prefix else "family_results"
+    if "family_results" not in payload:
+        append_missing(errors, field)
+    elif not isinstance(family_results, list) or any(not isinstance(item, dict) for item in family_results):
+        errors.append(f"field {field} expected list of objects")
+    require_string_list(payload, "notes", errors, prefix)
+    downstream = payload.get("downstream_dispatch_summary")
+    if isinstance(downstream, dict) and result in RESULT_VALUES and downstream.get("result") in RESULT_VALUES and result != downstream.get("result"):
+        field = f"{prefix}.result" if prefix else "result"
+        errors.append(f"field {field} does not match downstream_dispatch_summary.result={downstream.get('result')!r}")
     return tuple(errors)
 
 
@@ -1140,13 +1324,14 @@ def validate_sha256sum_file(repo_root: Path, checksum_path: Path) -> tuple[str, 
     return tuple(errors)
 
 
-def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[str, str, str, str]:
+def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[str, str, str, str, str, str]:
     schema_id = str(payload.get("schema_id", ""))
     mode = str(payload.get("mode", ""))
+    target = str(payload.get("target", ""))
     result = str(payload.get("result", ""))
     posture = ""
     downstream_result = ""
-    if artifact_kind == "preflight":
+    if artifact_kind.endswith("preflight"):
         posture = str(payload.get("posture_classification", ""))
     else:
         preflight = payload.get("preflight")
@@ -1155,11 +1340,24 @@ def validation_summary(payload: Mapping[str, Any], artifact_kind: str) -> tuple[
         downstream = payload.get("downstream_dispatch_summary")
         if isinstance(downstream, dict):
             downstream_result = str(downstream.get("result", ""))
-    return schema_id, mode, result, posture or "n/a", downstream_result or "n/a"
+    return schema_id, mode, target or "n/a", result, posture or "n/a", downstream_result or "n/a"
 
 
 def validate_eval_factory_artifact_file(repo_root: Path, path: Path, artifact_kind: str) -> EvalFactoryArtifactValidation:
-    source_class = SOURCE_EVAL_FACTORY_PREFLIGHT if artifact_kind == "preflight" else SOURCE_EVAL_FACTORY_STATUS
+    if artifact_kind == "preflight":
+        source_class = SOURCE_EVAL_FACTORY_PREFLIGHT
+        validator = validate_preflight_artifact_payload
+    elif artifact_kind == "status":
+        source_class = SOURCE_EVAL_FACTORY_STATUS
+        validator = validate_status_artifact_payload
+    elif artifact_kind == "weekly-preflight":
+        source_class = SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT
+        validator = validate_l4_weekly_preflight_artifact_payload
+    elif artifact_kind == "weekly-status":
+        source_class = SOURCE_EVAL_FACTORY_WEEKLY_STATUS
+        validator = validate_l4_weekly_status_artifact_payload
+    else:
+        raise ValueError(f"unsupported eval-factory artifact kind: {artifact_kind}")
     relative_path = repo_relative(repo_root, path)
     if not path.exists():
         return EvalFactoryArtifactValidation(
@@ -1169,6 +1367,7 @@ def validate_eval_factory_artifact_file(repo_root: Path, path: Path, artifact_ki
             status=ARTIFACT_STATUS_MISSING,
             schema_id="",
             mode="",
+            target="",
             result="",
             posture_classification="",
             downstream_result="",
@@ -1184,18 +1383,15 @@ def validate_eval_factory_artifact_file(repo_root: Path, path: Path, artifact_ki
             status=ARTIFACT_STATUS_MALFORMED,
             schema_id="",
             mode="",
+            target="",
             result="",
             posture_classification="",
             downstream_result="",
             errors=(f"artifact unreadable: {exc}",),
         )
 
-    errors = (
-        validate_preflight_artifact_payload(payload)
-        if artifact_kind == "preflight"
-        else validate_status_artifact_payload(payload)
-    )
-    schema_id, mode, result, posture, downstream_result = validation_summary(payload, artifact_kind) if isinstance(payload, dict) else ("", "", "", "", "")
+    errors = validator(payload)
+    schema_id, mode, target, result, posture, downstream_result = validation_summary(payload, artifact_kind) if isinstance(payload, dict) else ("", "", "", "", "", "")
     return EvalFactoryArtifactValidation(
         source_class=source_class,
         artifact_kind=artifact_kind,
@@ -1203,6 +1399,7 @@ def validate_eval_factory_artifact_file(repo_root: Path, path: Path, artifact_ki
         status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
         schema_id=schema_id,
         mode=mode,
+        target=target,
         result=result,
         posture_classification=posture,
         downstream_result=downstream_result,
@@ -1218,6 +1415,14 @@ def validate_eval_factory_status_artifact(repo_root: Path, path: Path) -> EvalFa
     return validate_eval_factory_artifact_file(repo_root, path, "status")
 
 
+def validate_eval_factory_weekly_preflight_artifact(repo_root: Path, path: Path) -> EvalFactoryArtifactValidation:
+    return validate_eval_factory_artifact_file(repo_root, path, "weekly-preflight")
+
+
+def validate_eval_factory_weekly_status_artifact(repo_root: Path, path: Path) -> EvalFactoryArtifactValidation:
+    return validate_eval_factory_artifact_file(repo_root, path, "weekly-status")
+
+
 def discover_and_validate_eval_factory_artifacts(repo_root: Path) -> tuple[tuple[EvalFactoryArtifactValidation, ...], tuple[EvalFactoryArtifactValidation, ...]]:
     preflight_results = tuple(
         validate_eval_factory_preflight_artifact(repo_root, path)
@@ -1226,6 +1431,18 @@ def discover_and_validate_eval_factory_artifacts(repo_root: Path) -> tuple[tuple
     status_results = tuple(
         validate_eval_factory_status_artifact(repo_root, path)
         for path in discover_eval_factory_status_artifacts(repo_root)
+    )
+    return preflight_results, status_results
+
+
+def discover_and_validate_eval_factory_weekly_artifacts(repo_root: Path) -> tuple[tuple[EvalFactoryArtifactValidation, ...], tuple[EvalFactoryArtifactValidation, ...]]:
+    preflight_results = tuple(
+        validate_eval_factory_weekly_preflight_artifact(repo_root, path)
+        for path in discover_eval_factory_weekly_preflight_artifacts(repo_root)
+    )
+    status_results = tuple(
+        validate_eval_factory_weekly_status_artifact(repo_root, path)
+        for path in discover_eval_factory_weekly_status_artifacts(repo_root)
     )
     return preflight_results, status_results
 
@@ -1348,6 +1565,7 @@ def artifact_check_detail(result: EvalFactoryArtifactValidation) -> str:
             f"path={result.path}",
             f"schema={result.schema_id}",
             f"mode={result.mode}",
+            f"target={result.target}",
             f"result={result.result}",
             f"posture={result.posture_classification}",
         ]
@@ -1395,6 +1613,24 @@ def append_eval_factory_artifact_checks(checks: list[CheckResult], repo_root: Pa
             checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_STATUS} {result.path}", artifact_check_detail(result)))
 
 
+def append_eval_factory_weekly_artifact_checks(checks: list[CheckResult], repo_root: Path) -> None:
+    preflight_results, status_results = discover_and_validate_eval_factory_weekly_artifacts(repo_root)
+
+    if not preflight_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT, f"optional missing: {L4_WEEKLY_PREFLIGHT_FILENAME}"))
+    else:
+        for result in preflight_results:
+            level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+            checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT} {result.path}", artifact_check_detail(result)))
+
+    if not status_results:
+        checks.append(CheckResult(LEVEL_WARN, SOURCE_EVAL_FACTORY_WEEKLY_STATUS, f"optional missing: {L4_WEEKLY_STATUS_FILENAME}"))
+    else:
+        for result in status_results:
+            level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
+            checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_WEEKLY_STATUS} {result.path}", artifact_check_detail(result)))
+
+
 def append_operator_receipt_checks(checks: list[CheckResult], repo_root: Path) -> None:
     receipt_results = discover_and_validate_operator_receipts(repo_root)
     if not receipt_results:
@@ -1437,6 +1673,7 @@ def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
         checks.append(CheckResult(LEVEL_PASS, "l4-weekly exclusions", ", ".join(required_exclusions)))
 
     append_eval_factory_artifact_checks(checks, repo_root)
+    append_eval_factory_weekly_artifact_checks(checks, repo_root)
     append_operator_receipt_checks(checks, repo_root)
 
     summary_dirs = discover_summary_dirs(repo_root)
@@ -1721,6 +1958,37 @@ def write_preflight_artifact(out_dir: Path, preflight: L4SmokePreflight, mode: s
     write_status_artifact(preflight_artifact_path(out_dir), build_preflight_artifact_payload(preflight, mode))
 
 
+def build_l4_weekly_preflight_artifact_payload(
+    preflight: L4SmokePreflight,
+    target: L4WeeklyTarget,
+    mode: str,
+    created_at: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema_id": L4_WEEKLY_PREFLIGHT_SCHEMA_ID,
+        "schema_version": ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at or utc_created_at(),
+        "tier": Tier.L4_WEEKLY.value,
+        "mode": mode,
+        "target": target.target_key,
+        "fixed_target_set": l4_weekly_fixed_target_set(target),
+        **preflight_to_dict(preflight),
+        "result": result_from_bool(preflight.preflight_ok),
+    }
+
+
+def l4_weekly_preflight_artifact_path(out_dir: Path) -> Path:
+    return out_dir / L4_WEEKLY_PREFLIGHT_FILENAME
+
+
+def write_l4_weekly_preflight_artifact(out_dir: Path, target: L4WeeklyTarget, preflight: L4SmokePreflight, mode: str) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_status_artifact(
+        l4_weekly_preflight_artifact_path(out_dir),
+        build_l4_weekly_preflight_artifact_payload(preflight, target, mode),
+    )
+
+
 def render_l4_smoke_preflight(preflight: L4SmokePreflight) -> str:
     lines = [
         "environment diagnostics:",
@@ -1780,6 +2048,36 @@ def l4_weekly_entrypoints(repo_root: Path) -> tuple[Path, ...]:
     )
 
 
+def build_l4_weekly_command(repo_root: Path, out_dir: Path, target: L4WeeklyTarget) -> list[str]:
+    entrypoint = repo_root / "tools" / "run_gate12a_cross_model_replay.py"
+    return [
+        sys.executable,
+        str(entrypoint.resolve()),
+        "--model-id",
+        target.model_id,
+        "--model-label",
+        target.model_label,
+        "--families",
+        *target.families,
+        "--device",
+        target.device,
+        "--topk",
+        str(target.topk),
+        "--seed",
+        str(target.seed),
+        "--gate12a-top-k",
+        str(target.gate12a_top_k),
+        "--balanced-per-band",
+        str(target.balanced_per_band),
+        "--reading-limit",
+        str(target.reading_limit),
+        "--out-root",
+        str(out_dir),
+        "--summary-run-id",
+        target.summary_run_id,
+    ]
+
+
 def build_l4_weekly_plan_payload(repo_root: Path, created_at: str | None = None) -> dict[str, Any]:
     return {
         "schema_id": L4_WEEKLY_PLAN_SCHEMA_ID,
@@ -1814,6 +2112,7 @@ def validate_l4_weekly_plan_artifact(repo_root: Path, path: Path) -> EvalFactory
             status=ARTIFACT_STATUS_MISSING,
             schema_id="",
             mode="",
+            target="n/a",
             result="",
             posture_classification="n/a",
             downstream_result="n/a",
@@ -1829,6 +2128,7 @@ def validate_l4_weekly_plan_artifact(repo_root: Path, path: Path) -> EvalFactory
             status=ARTIFACT_STATUS_MALFORMED,
             schema_id="",
             mode="",
+            target="n/a",
             result="",
             posture_classification="n/a",
             downstream_result="n/a",
@@ -1845,6 +2145,7 @@ def validate_l4_weekly_plan_artifact(repo_root: Path, path: Path) -> EvalFactory
         status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
         schema_id=schema_id,
         mode=mode,
+        target="n/a",
         result=result,
         posture_classification="n/a",
         downstream_result="n/a",
@@ -1865,6 +2166,7 @@ def render_l4_weekly_plan(repo_root: Path, out_dir: Path | None = None) -> str:
     for target in payload["weekly_target_matrix"]:
         lines.append(
             "  - "
+            f"target={target['target']}; "
             f"model={target['model_id']}; model_label={target['model_label']}; "
             f"families={', '.join(target['families'])}"
         )
@@ -1897,6 +2199,180 @@ def run_l4_weekly(repo_root: Path, out_dir: Path | None) -> int:
         write_l4_weekly_plan_artifact(repo_root, out_dir)
     print(render_l4_weekly_plan(repo_root, out_dir))
     return 0
+
+
+def render_l4_weekly_header(repo_root: Path, target: L4WeeklyTarget, out_dir: Path | None, mode: str) -> str:
+    out_dir_text = str(out_dir) if out_dir is not None else "<required for --execute>"
+    command = build_l4_weekly_command(repo_root, out_dir or Path("<out-dir>"), target)
+    lines = [
+        f"tier: {Tier.L4_WEEKLY.value}",
+        f"mode: {mode}",
+        f"target: {target.target_key}",
+        "fixed target set:",
+        f"  surface: {L4_WEEKLY_SURFACES}",
+        f"  model: {target.model_id}",
+        f"  model_label: {target.model_label}",
+        "  families: " + ", ".join(target.families),
+        f"  device: {target.device}",
+        "actual entrypoints selected:",
+    ]
+    lines.extend(f"  - {repo_relative(repo_root, path)}" for path in l4_weekly_entrypoints(repo_root))
+    lines.extend(
+        [
+            f"out-dir: {out_dir_text}",
+            "planned command:",
+            "  " + " ".join(command),
+            "out of scope:",
+        ]
+    )
+    lines.extend(f"  - {item}" for item in L4_WEEKLY_EXCLUSIONS)
+    return "\n".join(lines)
+
+
+def validate_l4_weekly_execute_preconditions(repo_root: Path, target: L4WeeklyTarget, out_dir: Path | None) -> list[str]:
+    errors: list[str] = []
+    if out_dir is None:
+        errors.append("--out-dir is required for --tier l4-weekly --execute")
+    elif out_dir.exists() and not out_dir.is_dir():
+        errors.append(f"--out-dir points to a file, not a directory: {out_dir}")
+
+    missing_entrypoints = [repo_relative(repo_root, path) for path in l4_weekly_entrypoints(repo_root) if not path.exists()]
+    if missing_entrypoints:
+        errors.append("missing committed entrypoint(s): " + ", ".join(missing_entrypoints))
+    if target.target_key not in L4_WEEKLY_TARGET_BY_KEY:
+        errors.append(f"unsupported l4-weekly target: {target.target_key}")
+    return errors
+
+
+def l4_weekly_status_artifact_path(out_dir: Path) -> Path:
+    return out_dir / L4_WEEKLY_STATUS_FILENAME
+
+
+def render_l4_weekly_precondition_failure(repo_root: Path, target: L4WeeklyTarget, out_dir: Path | None, errors: Sequence[str]) -> str:
+    return "\n".join(
+        [
+            render_l4_weekly_header(repo_root, target, out_dir, "execute"),
+            "precondition errors:",
+            *(f"  - {error}" for error in errors),
+            "final pass/fail summary:",
+            "  result: fail",
+        ]
+    )
+
+
+def render_l4_weekly_preflight_blocked(repo_root: Path, target: L4WeeklyTarget, out_dir: Path, preflight: L4SmokePreflight) -> str:
+    return "\n".join(
+        [
+            render_l4_weekly_header(repo_root, target, out_dir, "execute"),
+            render_l4_smoke_preflight(preflight),
+            "execution dispatch/result summary:",
+            "  downstream subprocess: not invoked",
+            "final pass/fail summary:",
+            "  result: fail",
+        ]
+    )
+
+
+def run_l4_weekly_preflight_only(
+    repo_root: Path,
+    target: L4WeeklyTarget,
+    out_dir: Path | None,
+    preflight_provider: Callable[[Path], L4SmokePreflight] = collect_l4_smoke_preflight,
+) -> int:
+    preflight = preflight_provider(repo_root)
+    if out_dir is not None:
+        write_l4_weekly_preflight_artifact(out_dir, target, preflight, "preflight-only")
+    print(
+        "\n".join(
+            [
+                render_l4_weekly_header(repo_root, target, out_dir, "preflight-only"),
+                render_l4_smoke_preflight(preflight),
+                "artifact paths:",
+                f"  preflight: {l4_weekly_preflight_artifact_path(out_dir) if out_dir is not None else 'not written'}",
+            ]
+        )
+    )
+    return 0 if preflight.preflight_ok else 1
+
+
+def run_l4_weekly_execute(
+    repo_root: Path,
+    target: L4WeeklyTarget,
+    out_dir: Path | None,
+    run_command: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    preflight_provider: Callable[[Path], L4SmokePreflight] = collect_l4_smoke_preflight,
+) -> int:
+    errors = validate_l4_weekly_execute_preconditions(repo_root, target, out_dir)
+    if errors:
+        print(render_l4_weekly_precondition_failure(repo_root, target, out_dir, errors))
+        return 2
+
+    assert out_dir is not None
+    out_dir.mkdir(parents=True, exist_ok=True)
+    preflight = preflight_provider(repo_root)
+    write_l4_weekly_preflight_artifact(out_dir, target, preflight, "execute")
+    if not preflight.preflight_ok:
+        print(render_l4_weekly_preflight_blocked(repo_root, target, out_dir, preflight))
+        return 1
+
+    command = build_l4_weekly_command(repo_root, out_dir, target)
+    print(render_l4_weekly_header(repo_root, target, out_dir, "execute"))
+    print(render_l4_smoke_preflight(preflight))
+    completed = run_command(
+        command,
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    family_results, notes = parse_l4_weekly_family_results(repo_root, out_dir, target) if completed.returncode == 0 else ([], [])
+    if completed.returncode != 0:
+        if completed.stdout:
+            notes.append("subprocess stdout: " + completed.stdout.strip()[-1000:])
+        if completed.stderr:
+            notes.append("subprocess stderr: " + completed.stderr.strip()[-1000:])
+    print(render_l4_weekly_results(family_results, notes, int(completed.returncode), target))
+
+    created_at = utc_created_at()
+    downstream_summary = build_downstream_dispatch_summary(
+        family_results,
+        notes,
+        int(completed.returncode),
+        expected_family_count=len(target.families),
+    )
+    status_payload = {
+        "schema_id": L4_WEEKLY_STATUS_SCHEMA_ID,
+        "schema_version": ARTIFACT_CONTRACT_VERSION,
+        "created_at": created_at,
+        "tier": Tier.L4_WEEKLY.value,
+        "mode": "execute",
+        "target": target.target_key,
+        "fixed_target_set": l4_weekly_fixed_target_set(target),
+        "model_id": target.model_id,
+        "model_label": target.model_label,
+        "families": list(target.families),
+        "entrypoint": repo_relative(repo_root, repo_root / "tools" / "run_gate12a_cross_model_replay.py"),
+        "command": command,
+        "out_dir": str(out_dir),
+        "returncode": int(completed.returncode),
+        "preflight": build_l4_weekly_preflight_artifact_payload(preflight, target, "execute", created_at=created_at),
+        "downstream_dispatch_summary": downstream_summary,
+        "result": downstream_summary["result"],
+        "family_results": list(family_results),
+        "notes": list(notes),
+    }
+    write_status_artifact(l4_weekly_status_artifact_path(out_dir), status_payload)
+    print(
+        "\n".join(
+            [
+                "artifact paths:",
+                f"  preflight: {l4_weekly_preflight_artifact_path(out_dir)}",
+                f"  status: {l4_weekly_status_artifact_path(out_dir)}",
+            ]
+        )
+    )
+    return 0 if downstream_summary["result"] == "pass" and family_results else 1
 
 
 def build_l4_smoke_command(repo_root: Path, out_dir: Path) -> list[str]:
@@ -1992,8 +2468,13 @@ def write_status_artifact(path: Path, payload: Mapping[str, Any]) -> None:
     path.write_text(json.dumps(dict(payload), ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
 
 
-def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[dict[str, str]], list[str]]:
-    summary_dir = out_dir / L4_SMOKE_CONFIG.summary_run_id
+def parse_l4_family_results(
+    repo_root: Path,
+    out_dir: Path,
+    summary_run_id: str,
+    families: Sequence[str],
+) -> tuple[list[dict[str, str]], list[str]]:
+    summary_dir = out_dir / summary_run_id
     summary_path = summary_dir / CROSS_MODEL_SUMMARY_FILENAME
     if not summary_path.exists():
         return [], [f"missing summary: {repo_relative(repo_root, summary_path)}"]
@@ -2013,7 +2494,7 @@ def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[
 
     by_family = {str(row.get("rendering_family", "")).strip(): row for row in rows}
     results: list[dict[str, str]] = []
-    for family in L4_SMOKE_CONFIG.families:
+    for family in families:
         row = by_family.get(family)
         if row is None:
             results.append(
@@ -2038,10 +2519,19 @@ def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[
     return results, notes
 
 
+def parse_l4_smoke_family_results(repo_root: Path, out_dir: Path) -> tuple[list[dict[str, str]], list[str]]:
+    return parse_l4_family_results(repo_root, out_dir, L4_SMOKE_CONFIG.summary_run_id, L4_SMOKE_CONFIG.families)
+
+
+def parse_l4_weekly_family_results(repo_root: Path, out_dir: Path, target: L4WeeklyTarget) -> tuple[list[dict[str, str]], list[str]]:
+    return parse_l4_family_results(repo_root, out_dir, target.summary_run_id, target.families)
+
+
 def build_downstream_dispatch_summary(
     family_results: Sequence[Mapping[str, str]],
     notes: Sequence[str],
     completed_returncode: int,
+    expected_family_count: int = len(L4_SMOKE_CONFIG.families),
 ) -> dict[str, Any]:
     fail_count = sum(
         1
@@ -2049,7 +2539,7 @@ def build_downstream_dispatch_summary(
         if row.get("dispatch") != "completed" or row.get("structural_flags_all_true") != "True"
     )
     families_reported = len(family_results)
-    families_expected = len(L4_SMOKE_CONFIG.families)
+    families_expected = expected_family_count
     result = "pass" if completed_returncode == 0 and fail_count == 0 and not notes and families_reported == families_expected else "fail"
     return {
         "subprocess_returncode": int(completed_returncode),
@@ -2060,8 +2550,18 @@ def build_downstream_dispatch_summary(
     }
 
 
-def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: Sequence[str], completed_returncode: int) -> str:
-    downstream_summary = build_downstream_dispatch_summary(family_results, notes, completed_returncode)
+def render_l4_results(
+    family_results: Sequence[Mapping[str, str]],
+    notes: Sequence[str],
+    completed_returncode: int,
+    expected_family_count: int = len(L4_SMOKE_CONFIG.families),
+) -> str:
+    downstream_summary = build_downstream_dispatch_summary(
+        family_results,
+        notes,
+        completed_returncode,
+        expected_family_count=expected_family_count,
+    )
     lines = [
         "execution dispatch/result summary:",
         "per-family dispatch/result summary:",
@@ -2089,6 +2589,19 @@ def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: 
         ]
     )
     return "\n".join(lines)
+
+
+def render_l4_smoke_results(family_results: Sequence[Mapping[str, str]], notes: Sequence[str], completed_returncode: int) -> str:
+    return render_l4_results(family_results, notes, completed_returncode, expected_family_count=len(L4_SMOKE_CONFIG.families))
+
+
+def render_l4_weekly_results(
+    family_results: Sequence[Mapping[str, str]],
+    notes: Sequence[str],
+    completed_returncode: int,
+    target: L4WeeklyTarget,
+) -> str:
+    return render_l4_results(family_results, notes, completed_returncode, expected_family_count=len(target.families))
 
 
 def render_l4_smoke_precondition_failure(repo_root: Path, out_dir: Path | None, errors: Sequence[str]) -> str:
@@ -2207,6 +2720,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     summary_dirs = discover_summary_dirs(repo_root)
     summaries = [parse_cross_model_summary(repo_root, path) for path in summary_dirs]
     preflight_artifacts, status_artifacts = discover_and_validate_eval_factory_artifacts(repo_root)
+    weekly_preflight_artifacts, weekly_status_artifacts = discover_and_validate_eval_factory_weekly_artifacts(repo_root)
     receipt_bundles = discover_and_validate_operator_receipts(repo_root)
     discovered_summary_names = {summary.run_id for summary in summaries}
     missing_expected_summaries = [name for name in EXPECTED_SUMMARY_RUNS if name not in discovered_summary_names]
@@ -2313,6 +2827,54 @@ def render_summarize_existing(repo_root: Path) -> str:
 
     lines.extend(
         [
+            "eval-factory l4-weekly preflight artifact surfaces:",
+            f"  discovered: {len(weekly_preflight_artifacts)}",
+        ]
+    )
+    if weekly_preflight_artifacts:
+        for artifact in weekly_preflight_artifacts:
+            if artifact.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    f"schema={artifact.schema_id}; mode={artifact.mode}; target={artifact.target}; result={artifact.result}; "
+                    f"posture={artifact.posture_classification}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    "errors=" + " | ".join(artifact.errors)
+                )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
+            "eval-factory l4-weekly execute/status artifact surfaces:",
+            f"  discovered: {len(weekly_status_artifacts)}",
+        ]
+    )
+    if weekly_status_artifacts:
+        for artifact in weekly_status_artifacts:
+            if artifact.status == ARTIFACT_STATUS_VALID:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    f"schema={artifact.schema_id}; mode={artifact.mode}; target={artifact.target}; result={artifact.result}; "
+                    f"posture={artifact.posture_classification}; downstream_result={artifact.downstream_result}"
+                )
+            else:
+                lines.append(
+                    "  - "
+                    f"source_class={artifact.source_class}; path={artifact.path}; artifact_status={artifact.status}; "
+                    "errors=" + " | ".join(artifact.errors)
+                )
+    else:
+        lines.append("  - none")
+
+    lines.extend(
+        [
             "operator/eval-factory receipt bundle surfaces:",
             f"  discovered: {len(receipt_bundles)}",
         ]
@@ -2366,11 +2928,15 @@ def run_summarize_existing(repo_root: Path) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     tier = Tier(args.tier)
-    if args.execute and tier != Tier.L4_SMOKE:
-        print(f"error: --execute is only supported for --tier {Tier.L4_SMOKE.value}")
+    executing_tiers = (Tier.L4_SMOKE, Tier.L4_WEEKLY)
+    if args.execute and tier not in executing_tiers:
+        print(f"error: --execute is only supported for --tier {Tier.L4_SMOKE.value} or {Tier.L4_WEEKLY.value}")
         return 2
-    if args.preflight_only and tier != Tier.L4_SMOKE:
-        print(f"error: --preflight-only is only supported for --tier {Tier.L4_SMOKE.value}")
+    if args.preflight_only and tier not in executing_tiers:
+        print(f"error: --preflight-only is only supported for --tier {Tier.L4_SMOKE.value} or {Tier.L4_WEEKLY.value}")
+        return 2
+    if args.target and tier != Tier.L4_WEEKLY:
+        print(f"error: --target is only supported for --tier {Tier.L4_WEEKLY.value}")
         return 2
     if args.execute and args.preflight_only:
         print("error: --execute and --preflight-only cannot be used together")
@@ -2387,6 +2953,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(render_l4_smoke_dry_run(REPO_ROOT))
         return 0
     if tier == Tier.L4_WEEKLY:
+        if args.preflight_only or args.execute:
+            if not args.target:
+                print(f"error: --target is required for --tier {Tier.L4_WEEKLY.value} with --preflight-only or --execute")
+                return 2
+            target = l4_weekly_target_for_key(args.target)
+            if args.preflight_only:
+                return run_l4_weekly_preflight_only(REPO_ROOT, target, Path(args.out_dir) if args.out_dir else None)
+            return run_l4_weekly_execute(REPO_ROOT, target, Path(args.out_dir) if args.out_dir else None)
         return run_l4_weekly(REPO_ROOT, Path(args.out_dir) if args.out_dir else None)
 
     plan = dispatch(tier)
