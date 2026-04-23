@@ -1,0 +1,200 @@
+{
+  "schema_id": "pale-ale.eval_factory.post_weekly_compatibility_survey.v1",
+  "survey_date": "2026-04-23",
+  "scope": "Read-only compatibility/admission survey for post-current weekly candidates. This is an operator planning surface, not a new checkpoint, memo claim, or execution campaign.",
+  "current_weekly_mainline_closed_targets": [
+    "qwen2_5_3b",
+    "llama3_2_3b",
+    "qwen3_4b"
+  ],
+  "observed_loader_assumptions": {
+    "loader_shape": [
+      "AutoTokenizer.from_pretrained(model_id, use_fast=True)",
+      "AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32)"
+    ],
+    "trust_remote_code_support": "not used in the current repo loader path",
+    "explicit_auth_token_plumbing": "not threaded through current repo loader path",
+    "processor_multimodal_support": "not used in the current repo loader path",
+    "current_weekly_surface": "one target at a time; fixed families transcript_v1/briefing_v1/archive_v1; dense text-only weekly mainline",
+    "notes": [
+      "Current weekly execution targets are all dense text-generation models loaded through Transformers CausalLM entrypoints.",
+      "Current repo loader assumptions are a poor fit for candidates that require AutoProcessor, multimodal inputs, trust_remote_code, or gated/community-license admission before download.",
+      "Current repo loader uses torch.float32 in extract_triality_triplets.py, so memory headroom is part of admission, not an afterthought."
+    ]
+  },
+  "observed_runtime_baseline": {
+    "source": "successful pale-ale-22 weekly lane environment reused for admission planning",
+    "transformers": "5.5.4",
+    "huggingface_hub": "1.11.0",
+    "torch": "2.9.1+cu129",
+    "status": "operator-observed baseline"
+  },
+  "family_search_notes": {
+    "qwen3_6_official_ids_seen_via_hf_api": [
+      "Qwen/Qwen3.6-35B-A3B",
+      "Qwen/Qwen3.6-27B",
+      "Qwen/Qwen3.6-35B-A3B-FP8",
+      "Qwen/Qwen3.6-27B-FP8"
+    ],
+    "gemma4_official_ids_seen_via_hf_api": [
+      "google/gemma-4-31B-it",
+      "google/gemma-4-E4B-it",
+      "google/gemma-4-26B-A4B-it",
+      "google/gemma-4-E2B-it"
+    ]
+  },
+  "candidate_matrix": [
+    {
+      "candidate": "Qwen/Qwen3-4B-Instruct-2507",
+      "family": "Qwen",
+      "likely_supported_by_current_stack": "yes",
+      "likely_blockers": [
+        "No clear loader delta from the already successful Qwen3-4B weekly lane.",
+        "Admission would still need an explicit target alias and bounded-lane update; it should not be silently merged into the current weekly set."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "current_mainline_candidate",
+      "source_urls": [
+        "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507"
+      ]
+    },
+    {
+      "candidate": "Qwen/Qwen3-8B",
+      "family": "Qwen",
+      "likely_supported_by_current_stack": "uncertain",
+      "likely_blockers": [
+        "Official Transformers support is present, but the current repo loader uses torch.float32.",
+        "Single-L4 headroom under the current float32 discipline is not obviously clean for an 8B class model.",
+        "This is outside the current bounded 3B/4B weekly mainline and should not be admitted without a separate compatibility check."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "compatibility_lane",
+      "source_urls": [
+        "https://huggingface.co/Qwen/Qwen3-8B"
+      ]
+    },
+    {
+      "candidate": "Qwen/Qwen3.6-27B",
+      "family": "Qwen",
+      "likely_supported_by_current_stack": "no",
+      "likely_blockers": [
+        "Official model card positions this as a causal LM with a vision encoder rather than a clean drop-in dense text-only successor.",
+        "Official examples point to large-scale serving and recommend the latest Transformers plus large GPU budgets.",
+        "This would require protocol-expanding treatment, not quiet admission into the current dense weekly line."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "protocol_expanding_lane",
+      "source_urls": [
+        "https://huggingface.co/Qwen/Qwen3.6-27B"
+      ]
+    },
+    {
+      "candidate": "Qwen/Qwen3.6-35B-A3B",
+      "family": "Qwen",
+      "likely_supported_by_current_stack": "no",
+      "likely_blockers": [
+        "Official model card describes a multimodal MoE system with a vision encoder.",
+        "Official examples assume high-end serving frameworks and large GPU counts rather than a single-L4 weekly lane.",
+        "This is both protocol-expanding and resource-expanding relative to the current bounded weekly surface."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "protocol_expanding_lane",
+      "source_urls": [
+        "https://huggingface.co/Qwen/Qwen3.6-35B-A3B"
+      ]
+    },
+    {
+      "candidate": "google/gemma-4-E2B-it",
+      "family": "Gemma 4",
+      "likely_supported_by_current_stack": "uncertain",
+      "likely_blockers": [
+        "Gemma 4 uses AutoProcessor-oriented loading and thinking-mode chat-template handling in the official usage path.",
+        "The current repo loader does not use AutoProcessor or multimodal/text-audio prompt assembly.",
+        "Text-only use may be possible later, but it still needs an explicit compatibility lane rather than silent admission."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "compatibility_lane",
+      "source_urls": [
+        "https://huggingface.co/google/gemma-4-E2B-it",
+        "https://huggingface.co/docs/transformers/model_doc/gemma4"
+      ]
+    },
+    {
+      "candidate": "google/gemma-4-E4B-it",
+      "family": "Gemma 4",
+      "likely_supported_by_current_stack": "uncertain",
+      "likely_blockers": [
+        "Same loader-shape mismatch as E2B-it: AutoProcessor and Gemma-4-specific response parsing are not in the current repo path.",
+        "The family is multimodal by default, so any admission must decide whether pale-ale is evaluating text-only or protocol-expanded behavior.",
+        "The E4B files are materially larger than the current dense 3B/4B mainline artifacts."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "compatibility_lane",
+      "source_urls": [
+        "https://huggingface.co/google/gemma-4-E4B-it/tree/main",
+        "https://huggingface.co/docs/transformers/model_doc/gemma4"
+      ]
+    },
+    {
+      "candidate": "google/gemma-4-31B-it",
+      "family": "Gemma 4",
+      "likely_supported_by_current_stack": "no",
+      "likely_blockers": [
+        "Official card places this at the large 31B dense end of the Gemma 4 family.",
+        "It still needs AutoProcessor and multimodal/text-image handling to match the official path.",
+        "Resource posture is not aligned with the current single-L4 bounded weekly lane."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "defer",
+      "source_urls": [
+        "https://huggingface.co/google/gemma-4-31B-it",
+        "https://huggingface.co/docs/transformers/model_doc/gemma4"
+      ]
+    },
+    {
+      "candidate": "microsoft/Phi-4-mini-instruct",
+      "family": "Phi",
+      "likely_supported_by_current_stack": "no",
+      "likely_blockers": [
+        "Official card uses trust_remote_code=True for Transformers inference.",
+        "Official card also points to FlashAttention and custom-code paths that the current repo loader does not admit.",
+        "This is a compatibility-lane candidate only if the repo is willing to open a trust_remote_code branch explicitly."
+      ],
+      "auth_gated_risk": "low",
+      "trust_remote_code_risk": "high",
+      "recommended_lane": "compatibility_lane",
+      "source_urls": [
+        "https://huggingface.co/microsoft/Phi-4-mini-instruct"
+      ]
+    },
+    {
+      "candidate": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+      "family": "Llama 4",
+      "likely_supported_by_current_stack": "no",
+      "likely_blockers": [
+        "Official page is gated and requires community-license acceptance plus authentication.",
+        "Official usage path is processor-based and multimodal, not the current plain AutoTokenizer/AutoModelForCausalLM path.",
+        "Resource posture and protocol shape are both outside the current bounded weekly mainline."
+      ],
+      "auth_gated_risk": "high",
+      "trust_remote_code_risk": "low",
+      "recommended_lane": "protocol_expanding_lane",
+      "source_urls": [
+        "https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct"
+      ]
+    }
+  ],
+  "survey_takeaways": [
+    "The cleanest post-current weekly admission candidate is Qwen/Qwen3-4B-Instruct-2507.",
+    "The official Qwen3.6 family surfaced in this survey starts at 27B and 35B-A3B; that is not a clean single-L4 successor to the closed 3B/4B dense weekly line.",
+    "Gemma 4 small models are plausible compatibility-lane work, but not current-mainline admissions, because the repo lacks AutoProcessor and multimodal-aware loading.",
+    "No surveyed candidate landed in a pure auth-only lane; the gated candidates here also expand protocol and loader assumptions."
+  ]
+}
