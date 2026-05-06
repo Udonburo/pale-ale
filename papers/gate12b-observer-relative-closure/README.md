@@ -1,6 +1,6 @@
 # Gate12B Observer-Relative Closure Manuscript Source
 
-Status: manuscript-source skeleton
+Status: v0.2 expanded manuscript draft
 Scope: paper-facing LaTeX source for the bounded Gate12B archive-family closure-signature result
 
 This directory holds the manuscript source surface for the Gate12B paper line.
@@ -17,11 +17,14 @@ Build target:
 pdflatex main.tex
 ```
 
+PDF build requires a local LaTeX installation. This repository does not commit
+generated `.aux`, `.log`, `.out`, `.toc`, or PDF build products for this draft.
+
 Production note:
 
-This LaTeX source is a manuscript skeleton and canonical paper-voice content
-source. Final production formatting may be generated through Prism or another
-LaTeX authoring/export workflow.
+This LaTeX source is the current canonical paper-voice content source. Final
+production formatting may be generated through Prism or another LaTeX
+authoring/export workflow.
 
 Boundary:
 
@@ -31,6 +34,7 @@ Boundary:
 - source-facing tags remain source-facing annotations, not answer-quality labels
 - the evidence package is specified by
   `workstream/229_GATE12B_PAPER_EVIDENCE_PACKAGE_MANIFEST.md`
+- generated `runs/` artifacts remain local evidence and are not committed here
 
 Before release, pair the final manuscript with:
 

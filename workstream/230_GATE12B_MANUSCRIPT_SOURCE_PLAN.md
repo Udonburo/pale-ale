@@ -50,6 +50,12 @@ The source starts from paper voice:
 - conclusion
 - appendix handoff to the evidence package manifest
 
+The current `main.tex` has been expanded from skeleton into a v0.2 manuscript
+draft. The expansion adds external-reader definitions, method detail, result
+subsections, source-facing annotation context, threats to validity, and
+claim-to-artifact reproducibility mapping while preserving the bounded claim
+from `228` and the evidence-package boundary from `229`.
+
 ## 2. Boundary
 
 This pass does not:
