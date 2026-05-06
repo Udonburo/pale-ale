@@ -251,6 +251,22 @@ Allowed tags:
 These tags describe the queued row's source-facing direction.
 They are not answer-quality labels.
 
+## Non-Archive Source-Facing Sensitivity
+
+Use the same queue and annotation helpers on `transcript_v1` and `briefing_v1`
+to check whether the archive source-facing alignment is family-specific.
+
+Keep the representative strict motif setting:
+
+- `observer_mode_set = cycle_motif_expansion_v1`
+- `top_k = 3`
+- `min_observer_support = 3`
+- `min_scale_support = 3`
+- `per_band_limit = 2`
+
+This sensitivity is still a read-only source-facing annotation pass. It is not
+an answer-quality evaluator and does not create new observer modes.
+
 ## Minimal Verification
 
 Run the focused Python tests:
