@@ -10,7 +10,7 @@ If you are new to the repo, do not start here blind. Start with:
 
 Then come back here for the full tracked index.
 
-- `06` through `228` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `229` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -50,6 +50,7 @@ Then come back here for the full tracked index.
 - the tracked Gate12B non-archive source-facing annotation sensitivity memo is `226`
 - the tracked Gate12B observer-relative closure closeout memo is `227`
 - the tracked Gate12B paper outline and claim-boundary memo is `228`
+- the tracked Gate12B paper evidence package manifest is `229`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
