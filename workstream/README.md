@@ -10,7 +10,7 @@ If you are new to the repo, do not start here blind. Start with:
 
 Then come back here for the full tracked index.
 
-- `06` through `216` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `223` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -38,6 +38,13 @@ Then come back here for the full tracked index.
 - the tracked Gate12A frozen-protocol exclusion and non-transformer sidecar memo is `214`
 - the tracked Gate12A Qwen2.5-0.5B fixed family-set lower-bound post-checkpoint replication memo is `215`
 - the tracked Gate12A bounded weekly target-set operator closeout memo is `216`
+- the tracked Gate12B observer-relative coarse-grained closure opening memo is `217`
+- the tracked Gate12B first observer-relative coarse-grained closure smoke memo is `218`
+- the tracked Gate12B Qwen2.5-0.5B three-family observer-relative comparison memo is `219`
+- the tracked Gate12B dense-transformer family-effect expansion memo is `220`
+- the tracked Gate12B archive strict-support sensitivity memo is `221`
+- the tracked Gate12B archive observer-scope expansion sensitivity memo is `222`
+- the tracked Gate12B motif observer specificity check is `223`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
