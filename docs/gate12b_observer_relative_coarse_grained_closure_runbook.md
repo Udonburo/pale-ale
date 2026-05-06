@@ -219,6 +219,38 @@ The queue writes:
 The exact support/conflict anchor text flags are inspection helpers only.
 They are not semantic labels.
 
+## Source-Facing Annotation
+
+Use the source-facing annotation helper after building an inspection queue:
+
+```powershell
+python tools\annotate_gate12b_source_inspection_queue.py `
+  --queue-jsonl runs\gate12b_archive_candidate_source_inspection_queue_motif_topk3\gate12b_source_inspection_queue.jsonl `
+  --out-dir runs\gate12b_archive_source_facing_annotation_motif_topk3 `
+  --derive-from-queue `
+  --annotator codex_source_surface_v1
+```
+
+The helper writes:
+
+- `gate12b_source_annotations.jsonl`
+- `gate12b_source_annotations.csv`
+- `gate12b_source_annotation_summary.json`
+- `gate12b_source_annotation_summary.csv`
+- `gate12b_source_annotation.md`
+- `manifest.json`
+- `checksums.json`
+
+Allowed tags:
+
+- `support-following`
+- `conflict-following`
+- `non-gluing`
+- `ambiguous`
+
+These tags describe the queued row's source-facing direction.
+They are not answer-quality labels.
+
 ## Minimal Verification
 
 Run the focused Python tests:
@@ -227,6 +259,7 @@ Run the focused Python tests:
 python -m unittest tools.test_run_gate12b_observer_relative_coarse_grained_closure
 python -m unittest tools.test_summarize_gate12b_runs
 python -m unittest tools.test_build_gate12b_source_inspection_queue
+python -m unittest tools.test_annotate_gate12b_source_inspection_queue
 ```
 
 For the current Gate12B line plus its immediate Gate12A dependencies:
@@ -237,7 +270,8 @@ python -m unittest `
   tools.test_run_gate12a_triangle_phenotype_tag_prep `
   tools.test_run_gate12b_observer_relative_coarse_grained_closure `
   tools.test_summarize_gate12b_runs `
-  tools.test_build_gate12b_source_inspection_queue
+  tools.test_build_gate12b_source_inspection_queue `
+  tools.test_annotate_gate12b_source_inspection_queue
 ```
 
 Inspect the smoke summary:
