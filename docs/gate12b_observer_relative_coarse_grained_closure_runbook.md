@@ -191,6 +191,34 @@ The summary includes candidate counts, dominant relation signatures by band,
 observer/scale support distributions, gauge unstable counts, builder hash
 status, and output checksum status.
 
+## Source Inspection Queue
+
+Use the source inspection queue builder when returning Gate12B candidates to
+Gate12A text-surface rows:
+
+```powershell
+python tools\build_gate12b_source_inspection_queue.py `
+  --out-dir runs\gate12b_archive_candidate_source_inspection_queue_motif_topk3 `
+  --per-band-limit 2 `
+  --case qwen2_5_0_5b_archive `
+    runs\gate12b_observer_relative_coarse_grained_closure_qwen2_5_0_5b_archive_motif_obs3_scale3_topk3 `
+    runs\gate12a_triangle_text_surface_audit_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_archive_128r_gate9k
+```
+
+Repeat `--case` for each model/family surface.
+
+The queue writes:
+
+- `gate12b_source_inspection_queue.csv`
+- `gate12b_source_inspection_queue.jsonl`
+- `gate12b_source_inspection_queue.md`
+- `gate12b_source_inspection_queue_status.json`
+- `manifest.json`
+- `checksums.json`
+
+The exact support/conflict anchor text flags are inspection helpers only.
+They are not semantic labels.
+
 ## Minimal Verification
 
 Run the focused Python tests:
@@ -198,6 +226,7 @@ Run the focused Python tests:
 ```powershell
 python -m unittest tools.test_run_gate12b_observer_relative_coarse_grained_closure
 python -m unittest tools.test_summarize_gate12b_runs
+python -m unittest tools.test_build_gate12b_source_inspection_queue
 ```
 
 For the current Gate12B line plus its immediate Gate12A dependencies:
@@ -207,7 +236,8 @@ python -m unittest `
   tools.test_run_gate12a_discrete_connection_audit `
   tools.test_run_gate12a_triangle_phenotype_tag_prep `
   tools.test_run_gate12b_observer_relative_coarse_grained_closure `
-  tools.test_summarize_gate12b_runs
+  tools.test_summarize_gate12b_runs `
+  tools.test_build_gate12b_source_inspection_queue
 ```
 
 Inspect the smoke summary:
