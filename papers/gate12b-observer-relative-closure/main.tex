@@ -1,0 +1,397 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+
+% Core packages
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{seqsplit}
+\usepackage[
+  hidelinks,
+  pdftitle={Observer-Relative Closure Signatures in Existing LLM Audit Artifacts},
+  pdfauthor={Aoi Kawasaki},
+  pdfsubject={Technical report},
+  pdfkeywords={large language models, structural replay, closure signatures, artifact audit, source-facing annotation}
+]{hyperref}
+
+% Paragraphs
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1\baselineskip}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\breakcode}[1]{\texttt{\seqsplit{\detokenize{#1}}}}
+
+\title{Observer-Relative Closure Signatures\\
+in Existing LLM Audit Artifacts:\\
+A Bounded Gate12B Report}
+\author{Aoi Kawasaki}
+\date{May 6, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study closure signatures in existing LLM audit artifacts using Gate12B, a
+read-only secondary audit over Gate12A discrete inference transport outputs.
+Across four dense-transformer model lines, archive-family surfaces repeatedly
+place high-tension candidates on \code{residual_chord=3} and flat candidates on
+\code{residual_chord=1|trusted_tree=2}. The signal survives stricter scale
+support, motif observer-scope expansion, and the current basis-preserving local
+reparameterization check. A selected source-facing queue aligns high-side R
+candidates with \code{conflict-following} rows and flat-side M candidates with
+\code{support-following} or \code{non-gluing} rows. Transcript and briefing
+sensitivities do not reproduce the same clean archive alignment. We present
+this as a bounded artifact study, not a universal interpretability law or
+model-quality benchmark.
+\end{abstract}
+
+\section{Introduction}
+
+This report studies closure signatures in already materialized LLM audit
+artifacts. The object of study is not free generation, leaderboard accuracy, or
+internal weight-level causality. The object is a set of replay and transport
+artifacts emitted by the Gate12A pipeline and read by Gate12B as a secondary
+audit surface.
+
+The narrow motivation is practical. Once a replay artifact contains local
+objects, transport relations, triangle cycles, and source-facing text surfaces,
+it becomes possible to ask whether some closure-defect signatures survive
+changes of observer view, coarse scale, and bounded local reparameterization.
+Gate12B asks that question without changing the Gate12A artifact semantics.
+
+The main result is archive-family bounded. In the current dense-transformer
+artifact set, archive-family Gate12B surfaces repeatedly place high-tension
+candidates on \code{residual_chord=3} and flat candidates on
+\code{residual_chord=1|trusted_tree=2}. The same queue and source-facing
+annotation path does not make transcript and briefing surfaces reproduce the
+same clean archive alignment.
+
+\subsection{What We Claim}
+
+\begin{enumerate}
+    \item \textbf{Bounded artifact phenomenon.} We report a repeated
+    archive-family closure signature in existing Gate12A/Gate12B audit
+    artifacts.
+    \item \textbf{Archive-family relation signature.} Across four
+    dense-transformer model lines, archive-family Gate12B surfaces repeatedly
+    place high-tension candidates on \code{residual_chord=3} and flat candidates
+    on \code{residual_chord=1|trusted_tree=2}.
+    \item \textbf{Sensitivity survival.} The signal survives the recorded
+    observer, scale, motif observer-scope, and basis-preserving local
+    reparameterization sensitivities.
+    \item \textbf{Source-facing alignment.} A selected archive source-facing
+    queue aligns high-side R candidates with \code{conflict-following} rows and
+    flat-side M candidates with \code{support-following} or \code{non-gluing}
+    rows.
+    \item \textbf{Non-archive sensitivity.} Transcript and briefing
+    sensitivities do not reproduce the same clean archive alignment under the
+    same queue and derived annotation path.
+\end{enumerate}
+
+\subsection{What We Do NOT Claim}
+
+\begin{enumerate}
+    \item \textbf{No universal law.} We do not claim a universal law of LLM
+    reasoning.
+    \item \textbf{No benchmark ranking.} We do not present Gate12B as a
+    model-quality benchmark or correctness classifier.
+    \item \textbf{No answer-quality labels.} Source-facing tags describe the
+    direction of a queued source row only; they are not answer-quality labels.
+    \item \textbf{No weight-level claim.} We make no claim about model weights
+    in general or about mechanistic causality inside a model.
+    \item \textbf{No physical invariant.} The bounded reparameterization checks
+    are artifact-level stability checks, not a physical gauge invariant.
+    \item \textbf{No checkpoint claim.} This report is not a checkpoint,
+    release, or replacement for Gate12A.
+\end{enumerate}
+
+\section{Controlled Artifact Regime}
+\label{sec:artifact-regime}
+
+The empirical surface is deliberately narrow. Gate12B reads existing Gate12A
+artifacts and emits secondary audit summaries. No model inference is run for
+Gate12B. No Gate12A artifact schema, threshold, classification, or source
+semantics is changed.
+
+The selected model lines are:
+
+\begin{itemize}
+    \item \code{Qwen/Qwen2.5-0.5B}
+    \item \code{Qwen/Qwen2.5-3B-Instruct}
+    \item \code{meta-llama/Llama-3.2-3B-Instruct}
+    \item \code{Qwen/Qwen3-4B}
+\end{itemize}
+
+The selected rendering families are:
+
+\begin{itemize}
+    \item \code{archive_v1}
+    \item \code{transcript_v1}
+    \item \code{briefing_v1}
+\end{itemize}
+
+Archive is the family in which the repeated closure signature is reported.
+Transcript and briefing are sensitivity surfaces used to test whether the same
+structural and source-facing pattern is reproduced outside archive.
+
+\section{Gate12B Operational Framework}
+\label{sec:framework}
+
+Gate12B is a read-only secondary audit over Gate12A artifacts. The operational
+primitive is:
+
+\begin{quote}
+\code{observer x scale x bounded local reparameterization}
+\end{quote}
+
+The audit reads existing Gate12A registries:
+
+\begin{itemize}
+    \item \code{manifest.json}
+    \item \code{explicit_triangle_cycle_registry.jsonl}
+    \item \code{triangle_holonomy_registry.jsonl}
+    \item \code{transport_relation_registry.jsonl}
+\end{itemize}
+
+When source-facing evidence is needed, Gate12B also reads the Gate12A triangle
+text-surface audit:
+
+\begin{itemize}
+    \item \code{triangle_text_surface_joined.jsonl}
+    \item text-surface \code{manifest.json}
+\end{itemize}
+
+The representative strict motif setting is:
+
+\begin{quote}
+\begin{tabular}{ll}
+\code{observer_mode_set} & \code{cycle_motif_expansion_v1} \\
+\code{top_k} & \code{3} \\
+\code{min_observer_support} & \code{3} \\
+\code{min_scale_support} & \code{3} \\
+\code{per_band_limit} & \code{2} \\
+\end{tabular}
+\end{quote}
+
+The source-facing annotation layer is derived by exact-anchor and phrase rules:
+
+\begin{itemize}
+    \item exact conflict-anchor text in the answer gives \code{conflict-following}
+    \item exact support-anchor text in the answer gives \code{support-following}
+    \item no-gluing or not-warranted phrasing gives \code{non-gluing}
+    \item otherwise the row is \code{ambiguous}
+\end{itemize}
+
+This is not human semantic annotation and not an answer-quality evaluator.
+
+\section{Main Archive-Family Evidence}
+\label{sec:archive-evidence}
+
+The main relation-signature result is:
+
+\begin{quote}
+\begin{tabular}{ll}
+archive high-tension side & \code{residual_chord=3} \\
+archive flat side & \code{residual_chord=1|trusted_tree=2} \\
+\end{tabular}
+\end{quote}
+
+Table~\ref{tab:family-comparison} gives the paper-facing summary.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Family-level closure-signature summary under the representative strict motif setting.}
+\label{tab:family-comparison}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.18\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.16\textwidth}|}
+\hline
+Family & High-side dominant relation signature & Flat-side dominant relation signature & Reading \\
+\hline
+\breakcode{archive_v1} & \breakcode{residual_chord=3} & \breakcode{residual_chord=1|trusted_tree=2} & clean archive direction \\
+\breakcode{transcript_v1} & \breakcode{residual_chord=1|trusted_tree=2} & \breakcode{residual_chord=3} & mostly reverse / mixed \\
+\breakcode{briefing_v1} & \breakcode{residual_chord=1|trusted_tree=2} & \breakcode{residual_chord=3} & mostly reverse / mixed \\
+\hline
+\end{tabular}
+\end{table}
+
+The table should be read as a bounded artifact result. It is not a claim that
+archive is universally special, nor that transcript or briefing are failed
+families.
+
+\section{Sensitivity And Boundary Results}
+\label{sec:sensitivity}
+
+The archive signature survives several recorded sensitivities:
+
+\begin{itemize}
+    \item strict scale support at \code{top_k=1}, \code{top_k=3}, and
+    \code{top_k=5}
+    \item motif observer-scope expansion through \code{cycle_motif_expansion_v1}
+    \item the current basis-preserving local reparameterization check
+\end{itemize}
+
+The default core observer setting is narrower. Under the stricter
+observer-support setting, the default core observer set can make candidates
+vanish rather than produce the archive relation-signature result. This boundary
+is important because it keeps the motif observer expansion from being treated
+as a silent default.
+
+The known Qwen3-4B briefing caveat is a threshold-boundary case:
+
+\begin{itemize}
+    \item \code{triangle:000358}
+    \item band transition: \code{tense -> flat}
+    \item residual delta approximately \code{1.6653345369377348e-16}
+    \item not an invariant candidate
+    \item not a gauge-stable candidate
+\end{itemize}
+
+This is recorded as threshold-boundary behavior, not candidate-level
+instability.
+
+\section{Source-Facing Evidence}
+\label{sec:source-facing}
+
+The selected source-facing queue contains 16 archive rows:
+
+\begin{itemize}
+    \item 8 high-tension rows
+    \item 8 flat rows
+    \item \code{per_band_limit=2}
+\end{itemize}
+
+The derived archive annotation result is:
+
+\begin{quote}
+\begin{tabular}{ll}
+high-side \code{residual_chord=3} & \code{conflict-following} in 8/8 rows \\
+flat-side \code{residual_chord=1|trusted_tree=2} & \code{support-following} in 6/8 rows \\
+flat-side \code{residual_chord=1|trusted_tree=2} & \code{non-gluing} in 2/8 rows \\
+\end{tabular}
+\end{quote}
+
+Table~\ref{tab:source-facing} summarizes archive, transcript, and briefing
+annotation counts.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Source-facing derived annotation summary.}
+\label{tab:source-facing}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.18\textwidth}|r|r|r|r|r|>{\raggedright\arraybackslash}p{0.22\textwidth}|}
+\hline
+Family & Rows & Support & Conflict & Non-gluing & Ambiguous & Reading \\
+\hline
+\code{archive_v1} & 16 & 6 & 8 & 2 & 0 & clean high-R conflict / flat-M support-or-non-gluing \\
+\code{transcript_v1} & 16 & 10 & 6 & 0 & 0 & relation signatures mostly reverse archive \\
+\code{briefing_v1} & 16 & 12 & 4 & 0 & 0 & model-conditioned / mixed \\
+\hline
+\end{tabular}
+\end{table}
+
+These annotation tags describe source-facing direction only. They are not
+semantic labels and not answer-quality labels.
+
+\section{Non-Archive Sensitivity}
+\label{sec:nonarchive}
+
+The non-archive sensitivity is a defense against a simple annotation-rule
+artifact explanation. If the exact-anchor and phrase-rule annotation path
+forced every family into the archive pattern, transcript and briefing would
+also show the same clean high-R conflict / flat-M support-or-non-gluing
+alignment.
+
+They do not.
+
+Under the same representative strict motif setting, transcript and briefing
+mostly reverse the relation-signature direction:
+
+\begin{quote}
+\begin{tabular}{ll}
+non-archive high side & \code{residual_chord=1|trusted_tree=2} \\
+non-archive flat side & \code{residual_chord=3} \\
+\end{tabular}
+\end{quote}
+
+This supports a bounded family-specific reading. It does not imply that
+transcript or briefing are incorrect, noisy, or scientifically unimportant.
+
+\section{Limitations}
+\label{sec:limits}
+
+The main limitations are:
+
+\begin{itemize}
+    \item the study uses existing local artifacts
+    \item the current source-facing queue uses \code{per_band_limit=2}
+    \item source-facing annotation is exact-anchor / phrase-rule derived
+    \item the current dense-transformer set has four model lines
+    \item the archive result is family-bounded and artifact-bounded
+    \item the current reparameterization check is bounded to the evaluated
+    basis-preserving local transform
+    \item the evidence package is specified separately and is not yet a public
+    release bundle
+\end{itemize}
+
+These limits are part of the claim. The report is stronger when the claim
+remains bounded to the evidence that earned it.
+
+\section{Artifact Manifest And Reproducibility}
+\label{sec:manifest}
+
+The evidence package is specified by
+\code{229_GATE12B_PAPER_EVIDENCE_PACKAGE_MANIFEST.md}. The package is
+manifest-only at this manuscript-skeleton stage; generated \code{runs/}
+artifacts are not committed into this paper source directory.
+
+The required evidence sets are:
+
+\begin{itemize}
+    \item motif specificity summary
+    \item 36 motif Gate12B runs
+    \item archive, transcript, and briefing source queue artifacts
+    \item archive, transcript, and briefing source-facing annotation artifacts
+    \item archive strict/core boundary runs for appendix sensitivity
+\end{itemize}
+
+Recorded integrity status in the manifest:
+
+\begin{itemize}
+    \item 36 motif Gate12B runs: checksum mismatches 0
+    \item 6 source queue / annotation artifacts: checksum mismatches 0
+    \item 24 archive strict/core boundary runs: checksum mismatches 0
+    \item 12/12 source queue cases: matching Gate12B/text-surface
+    \code{source_gate12a_run_id}
+\end{itemize}
+
+\section{Conclusion}
+
+Gate12B reports a bounded archive-family closure-signature phenomenon in
+existing LLM audit artifacts. The current dense-transformer archive surfaces
+show a repeated high-R / flat-M relation signature that survives the recorded
+observer, scale, motif observer-scope, and bounded local reparameterization
+sensitivities. Selected source-facing rows align with that structural read,
+while transcript and briefing sensitivities do not reproduce the same clean
+archive alignment.
+
+The result is paper-ready only as a bounded artifact report. It is not a
+universal interpretability law, model-quality benchmark, answer-quality
+classifier, physical invariant, checkpoint, or release claim.
+
+\appendix
+
+\section{Evidence Package Manifest}
+\label{app:evidence-package}
+
+The paper evidence package is defined in:
+
+\begin{quote}
+\code{workstream/229_GATE12B_PAPER_EVIDENCE_PACKAGE_MANIFEST.md}
+\end{quote}
+
+The appendix should eventually include a compact copy of the package table.
+Until a release package is assembled, the workstream manifest is the source of
+truth for which local artifacts support each paper table.
+
+\end{document}
