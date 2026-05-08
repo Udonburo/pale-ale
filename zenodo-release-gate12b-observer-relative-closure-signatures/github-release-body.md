@@ -23,6 +23,7 @@ classifier, weight-level causal mechanism, or physical invariant.
 - `README.txt`
 - `CHECKSUMS-SHA256.txt`
 - `zenodo-description.md`
+- `github-release-body.md`
 
 The packaged manifest `gate12b-paper-evidence-package-manifest.md` is a
 release-facing derivative of
