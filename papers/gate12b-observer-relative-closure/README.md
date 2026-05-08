@@ -1,7 +1,8 @@
 # Observer-Relative Closure Signatures on Replay Artifact Graphs: A Bounded Source-Facing Audit of Existing LLM Artifacts
 
-Status: v0.3 external-reader manuscript draft
+Status: published bounded technical report source
 Scope: LaTeX manuscript source for the bounded Gate12B archive-family closure-signature result
+Zenodo DOI: https://doi.org/10.5281/zenodo.20080003
 
 This directory holds the manuscript source surface for the Gate12B paper line.
 It is intentionally separate from `workstream/` memos: the memos establish the
@@ -39,9 +40,9 @@ Boundary:
   package can be assembled separately from recorded artifact directories,
   manifests, checksums, and queue outputs
 
-Before public deposit, pair the final manuscript with:
+Public deposit:
 
-- a paper PDF
-- checksum material
-- public-deposit provenance notes
-- an intentionally packaged evidence bundle or stable evidence record
+- DOI: https://doi.org/10.5281/zenodo.20080003
+- release package:
+  `zenodo-release-gate12b-observer-relative-closure-signatures/`
+- generated `runs/` artifacts are not included in the public deposit

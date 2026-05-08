@@ -5,6 +5,7 @@ A Bounded Source-Facing Audit of Existing LLM Artifacts
 
 Author: Aoi Kawasaki
 Manuscript date: 2026-05-06
+Zenodo DOI: https://doi.org/10.5281/zenodo.20080003
 
 ## Summary
 

@@ -1,6 +1,8 @@
 Observer-Relative Closure Signatures on Replay Artifact Graphs:
 A Bounded Source-Facing Audit of Existing LLM Artifacts
 
+DOI: https://doi.org/10.5281/zenodo.20080003
+
 This bounded technical report presents Gate12B, a read-only secondary audit
 over existing Gate12A/Gate12B replay artifact graphs. It reports an
 archive-family closure-signature phenomenon across four dense-transformer
