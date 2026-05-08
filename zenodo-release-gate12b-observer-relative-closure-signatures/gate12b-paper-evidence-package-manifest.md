@@ -1,10 +1,11 @@
 # Gate12B Paper Evidence Package Manifest
 
-Status: Gate12B paper evidence package manifest draft
-Role: bounded manifest for the local artifacts needed to support the Gate12B paper outline, not an artifact commit, not a paper draft, not a checkpoint revision, not a release claim, not a new experiment, and not a Gate12A/Gate12B schema change
+Status: release-facing compact evidence manifest
+Role: bounded manifest for the archived Gate12B paper package; records local evidence paths, hashes, checksum expectations, and paper-table mappings without including generated `runs/` artifacts, changing experiments, or expanding claims
 Date: 2026-05-06
 
-This memo proceeds from:
+This release-facing manifest is derived from the following workstream evidence
+memos:
 
 - `217_GATE12B_OBSERVER_RELATIVE_COARSE_GRAINED_CLOSURE_OPENING_MEMO.md`
 - `218_GATE12B_FIRST_OBSERVER_RELATIVE_COARSE_GRAINED_CLOSURE_SMOKE_MEMO.md`
@@ -21,12 +22,12 @@ This memo proceeds from:
 
 ## 0. Scope
 
-This memo defines the evidence package for the Gate12B paper line.
+This manifest records the compact evidence package boundary for the Gate12B
+paper line.
 
-It does not package or commit generated `runs/` artifacts. It lists the local
-artifact directories, hashes, checksum expectations, and paper-table mappings
-that should be used if an intentional paper evidence package is assembled
-later.
+The archived paper package does not include generated `runs/` artifacts. It
+lists the local artifact directories, hashes, checksum expectations, and
+paper-table mappings used to verify the manuscript tables and evidence chain.
 
 The package purpose is narrow:
 
@@ -43,15 +44,15 @@ Package manifest id:
 gate12b_paper_evidence_package_manifest_v1
 ```
 
-Current packaging status:
+Packaged record status:
 
 ```text
-manifest_only_local_artifacts_not_committed
+release_manifest_with_local_evidence_record_no_runs_payload
 ```
 
-The package should include enough local artifacts to reproduce the paper
-tables and verify the evidence chain, but it should not turn `runs/` into a
-tracked dump.
+This compact release package includes the manuscript, TeX source, this
+release-facing evidence manifest, and package checksums. It intentionally does
+not turn `runs/` into a tracked dump.
 
 Do not include:
 
@@ -82,7 +83,7 @@ Do not include:
 | `motif_gate12b_runs` | Gate12B run directories | 36 | regenerate motif specificity summary and family comparison | 36/36 `checksums.json` present; mismatch count `0` |
 | `source_queue_annotation` | source queue and annotation artifacts | 6 | Table 3 source-facing annotation evidence | 6/6 `checksums.json` present; mismatch count `0` |
 | `archive_core_boundary_runs` | Gate12B archive boundary runs | 24 | support `221` / `222` boundary discussion | 24/24 `checksums.json` present; mismatch count `0` |
-| `upstream_rebuild_inputs` | Gate12A discrete connection and text-surface inputs | local upstream dependency set | optional rebuild provenance | not packaged by this memo |
+| `upstream_rebuild_inputs` | Gate12A discrete connection and text-surface inputs | local upstream dependency set | optional rebuild provenance | not included in this compact release package |
 
 The minimal paper package can start from the first three sets. The
 `archive_core_boundary_runs` set should be included if the paper table or
@@ -303,17 +304,17 @@ Gate12A text-surface rows.
 | Table 5: Caveats | motif specificity summary; Qwen3-4B briefing motif runs; `223` and `227` text |
 | Reparameterization availability table | motif Gate12B run set; archive boundary set; Section 6 of this manifest |
 
-## 11. Packaging Procedure
+## 11. Future Full Evidence Bundle Procedure
 
-When a real package is created later:
+If a future full evidence bundle includes generated run directories:
 
 1. Start from a clean `main`.
 2. Create a dedicated evidence-package branch or external archive, not a
    regular workstream memo branch.
-3. Copy only the directories listed in this memo.
+3. Copy only the directories listed in this manifest.
 4. Preserve each artifact directory's `manifest.json` and `checksums.json`.
 5. Recompute checksums and record mismatches.
-6. Include this memo as the package manifest.
+6. Include this manifest as the package manifest.
 7. Do not add unrelated `runs/` directories.
 8. Do not regenerate model outputs.
 
@@ -339,17 +340,21 @@ It does not claim:
 It also does not introduce new observer modes or new source-facing annotation
 semantics.
 
-## 13. 230 Handoff
+## 13. Source Lineage
 
-`230` should be:
+This file is a release-facing derivative of:
 
 ```text
-230_GATE12B_PAPER_DRAFT_V0.md
+workstream/229_GATE12B_PAPER_EVIDENCE_PACKAGE_MANIFEST.md
 ```
 
-The draft should use this memo as the evidence-package reference. It should not
-open new experiments before first writing the paper in the bounded form
-established by `228`.
+It preserves the evidence mapping from the workstream manifest while removing
+workstream handoff and local-only packaging language. The packaged manuscript
+source is:
+
+```text
+gate12b-observer-relative-closure-signatures.tex
+```
 
 ## 14. Short Sentence
 
