@@ -2,10 +2,15 @@
 
 [![Gate12A frozen technical report DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19483162.svg)](https://doi.org/10.5281/zenodo.19483162)
 [![Transport-first telemetry note DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19569052.svg)](https://doi.org/10.5281/zenodo.19569052)
+[![Gate12B observer-relative closure signatures DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20080003.svg)](https://doi.org/10.5281/zenodo.20080003)
 
 **pale-ale is a public-facing research sandbox for structural approaches to local observation, consistency, and learned systems.**
 
-Its current public checkpoints are LLM-centered. The main report surface is the Gate12A line: a frozen FP32 dense-transformer replay regime used to test one narrow part of a broader structural research program through structural replay evidence and boundary cases.
+Its current public checkpoints are LLM-centered. The Gate12A line is a frozen
+FP32 dense-transformer replay regime used to test one narrow part of a broader
+structural research program through structural replay evidence and boundary
+cases. The Gate12B line adds a bounded source-facing audit over existing replay
+artifact surfaces.
 
 ## Current Citable Releases
 
@@ -13,6 +18,7 @@ Its current public checkpoints are LLM-centered. The main report surface is the 
 | --- | --- | --- | --- |
 | Gate12A frozen technical report | [10.5281/zenodo.19483162](https://doi.org/10.5281/zenodo.19483162) | Main April 2026 frozen FP32 dense-transformer technical report and release bundle. | Cite for the current frozen Gate12A paper/release surface and its selected manifest/checksum bundle. |
 | Transport-first telemetry note | [10.5281/zenodo.19569052](https://doi.org/10.5281/zenodo.19569052) | Mathematical telemetry note associated with the Gate12A line; not a revision of the empirical report. | Cite for the transport-first closure-defect formulation. |
+| Gate12B observer-relative closure signatures | [10.5281/zenodo.20080003](https://doi.org/10.5281/zenodo.20080003) | Bounded source-facing audit of existing Gate12A/Gate12B replay artifacts and manifest-level Gate12B evidence package. | Cite for the Gate12B archive-family closure-signature report and its compact evidence manifest. |
 | Earlier checkpoint / prior release surface | [10.5281/zenodo.19340221](https://doi.org/10.5281/zenodo.19340221) | Earlier replication checkpoint / prior release surface. | Cite only when referring to that earlier checkpoint record or comparing release surfaces. |
 
 ## About
@@ -34,6 +40,7 @@ If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.
 - [`zenodo-release/README.txt`](zenodo-release/README.txt)
 - [`zenodo-release/CHECKSUMS-SHA256.txt`](zenodo-release/CHECKSUMS-SHA256.txt)
 - [`zenodo-release-transport-first-defect-telemetry/README.txt`](zenodo-release-transport-first-defect-telemetry/README.txt)
+- [`zenodo-release-gate12b-observer-relative-closure-signatures/README.txt`](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt)
 - [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
 - [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
 - [`docs/eval_factory_operator_guide.md`](docs/eval_factory_operator_guide.md)
@@ -72,6 +79,7 @@ The repo is being shaped so that this release surface is easy to find and does n
 - [`workstream/`](workstream/README.md): numbered tracked research memory
 - [`zenodo-release/`](zenodo-release/README.txt): frozen Gate12A paper release bundle and checksum surface
 - [`zenodo-release-transport-first-defect-telemetry/`](zenodo-release-transport-first-defect-telemetry/README.txt): formal telemetry-note release bundle
+- [`zenodo-release-gate12b-observer-relative-closure-signatures/`](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt): Gate12B bounded technical report release package
 - `runs/`: local/generated working outputs; not the tracked public evidence surface
 - [`tools/`](tools/): current narrow Python-side runner and audit surface
 - [`src/`](src/) and [`crates/`](crates/): retained implementation and infrastructure

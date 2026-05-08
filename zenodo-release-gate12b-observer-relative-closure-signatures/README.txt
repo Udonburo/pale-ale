@@ -3,7 +3,8 @@ A Bounded Source-Facing Audit of Existing LLM Artifacts
 
 Author: Aoi Kawasaki
 Manuscript date: 2026-05-06
-Package date: 2026-05-07
+Package date: 2026-05-08
+DOI: https://doi.org/10.5281/zenodo.20080003
 
 This record contains the Gate12B bounded technical report and its compact
 source/evidence manifest package.
