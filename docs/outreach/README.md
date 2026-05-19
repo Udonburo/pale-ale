@@ -16,7 +16,15 @@ These documents are deliberately bounded. They should not widen Gate12A or Gate1
 
 - `ltff-eoi-v0.2-300w.md`
 
-  Short LTFF EOI draft. Use this as the compressed version for forms, introductions, or first-pass grant discussion.
+  Short LTFF EOI draft. Retained as the prior compressed version for forms, introductions, or first-pass grant discussion.
+
+- `ltff-eoi-v0.3-300w.md`
+
+  Conservative LTFF EOI draft. Softens the final validation claim while preserving the pre-scalar oversight framing.
+
+- `ltff-proposal-summary-v0.1-800w.md`
+
+  Medium-length LTFF proposal summary for grant discussion. Compresses the longer LTFF memo into the ask, problem, approach, bounded evidence, validation plan, safety relevance, and support requested.
 
 ## Positioning split
 
