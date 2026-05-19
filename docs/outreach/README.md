@@ -43,18 +43,29 @@ LTFF memo:
 
 ## Claim boundaries
 
-Do not add:
+These outreach documents are first-contact materials. They should keep the
+claim surface narrow, practical, and externally legible.
 
-- holonomy-heavy framing;
-- gauge theory;
-- physics analogies;
-- topos / C* / GNS / twistor / Atiyah-Singer / AdS-CFT;
-- deception-detector language;
-- semantic-inconsistency-detector language;
-- benchmark or correctness-classifier language;
-- model-weight causal claims.
+They should describe pale-ale as:
 
-The longer theoretical roadmap belongs in separate technical notes or internal planning material, not first-contact outreach memos.
+- structural telemetry for LLM and agent evaluation artifacts;
+- pre-scalar oversight infrastructure for agentic AI artifact chains;
+- a way to produce reproducible shortlists of artifacts or trace rows for
+  human-review prioritization;
+- bounded artifact-level evidence with a validation and scaling plan.
+
+They should not describe pale-ale as:
+
+- a benchmark;
+- a correctness classifier;
+- a model-quality ranking system;
+- a deception detector;
+- a semantic-inconsistency detector;
+- a mechanistic claim about model weights.
+
+More speculative mathematical or physical research directions belong in
+separate technical notes or internal planning material, not first-contact
+outreach memos.
 
 Validation language should remain modest:
 
