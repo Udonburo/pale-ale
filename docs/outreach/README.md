@@ -46,13 +46,18 @@ LTFF memo:
 These outreach documents are first-contact materials. They should keep the
 claim surface narrow, practical, and externally legible.
 
-They should describe pale-ale as:
+Allowed descriptions include:
 
 - structural telemetry for LLM and agent evaluation artifacts;
-- pre-scalar oversight infrastructure for agentic AI artifact chains;
 - a way to produce reproducible shortlists of artifacts or trace rows for
   human-review prioritization;
 - bounded artifact-level evidence with a validation and scaling plan.
+
+LTFF-specific descriptions may also use:
+
+- pre-scalar oversight infrastructure for agentic AI artifact chains;
+- scalable oversight;
+- safety-case evidence.
 
 They should not describe pale-ale as:
 

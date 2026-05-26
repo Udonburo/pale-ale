@@ -1,0 +1,204 @@
+{
+  "demo": "pale-ale Trace Triage",
+  "kind": "synthetic_policy_rag_evaluation_trace",
+  "purpose": "First-contact demo concept for long LLM and agent evaluation trace human-review prioritization.",
+  "core_message": "Scalar-only evaluation says pass. pale-ale shows the 3 trace rows a human should inspect first.",
+  "plain_language_boundary": "pale-ale does not decide correctness. It tells a reviewer where to look first.",
+  "scalar_only_evaluation": {
+    "final_answer": "Acceptable",
+    "llm_as_judge": "Pass",
+    "similarity_check": "Pass",
+    "hidden_issue": "where the source constraint changed inside the trace"
+  },
+  "trace_triage_output": {
+    "review_recommended": true,
+    "shortlisted_row_count": 3,
+    "output_type": "review targets, not a model score",
+    "inspect_first": [
+      {
+        "row_id": "03",
+        "reason": "retrieved context omitted exclusion"
+      },
+      {
+        "row_id": "04",
+        "reason": "requirement broadened"
+      },
+      {
+        "row_id": "06",
+        "reason": "final answer conflicts with source"
+      }
+    ]
+  },
+  "trace_rows": [
+    {
+      "row_id": "01",
+      "stage": "Prompt",
+      "text": "Contractor asks whether they can expense a monitor.",
+      "review_signal": null,
+      "shortlisted": false
+    },
+    {
+      "row_id": "02",
+      "stage": "Source policy",
+      "text": "Company-issued equipment only; manager pre-approval required; personal devices excluded.",
+      "source_constraints": [
+        "company-issued equipment only",
+        "manager pre-approval required",
+        "personal devices excluded"
+      ],
+      "review_signal": "source constraints captured",
+      "shortlisted": false
+    },
+    {
+      "row_id": "03",
+      "stage": "Retrieved context",
+      "text": "Company-issued equipment may be expensed with manager pre-approval.",
+      "preserved_constraints": [
+        "company-issued equipment",
+        "manager pre-approval"
+      ],
+      "omitted_constraints": [
+        "personal-device exclusion"
+      ],
+      "review_signal": "source coverage weakened",
+      "shortlisted": true
+    },
+    {
+      "row_id": "04",
+      "stage": "Intermediate judgment",
+      "text": "A monitor purchase with a receipt can be treated as sufficient reimbursement documentation.",
+      "review_signal": "requirement broadened",
+      "shortlisted": true
+    },
+    {
+      "row_id": "05",
+      "stage": "Draft answer",
+      "text": "You can buy a personal monitor and expense it after purchase if you keep the receipt.",
+      "review_signal": "source-linked conflict",
+      "shortlisted": false
+    },
+    {
+      "row_id": "06",
+      "stage": "Final answer",
+      "text": "Yes. For a personal monitor, submit the receipt after purchase; the receipt is enough.",
+      "review_signal": "source-linked conflict",
+      "shortlisted": true
+    },
+    {
+      "row_id": "07",
+      "stage": "Evaluator note",
+      "text": "Scalar-only checks pass, but source constraints were not preserved.",
+      "review_signal": "review context",
+      "shortlisted": false
+    }
+  ],
+  "reviewer_shortlist_cards": [
+    {
+      "row_id": "03",
+      "title": "Source coverage weakened",
+      "why_shortlisted": "Retrieved context omitted a constraint that mattered.",
+      "reviewer_question": "Did retrieval drop the personal-device exclusion?"
+    },
+    {
+      "row_id": "04",
+      "title": "Requirement broadened",
+      "why_shortlisted": "The trace changed \"manager pre-approval required\" into \"receipt may be enough.\"",
+      "reviewer_question": "Where did the policy condition change?"
+    },
+    {
+      "row_id": "06",
+      "title": "Source-linked conflict",
+      "why_shortlisted": "The final answer permits a personal monitor while the source excludes personally selected devices.",
+      "reviewer_question": "Should the answer be revised or require a policy citation?"
+    }
+  ],
+  "evidence_comparison": [
+    {
+      "card": "Source policy",
+      "text": "Company-issued equipment only; manager pre-approval required; personal devices excluded.",
+      "highlighted_spans": [
+        "manager pre-approval required",
+        "company-issued equipment only",
+        "personal devices excluded"
+      ]
+    },
+    {
+      "card": "Retrieved context",
+      "text": "Company-issued equipment may be expensed with manager pre-approval.",
+      "highlighted_spans": [
+        "manager pre-approval",
+        "company-issued equipment",
+        "personal-device exclusion missing"
+      ]
+    },
+    {
+      "card": "Final answer",
+      "text": "You can expense a personal monitor after purchase if you keep the receipt; the receipt is enough.",
+      "highlighted_spans": [
+        "personal monitor",
+        "after purchase",
+        "receipt is enough"
+      ]
+    }
+  ],
+  "same_review_budget_comparison": {
+    "prompt": "If a reviewer can inspect only 3 rows:",
+    "label": "Synthetic illustrative example, not a benchmark result.",
+    "review_relevant_definition": "For this synthetic comparison only, review-relevant means one of the first-inspect target rows named in the storyboard: rows 03, 04, and 06. Row 05 is supporting context for row 06, but it is not counted as a first-inspect target here.",
+    "rows": [
+      {
+        "method": "Random baseline",
+        "selection_rule": "Fixed illustrative draw for the synthetic example.",
+        "selected_row_ids": [
+          "01",
+          "03",
+          "07"
+        ],
+        "rows_inspected": 3,
+        "review_relevant_rows_found": 1,
+        "review_relevant_row_ids_found": [
+          "03"
+        ]
+      },
+      {
+        "method": "Final-output heuristic",
+        "selection_rule": "Inspect the draft answer, final answer, and scalar evaluator note.",
+        "selected_row_ids": [
+          "05",
+          "06",
+          "07"
+        ],
+        "rows_inspected": 3,
+        "review_relevant_rows_found": 1,
+        "review_relevant_row_ids_found": [
+          "06"
+        ]
+      },
+      {
+        "method": "pale-ale shortlist",
+        "selection_rule": "Inspect the three rows shortlisted for first human review.",
+        "selected_row_ids": [
+          "03",
+          "04",
+          "06"
+        ],
+        "rows_inspected": 3,
+        "review_relevant_rows_found": 3,
+        "review_relevant_row_ids_found": [
+          "03",
+          "04",
+          "06"
+        ]
+      }
+    ]
+  },
+  "claim_boundaries": [
+    "This demo shows review triage, not model scoring.",
+    "Not a benchmark",
+    "Not a correctness classifier",
+    "Not a model-quality score",
+    "Not a detector of deception",
+    "Not a claim about model internals",
+    "Synthetic illustrative example; bounded evidence linked separately"
+  ]
+}
