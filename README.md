@@ -1,8 +1,8 @@
 # pale-ale
 
-[![Gate12A frozen technical report DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19483162.svg)](https://doi.org/10.5281/zenodo.19483162)
-[![Transport-first telemetry note DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19569052.svg)](https://doi.org/10.5281/zenodo.19569052)
-[![Gate12B observer-relative closure signatures DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20080003.svg)](https://doi.org/10.5281/zenodo.20080003)
+[![Gate12A DOI](https://img.shields.io/badge/Gate12A%20DOI-10.5281%2Fzenodo.19483162-blue)](https://doi.org/10.5281/zenodo.19483162)
+[![Telemetry note DOI](https://img.shields.io/badge/Telemetry%20note%20DOI-10.5281%2Fzenodo.19569052-blue)](https://doi.org/10.5281/zenodo.19569052)
+[![Gate12B DOI](https://img.shields.io/badge/Gate12B%20DOI-10.5281%2Fzenodo.20080003-blue)](https://doi.org/10.5281/zenodo.20080003)
 
 **pale-ale is a public-facing research sandbox for structural approaches to local observation, consistency, and learned systems.**
 
