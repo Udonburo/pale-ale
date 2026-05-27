@@ -13,7 +13,9 @@ grant reviewer who needs to understand the practical output in about 30 seconds:
 
 ## Live Demo
 
-Public deployment is not configured yet.
+Live demo:
+
+https://pale-ale-trace-triage.vercel.app/
 
 Local development URL, when the dev server is running:
 
@@ -67,12 +69,18 @@ The production bundle is written to `apps/trace-triage-demo/dist/`, which is ign
 
 ## Deployment Notes
 
+The app is deployed on Vercel at:
+
+https://pale-ale-trace-triage.vercel.app/
+
 The app is static after build. Suitable deployment targets include Vercel,
 Netlify, or GitHub Pages.
 
 Suggested settings:
 
+- project name: `pale-ale-trace-triage`
 - root directory: `apps/trace-triage-demo`
+- install command: `npm ci`
 - build command: `npm run build`
 - output directory: `dist`
 

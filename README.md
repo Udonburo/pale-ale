@@ -17,13 +17,14 @@ artifact surfaces.
 If you are evaluating whether pale-ale could be useful for LLM, agent,
 red-team, or evaluation-trace workflows, start here:
 
-- [Open the Trace Triage demo notes](apps/trace-triage-demo/README.md)
+- [Open the live Trace Triage demo](https://pale-ale-trace-triage.vercel.app/)
+  ([source](apps/trace-triage-demo/README.md))
 
   Static one-glance Trace Triage demo. It shows a synthetic policy/RAG/evaluation
   trace where scalar-only checks pass while pale-ale-style triage shortlists the
   trace rows a human should inspect first.
 
-  <a href="apps/trace-triage-demo/README.md">
+  <a href="https://pale-ale-trace-triage.vercel.app/">
     <img src="apps/trace-triage-demo/screenshots/trace-triage-demo-hero-chrome.png" width="520" alt="Trace Triage demo first screen">
   </a>
 
@@ -83,6 +84,7 @@ If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.
 
 ### The first-contact trace triage demo
 
+- [Live Trace Triage demo](https://pale-ale-trace-triage.vercel.app/)
 - [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md)
 - [`docs/demo/trace-triage/`](docs/demo/trace-triage/README.md)
 

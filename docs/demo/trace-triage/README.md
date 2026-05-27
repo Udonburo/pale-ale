@@ -13,7 +13,11 @@ pale-ale does not decide correctness. It tells a reviewer where to look first.
 
 ## Rendered demo
 
-The static UI lives in [`../../../apps/trace-triage-demo/`](../../../apps/trace-triage-demo/README.md).
+Live rendered demo:
+
+https://pale-ale-trace-triage.vercel.app/
+
+The static UI source lives in [`../../../apps/trace-triage-demo/`](../../../apps/trace-triage-demo/README.md).
 
 That app renders this directory's storyboard and synthetic trace fixture as a
 one-glance external-review demo for evaluation, red-team, agent-monitoring, AI
