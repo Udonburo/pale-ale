@@ -76,7 +76,7 @@ https://pale-ale-trace-triage.vercel.app/
 The app is static after build. Suitable deployment targets include Vercel,
 Netlify, or GitHub Pages.
 
-Suggested settings:
+Current Vercel settings:
 
 - project name: `pale-ale-trace-triage`
 - root directory: `apps/trace-triage-demo`
