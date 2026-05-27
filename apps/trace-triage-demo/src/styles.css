@@ -513,6 +513,10 @@ summary strong {
   background: #ffffff;
 }
 
+.appendix-content > * {
+  min-width: 0;
+}
+
 .appendix-content ul {
   margin: 0;
   padding-left: 1.15rem;
@@ -524,6 +528,7 @@ summary strong {
 }
 
 pre {
+  max-width: 100%;
   max-height: 520px;
   overflow: auto;
   margin: 0;
