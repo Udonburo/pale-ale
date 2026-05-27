@@ -11,6 +11,14 @@ Core message:
 
 pale-ale does not decide correctness. It tells a reviewer where to look first.
 
+## Rendered demo
+
+The static UI lives in [`../../../apps/trace-triage-demo/`](../../../apps/trace-triage-demo/README.md).
+
+That app renders this directory's storyboard and synthetic trace fixture as a
+one-glance external-review demo for evaluation, red-team, agent-monitoring, AI
+safety, grant, and pilot-collaboration contexts.
+
 ## Files
 
 - `storyboard.md`: seven-section first-contact storyboard for the demo.
@@ -21,7 +29,7 @@ pale-ale does not decide correctness. It tells a reviewer where to look first.
 
 RANVIER remains a document-grounded constraint audit sidecar.
 
-pale-ale Trace Triage is a separate demo concept for human-review prioritization over long LLM, agent, RAG, or evaluation traces. Its output is a shortlist of review targets, not a benchmark result, model-quality score, or correctness classifier.
+pale-ale Trace Triage is a separate demo concept for human-review prioritization over long LLM, agent, RAG, or evaluation traces. Its output is a shortlist of rows for human review, not a benchmark result, model-quality score, or correctness classifier.
 
 ## Intended audience
 

@@ -12,6 +12,24 @@ structural research program through structural replay evidence and boundary
 cases. The Gate12B line adds a bounded source-facing audit over existing replay
 artifact surfaces.
 
+## First-Contact Demo
+
+If you are evaluating whether pale-ale could be useful for LLM, agent,
+red-team, or evaluation-trace workflows, start here:
+
+- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md)
+
+  Static one-glance Trace Triage demo. It shows a synthetic policy/RAG/evaluation
+  trace where scalar-only checks pass while pale-ale-style triage shortlists the
+  trace rows a human should inspect first.
+
+  ![Trace Triage demo first screen](apps/trace-triage-demo/screenshots/trace-triage-demo-hero-chrome.png)
+
+The demo is intentionally bounded. It is not a benchmark, correctness
+classifier, model-quality score, deception detector, or claim about model
+internals. Its purpose is to make the human-review output surface legible before
+grant, collaboration, or external validation conversations.
+
 ## Current Citable Releases
 
 | Surface | DOI | Role | When to cite |
@@ -61,6 +79,11 @@ If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.
 
 - [`workstream/README.md`](workstream/README.md)
 
+### The first-contact trace triage demo
+
+- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md)
+- [`docs/demo/trace-triage/`](docs/demo/trace-triage/README.md)
+
 ## Current Release Shape
 
 The intended frozen release surface for the Gate12A report is:
@@ -81,6 +104,7 @@ The repo is being shaped so that this release surface is easy to find and does n
 - [`zenodo-release-transport-first-defect-telemetry/`](zenodo-release-transport-first-defect-telemetry/README.txt): formal telemetry-note release bundle
 - [`zenodo-release-gate12b-observer-relative-closure-signatures/`](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt): Gate12B bounded technical report release package
 - `runs/`: local/generated working outputs; not the tracked public evidence surface
+- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md): static first-contact Trace Triage demo
 - [`tools/`](tools/): current narrow Python-side runner and audit surface
 - [`src/`](src/) and [`crates/`](crates/): retained implementation and infrastructure
 - [`docs/`](docs/) and [`specs/`](specs/): longer-form design and specification material

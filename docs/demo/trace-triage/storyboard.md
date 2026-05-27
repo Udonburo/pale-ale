@@ -23,7 +23,7 @@ Purpose: show the failure mode and the triage output in the first screen, before
 
 - Review recommended
 - 3 rows shortlisted
-- Output: review targets, not a model score
+- Output: rows for human review, not a model score
 - Inspect first:
   - Row 03 - retrieved context omitted exclusion
   - Row 04 - requirement broadened
@@ -48,7 +48,7 @@ Screen copy:
 Timeline behavior:
 
 - Keep all 7 rows visible.
-- Mark rows 03, 04, and 06 as the first review targets.
+- Mark rows 03, 04, and 06 as the first-inspect rows.
 - Let the reviewer open row 05 from the row 06 card as supporting context, without making it part of the first 3-row shortlist.
 
 ## 3. Reviewer shortlist cards
@@ -85,7 +85,7 @@ Use three compact cards so the reviewer can compare the source, retrieved contex
 
 Company-issued equipment only; manager pre-approval required; personal devices excluded.
 
-Highlighted spans:
+Highlighted text:
 
 - `manager pre-approval required`
 - `company-issued equipment only`
@@ -95,7 +95,7 @@ Highlighted spans:
 
 Company-issued equipment may be expensed with manager pre-approval.
 
-Highlighted spans:
+Highlighted text:
 
 - `manager pre-approval`
 - `company-issued equipment`
@@ -105,7 +105,7 @@ Highlighted spans:
 
 You can expense a personal monitor after purchase if you keep the receipt; the receipt is enough.
 
-Highlighted spans:
+Highlighted text:
 
 - `personal monitor`
 - `after purchase`
@@ -115,15 +115,15 @@ Highlighted spans:
 
 If a reviewer can inspect only 3 rows:
 
-For this synthetic comparison only, "review-relevant" means one of the first-inspect target rows named in this storyboard: rows 03, 04, and 06. Row 05 remains supporting context for row 06, but it is not counted as a first-inspect target here.
+For this synthetic comparison only, the counted metric is first-inspect targets included. The first-inspect targets named in this storyboard are rows 03, 04, and 06. Row 05 remains supporting context for row 06, but it is not counted as a first-inspect target here.
 
 Fixed illustrative selections:
 
-| Review method | Fixed rows inspected | Review-relevant rows found |
+| Review method | Fixed rows inspected | First-inspect targets included |
 | --- | --- | ---: |
-| Random baseline | 01, 03, 07 | 1 relevant row |
-| Final-output heuristic | 05, 06, 07 | 1 relevant row |
-| pale-ale shortlist | 03, 04, 06 | 3 review-relevant rows |
+| Random baseline | 01, 03, 07 | 1 target |
+| Final-output heuristic | 05, 06, 07 | 1 target |
+| pale-ale shortlist | 03, 04, 06 | 3 targets |
 
 Label:
 
@@ -143,11 +143,11 @@ Demo output:
 - A review recommendation.
 - Three shortlisted trace rows.
 - Reviewer questions tied to those rows.
-- Evidence spans linked to source, retrieved context, and final answer.
+- Evidence text linked to source, retrieved context, and final answer.
 
 Output boundary:
 
-- The output is a set of review targets, not a model score.
+- The output is a shortlist of rows for human review, not a model score.
 - The example supports a first-contact explanation of trace triage.
 - The demo does not ask the viewer to trust a hidden classifier; it asks the viewer to inspect the linked rows.
 
@@ -158,6 +158,6 @@ This demo shows review triage, not model scoring.
 - Not a benchmark
 - Not a correctness classifier
 - Not a model-quality score
-- Not a detector of deception
+- Not a deception detector
 - Not a claim about model internals
 - Synthetic illustrative example; bounded evidence linked separately

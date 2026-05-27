@@ -13,7 +13,7 @@
   "trace_triage_output": {
     "review_recommended": true,
     "shortlisted_row_count": 3,
-    "output_type": "review targets, not a model score",
+    "output_type": "rows for human review, not a model score",
     "inspect_first": [
       {
         "row_id": "03",
@@ -116,7 +116,7 @@
     {
       "card": "Source policy",
       "text": "Company-issued equipment only; manager pre-approval required; personal devices excluded.",
-      "highlighted_spans": [
+      "highlighted_text": [
         "manager pre-approval required",
         "company-issued equipment only",
         "personal devices excluded"
@@ -125,7 +125,7 @@
     {
       "card": "Retrieved context",
       "text": "Company-issued equipment may be expensed with manager pre-approval.",
-      "highlighted_spans": [
+      "highlighted_text": [
         "manager pre-approval",
         "company-issued equipment",
         "personal-device exclusion missing"
@@ -134,7 +134,7 @@
     {
       "card": "Final answer",
       "text": "You can expense a personal monitor after purchase if you keep the receipt; the receipt is enough.",
-      "highlighted_spans": [
+      "highlighted_text": [
         "personal monitor",
         "after purchase",
         "receipt is enough"
@@ -144,7 +144,8 @@
   "same_review_budget_comparison": {
     "prompt": "If a reviewer can inspect only 3 rows:",
     "label": "Synthetic illustrative example, not a benchmark result.",
-    "review_relevant_definition": "For this synthetic comparison only, review-relevant means one of the first-inspect target rows named in the storyboard: rows 03, 04, and 06. Row 05 is supporting context for row 06, but it is not counted as a first-inspect target here.",
+    "metric": "first-inspect targets included",
+    "metric_definition": "For this synthetic comparison only, the counted metric is first-inspect targets included. The first-inspect targets named in the storyboard are rows 03, 04, and 06. Row 05 is supporting context for row 06, but it is not counted as a first-inspect target here.",
     "rows": [
       {
         "method": "Random baseline",
@@ -155,8 +156,8 @@
           "07"
         ],
         "rows_inspected": 3,
-        "review_relevant_rows_found": 1,
-        "review_relevant_row_ids_found": [
+        "first_inspect_targets_included": 1,
+        "first_inspect_target_row_ids_included": [
           "03"
         ]
       },
@@ -169,8 +170,8 @@
           "07"
         ],
         "rows_inspected": 3,
-        "review_relevant_rows_found": 1,
-        "review_relevant_row_ids_found": [
+        "first_inspect_targets_included": 1,
+        "first_inspect_target_row_ids_included": [
           "06"
         ]
       },
@@ -183,8 +184,8 @@
           "06"
         ],
         "rows_inspected": 3,
-        "review_relevant_rows_found": 3,
-        "review_relevant_row_ids_found": [
+        "first_inspect_targets_included": 3,
+        "first_inspect_target_row_ids_included": [
           "03",
           "04",
           "06"
@@ -197,7 +198,7 @@
     "Not a benchmark",
     "Not a correctness classifier",
     "Not a model-quality score",
-    "Not a detector of deception",
+    "Not a deception detector",
     "Not a claim about model internals",
     "Synthetic illustrative example; bounded evidence linked separately"
   ]
