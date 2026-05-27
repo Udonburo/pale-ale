@@ -17,18 +17,20 @@ artifact surfaces.
 If you are evaluating whether pale-ale could be useful for LLM, agent,
 red-team, or evaluation-trace workflows, start here:
 
-- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md)
+- [Open the Trace Triage demo notes](apps/trace-triage-demo/README.md)
 
   Static one-glance Trace Triage demo. It shows a synthetic policy/RAG/evaluation
   trace where scalar-only checks pass while pale-ale-style triage shortlists the
   trace rows a human should inspect first.
 
-  ![Trace Triage demo first screen](apps/trace-triage-demo/screenshots/trace-triage-demo-hero-chrome.png)
+  <a href="apps/trace-triage-demo/README.md">
+    <img src="apps/trace-triage-demo/screenshots/trace-triage-demo-hero-chrome.png" width="520" alt="Trace Triage demo first screen">
+  </a>
 
 The demo is intentionally bounded. It is not a benchmark, correctness
 classifier, model-quality score, deception detector, or claim about model
-internals. Its purpose is to make the human-review output surface legible before
-grant, collaboration, or external validation conversations.
+internals. It is a first-contact demo, not a replacement for the bounded
+Gate12A/Gate12B reports.
 
 ## Current Citable Releases
 
