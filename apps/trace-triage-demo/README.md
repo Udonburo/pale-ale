@@ -29,8 +29,8 @@ checks pass, but a source constraint changes inside the trace.
 The pale-ale-facing output is a shortlist of rows for human review:
 
 - Row 03: retrieved context omitted an exclusion.
-- Row 04: a requirement was broadened.
-- Row 06: the final answer conflicts with the source.
+- Row 04: pre-approval requirement was broadened.
+- Row 06: the final answer needs a source check.
 
 This is a triage surface. It tells a reviewer where to inspect first.
 
