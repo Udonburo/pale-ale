@@ -8,7 +8,7 @@
     "final_answer": "Acceptable",
     "llm_as_judge": "Pass",
     "similarity_check": "Pass",
-    "hidden_issue": "where the source constraint changed inside the trace"
+    "hidden_issue": "the row where the policy constraint changed"
   },
   "trace_triage_output": {
     "review_recommended": true,

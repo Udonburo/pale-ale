@@ -83,6 +83,7 @@ const artifactRelations = [
 
 const links = [
   ["GitHub repository", "https://github.com/Udonburo/pale-ale"],
+  ["Common validation memo", "https://github.com/Udonburo/pale-ale/blob/main/docs/outreach/common-memo-v0.4.2-validation.md"],
   ["Gate12A frozen technical report", "https://doi.org/10.5281/zenodo.19483162"],
   ["Transport-first telemetry note", "https://doi.org/10.5281/zenodo.19569052"],
   ["Gate12B observer-relative closure signatures", "https://doi.org/10.5281/zenodo.20080003"]
@@ -111,9 +112,16 @@ function App() {
     setActiveShortlistId(rowId);
   };
 
+  const inspectHeroRow = (rowId: string) => {
+    selectShortlist(rowId);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`trace-row-${rowId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   return (
     <main>
-      <HeroComparison />
+      <HeroComparison onInspectRow={inspectHeroRow} />
       <TraceTimeline selectedRow={selectedRow} selectedRowId={selectedRowId} onSelectRow={selectRow} />
       <ReviewerShortlist activeShortlistId={activeShortlistId} onSelectShortlist={selectShortlist} />
       <EvidenceComparison focusText={evidenceFocusText} />
@@ -124,7 +132,7 @@ function App() {
   );
 }
 
-function HeroComparison() {
+function HeroComparison({ onInspectRow }: { onInspectRow: (rowId: string) => void }) {
   return (
     <section className="hero-section" aria-labelledby="hero-title">
       <div className="hero-copy">
@@ -147,7 +155,7 @@ function HeroComparison() {
             ]}
             tone="pass"
           />
-          <p className="hidden-note">But hidden in the trace: {data.scalar_only_evaluation.hidden_issue}</p>
+          <p className="hidden-note">Hidden: {data.scalar_only_evaluation.hidden_issue}.</p>
         </article>
 
         <article className="comparison-card triage-card">
@@ -155,13 +163,16 @@ function HeroComparison() {
             <p className="card-kicker">pale-ale Trace Triage</p>
             <h2>Inspect these rows first</h2>
           </div>
-          <p className="shortlist-count">{data.trace_triage_output.shortlisted_row_count} rows shortlisted</p>
-          <p className="output-type">Output: {data.trace_triage_output.output_type}</p>
+          <p className="shortlist-count">{data.trace_triage_output.shortlisted_row_count} review targets</p>
+          <p className="output-type">Rows for human review, not a model score.</p>
+          <p className="verdict-note">Review targets, not verdicts.</p>
           <ol className="inspect-list">
             {data.trace_triage_output.inspect_first.map((item) => (
               <li key={item.row_id}>
-                <span>Row {item.row_id}</span>
-                {item.reason}
+                <button className="inspect-row-button" onClick={() => onInspectRow(item.row_id)} type="button">
+                  <span>Row {item.row_id}</span>
+                  {item.reason}
+                </button>
               </li>
             ))}
           </ol>
@@ -207,6 +218,7 @@ function TraceTimeline({
               className={`timeline-row ${row.shortlisted ? "shortlisted" : ""} ${
                 selectedRowId === row.row_id ? "selected" : ""
               }`}
+              id={`trace-row-${row.row_id}`}
               key={row.row_id}
               onClick={() => onSelectRow(row.row_id)}
               type="button"
@@ -216,7 +228,10 @@ function TraceTimeline({
                 <strong>{row.stage}</strong>
                 <span>{row.text}</span>
               </span>
-              <span className="row-signal">{row.review_signal ?? "No review signal"}</span>
+              <span className="row-signal-group">
+                {row.shortlisted && <span className="review-target-badge">Review target</span>}
+                <span className="row-signal">{row.review_signal ?? "No review signal"}</span>
+              </span>
             </button>
           ))}
         </div>
@@ -231,7 +246,7 @@ function TraceTimeline({
               <dd>{selectedRow.review_signal ?? "None shown"}</dd>
             </div>
             <div>
-              <dt>Shortlisted</dt>
+              <dt>Review target</dt>
               <dd>{selectedRow.shortlisted ? "Yes, inspect early" : "No, supporting context"}</dd>
             </div>
           </dl>
@@ -327,6 +342,7 @@ function ReviewBudgetComparison() {
         title={data.same_review_budget_comparison.prompt}
         body={budgetMetricSummary}
       />
+      <p className="benchmark-label">{data.same_review_budget_comparison.label}</p>
       <div className="budget-grid">
         {data.same_review_budget_comparison.rows.map((row) => (
           <article className={row.method === "pale-ale shortlist" ? "budget-card best" : "budget-card"} key={row.method}>
@@ -342,7 +358,6 @@ function ReviewBudgetComparison() {
           </article>
         ))}
       </div>
-      <p className="benchmark-label">{data.same_review_budget_comparison.label}</p>
     </section>
   );
 }

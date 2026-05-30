@@ -17,13 +17,14 @@ Purpose: show the failure mode and the triage output in the first screen, before
 - Final answer: Acceptable
 - LLM-as-judge: Pass
 - Similarity check: Pass
-- Hidden: where the source constraint changed inside the trace
+- Hidden: the row where the policy constraint changed
 
 ### Right: pale-ale Trace Triage
 
 - Review recommended
-- 3 rows shortlisted
-- Output: rows for human review, not a model score
+- 3 review targets
+- Rows for human review, not a model score
+- Review targets, not verdicts
 - Inspect first:
   - Row 03 - retrieved context omitted exclusion
   - Row 04 - requirement broadened
