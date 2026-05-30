@@ -8,7 +8,7 @@
     "final_answer": "Acceptable",
     "llm_as_judge": "Pass",
     "similarity_check": "Pass",
-    "hidden_issue": "the row where the policy constraint changed"
+    "hidden_issue": "which row changed the policy constraint"
   },
   "trace_triage_output": {
     "review_recommended": true,
@@ -21,11 +21,11 @@
       },
       {
         "row_id": "04",
-        "reason": "requirement broadened"
+        "reason": "pre-approval requirement broadened"
       },
       {
         "row_id": "06",
-        "reason": "final answer conflicts with source"
+        "reason": "final answer needs source check"
       }
     ]
   },
@@ -67,7 +67,7 @@
       "row_id": "04",
       "stage": "Intermediate judgment",
       "text": "A monitor purchase with a receipt can be treated as sufficient reimbursement documentation.",
-      "review_signal": "requirement broadened",
+      "review_signal": "pre-approval requirement broadened",
       "shortlisted": true
     },
     {
@@ -101,7 +101,7 @@
     },
     {
       "row_id": "04",
-      "title": "Requirement broadened",
+      "title": "Pre-approval requirement broadened",
       "why_shortlisted": "The trace changed \"manager pre-approval required\" into \"receipt may be enough.\"",
       "reviewer_question": "Where did the policy condition change?"
     },

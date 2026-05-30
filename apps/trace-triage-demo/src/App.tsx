@@ -83,6 +83,7 @@ const artifactRelations = [
 
 const links = [
   ["GitHub repository", "https://github.com/Udonburo/pale-ale"],
+  ["Fixture JSON source", "https://github.com/Udonburo/pale-ale/blob/main/docs/demo/trace-triage/synthetic-trace.json"],
   ["Common validation memo", "https://github.com/Udonburo/pale-ale/blob/main/docs/outreach/common-memo-v0.4.2-validation.md"],
   ["Gate12A frozen technical report", "https://doi.org/10.5281/zenodo.19483162"],
   ["Transport-first telemetry note", "https://doi.org/10.5281/zenodo.19569052"],
@@ -426,6 +427,15 @@ function TechnicalAppendix() {
                     {label}
                   </a>
                 </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3>Claim boundaries</h3>
+            <ul className="link-list">
+              {data.claim_boundaries.map((claim) => (
+                <li key={claim}>{claim}</li>
               ))}
             </ul>
           </div>

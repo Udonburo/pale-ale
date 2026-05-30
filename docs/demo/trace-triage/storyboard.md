@@ -17,7 +17,7 @@ Purpose: show the failure mode and the triage output in the first screen, before
 - Final answer: Acceptable
 - LLM-as-judge: Pass
 - Similarity check: Pass
-- Hidden: the row where the policy constraint changed
+- Hidden: which row changed the policy constraint
 
 ### Right: pale-ale Trace Triage
 
@@ -27,8 +27,8 @@ Purpose: show the failure mode and the triage output in the first screen, before
 - Review targets, not verdicts
 - Inspect first:
   - Row 03 - retrieved context omitted exclusion
-  - Row 04 - requirement broadened
-  - Row 06 - final answer conflicts with source
+  - Row 04 - pre-approval requirement broadened
+  - Row 06 - final answer needs source check
 
 Screen copy:
 
@@ -45,7 +45,7 @@ Hero boundary:
 | 01 | Prompt | Contractor asks whether they can expense a monitor. | None shown. |
 | 02 | Source policy | Company-issued equipment only; manager pre-approval required; personal devices excluded. | Source constraints captured. |
 | 03 | Retrieved context | Preserves company-issued equipment and manager pre-approval, but omits personal-device exclusion. | Source coverage weakened. |
-| 04 | Intermediate judgment | Treats receipt as sufficient. | Requirement broadened. |
+| 04 | Intermediate judgment | Treats receipt as sufficient. | Pre-approval requirement broadened. |
 | 05 | Draft answer | Allows personal monitor after purchase. | Source-linked conflict. |
 | 06 | Final answer | Says receipt is enough. | Source-linked conflict. |
 | 07 | Evaluator note | Scalar-only checks pass, but source constraints were not preserved. | Review context. |
@@ -66,7 +66,7 @@ Retrieved context omitted a constraint that mattered.
 Reviewer question:
 Did retrieval drop the personal-device exclusion?
 
-### Row 04 - Requirement broadened
+### Row 04 - Pre-approval requirement broadened
 
 Why shortlisted:
 The trace changed "manager pre-approval required" into "receipt may be enough."
