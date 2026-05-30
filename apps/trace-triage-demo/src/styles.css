@@ -81,6 +81,10 @@ h1 {
   overflow-wrap: break-word;
 }
 
+.mobile-title {
+  display: none;
+}
+
 h2 {
   margin-bottom: 0.45rem;
   color: #101820;
@@ -97,11 +101,22 @@ h3 {
   letter-spacing: 0;
 }
 
-.hero-copy > p:last-child,
+.hero-subcopy,
 .section-heading > p:last-child {
   max-width: 780px;
   color: #3f4a54;
   font-size: 0.98rem;
+}
+
+.hero-boundary {
+  display: inline-block;
+  margin-left: 0.35rem;
+  border-left: 3px solid #a66622;
+  padding: 0.16rem 0.45rem;
+  background: #fff5e8;
+  color: #5b3a17;
+  font-size: 0.9em;
+  font-weight: 750;
 }
 
 .hero-grid {
@@ -610,17 +625,30 @@ pre {
   }
 
   h1 {
-    font-size: clamp(1.75rem, 7.4vw, 2rem);
+    font-size: clamp(1.65rem, 7vw, 1.9rem);
     line-height: 1.06;
+  }
+
+  .desktop-title {
+    display: none;
+  }
+
+  .mobile-title {
+    display: inline;
   }
 
   h2 {
     font-size: 1.25rem;
   }
 
-  .hero-copy > p:last-child,
+  .hero-subcopy,
   .section-heading > p:last-child {
     font-size: 0.94rem;
+  }
+
+  .hero-boundary {
+    margin: 0.35rem 0 0;
+    font-size: 0.86rem;
   }
 
   .comparison-card {

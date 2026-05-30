@@ -34,6 +34,10 @@ Screen copy:
 
 > Scalar-only evaluation says pass. pale-ale shows the 3 trace rows a human should inspect first.
 
+Hero boundary:
+
+> Synthetic illustrative demo. Not a benchmark result.
+
 ## 2. Trace timeline
 
 | Row | Stage | Trace content | Review signal |
@@ -138,6 +142,7 @@ Demo input:
 - Source constraints attached to the policy row.
 - Row-level review signals for source coverage, requirement broadening, and source-linked conflict.
 - A scalar-only evaluator note that still records pass-like outcomes.
+- The static fixture can be adapted to another ordered evaluation trace if it supplies rows, shortlist entries, reviewer questions, evidence text, and claim boundaries in the same shape.
 
 Demo output:
 

@@ -137,8 +137,14 @@ function HeroComparison({ onInspectRow }: { onInspectRow: (rowId: string) => voi
     <section className="hero-section" aria-labelledby="hero-title">
       <div className="hero-copy">
         <p className="eyebrow">pale-ale Trace Triage</p>
-        <h1 id="hero-title">{data.core_message}</h1>
-        <p>{data.plain_language_boundary}</p>
+        <h1 id="hero-title">
+          <span className="desktop-title">{data.core_message}</span>
+          <span className="mobile-title">Scalar checks pass. pale-ale shows where to inspect first.</span>
+        </h1>
+        <p className="hero-subcopy">
+          {data.plain_language_boundary}{" "}
+          <span className="hero-boundary">Synthetic illustrative demo. Not a benchmark result.</span>
+        </p>
       </div>
 
       <div className="hero-grid" aria-label="Before and after comparison">
@@ -392,6 +398,10 @@ function TechnicalAppendix() {
         <div className="appendix-content">
           <div>
             <h3>Artifact relation list</h3>
+            <p>
+              This static fixture can be replaced with another ordered evaluation trace if the rows, shortlist entries,
+              reviewer questions, evidence text, and claim boundaries are supplied in the same shape.
+            </p>
             <ul>
               {artifactRelations.map((item) => (
                 <li key={item}>{item}</li>
@@ -422,6 +432,7 @@ function TechnicalAppendix() {
 
           <div>
             <h3>Raw fixture JSON</h3>
+            <p>Includes artifact rows, shortlist entries, reviewer questions, highlighted evidence text, and boundaries.</p>
             <pre>{JSON.stringify(data, null, 2)}</pre>
           </div>
         </div>
