@@ -77,7 +77,7 @@ This pass does not:
 The next step is not more evidence collection. It is manuscript editing:
 
 ```text
-230 expanded manuscript draft -> 231 manuscript polish / PDF build verification
+230 expanded manuscript draft -> later manuscript polish / PDF build verification
 ```
 
 The paper should keep the claim from `228` as its ceiling and the evidence
