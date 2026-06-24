@@ -146,6 +146,11 @@ function HeroComparison({ onInspectRow }: { onInspectRow: (rowId: string) => voi
           {data.plain_language_boundary}{" "}
           <span className="hero-boundary">Synthetic illustrative demo. Not a benchmark result.</span>
         </p>
+        <div className="mobile-compare-strip" aria-label="Mobile summary of scalar-only versus pale-ale output">
+          <span>Scalar-only: PASS</span>
+          <span aria-hidden="true">-&gt;</span>
+          <span>pale-ale: 3 review targets</span>
+        </div>
       </div>
 
       <div className="hero-grid" aria-label="Before and after comparison">

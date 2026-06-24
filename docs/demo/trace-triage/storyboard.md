@@ -46,7 +46,7 @@ Hero boundary:
 | 02 | Source policy | Company-issued equipment only; manager pre-approval required; personal devices excluded. | Source constraints captured. |
 | 03 | Retrieved context | Preserves company-issued equipment and manager pre-approval, but omits personal-device exclusion. | Source coverage weakened. |
 | 04 | Intermediate judgment | Treats receipt as sufficient. | Pre-approval requirement broadened. |
-| 05 | Draft answer | Allows personal monitor after purchase. | Source-linked conflict. |
+| 05 | Draft answer | Allows personal monitor after purchase. | Supports Row 06. |
 | 06 | Final answer | Says receipt is enough. | Source-linked conflict. |
 | 07 | Evaluator note | Scalar-only checks pass, but source constraints were not preserved. | Review context. |
 
@@ -54,7 +54,7 @@ Timeline behavior:
 
 - Keep all 7 rows visible.
 - Mark rows 03, 04, and 06 as the first-inspect rows.
-- Let the reviewer open row 05 from the row 06 card as supporting context, without making it part of the first 3-row shortlist.
+- Keep row 05 as supporting context for row 06, without making it part of the first 3-row shortlist.
 
 ## 3. Reviewer shortlist cards
 

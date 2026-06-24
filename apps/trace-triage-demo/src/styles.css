@@ -119,6 +119,10 @@ h3 {
   font-weight: 750;
 }
 
+.mobile-compare-strip {
+  display: none;
+}
+
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -199,6 +203,7 @@ h3 {
   background: #fff5e8;
   color: #5b3a17;
   font-weight: 750;
+  overflow-wrap: anywhere;
 }
 
 .shortlist-count {
@@ -625,7 +630,7 @@ pre {
   }
 
   h1 {
-    font-size: clamp(1.65rem, 7vw, 1.9rem);
+    font-size: clamp(1.45rem, 6.2vw, 1.7rem);
     line-height: 1.06;
   }
 
@@ -649,6 +654,27 @@ pre {
   .hero-boundary {
     margin: 0.35rem 0 0;
     font-size: 0.86rem;
+  }
+
+  .mobile-compare-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.45rem;
+    align-items: center;
+    margin-top: 0.7rem;
+    border: 1px solid #c5d7da;
+    border-left: 4px solid #0b5d6b;
+    border-radius: 8px;
+    padding: 0.6rem 0.65rem;
+    background: #eef8f7;
+    color: #14313a;
+    font-size: 0.86rem;
+    font-weight: 850;
+  }
+
+  .mobile-compare-strip > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .comparison-card {
