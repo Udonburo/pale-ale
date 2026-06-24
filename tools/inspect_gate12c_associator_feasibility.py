@@ -891,7 +891,11 @@ def build_readme(
         f"- ordinary_associator_max_fro: `{ordinary_null['ordinary_associator_max_fro']}`",
         f"- ordinary_associator_failed_count: `{ordinary_null['ordinary_associator_failed_count']}`",
         "",
-        "Empirical Gate12C-1 feasibility remains unknown until this preflight is run on real Gate12A artifact directories.",
+        (
+            "Gate12C-1 is not implemented. This preflight reports only artifact-surface "
+            "eligibility under the caller-declared minimum and does not measure compressed "
+            "associator behavior."
+        ),
     ]
     missing = list(preflight_payload.get("missing_required_artifacts") or [])
     if missing:

@@ -411,6 +411,9 @@ class InspectGate12CAssociatorFeasibilityTest(unittest.TestCase):
                 csv_rows = list(csv.DictReader(handle))
             self.assertEqual(len(csv_rows), 1)
             self.assertEqual(len(read_jsonl(out_dir / gate12c.DEFAULT_CUT_CENSUS)), 3)
+            read_text = (out_dir / gate12c.DEFAULT_READ).read_text(encoding="utf-8")
+            self.assertIn("Gate12C-1 is not implemented.", read_text)
+            self.assertIn("does not measure compressed associator behavior.", read_text)
 
     def _run(
         self,
