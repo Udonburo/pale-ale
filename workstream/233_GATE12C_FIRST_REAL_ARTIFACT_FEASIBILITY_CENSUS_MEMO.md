@@ -41,6 +41,19 @@ builder_script_sha256 = af03afc8d320c9d86f1c35128b19ff0a22d9d860490c7befcfac4ea5
 
 The wording-only change did not alter schema version, method id, calculations, tolerances, eligibility, status rules, output field names, or artifact structure.
 
+### 1.1 Integration Provenance Note
+
+PR `#113` was integrated to `main` through a squash merge after the census completed.
+
+```text
+execution_builder_commit = c1186eb58e9baad01e5a20cfc1d1283e9016d91a
+integration_commit = 655116f7246ebf3051b0a78404353d0f9072b678
+integration_mode = squash
+builder_script_sha256 = af03afc8d320c9d86f1c35128b19ff0a22d9d860490c7befcfac4ea5e4be8c92
+```
+
+This does not change the census result. It records that the execution builder commit is preserved through PR provenance rather than as a first-parent `main` ancestor.
+
 ## 2. Frozen Settings
 
 The run used the merged Gate12C-0 defaults:
