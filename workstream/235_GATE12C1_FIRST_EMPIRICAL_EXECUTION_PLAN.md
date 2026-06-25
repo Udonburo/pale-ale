@@ -110,6 +110,20 @@ log_null_ratio =
 
 The `epsilon` in this formula is the frozen runner default `1e-12`.
 
+The primary directional-zero tolerance is frozen as:
+
+```text
+primary_zero_tolerance = 1e-12
+```
+
+Directional signs use this tolerance:
+
+```text
+positive: score > +primary_zero_tolerance
+negative: score < -primary_zero_tolerance
+tie:      abs(score) <= primary_zero_tolerance
+```
+
 This row effect is an input to the predeclared hierarchy only. It is not a row-level discovery claim.
 
 ## 5. Primary Eligibility
@@ -162,17 +176,66 @@ For each run and each q:
 - at least 90% of source blocks must be represented
 - no imputation is allowed
 
+The cycle denominator is the preflight-eligible distinct-cycle count frozen in `233` for that run:
+
+```text
+expected_cycle_count = preflight_eligible_cycle_count
+```
+
+A valid `cycle/q` requires:
+
+- exactly three root rows
+- all three rows satisfy primary eligibility
+- all three rows resolve to the same `single_sample` block
+
+The expected block denominator is the set of all distinct `single_sample` `source_sample_block_id` values represented by the run's preflight-eligible cycles before primary filtering.
+
+A block is represented for q when it has at least one valid `cycle/q`.
+
+Any `mixed_or_undefined` source block on a preflight-eligible cycle forces `coverage_pass = false` for that run/q and must be reported.
+
+Coverage ratios are:
+
+```text
+represented_cycle_q_count = valid_cycle_q_count
+cycle_coverage_ratio = valid_cycle_q_count / preflight_eligible_cycle_count
+block_coverage_ratio = represented_block_q_count / expected_single_sample_block_count
+```
+
+Both ratios must be `>= 0.90`. A zero expected block denominator is a coverage failure.
+
 Coverage failures do not become positive or negative evidence. They must be reported as coverage failures in the result memo.
 
 ## 8. Per-Run Directional Test
 
-For each run and q, apply a one-sided exact sign test to source-block scores:
+For each run and q, apply a one-sided exact sign test to source-block scores after applying `primary_zero_tolerance`:
 
 ```text
 H1: source-block score > 0
 ```
 
-Zero ties are excluded before the sign test. If no nonzero block scores remain, the run/q test is non-informative and cannot support directional excess.
+Definitions:
+
+```text
+s = positive block count
+n = positive block count + negative block count
+
+raw_p =
+  sum_{k=s}^{n} binomial(n, k) / 2^n
+```
+
+Ties are excluded from `n`. If `n == 0`:
+
+```text
+test_status = non_informative
+raw_p = 1.0
+```
+
+Otherwise:
+
+```text
+test_status = informative
+```
 
 There are 24 predeclared run-by-q tests:
 
@@ -180,28 +243,100 @@ There are 24 predeclared run-by-q tests:
 12 runs x 2 q values = 24 tests
 ```
 
-Apply Holm correction across only these 24 tests.
+Apply Holm correction across all 24 endpoints. Coverage-failed and non-informative endpoints remain in the 24 tests with `raw_p = 1.0`.
+
+Sort endpoints by:
+
+```text
+(raw_p, case_id numeric order, q)
+```
+
+For ordered p-values `p_(i)`, with `i` starting at `1`:
+
+```text
+candidate_i = min(1, (24 - i + 1) * p_(i))
+adjusted_i = max(candidate_1, ..., candidate_i)
+```
+
+Map adjusted values back to the original case/q endpoint rows.
+
+q-specific support is:
+
+```text
+q_support =
+  coverage_pass
+  and test_status == informative
+  and run_median > primary_zero_tolerance
+  and holm_adjusted_p < 0.05
+```
 
 A run supports directional excess only when:
 
-- the `q = 1` run median is positive
-- the `q = 2` run median is positive
-- the Holm-adjusted p-value for `q = 1` is below `0.05`
-- the Holm-adjusted p-value for `q = 2` is below `0.05`
+```text
+q1_support and q2_support
+```
 
 Single-q support is not sufficient for a run-level directional-excess call.
 
 ## 9. Outcome Categories
 
-The first empirical result memo must classify the run grid into exactly one of:
+Execution status is separate from scientific outcome:
+
+```text
+execution_status:
+  complete
+  contract_failure
+```
+
+If `execution_status != complete`:
+
+```text
+grid_outcome = not_classified
+```
+
+For complete execution, apply this `grid_outcome` precedence:
+
+```text
+coverage_limited
+mixed_q
+strong_broad
+broad_replicated
+partial_or_structured
+no_directional_support
+```
+
+`coverage_limited` applies if any of the 24 run/q endpoints:
+
+- fails cycle coverage
+- fails block coverage
+- is non-informative
+
+For each run:
+
+```text
+q_discordant_run =
+  q1_support != q2_support
+  or sign(q1_run_median) != sign(q2_run_median)
+```
+
+where `sign` uses `primary_zero_tolerance` and returns `-1`, `0`, or `+1`.
+
+`mixed_q` applies when:
+
+```text
+q_discordant_run_count >= 6
+```
+
+`mixed_q` takes precedence over broad, partial, and no-support categories.
+
+The remaining complete, coverage-sufficient categories are:
 
 - `strong_broad`: 12/12 runs support directional excess
 - `broad_replicated`: at least 10/12 runs support directional excess, every family has at least 3/4 supporting models, and every model has at least 2/3 supporting families
-- `partial_or_structured`: 1-9 runs support directional excess, or support is localized by model/family pattern
 - `no_directional_support`: 0/12 runs support directional excess
-- `mixed_q`: systematic disagreement between `q = 1` and `q = 2`
+- `partial_or_structured`: every remaining complete, coverage-sufficient case with 1-11 supporting runs, including 10-11 supporting runs that fail breadth constraints
 
-If `mixed_q` and another category both appear plausible, `mixed_q` takes precedence until the q disagreement is described.
+These categories are exhaustive after applying the execution-status, coverage, and mixed-q precedence rules.
 
 ## 10. Secondary Telemetry
 
@@ -224,12 +359,17 @@ The matched orientation null preserves each edge singular spectrum. Therefore, t
 Secondary separation checks must include:
 
 1. A low-holonomy secondary surface:
+   - define `N` as the distinct preflight-eligible cycle count in the run
    - sort cycles within each run by `(gate12a_holonomy_residual_fro, cycle_id)`
    - select the first `floor(N/4)` cycles per run
    - retain q-specific aggregation
 2. q-specific Spearman correlations with:
    - `gate12a_holonomy_residual_fro`
    - `edge_compatibility_gap_max`
+
+Spearman correlations use one `cycle/q` aggregate per cycle. They must never use root rows as independent observations. Use average ranks for ties.
+
+Correlation p-values are not inferential claims and need not be emitted.
 
 These separation checks are descriptive. They do not replace the primary hierarchy or create row-level claims.
 
@@ -251,6 +391,7 @@ The following are frozen once the first real run starts:
 - orientation-null draw count
 - orientation-null max attempts
 - numerical tolerances
+- primary zero tolerance
 - aggregation hierarchy
 - coverage thresholds
 - directional test
@@ -286,6 +427,22 @@ That PR must use synthetic fixtures only. It must not run real Gate12C-1 outputs
 
 The summary tool must implement this plan's primary eligibility, hierarchy, coverage checks, sign tests, Holm correction, outcome categories, secondary telemetry, and deterministic result-table emission.
 
+The summary-tool outputs must include:
+
+- `primary_zero_tolerance`
+- positive, negative, and tie counts
+- `test_status`
+- `raw_p`
+- Holm-adjusted p-value
+- `q_support`
+- `q_discordant_run`
+- expected and represented cycle counts
+- expected and represented block counts
+- cycle coverage ratio
+- block coverage ratio
+- `execution_status`
+- `grid_outcome`
+
 ## 16. Planned Result Memo
 
 The first empirical execution result must be recorded in:
@@ -301,9 +458,18 @@ The result memo must report:
 - source immutability checks
 - command settings
 - completion status for all 12 runs
+- `primary_zero_tolerance`
 - coverage by run/q
+- expected and represented cycle counts
+- expected and represented block counts
+- cycle and block coverage ratios
 - 24 run/q sign tests before and after Holm correction
+- positive, negative, and tie counts
+- `test_status`, `raw_p`, and Holm-adjusted p-values
+- q-specific support calls
 - run-level directional-excess support calls
+- q-discordant run count
+- `execution_status`
 - grid outcome category
 - secondary telemetry
 - existing-defect separation checks
