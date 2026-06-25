@@ -459,6 +459,23 @@ class Gate12CCompressedOverlapAssociatorTest(unittest.TestCase):
             self.assertEqual(first_manifest, second_manifest)
             self.assertEqual(first_checksums, second_checksums)
 
+    def test_manifest_uses_claim_boundary_not_validation_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run(Path(tmpdir), [self._positive_rank2_spec()])
+            manifest = result["manifest"]
+
+            self.assertNotIn("boundary", manifest)
+            self.assertIn("claim_boundary", manifest)
+            self.assertNotIn("implementation_only", manifest["claim_boundary"])
+            self.assertNotIn("synthetic_fixture_only_for_tests", manifest["claim_boundary"])
+            self.assertFalse(
+                manifest["claim_boundary"]["scientific_null_excess_threshold_defined"]
+            )
+            self.assertFalse(manifest["claim_boundary"]["gate12b_overlay_used"])
+            self.assertFalse(
+                manifest["claim_boundary"]["rectangular_rank_mismatch_supported"]
+            )
+
     def test_source_directory_immutability(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -514,6 +531,80 @@ class Gate12CCompressedOverlapAssociatorTest(unittest.TestCase):
 
             self.assertEqual(exit_code, 1)
             self.assertEqual(read_json(root / "out" / gate12c.DEFAULT_STATUS)["process_status"], "fail")
+
+    def test_cli_rejects_source_alias_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            gate12a_dir = self._build_gate12a_fixture(root, [self._positive_rank2_spec()])
+            before = snapshot_files(gate12a_dir)
+
+            exit_code = gate12c.main(
+                [
+                    "--gate12a-dir",
+                    str(gate12a_dir),
+                    "--out-dir",
+                    str(gate12a_dir),
+                    "--orientation-null-seed",
+                    "seed",
+                    "--orientation-null-requested-draw-count",
+                    "1",
+                    "--orientation-null-max-attempt-count",
+                    "1",
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(before, snapshot_files(gate12a_dir))
+            self.assertFalse((gate12a_dir / gate12c.DEFAULT_STATUS).exists())
+
+    def test_cli_rejects_nested_output_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            gate12a_dir = self._build_gate12a_fixture(root, [self._positive_rank2_spec()])
+            nested_out = gate12a_dir / "nested_gate12c1"
+            before = snapshot_files(gate12a_dir)
+
+            exit_code = gate12c.main(
+                [
+                    "--gate12a-dir",
+                    str(gate12a_dir),
+                    "--out-dir",
+                    str(nested_out),
+                    "--orientation-null-seed",
+                    "seed",
+                    "--orientation-null-requested-draw-count",
+                    "1",
+                    "--orientation-null-max-attempt-count",
+                    "1",
+                ]
+            )
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(before, snapshot_files(gate12a_dir))
+            self.assertFalse(nested_out.exists())
+
+    def test_defined_holonomy_requires_finite_residual(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            gate12a_dir = self._build_gate12a_fixture(root, [self._positive_rank2_spec()])
+            holonomy_path = gate12a_dir / gate12c0.DEFAULT_HOLONOMY_REGISTRY
+            rows = read_jsonl(holonomy_path)
+            del rows[0]["holonomy_residual_fro"]
+            write_jsonl(holonomy_path, rows)
+
+            with self.assertRaisesRegex(ValueError, "holonomy_residual_fro"):
+                self._run_existing(root, gate12a_dir, root / "out")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            gate12a_dir = self._build_gate12a_fixture(root, [self._positive_rank2_spec()])
+            holonomy_path = gate12a_dir / gate12c0.DEFAULT_HOLONOMY_REGISTRY
+            rows = read_jsonl(holonomy_path)
+            rows[0]["holonomy_residual_fro"] = None
+            write_jsonl(holonomy_path, rows)
+
+            with self.assertRaisesRegex(gate12c.Gate12CContractError, "non-numeric"):
+                self._run_existing(root, gate12a_dir, root / "out")
 
     def _run(
         self,

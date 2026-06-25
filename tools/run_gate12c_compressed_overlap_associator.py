@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
@@ -985,6 +986,23 @@ def run_gate12c_compressed_overlap_associator(
         holonomy = artifacts.holonomy_map.get(cycle_id, {})
         if str(holonomy.get("holonomy_status") or "missing") != "defined":
             continue
+        gate12c0.require_keys(
+            holonomy,
+            ("holonomy_residual_fro",),
+            "triangle_holonomy_registry defined row",
+        )
+        try:
+            holonomy_residual_fro = float(holonomy["holonomy_residual_fro"])
+        except (TypeError, ValueError) as exc:
+            raise Gate12CContractError(
+                f"defined holonomy row for cycle {cycle_id} has non-numeric "
+                "holonomy_residual_fro"
+            ) from exc
+        if not math.isfinite(holonomy_residual_fro):
+            raise Gate12CContractError(
+                f"defined holonomy row for cycle {cycle_id} has non-finite "
+                "holonomy_residual_fro"
+            )
         node_ids = [str(node_id) for node_id in list(cycle["node_id_path"])[:3]]
         if any(node_id not in artifacts.node_map for node_id in node_ids):
             continue
@@ -1174,9 +1192,7 @@ def run_gate12c_compressed_overlap_associator(
                     )
                     if measurement is not None
                     else None,
-                    "gate12a_holonomy_residual_fro": float(
-                        holonomy.get("holonomy_residual_fro", 0.0)
-                    ),
+                    "gate12a_holonomy_residual_fro": float(holonomy_residual_fro),
                     "edge_compatibility_gap_max": edge_compatibility_gap_max(root_edges),
                     "source_sample_block_id": source_sample_block_id,
                     "source_block_status": source_block,
@@ -1335,13 +1351,11 @@ def run_gate12c_compressed_overlap_associator(
             DEFAULT_STATUS: repo_relative_or_posix(out_dir / DEFAULT_STATUS),
             DEFAULT_READ: repo_relative_or_posix(out_dir / DEFAULT_READ),
         },
-        "boundary": {
-            "implementation_only": True,
-            "synthetic_fixture_only_for_tests": True,
-            "gate12b_overlay_used": False,
+        "claim_boundary": {
+            "scientific_null_excess_threshold_defined": False,
             "type_iii_claim_authorized": False,
+            "gate12b_overlay_used": False,
             "rectangular_rank_mismatch_supported": False,
-            "scientific_null_excess_threshold": None,
             "gate12a_or_gate12b_semantics_changed": False,
         },
     }
@@ -1419,6 +1433,14 @@ def run_gate12c_compressed_overlap_associator(
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    gate12a_dir = Path(args.gate12a_dir)
+    out_dir = Path(args.out_dir)
+    try:
+        gate12c0.validate_output_directory(gate12a_dir=gate12a_dir, out_dir=out_dir)
+    except Exception as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
     tolerances = Tolerances(
         tau_overlap_sv_min=float(args.tau_overlap_sv_min),
         tau_overlap_singular_value_abs_error=float(
@@ -1432,10 +1454,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         tau_gauge_scalar_delta_abs=float(args.tau_gauge_scalar_delta_abs),
         epsilon=float(args.epsilon),
     )
-    out_dir = Path(args.out_dir)
     try:
         run_gate12c_compressed_overlap_associator(
-            gate12a_dir=Path(args.gate12a_dir),
+            gate12a_dir=gate12a_dir,
             out_dir=out_dir,
             orientation_null_seed=str(args.orientation_null_seed),
             orientation_null_requested_draw_count=int(
