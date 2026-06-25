@@ -277,17 +277,20 @@ C_e^(b) = L_e^(b) Sigma_e R_e^(b).T
 
 where `Sigma_e` is the observed edge singular spectrum, and `L_e^(b)` and `R_e^(b)` are deterministic seeded orthogonal orientations.
 
-Seed derivation must be independent of registry row order and execution parallelism. For each orientation matrix, derive the seed from a stable hash of:
+Seed derivation must be independent of registry row order and execution parallelism. For each orientation matrix, derive the seed from a stable hash of this canonical JSON array encoded as UTF-8, with no insignificant whitespace:
 
 ```text
-SHA256(
-  orientation_null_seed
-  cycle_id
-  edge_id
-  draw_index
+SHA256(canonical_json_utf8([
+  "gate12c1_orientation_null_v1",
+  orientation_null_seed,
+  cycle_id,
+  edge_id,
+  draw_index,
   left_or_right_orientation_label
-)
+]))
 ```
+
+The hash input must not be built by naive string concatenation. `draw_index` is encoded as a JSON integer; all other entries are encoded as JSON strings.
 
 The deterministic orthogonal generator is frozen as:
 
@@ -343,6 +346,16 @@ orientation_null_empirical_p_upper =
 orientation_null_robust_z =
   (a_obs - median(a_b)) /
   (1.4826 * MAD(a_b) + epsilon)
+
+orientation_null_scale_degenerate =
+  MAD(a_b) <= epsilon
+```
+
+When `orientation_null_scale_degenerate = true`, set:
+
+```text
+orientation_null_robust_z = null
+orientation_null_excess_status = scale_degenerate
 ```
 
 Required null summary fields:
@@ -644,10 +657,11 @@ Add focused regression coverage for:
 - matched spectrum-preserving orientation null determinism
 - one randomized null triangle reused across all roots and `q`
 - orientation-null seed independence from row order and parallel execution
+- canonical JSON UTF-8 seed-hash encoding without naive concatenation
 - frozen SHA256 plus QR sign-normalized orthogonal generator
 - null split-gap invalid-cut detection without arbitrary SVD basis selection
 - valid-draw retry, max-attempt exhaustion, and insufficient-valid-draw accounting
-- orientation-null p-value, robust-z, and scale-degenerate formulas
+- orientation-null p-value, robust-z, and exact scale-degenerate formulas
 - descriptive-only row-level p/z status
 - valid no-excess run exits `0`
 - contract and implementation failures exit `1`
