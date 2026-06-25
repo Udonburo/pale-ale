@@ -178,7 +178,7 @@ left_gap_q > tau_split_rel
 right_gap_q > tau_split_rel
 ```
 
-Near-degenerate cuts must remain non-promotable. The implementation must not preserve or choose an arbitrary SVD basis across an unresolved split and report that as an active alpha result.
+Near-degenerate cuts must remain aggregation-ineligible. The implementation must not preserve or choose an arbitrary SVD basis across an unresolved split and report that as an active alpha result.
 
 Suggested `truncation_status` values:
 
@@ -224,38 +224,144 @@ U_v' = U_v G_v
 C_(target<-source)' = G_target.T @ C_(target<-source) @ G_source
 ```
 
-Recompute scalar readouts.
+Recompute the full compressed-overlap operators and scalar readouts.
 
-For admissible cuts that remain stable under the transformed basis, the Frobenius scalar readouts must remain stable within tolerance. The implementation must not insert a gauge-fixing map into the core law.
+At the selected root `v0`, the associator operator must transform covariantly:
+
+```text
+A_q_transformed ~= G_0.T @ A_q @ G_0
+```
+
+Required gauge fields:
+
+```text
+gauge_operator_covariance_fro = ||A_q_transformed - G_0.T @ A_q @ G_0||_F
+gauge_scalar_delta_abs = abs(||A_q_transformed||_F - ||A_q||_F)
+gauge_cut_status_preserved
+gauge_scalar_status
+```
+
+Gauge pass requires both:
+
+- operator covariance within the declared tolerance
+- scalar Frobenius stability within the declared tolerance
+
+For rows where the gauge-transformed cut is no longer stable, set `gauge_cut_status_preserved = false` and do not treat the row as aggregation-eligible.
+
+The implementation must not insert a gauge-fixing map into the core law.
 
 ### 5.4 Spectrum-Preserving Orientation Null
 
-For each observed row, construct a deterministic-seeded null that preserves:
+The orientation null is an edge-wise coherence-destroying operator-level null. It preserves edge singular spectra, but it is not a gauge transform and is not required to be realizable by one globally consistent set of node bases.
+
+For each cycle and draw:
+
+- generate one randomized triple of edge overlap operators
+- preserve each edge singular spectrum
+- reuse that same randomized triangle across all three cyclic roots and every `q`
+- do not generate independent null triangles per root/q row
+
+For each randomized edge:
 
 - edge matrix shape
 - edge rank
 - edge singular values
 - common cycle rank
-- compression rank `q`
 - triangle relation metadata
 
-The null draw should use:
+The null edge operator is:
 
 ```text
 C_e^(b) = L_e^(b) Sigma_e R_e^(b).T
 ```
 
-where `L_e^(b)` and `R_e^(b)` are deterministic seeded orthogonal orientations.
+where `Sigma_e` is the observed edge singular spectrum, and `L_e^(b)` and `R_e^(b)` are deterministic seeded orthogonal orientations.
+
+Seed derivation must be independent of registry row order and execution parallelism. For each orientation matrix, derive the seed from a stable hash of:
+
+```text
+SHA256(
+  orientation_null_seed
+  cycle_id
+  edge_id
+  draw_index
+  left_or_right_orientation_label
+)
+```
+
+The deterministic orthogonal generator is frozen as:
+
+1. Fill an `r x r` matrix `Z` row-major from SHA256 counter blocks keyed by the orientation seed.
+2. Convert hash-derived uniform pairs to standard-normal entries with a Box-Muller transform.
+3. Compute `Z = Q R` by QR decomposition.
+4. Sign-normalize `Q` by multiplying each column by `sign(diag(R))`, with zero signs replaced by `+1`.
+5. Use the resulting `Q` as the orientation matrix.
+
+All implementation manifests must record the generator id, seed, requested draw count, and max attempt count.
 
 Required null settings must be declared in the manifest:
 
 ```text
 orientation_null_seed
-orientation_null_draw_count
+orientation_null_requested_draw_count
+orientation_null_max_attempt_count
 orientation_null_mode
+orientation_null_orthogonal_generator
 ```
 
-A promoted empirical excess claim requires comparison with this matched null. Raw positivity is not sufficient.
+For every null cycle draw and root/q:
+
+1. compute the same left and right split gaps
+2. mark the row-draw `invalid_cut` when either cut is near-degenerate
+3. do not force an arbitrary SVD basis through an invalid cut
+
+Generate attempts until the requested valid draw count is reached or `orientation_null_max_attempt_count` is exhausted.
+
+Required per-row null accounting fields:
+
+```text
+orientation_null_requested_draw_count
+orientation_null_valid_draw_count
+orientation_null_invalid_cut_count
+orientation_null_attempt_count
+orientation_null_status
+```
+
+If valid draws are insufficient:
+
+```text
+orientation_null_status = insufficient_valid_draws
+aggregation_eligible = false
+```
+
+For observed scalar `a_obs` and valid null values `a_b`, define:
+
+```text
+orientation_null_empirical_p_upper =
+  (1 + count(a_b >= a_obs)) / (1 + B_valid)
+
+orientation_null_robust_z =
+  (a_obs - median(a_b)) /
+  (1.4826 * MAD(a_b) + epsilon)
+```
+
+Required null summary fields:
+
+```text
+orientation_null_median
+orientation_null_mad
+orientation_null_mean
+orientation_null_std
+orientation_null_empirical_p_upper
+orientation_null_robust_z
+orientation_null_scale_degenerate
+```
+
+Row-level p-values and robust z-scores are descriptive telemetry only. No row-level discovery claim is authorized by this contract. Multiple-testing boundaries and block-aware claim aggregation require a separate empirical execution plan.
+
+Do not freeze a scientific excess threshold in the implementation contract unless a later plan explicitly justifies and predeclares it. Gate12C-1 implementation should emit the statistics; a later empirical plan decides claim thresholds and aggregation.
+
+Raw positivity is not sufficient for any empirical excess claim.
 
 ## 6. Required Outputs
 
@@ -320,15 +426,62 @@ compressed_overlap_closure_right_fro
 compressed_overlap_closure_gap_abs
 gate12a_holonomy_residual_fro
 edge_compatibility_gap_max
+source_sample_block_id
+source_block_status
+measurement_status
+control_status
+aggregation_eligible
+gauge_operator_covariance_fro
+gauge_scalar_delta_abs
+gauge_cut_status_preserved
 gauge_scalar_status
 orientation_null_status
-orientation_null_draw_count
-orientation_null_excess_z
+orientation_null_excess_status
+orientation_null_requested_draw_count
+orientation_null_valid_draw_count
+orientation_null_invalid_cut_count
+orientation_null_attempt_count
+orientation_null_median
+orientation_null_mad
+orientation_null_mean
+orientation_null_std
+orientation_null_empirical_p_upper
+orientation_null_robust_z
+orientation_null_scale_degenerate
 operator_array_index
-promotable
 ```
 
 The `compressed_overlap_` prefix is mandatory for raw-overlap closure readouts. Do not emit ambiguous fields such as `left_closure_fro`, `right_closure_fro`, `holonomy_left`, or `holonomy_right`.
+
+Required row statuses:
+
+```text
+measurement_status
+control_status
+aggregation_eligible
+orientation_null_status
+orientation_null_excess_status
+```
+
+Do not emit `promotable`. If an older draft or helper uses that word, rename it to `aggregation_eligible` and apply the narrower definition in Section 9.
+
+`source_sample_block_id` and `source_block_status` are required for later block-aware aggregation.
+
+When all cycle nodes share one `sample_XXXXXX` prefix, set:
+
+```text
+source_sample_block_id = sample_XXXXXX
+source_block_status = single_sample
+```
+
+Otherwise set:
+
+```text
+source_sample_block_id = mixed_or_undefined
+source_block_status = mixed_or_undefined
+```
+
+Later empirical claims must aggregate by source-sample or source-run block and must not treat overlapping cycle rows as independent samples.
 
 ## 8. Cycle-Level Summaries
 
@@ -347,15 +500,38 @@ compressed_overlap_associator_root_spread
 ordinary_associator_max_fro
 no_compression_associator_max_fro
 gauge_stable_row_count
-orientation_null_promotable_row_count
-promotable_row_count
+orientation_null_complete_row_count
+aggregation_eligible_row_count
 ```
 
 The root-level registry remains primary.
 
-## 9. Promotion Boundary
+## 9. Status and Aggregation Boundary
 
-A row is structurally promotable only when all of the following hold:
+Gate12C-1 separates measurement, control completion, aggregation eligibility, and null excess.
+
+`measurement_status` describes whether the row produced the requested compressed-overlap operators and scalar readouts.
+
+`control_status` describes whether reconstruction, ordinary null, no-compression null, stable cuts, gauge checks, and orientation-null draw completion passed.
+
+`measurement_status` values:
+
+```text
+not_evaluated
+measured
+invalid_input
+```
+
+`control_status` values:
+
+```text
+not_evaluated
+pass
+fail
+incomplete
+```
+
+`aggregation_eligible = true` only when all of the following hold:
 
 - exact Gate12A residual-bearing explicit triangle surface
 - equal-rank common-rank cycle with `r >= 2`
@@ -364,8 +540,28 @@ A row is structurally promotable only when all of the following hold:
 - both nontrivial rank cuts stable
 - reconstructed overlaps agree with stored Gate12A spectra
 - reconstructed Gate12A transports agree with stored transports
-- gauge scalar check passes
-- matched spectrum-preserving orientation null is evaluated
+- gauge operator covariance passes
+- gauge scalar stability passes
+- the requested number of valid orientation-null draws has completed
+
+`aggregation_eligible = true` does not mean the observed associator exceeds the null. It does not authorize a Type-III claim.
+
+`orientation_null_status` records draw completion:
+
+```text
+not_evaluated
+complete
+insufficient_valid_draws
+invalid_input
+```
+
+`orientation_null_excess_status` records only descriptive comparison status, for example:
+
+```text
+not_evaluated
+descriptive_only
+scale_degenerate
+```
 
 An empirical excess claim additionally requires:
 
@@ -376,7 +572,38 @@ An empirical excess claim additionally requires:
 
 Do not label any output row as Type-III.
 
-## 10. Gate12B Overlay Boundary
+Do not include a generic `promotable` field; it conflates control completion with empirical excess. Use `aggregation_eligible` and `orientation_null_excess_status` separately.
+
+## 10. CLI and Process Semantics
+
+The command-line process status reports whether the contract execution succeeded, not whether an empirical excess was observed.
+
+A valid run with no orientation-null excess must exit `0`.
+
+These data outcomes must not force a nonzero process exit when the run otherwise emits complete deterministic artifacts:
+
+- no empirical null excess
+- zero aggregation-eligible rows
+- rows marked `orientation_null_status = insufficient_valid_draws` with requested, valid, invalid, and attempt counts recorded
+- rows marked `orientation_null_excess_status = descriptive_only`
+
+Exit `1` is reserved for contract or implementation failures, including:
+
+- missing required input artifacts
+- source/output aliasing or nested output paths
+- source artifact mutation
+- raw-overlap reconstruction mismatch
+- stored singular-spectrum or transport reconstruction mismatch
+- ordinary associativity-null failure
+- no-compression null failure
+- gauge operator covariance failure
+- gauge scalar stability failure
+- nondeterministic registry, array, manifest, or checksum output
+- invalid JSON numeric output such as NaN or infinity
+
+`gate12c_status.json` must distinguish process success from empirical excess status.
+
+## 11. Gate12B Overlay Boundary
 
 Gate12C-1 core computation must run over the full eligible Gate12A-defined equal-rank surface before any Gate12B overlay.
 
@@ -387,9 +614,9 @@ A later reader may join by `cycle_id` to compare relation signatures or Gate12B 
 - spectral-cut admissibility
 - gauge transforms
 - null construction
-- promotion status
+- aggregation eligibility or orientation-null excess status
 
-## 11. Required Tests
+## 12. Required Tests
 
 Add focused regression coverage for:
 
@@ -405,18 +632,31 @@ Add focused regression coverage for:
 - `q = r` no-compression null
 - ordinary associativity null
 - stable split-gap activation
-- near-degenerate split non-promotion
+- near-degenerate split non-aggregation-eligibility
 - deterministic positive compressed associator fixture
 - required `compressed_overlap_` field names
 - preservation of `gate12a_holonomy_residual_fro`
+- required status fields and absence of a generic `promotable` field
+- source-sample block provenance, including `mixed_or_undefined`
+- gauge operator covariance under deterministic signed permutations
 - gauge scalar stability under deterministic signed permutations
+- gauge cut-status preservation accounting
 - matched spectrum-preserving orientation null determinism
+- one randomized null triangle reused across all roots and `q`
+- orientation-null seed independence from row order and parallel execution
+- frozen SHA256 plus QR sign-normalized orthogonal generator
+- null split-gap invalid-cut detection without arbitrary SVD basis selection
+- valid-draw retry, max-attempt exhaustion, and insufficient-valid-draw accounting
+- orientation-null p-value, robust-z, and scale-degenerate formulas
+- descriptive-only row-level p/z status
+- valid no-excess run exits `0`
+- contract and implementation failures exit `1`
 - deterministic registry and array row indexing
 - deterministic manifest and checksum output
 
 Existing Gate12A and Gate12B regression tests must still pass.
 
-## 12. Implementation Files
+## 13. Implementation Files
 
 The implementation should add:
 
@@ -428,7 +668,7 @@ docs/gate12c_compressed_overlap_associator_runbook.md
 
 Do not modify Gate12A or Gate12B implementation files unless a genuine blocking incompatibility is found. If the current code contradicts this contract or `231`, stop and report the discrepancy before editing the canonical contract.
 
-## 13. Validation
+## 14. Validation
 
 Before opening an implementation PR, run:
 
@@ -441,6 +681,6 @@ git diff --check
 
 Do not stage generated `runs/` directories.
 
-## 14. Short Sentence
+## 15. Short Sentence
 
 Gate12C-1 may now measure compressed-overlap parenthesization sensitivity on the broad equal-rank `r = 3` surface found by Gate12C-0, but only with the declared nulls, gauge checks, orientation null, and claim boundary in place.
