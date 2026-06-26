@@ -160,7 +160,10 @@ CASE_INVENTORY_FIELDNAMES = (
     "derived_eligible_cycle_count",
     "expected_single_sample_block_count",
     "mixed_or_undefined_expected_cycle_count",
-    "input_checksum_validation_status",
+    "source_gate12a_checksum_status",
+    "gate12c1_output_checksum_status",
+    "source_gate12a_immutability_status",
+    "gate12c1_output_immutability_status",
 )
 
 RUN_Q_FIELDNAMES = (
@@ -628,6 +631,10 @@ def validate_summary_output_directory(*, out_dir: Path, case_inputs: Sequence[Ca
                 raise Gate12C1SummaryContractError(
                     f"summary out_dir must not be nested under {label} directory for {case.spec.case_id}"
                 )
+            if path_is_relative_to(child=source, parent=target):
+                raise Gate12C1SummaryContractError(
+                    f"summary out_dir must not contain {label} directory for {case.spec.case_id}"
+                )
         if case.source_gate12a_dir.resolve(strict=False) == case.gate12c1_run_dir.resolve(
             strict=False
         ):
@@ -663,6 +670,66 @@ def verify_run_checksums(run_dir: Path) -> None:
             raise Gate12C1SummaryContractError(
                 f"checksum mismatch for {name} in {run_dir}: expected {checksums[name]} got {actual}"
             )
+
+
+def hash_required_files(root_dir: Path, required_files: Sequence[str]) -> Dict[str, str]:
+    hashes: Dict[str, str] = {}
+    for name in required_files:
+        path = root_dir / name
+        if not path.exists():
+            raise Gate12C1SummaryContractError(f"required input file missing: {path}")
+        hashes[name] = sha256_file(path)
+    return hashes
+
+
+def verify_source_gate12a_checksums(source_dir: Path) -> None:
+    checksums_path = source_dir / "checksums.json"
+    if not checksums_path.exists():
+        raise Gate12C1SummaryContractError(
+            f"Gate12A source {source_dir} missing required checksums.json"
+        )
+    checksums = read_json(checksums_path)
+    if not isinstance(checksums, Mapping):
+        raise Gate12C1SummaryContractError(f"{checksums_path} must be an object")
+    for name in gate12c0.REQUIRED_FILES:
+        if name not in checksums:
+            raise Gate12C1SummaryContractError(
+                f"Gate12A source checksums.json missing {name} in {source_dir}"
+            )
+        actual = sha256_file(source_dir / name)
+        if str(checksums[name]) != actual:
+            raise Gate12C1SummaryContractError(
+                f"Gate12A source checksum mismatch for {name} in {source_dir}: "
+                f"expected {checksums[name]} got {actual}"
+            )
+
+
+def snapshot_input_hashes(case_inputs: Sequence[CaseInput]) -> Dict[str, Dict[str, Dict[str, str]]]:
+    snapshots: Dict[str, Dict[str, Dict[str, str]]] = {}
+    for case in case_inputs:
+        snapshots[case.spec.case_id] = {
+            "source_gate12a": hash_required_files(
+                case.source_gate12a_dir,
+                gate12c0.REQUIRED_FILES,
+            ),
+            "gate12c1_output": hash_required_files(
+                case.gate12c1_run_dir,
+                REQUIRED_GATE12C1_FILES,
+            ),
+        }
+    return snapshots
+
+
+def verify_input_immutability(
+    *,
+    case_inputs: Sequence[CaseInput],
+    before: Mapping[str, Mapping[str, Mapping[str, str]]],
+) -> None:
+    after = snapshot_input_hashes(case_inputs)
+    if dict(before) != dict(after):
+        raise Gate12C1SummaryContractError(
+            "Gate12A source or Gate12C-1 output input files changed during summary"
+        )
 
 
 def require_equal(
@@ -1526,10 +1593,17 @@ def build_secondary_telemetry(
             ]
             registry_metrics = [primary_row_metrics(row) for row in registry_rows]
             cycle_rows = cycle_by_case_q.get((case.spec.case_id, q), [])
-            robust_values = [
-                float(row["cycle_q_robust_z_median"])
-                for row in cycle_rows
-                if is_finite_number(row.get("cycle_q_robust_z_median"))
+            robust_by_block: Dict[str, List[float]] = {}
+            for row in cycle_rows:
+                if is_finite_number(row.get("cycle_q_robust_z_median")):
+                    robust_by_block.setdefault(
+                        str(row["source_sample_block_id"]),
+                        [],
+                    ).append(float(row["cycle_q_robust_z_median"]))
+            robust_block_medians = [
+                float(statistics.median(values))
+                for values in robust_by_block.values()
+                if values
             ]
             rel_values = [
                 float(row["cycle_q_associator_rel_median"])
@@ -1555,7 +1629,9 @@ def build_secondary_telemetry(
                     "model": case.spec.model,
                     "family": case.spec.family,
                     "compression_rank_q": q,
-                    "hierarchical_median_robust_z": median_or_none(robust_values),
+                    "hierarchical_block_median_robust_z": median_or_none(
+                        robust_block_medians
+                    ),
                     "empirical_p_upper_quantiles": quantiles_or_none(p_values),
                     "compressed_associator_rel_median": median_or_none(rel_values),
                     "cycle_q_root_spread_median": median_or_none(root_spread_values),
@@ -1613,6 +1689,14 @@ def build_low_holonomy_surface(
         )
         selected = expected[: len(expected) // 4]
         selected_ids = {cycle.cycle_id for cycle in selected}
+        selected_expected_blocks = {
+            cycle.source_sample_block_id
+            for cycle in selected
+            if cycle.source_block_status == "single_sample"
+        }
+        selected_mixed_count = sum(
+            1 for cycle in selected if cycle.source_block_status != "single_sample"
+        )
         for q in (1, 2):
             rows = [
                 valid_by_case_cycle_q[(case.spec.case_id, cycle_id, q)]
@@ -1627,13 +1711,26 @@ def build_low_holonomy_surface(
             block_scores = [
                 float(statistics.median(values)) for values in block_values.values() if values
             ]
+            selected_cycle_coverage_ratio = (
+                float(len(rows) / len(selected)) if selected else 0.0
+            )
+            selected_block_coverage_ratio = (
+                float(len(block_values) / len(selected_expected_blocks))
+                if selected_expected_blocks
+                else 0.0
+            )
             output.append(
                 {
                     "case_id": case.spec.case_id,
                     "case_order": case.spec.case_order,
                     "compression_rank_q": q,
-                    "selected_cycle_count": int(len(selected)),
-                    "valid_selected_cycle_count": int(len(rows)),
+                    "selected_expected_cycle_count": int(len(selected)),
+                    "selected_valid_cycle_count": int(len(rows)),
+                    "selected_cycle_coverage_ratio": selected_cycle_coverage_ratio,
+                    "selected_expected_block_count": int(len(selected_expected_blocks)),
+                    "selected_represented_block_count": int(len(block_values)),
+                    "selected_block_coverage_ratio": selected_block_coverage_ratio,
+                    "selected_mixed_or_undefined_count": int(selected_mixed_count),
                     "low_holonomy_run_q_median": median_or_none(block_scores),
                 }
             )
@@ -1718,10 +1815,12 @@ def build_case_inventory_rows(
     case_inputs: Sequence[CaseInput],
     expected_cycles_by_case: Mapping[str, List[ExpectedCycle]],
     runner_manifests: Mapping[str, Mapping[str, Any]],
+    integrity_status_by_case: Mapping[str, Mapping[str, str]],
 ) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     for case in case_inputs:
         expected_cycles = expected_cycles_by_case[case.spec.case_id]
+        integrity = integrity_status_by_case[case.spec.case_id]
         expected_blocks = {
             cycle.source_sample_block_id
             for cycle in expected_cycles
@@ -1742,7 +1841,14 @@ def build_case_inventory_rows(
                 "derived_eligible_cycle_count": len(expected_cycles),
                 "expected_single_sample_block_count": len(expected_blocks),
                 "mixed_or_undefined_expected_cycle_count": mixed_count,
-                "input_checksum_validation_status": "pass",
+                "source_gate12a_checksum_status": integrity["source_gate12a_checksum_status"],
+                "gate12c1_output_checksum_status": integrity["gate12c1_output_checksum_status"],
+                "source_gate12a_immutability_status": integrity[
+                    "source_gate12a_immutability_status"
+                ],
+                "gate12c1_output_immutability_status": integrity[
+                    "gate12c1_output_immutability_status"
+                ],
             }
         )
     return rows
@@ -1789,7 +1895,6 @@ def build_summary_manifest(
             }
             for case in case_inputs
         ],
-        "input_checksum_validation_status": "pass",
         "claim_boundary": {
             "gate12b_overlay_used": False,
             "type_iii_claim_authorized": False,
@@ -1892,9 +1997,20 @@ def summarize_gate12c1_first_empirical_grid(
     expected_cycles_by_case: Dict[str, List[ExpectedCycle]] = {}
     expected_by_cycle_by_case: Dict[str, Dict[str, ExpectedCycle]] = {}
     rows_by_case: Dict[str, List[Mapping[str, Any]]] = {}
+    integrity_status_by_case: Dict[str, Dict[str, str]] = {}
 
     for case in case_inputs:
+        verify_source_gate12a_checksums(case.source_gate12a_dir)
         verify_run_checksums(case.gate12c1_run_dir)
+        integrity_status_by_case[case.spec.case_id] = {
+            "source_gate12a_checksum_status": "pass",
+            "gate12c1_output_checksum_status": "pass",
+            "source_gate12a_immutability_status": "pass",
+            "gate12c1_output_immutability_status": "pass",
+        }
+    input_hashes_before = snapshot_input_hashes(case_inputs)
+
+    for case in case_inputs:
         runner_manifest = read_json(case.gate12c1_run_dir / "manifest.json")
         run_status = read_json(case.gate12c1_run_dir / "gate12c_status.json")
         source_manifest = read_json(case.source_gate12a_dir / gate12c0.DEFAULT_MANIFEST)
@@ -1947,6 +2063,7 @@ def summarize_gate12c1_first_empirical_grid(
         case_inputs=case_inputs,
         expected_cycles_by_case=expected_cycles_by_case,
         runner_manifests=runner_manifests,
+        integrity_status_by_case=integrity_status_by_case,
     )
     summary_manifest = build_summary_manifest(
         case_manifest_path=case_manifest_path,
@@ -1966,6 +2083,7 @@ def summarize_gate12c1_first_empirical_grid(
     write_json(out_dir / OUTPUT_SECONDARY, secondary)
     write_text(out_dir / OUTPUT_READ, build_readme(outcome=outcome))
     write_checksums(out_dir)
+    verify_input_immutability(case_inputs=case_inputs, before=input_hashes_before)
 
     return {
         "manifest": summary_manifest,
