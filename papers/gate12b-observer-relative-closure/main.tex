@@ -162,6 +162,11 @@ integrity checks. The conclusion restates the bounded claim and the non-claims.
     \item \textbf{No physical invariant.} The bounded reparameterization check
     is an artifact-level stability check over the evaluated transform, not a
     physical invariant.
+    \item \textbf{No higher-order associator claim.} A later Gate12C-1
+    negative-control extension tested compressed-overlap parenthesization
+    sensitivity and returned \code{no_directional_support}; we therefore do not
+    claim Type-III, nonassociative, or higher-order associator structure from
+    that experiment.
     \item \textbf{No Gate12A checkpoint claim.} This report is not a Gate12A
     checkpoint or replacement for Gate12A.
 \end{enumerate}
@@ -1011,6 +1016,15 @@ reported surface is the relation-signature direction and its sensitivity
 behavior. Residual distribution summaries should be added in a later evidence
 package before making any effect-size claim.
 
+A later Gate12C-1 higher-order negative-control extension tested whether
+compressed-overlap parenthesization sensitivity exceeded a matched
+spectrum-preserving orientation null on the same canonical twelve-run surface.
+It completed with \code{no_directional_support}: all 24 run/q endpoints were
+informative and coverage-complete, and all support calls were false. This result
+is included as a boundary against overclaiming. It does not invalidate the
+Gate12B closure-signature claim, but it prevents us from claiming Type-III or
+nonassociative structure from the higher-order probe.
+
 These limitations do not destroy the bounded claim because the claim is
 deliberately artifact-bounded. The integrity checks and source-linkage checks
 are recorded in the evidence manifest. The non-archive sensitivity constrains a
@@ -1036,6 +1050,8 @@ Correctness classifier & High-tension and flat are candidate sides, not correctn
 Weight-level claim & The report does not infer causal mechanisms inside model weights. \\
 \hline
 Physical invariant & The reparameterization check is an artifact-level stability check over the evaluated transform. \\
+\hline
+Type-III / nonassociative structure & Gate12C-1 was a predeclared higher-order negative control and returned \code{no_directional_support} under the matched orientation null. \\
 \hline
 Gate12A checkpoint claim & The manuscript is a bounded technical report, not a Gate12A checkpoint or replacement. \\
 \hline
@@ -1068,6 +1084,8 @@ Archive source-facing alignment & Archive source queue and annotation artifacts 
 Transcript/briefing do not reproduce clean archive alignment & Non-archive source queue and annotation artifacts & transcript 16/16 rows; briefing 16/16 rows; checksum mismatch 0 \\
 \hline
 Queue rows are linked to the matching text-surface source & Source queue manifests and text-surface manifests & 12/12 cases have matching \breakcode{source_gate12a_run_id} \\
+\hline
+Higher-order compressed-overlap associator excess is not claimed & Gate12C-1 result and closeout workstreams: \breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md} and \breakcode{workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md} & Frozen 12-run execution; execution status complete; grid outcome \code{no_directional_support}; generated runs not committed \\
 \hline
 \end{tabular}
 \end{table}
@@ -1126,6 +1144,11 @@ physical invariant, a weight-level causal mechanism, or a Gate12A checkpoint
 result. Transcript and briefing sensitivities do not reproduce the same clean
 archive alignment, which supports a family-specific reading while also keeping
 the archive result bounded.
+
+A later Gate12C-1 negative-control extension further narrows the claim
+boundary: the higher-order compressed-overlap parenthesization probe completed
+with \code{no_directional_support}, so this manuscript does not claim Type-III
+or nonassociative structure.
 
 Future work should assemble a public evidence package, add broader
 source-facing annotation coverage, and test whether the archive-family
@@ -1249,5 +1272,40 @@ the same source artifact &
 \hline
 
 \end{longtable}
+
+\section{Gate12C-1 Higher-Order Negative Control}
+\label{app:gate12c1-negative-control}
+
+Gate12C-1 was implemented after the Gate12B result as a stricter
+higher-order extension over compressed-overlap transports. It is included here
+only as a negative-control boundary. The result shows that the pipeline can
+reject an attractive stronger hypothesis rather than automatically converting
+every structural probe into support.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Gate12C-1 higher-order negative-control summary.}
+\label{tab:gate12c1-negative-control}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.32\textwidth}|>{\raggedright\arraybackslash}p{0.56\textwidth}|}
+\hline
+Field & Value \\
+\hline
+Gate12C-1 role & Negative-control extension \\
+\hline
+Execution status & \code{complete} \\
+\hline
+Grid outcome & \code{no_directional_support} \\
+\hline
+Endpoint family & 24 run/q endpoints \\
+\hline
+Coverage & 24/24 informative and coverage-complete \\
+\hline
+Support calls & All \code{q_support} and \code{run_support} calls false \\
+\hline
+Interpretation & No Type-III or nonassociative claim from the higher-order probe \\
+\hline
+\end{tabular}
+\end{table}
 
 \end{document}
