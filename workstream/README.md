@@ -10,7 +10,7 @@ If you are new to the repo, do not start here blind. Start with:
 
 Then come back here for the full tracked index.
 
-- `06` through `238` are the tracked Gate6-Gate12 line, kept in numeric order
+- `06` through `239` are the tracked Gate6-Gate12 line, kept in numeric order
 - the numbering is part of the reading order and should be preserved
 - mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
 - the current Gate11 constitution draft is `78`
@@ -60,6 +60,7 @@ Then come back here for the full tracked index.
 - the tracked Gate12C-1 first empirical result memo is `236`
 - the tracked Gate12C-1 result closeout and next boundary memo is `237`
 - the tracked Gate12C-1 negative-control and public positioning plan is `238`
+- the tracked Gate12B manuscript production readiness plan is `239`
 - no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
 
 Local-only notes are kept separately under `workstream/local/`.
