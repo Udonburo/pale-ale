@@ -27,6 +27,14 @@ This LaTeX source is the current canonical paper-voice content source. Final
 production formatting may be generated through Prism or another LaTeX
 authoring/export workflow.
 
+Release-candidate note:
+
+After Gate12C-1 negative-control integration, this source is ready for
+release-candidate review when the manuscript static checks pass. The
+release-candidate boundary preserves the current abstract and main Gate12B
+claim, treats Gate12C-1 only as a negative-control boundary, and does not add
+generated `runs/` artifacts.
+
 Boundary:
 
 - no generated `runs/` artifacts are stored here
