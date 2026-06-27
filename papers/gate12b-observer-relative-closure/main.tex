@@ -1106,7 +1106,8 @@ The required evidence sets are:
     \breakcode{workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md}
 \end{itemize}
 
-Recorded integrity status in the manifest:
+Recorded integrity status across the Gate12B manifest and Gate12C-1 boundary
+records:
 
 \begin{itemize}
     \item 36 motif Gate12B runs: checksum mismatches 0
@@ -1118,12 +1119,16 @@ Recorded integrity status in the manifest:
     grid outcome \code{no_directional_support}; generated runs not committed
 \end{itemize}
 
-The manifest is maintained as a separate workstream file rather than embedded
-in the manuscript source. This paper does not commit generated \code{runs/}
-artifacts. The manifest records the artifact directories, manifests, checksums,
-and queue outputs intended for a future public evidence package. The claim in
-this manuscript is limited to the recorded manifest-level evidence mapping
-above.
+The Gate12B evidence manifest is maintained as a separate workstream file
+rather than embedded in the manuscript source. This paper does not commit
+generated \code{runs/} artifacts. The manifest records the artifact directories,
+manifests, checksums, and queue outputs intended for a future public evidence
+package. Gate12C-1 generated outputs are not part of that Gate12B evidence
+package; the higher-order negative-control boundary is tracked in
+\breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md} and
+\breakcode{workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md}. The
+claim in this manuscript is limited to the recorded manifest-and-workstream
+evidence mapping above.
 
 \section{Conclusion}
 
