@@ -54,3 +54,7 @@ Public deposit:
 - release package:
   `zenodo-release-gate12b-observer-relative-closure-signatures/`
 - generated `runs/` artifacts are not included in the public deposit
+
+The `zenodo-release-*` directories are frozen historical release snapshots with
+their own checksum sets. Editing this manuscript source directory does not
+refresh a Zenodo package, update packaged files, or update `CHECKSUMS-SHA256.txt`.
