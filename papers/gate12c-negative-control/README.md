@@ -19,10 +19,9 @@ overlay, modify Gate12A/B/C runners, create a Zenodo package, or update
 `CHECKSUMS-SHA256.txt`.
 
 Gate12C-1 is treated here only as a predeclared higher-order negative control.
-The draft does not claim Type-III evidence, physical nonassociativity,
-nonassociative physics in LLMs, octonions in LLMs, model safety, model quality,
-correctness classification, a weight-level causal mechanism, or Gate12C-1 as
-positive evidence for Gate12B.
+The draft does not claim a physical-structure discovery, safety or deployment
+guarantee, model-quality ranking, correctness classification, weight-level
+causal mechanism, or Gate12C-1 as positive evidence for Gate12B.
 
 Build target, once a local LaTeX installation is available:
 

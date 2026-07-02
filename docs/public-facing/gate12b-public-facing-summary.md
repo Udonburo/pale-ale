@@ -12,7 +12,7 @@ This file is not a generated run artifact, not a refreshed Zenodo package file, 
 
 ## Core Summary
 
-We report a bounded read-only audit of existing LLM replay artifacts. Gate12B reports an archive-family observer-relative closure-signature pattern across four dense-transformer model lines, using already materialized local objects, transport relations, triangle cycles, observer/scale views, and selected source-facing rows. Gate12B does not rerun model inference, rank models, or classify answer correctness. Gate12C-1 serves as a predeclared higher-order negative control: across the canonical twelve Gate12A source-run surface, a compressed-overlap parenthesization probe returned `no_directional_support` under a matched spectrum-preserving orientation null. Gate12C-1 does not expand the empirical scope of Gate12B; it narrows the claim boundary by preventing a stronger associator-excess hypothesis from being reported as evidence. The result is therefore not a Type-III, nonassociative-physics, model-safety, model-quality, or correctness-classification claim. Its value is methodological: the audit stack can report bounded structural signals while rejecting attractive overextensions.
+We report a bounded read-only audit of existing LLM replay artifacts. Gate12B reports an archive-family observer-relative closure-signature pattern across four dense-transformer model lines, using already materialized local objects, transport relations, triangle cycles, observer/scale views, and selected source-facing rows. Gate12B does not rerun model inference, rank models, or classify answer correctness. Gate12C-1 serves as a predeclared higher-order negative control: across the canonical twelve Gate12A source-run surface, a compressed-overlap parenthesization probe returned `no_directional_support` under a matched spectrum-preserving orientation null. Gate12C-1 does not expand the empirical scope of Gate12B; it narrows the claim boundary by preventing a stronger associator-excess hypothesis from being reported as evidence. The result is therefore not a physical-structure, safety, model-ranking, or correctness-classification claim. Its value is methodological: the audit stack can report bounded structural signals while rejecting attractive overextensions.
 
 ## One-Page External Summary
 
@@ -49,13 +49,9 @@ Without predeclared nulls and claim boundaries, structural audit methods risk be
 - No model-quality ranking.
 - No correctness classifier.
 - No answer-quality label.
-- No safety proof.
-- No jailbreak-resistance claim.
+- No safety or deployment guarantee.
 - No weight-level causal mechanism.
-- No physical invariant.
-- No Type-III evidence.
-- No nonassociative physics in LLMs.
-- No octonions in LLMs.
+- No physical-structure claim.
 - No latent-manifold stability proof.
 - No claim that Gate12C-1 is positive evidence.
 - No claim that Gate12C-1 expands the empirical scope of Gate12B.
@@ -81,27 +77,24 @@ Under the frozen protocol, the answer was no.
 
 That result matters because it prevents overclaiming. Gate12C-1 is not a failed search for a dramatic signal. It is a successful negative control: it shows where the evidence stops.
 
-The paper therefore reports Gate12B as the bounded positive artifact-level result and Gate12C-1 as the boundary that prevents a stronger Type-III or nonassociative-structure claim.
+The paper therefore reports Gate12B as the bounded positive artifact-level result and Gate12C-1 as the boundary that prevents a stronger higher-order structure claim.
 
 ## Compact Version
 
-Gate12B is a read-only audit over existing LLM replay artifacts that reports an archive-family observer-relative closure-signature pattern across four dense-transformer model lines. Gate12C-1 is a predeclared negative control: its higher-order compressed-overlap parenthesization probe returned `no_directional_support` under a matched spectrum-preserving orientation null, preventing a Type-III or nonassociative-structure claim.
+Gate12B is a read-only audit over existing LLM replay artifacts that reports an archive-family observer-relative closure-signature pattern across four dense-transformer model lines. Gate12C-1 is a predeclared negative control: its higher-order compressed-overlap parenthesization probe returned `no_directional_support` under a matched spectrum-preserving orientation null, preventing a stronger higher-order structure claim.
 
-## Public Wording To Avoid
+## Public Wording Boundary
 
-Avoid saying:
+Keep public summaries close to the tracked artifact boundary. Do not present the result as:
 
-- LLM safety is topology.
-- Jailbreaks are topological defects.
-- We found nonassociativity in LLMs.
-- Gate12C-1 shows Type-III defects.
-- This is octonionic structure.
-- This proves latent-space stability.
-- This is a new physics of AI.
-- Gate12C-1 supports Gate12B.
-- Gate12C-1 validates the archive result.
+- a safety or deployment guarantee
+- a model ranking
+- a correctness classifier
+- a physical-structure discovery
+- a weight-level causal mechanism
+- a claim that Gate12C-1 supports or validates Gate12B
 
-Use instead:
+Preferred wording:
 
 - bounded read-only artifact audit
 - observer-relative closure signatures
