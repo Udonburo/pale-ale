@@ -1,13 +1,13 @@
 # Gate12C-1 Negative-Control Technical Note
 
-Status: draft paper skeleton
-Scope: conservative source skeleton for the Gate12C-1 negative-control result
+Status: first technical-note draft
+Scope: conservative paper source for the Gate12C-1 negative-control result
 
-This directory contains a draft/skeleton paper source for the Gate12C-1
+This directory contains a concise draft technical-note source for the Gate12C-1
 negative-control result. It is not a Zenodo package, not a refreshed release
 folder, and not a checksum set.
 
-The skeleton is based on tracked repository workstream records:
+The draft is based on tracked repository workstream records:
 
 - `workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md`
 - `workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md`
@@ -30,4 +30,4 @@ pdflatex main.tex
 ```
 
 Build products such as `.aux`, `.log`, `.out`, `.toc`, and generated PDFs are
-not committed by this skeleton.
+not committed by this draft.
