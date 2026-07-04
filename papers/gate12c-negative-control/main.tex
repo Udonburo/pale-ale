@@ -51,7 +51,9 @@ designed after the Gate12B audit line as a stricter higher-order probe over
 existing Gate12A replay artifacts. The test asks whether real artifact cycles
 show more compressed-overlap parenthesization sensitivity than a matched
 orientation-randomized null that preserves edge spectra. Under the frozen
-equal-rank hierarchy, they did not.
+equal-rank hierarchy, they did not. In this note, associator excess means
+excess parenthesization sensitivity relative to that matched orientation null,
+not nonzero parenthesization sensitivity by itself.
 
 The contribution is narrow and methodological. Gate12C-1 records a completed
 null-controlled negative result and fixes the corresponding claim boundary. It
@@ -132,6 +134,13 @@ For this note, \emph{associator excess} means directional excess of the
 observed readout above that matched orientation-null distribution after the
 frozen support hierarchy and multiplicity rules are applied.
 
+For each ordered eligible triangle, the probe starts from three raw-overlap
+operators along the triangle edges. One compressed branch first composes and
+compresses one adjacent pair before applying the remaining edge; the other
+branch first composes and compresses the other adjacent pair. The readout
+compares the resulting compressed operators. This is the operational
+parenthesization-sensitive quantity tested against the matched null.
+
 \subsection{Compressed-Overlap Parenthesization Probe}
 
 The probe compares parenthesization-sensitive compositions of local
@@ -145,25 +154,29 @@ listed in Section~\ref{sec:reproducibility}.
 
 \subsection{Matched Orientation Null}
 
-The null preserves each edge's singular spectrum while randomizing orientation.
-This makes the comparison a matched orientation test rather than a comparison
-against zero. Under this protocol, positive associator magnitude is not
-evidence by itself; support requires directional excess relative to the matched
-null after the frozen hierarchy is applied.
+The null preserves each edge's singular spectrum while randomizing relative
+orientation across the triangle. This makes the comparison a matched
+orientation test rather than a comparison against zero or arbitrary random
+matrices. Under this protocol, positive associator magnitude is not evidence by
+itself; support requires directional excess relative to the matched null after
+the frozen hierarchy is applied.
 
 \subsection{Support Rule}
 
-The frozen hierarchy produces endpoint-level and run-level support calls. The
-primary grid outcome is determined only after coverage and multiplicity checks.
-In the recorded execution, no endpoint failed the coverage condition and no
-support call was positive.
+The frozen hierarchy produces endpoint-level and run-level support calls.
+Row-level null summaries are telemetry; they do not by themselves assign
+support. Case/q support is assigned only after the frozen coverage,
+aggregation, directional test, and multiplicity-correction rules are applied.
+Run support requires both tested q endpoints. In the recorded execution, no
+endpoint failed the coverage condition and no support call was positive.
 
 \section{Result}
 \label{sec:result}
 
 Gate12C-1 completed over the canonical twelve Gate12A source-run surface.
 Table~\ref{tab:primary-result} gives the complete primary result boundary used
-by this note.
+by this note. The 24 endpoints are the twelve canonical source-run cases times
+two nontrivial compression ranks.
 
 \begin{table}[ht]
 \centering
@@ -298,6 +311,7 @@ protocol. The completed result is \code{no_directional_support}, with all 24
 run/q endpoints informative and coverage-complete and all support calls false.
 Its value is disciplinary: the audit stack can reject an attractive
 higher-order extension rather than automatically convert it into a positive
-claim. Future empirical work requires new predeclared plans.
+claim. Future extensions of the null family, rank regime, source surface, or
+Gate12B overlay require separate predeclared plans.
 
 \end{document}
