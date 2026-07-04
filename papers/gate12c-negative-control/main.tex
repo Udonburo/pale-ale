@@ -46,6 +46,13 @@ useful only if the audit program can reject attractive extensions as well as
 report bounded positive signals. Without that discipline, richer telemetry can
 become a source of unchecked interpretive claims.
 
+Predeclared negative controls are one guard against that drift. Once an audit
+surface contains graphs, cycles, transports, and compression choices, many
+plausible higher-order probes can be defined. Without a predeclared null,
+endpoint family, and support rule, positive-looking slices can be promoted
+while negative outcomes are treated as incidental. Gate12C-1 fixes those
+degrees of freedom before reading the result.
+
 Gate12C-1 is included as a negative control for that audit posture. It was
 designed after the Gate12B audit line as a stricter higher-order probe over
 existing Gate12A replay artifacts. The test asks whether real artifact cycles
@@ -60,7 +67,7 @@ null-controlled negative result and fixes the corresponding claim boundary. It
 shows that this audit stack can decline a stronger associator-excess
 interpretation when the predeclared matched-null test does not support it.
 
-\section{Background}
+\section{Artifact Surface and Prior Gate12 Lines}
 \label{sec:background}
 
 \subsection{Gate12A Source Surface}
@@ -79,7 +86,7 @@ note keeps the Gate12B and Gate12C-1 claims separate: Gate12C-1 does not add
 empirical support to Gate12B, does not expand Gate12B's empirical scope, and
 does not invalidate the Gate12B closure-signature claim.
 
-\subsection{Gate12C-0 and Gate12C-1}
+\subsection{Gate12C-0 Feasibility and Gate12C-1 Test}
 
 Gate12C-0 established that an equal-rank associator surface was operationally
 feasible over the canonical real-artifact grid. Feasible here means that the
@@ -95,6 +102,17 @@ support hierarchy.
 Gate12C-1 is best read as an operational negative-control test, not as a new
 theory layer. The protocol fixes the source surface, the rank regime, the null
 family, and the support hierarchy before interpreting the result.
+
+The following were frozen before execution:
+
+\begin{itemize}
+    \item canonical twelve source-run surface;
+    \item equal-rank alpha eligibility;
+    \item matched orientation null;
+    \item aggregation hierarchy;
+    \item 24 endpoint family;
+    \item support rule.
+\end{itemize}
 
 \begin{table}[ht]
 \centering
@@ -150,7 +168,7 @@ rank-\code{q} SVD compression. The two parenthesized branches are recorded as
 \code{L_q = Q_q(M2 M1) M0} and \code{R_q = M2 Q_q(M1 M0)}. The observed
 readout is the Frobenius distance \code{a_q = fro_norm(L_q - R_q)}.
 
-\subsection{Compressed-Overlap Parenthesization Probe}
+\subsection{Eligible Triangle and Compressed-Overlap Readout}
 
 The probe compares parenthesization-sensitive compositions of local
 compressed-overlap transport objects derived from the existing artifact
@@ -250,6 +268,11 @@ Grid outcome & \code{no_directional_support} \\
 \hline
 \end{tabular}
 \end{table}
+
+This is not a marginal or coverage-limited negative result. All 24 endpoints
+were informative and coverage-complete. The negative grid outcome is driven by
+failure of the predeclared support rule, not by missing endpoints or a coverage
+failure.
 
 The primary hierarchy contains no positive endpoint hidden by aggregation. All
 endpoints were usable, none were coverage-limited, and the run-level support
