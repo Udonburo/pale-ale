@@ -141,6 +141,15 @@ branch first composes and compresses the other adjacent pair. The readout
 compares the resulting compressed operators. This is the operational
 parenthesization-sensitive quantity tested against the matched null.
 
+The following notation is runner notation for the operational readout, not new
+theory. For an ordered eligible triangle \code{v0 -> v1 -> v2 -> v0}, let
+\code{M0 = C(v1<-v0)}, \code{M1 = C(v2<-v1)}, and
+\code{M2 = C(v0<-v2)} denote the three raw-overlap operators on the directed
+edges. For nontrivial compression rank \code{q}, \code{Q_q} is the frozen best
+rank-\code{q} SVD compression. The two parenthesized branches are recorded as
+\code{L_q = Q_q(M2 M1) M0} and \code{R_q = M2 Q_q(M1 M0)}. The observed
+readout is the Frobenius distance \code{a_q = fro_norm(L_q - R_q)}.
+
 \subsection{Compressed-Overlap Parenthesization Probe}
 
 The probe compares parenthesization-sensitive compositions of local
@@ -154,21 +163,27 @@ listed in Section~\ref{sec:reproducibility}.
 
 \subsection{Matched Orientation Null}
 
-The null preserves each edge's singular spectrum while randomizing relative
-orientation across the triangle. This makes the comparison a matched
-orientation test rather than a comparison against zero or arbitrary random
-matrices. Under this protocol, positive associator magnitude is not evidence by
-itself; support requires directional excess relative to the matched null after
-the frozen hierarchy is applied.
+The null preserves each edge's singular spectrum while randomizing the relative
+orientations used by the triangle composition. This makes the comparison a
+matched orientation test rather than a comparison against zero or arbitrary
+random matrices. The null is not a gauge transform and is not required to be
+realizable by one globally consistent set of node bases. Under this protocol,
+positive associator magnitude is not evidence by itself; support requires
+directional excess relative to the matched null after the frozen hierarchy is
+applied.
 
 \subsection{Support Rule}
 
 The frozen hierarchy produces endpoint-level and run-level support calls.
 Row-level null summaries are telemetry; they do not by themselves assign
-support. Case/q support is assigned only after the frozen coverage,
-aggregation, directional test, and multiplicity-correction rules are applied.
-Run support requires both tested q endpoints. In the recorded execution, no
-endpoint failed the coverage condition and no support call was positive.
+support or discovery claims. The hierarchy runs from root row, to cycle/q
+median across three cyclic roots, to source-block/q median, to run/q median, to
+an exact sign test over source-block scores, and then to the Holm-corrected
+24-endpoint family. Case/q support is assigned only after the frozen coverage,
+aggregation, directional test, and multiplicity-correction rules are applied. A
+run supports the tested hypothesis only if both tested q endpoints satisfy the
+predeclared support rule. In the recorded execution, no endpoint failed the
+coverage condition and no support call was positive.
 
 \section{Result}
 \label{sec:result}
@@ -202,6 +217,36 @@ Endpoint family & 24 run/q endpoints \\
 Coverage & 24/24 informative and coverage-complete \\
 \hline
 Support calls & All \code{q_support} and \code{run_support} calls false \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Gate12C-1 decision-family summary.}
+\label{tab:decision-family}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.48\textwidth}|>{\raggedright\arraybackslash}p{0.39\textwidth}|}
+\hline
+Field & Value \\
+\hline
+Canonical source-run cases & 12 \\
+\hline
+Nontrivial compression ranks per case & 2 \\
+\hline
+Predeclared endpoint family & 24 case/q endpoints \\
+\hline
+Informative endpoints & 24/24 \\
+\hline
+Coverage-complete endpoints & 24/24 \\
+\hline
+Coverage-limited endpoints & 0 \\
+\hline
+Endpoints with \code{q_support} & 0/24 \\
+\hline
+Runs with both q endpoints supported & 0/12 \\
+\hline
+Grid outcome & \code{no_directional_support} \\
 \hline
 \end{tabular}
 \end{table}
@@ -293,11 +338,26 @@ rerun any Gate12A, Gate12B, or Gate12C tool.
 
 Tracked source records:
 
-\begin{itemize}
-    \item \breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md}
-    \item \breakcode{workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md}
-    \item \breakcode{workstream/238_GATE12C1_NEGATIVE_CONTROL_AND_PUBLIC_POSITIONING_PLAN.md}
-\end{itemize}
+\begin{table}[ht]
+\centering
+\small
+\caption{Tracked provenance records used by this note.}
+\label{tab:provenance-records}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.55\textwidth}|>{\raggedright\arraybackslash}p{0.32\textwidth}|}
+\hline
+Record & Role \\
+\hline
+\breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md} &
+Primary empirical result memo and fixed result fields. \\
+\hline
+\breakcode{workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md} &
+Closeout boundary and non-claim record. \\
+\hline
+\breakcode{workstream/238_GATE12C1_NEGATIVE_CONTROL_AND_PUBLIC_POSITIONING_PLAN.md} &
+Public positioning and manuscript-integration boundary. \\
+\hline
+\end{tabular}
+\end{table}
 
 Existing \breakcode{zenodo-release-*} directories remain frozen historical
 release snapshots. This note is not part of a refreshed Zenodo package and does
@@ -309,7 +369,7 @@ not update any \breakcode{CHECKSUMS-SHA256.txt} file.
 Gate12C-1 provides no support for associator excess under the frozen equal-rank
 protocol. The completed result is \code{no_directional_support}, with all 24
 run/q endpoints informative and coverage-complete and all support calls false.
-Its value is disciplinary: the audit stack can reject an attractive
+Its value is in claim discipline: the audit stack can reject a stronger
 higher-order extension rather than automatically convert it into a positive
 claim. Future extensions of the null family, rank regime, source surface, or
 Gate12B overlay require separate predeclared plans.
