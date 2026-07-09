@@ -28,11 +28,11 @@ replay artifacts. The test asks whether compressed-overlap parenthesization
 sensitivity on the canonical twelve-source-run surface exceeds a matched
 spectrum-preserving orientation null under a frozen equal-rank protocol. The
 execution completed with status \code{complete} and grid outcome
-\code{no_directional_support}: all 24 run/q endpoints were informative and
+\code{no_directional_support}: all 24 case/q endpoints were informative and
 coverage-complete, and all \code{q_support} and \code{run_support} calls were
 false. Under this protocol, the run provides no support for the tested
 associator-excess hypothesis. The result is a claim-boundary result, not
-positive evidence for Gate12B and not a model-evaluation or physical-structure
+evidence transfer to Gate12B and not a model-evaluation or physical-structure
 claim.
 \end{abstract}
 
@@ -117,6 +117,52 @@ The following were frozen before execution:
     \item support rule.
 \end{itemize}
 
+Throughout this note, a \emph{source-run case} means one of the twelve
+canonical Gate12A source runs. A \emph{case/q endpoint} means one predeclared
+endpoint for one source-run case and one nontrivial compression rank \code{q}.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Frozen protocol settings used by Gate12C-1.}
+\label{tab:frozen-protocol}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{0.39\textwidth}|>{\raggedright\arraybackslash}p{0.48\textwidth}|}
+\hline
+Setting & Frozen value or rule \\
+\hline
+Source surface & 12 canonical Gate12A source-run cases. \\
+\hline
+Rank surface & Equal-rank alpha; common rank 3 on the canonical grid. \\
+\hline
+Compression ranks & Nontrivial ranks 1 and 2. \\
+\hline
+Null family & Matched orientation null preserving per-edge singular spectra. \\
+\hline
+Orientation-null seed & \code{gate12c1_first_empirical_orientation_null_v1}. \\
+\hline
+Requested null draws & 255. \\
+\hline
+Maximum null attempts & 1024. \\
+\hline
+Coverage threshold & 0.9. \\
+\hline
+Primary zero tolerance & \code{1e-12}. \\
+\hline
+Endpoint family & 24 case/q endpoints. \\
+\hline
+Directional test & One-sided exact sign test over source-block scores for
+directional excess. \\
+\hline
+Multiplicity correction & Holm correction over the 24 endpoint family at
+alpha 0.05. \\
+\hline
+Support rule & Case/q support is assigned after coverage, hierarchy,
+directional testing, and multiplicity correction; \code{run_support} requires
+both tested q endpoints. \\
+\hline
+\end{tabular}
+\end{table}
+
 \begin{table}[ht]
 \centering
 \small
@@ -163,13 +209,29 @@ compares the resulting compressed operators. This is the operational
 parenthesization-sensitive quantity tested against the matched null.
 
 The following notation is runner notation for the operational readout, not new
-theory. For an ordered eligible triangle \code{v0 -> v1 -> v2 -> v0}, let
-\code{M0 = C(v1<-v0)}, \code{M1 = C(v2<-v1)}, and
-\code{M2 = C(v0<-v2)} denote the three raw-overlap operators on the directed
-edges. For nontrivial compression rank \code{q}, \code{Q_q} is the frozen best
-rank-\code{q} SVD compression. The two parenthesized branches are recorded as
-\code{L_q = Q_q(M2 M1) M0} and \code{R_q = M2 Q_q(M1 M0)}. The observed
-readout is the Frobenius distance \code{a_q = fro_norm(L_q - R_q)}.
+theory. For an ordered eligible triangle
+\[
+v\sb{0}\rightarrow v\sb{1}\rightarrow v\sb{2}\rightarrow v\sb{0},
+\]
+let
+\[
+M\sb{0}=C(v\sb{1}\leftarrow v\sb{0}),\quad
+M\sb{1}=C(v\sb{2}\leftarrow v\sb{1}),\quad
+M\sb{2}=C(v\sb{0}\leftarrow v\sb{2})
+\]
+denote the three raw-overlap operators on the directed edges. For nontrivial
+compression rank \code{q}, \code{Q_q} is the frozen best rank-\code{q} SVD
+compression. The two parenthesized branches are
+\[
+L\sb{q}=Q\sb{q}(M\sb{2}M\sb{1})M\sb{0},\quad
+R\sb{q}=M\sb{2}Q\sb{q}(M\sb{1}M\sb{0}),
+\]
+and the observed readout is
+\[
+a\sb{q}=\lVert L\sb{q}-R\sb{q}\rVert\sb{F}.
+\]
+These displayed terms correspond to runner fields \code{M0}, \code{M1},
+\code{M2}, \code{Q_q}, \code{L_q}, \code{R_q}, and \code{a_q}.
 
 \subsection{Eligible Triangle and Compressed-Overlap Readout}
 
@@ -178,9 +240,9 @@ compressed-overlap transport objects derived from the existing artifact
 surface. The relevant question is whether the real artifact cycles exceed their
 matched null counterparts under the frozen decision rule.
 
-This note does not introduce new equations or theory vocabulary beyond the
-tracked protocol records. The authoritative result and closeout records are
-listed in Section~\ref{sec:reproducibility}.
+This note does not introduce a new theory layer; it restates the runner
+notation needed to identify the tracked protocol records. The authoritative
+result and closeout records are listed in Section~\ref{sec:reproducibility}.
 
 \subsection{Matched Orientation Null}
 
@@ -200,7 +262,7 @@ Row-level null summaries are telemetry; they do not by themselves assign
 support or discovery claims. The hierarchy runs from root row, to cycle/q
 median across three cyclic roots, to source-block/q median, to run/q median, to
 an exact sign test over source-block scores, and then to the Holm-corrected
-24-endpoint family. Case/q support is assigned only after the frozen coverage,
+24 case/q endpoint family. Case/q support is assigned only after the frozen coverage,
 aggregation, directional test, and multiplicity-correction rules are applied. A
 run supports the tested hypothesis only if both tested q endpoints satisfy the
 predeclared support rule. In the recorded execution, no endpoint failed the
@@ -229,11 +291,11 @@ Grid outcome & \code{no_directional_support} \\
 \hline
 Supporting run count & 0 \\
 \hline
-Q-discordant run count & 0 \\
+q-discordant run count & 0 \\
 \hline
 Coverage-limited endpoint count & 0 \\
 \hline
-Endpoint family & 24 run/q endpoints \\
+Endpoint family & 24 case/q endpoints \\
 \hline
 Coverage & 24/24 informative and coverage-complete \\
 \hline
@@ -279,10 +341,9 @@ failure.
 
 The primary hierarchy contains no positive endpoint hidden by aggregation. All
 endpoints were usable, none were coverage-limited, and the run-level support
-count was zero. The clean reading is therefore direct: under the frozen
-equal-rank protocol, the real Gate12A artifact cycles were not more
-parenthesization-sensitive than the matched orientation-randomized,
-edge-spectrum-preserving null.
+count was zero. Under the frozen equal-rank protocol, the real Gate12A artifact
+cycles did not satisfy the predeclared directional-excess support rule relative
+to the matched orientation-randomized, edge-spectrum-preserving null.
 
 \section{Interpretation}
 \label{sec:interpretation}
@@ -358,9 +419,9 @@ Gate12B overlay evidence, or a rectangular rank-mismatch result.
 \section{Reproducibility Boundary}
 \label{sec:reproducibility}
 
-This note records paper-source wording only. It does not include generated run
-artifacts, refresh a Zenodo release package, update package integrity files, or
-rerun any Gate12A, Gate12B, or Gate12C tool.
+This manuscript summarizes the Gate12C-1 result from tracked source records. It
+does not include generated run artifacts, refresh a Zenodo release package,
+update package integrity files, or rerun any Gate12A, Gate12B, or Gate12C tool.
 
 Tracked source records:
 
@@ -372,6 +433,15 @@ Tracked source records:
 \begin{tabular}{|>{\raggedright\arraybackslash}p{0.55\textwidth}|>{\raggedright\arraybackslash}p{0.32\textwidth}|}
 \hline
 Record & Role \\
+\hline
+\breakcode{workstream/233_GATE12C_FIRST_REAL_ARTIFACT_FEASIBILITY_CENSUS_MEMO.md} &
+Gate12C-0 feasibility census for the equal-rank source surface. \\
+\hline
+\breakcode{workstream/234_GATE12C_EQUAL_RANK_ALPHA_IMPLEMENTATION_CONTRACT.md} &
+Equal-rank alpha implementation contract. \\
+\hline
+\breakcode{workstream/235_GATE12C1_FIRST_EMPIRICAL_EXECUTION_PLAN.md} &
+Pre-execution Gate12C-1 plan, null settings, hierarchy, and endpoint family. \\
 \hline
 \breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md} &
 Primary empirical result memo and fixed result fields. \\
@@ -394,7 +464,7 @@ not update any \breakcode{CHECKSUMS-SHA256.txt} file.
 
 Gate12C-1 provides no support for associator excess under the frozen equal-rank
 protocol. The completed result is \code{no_directional_support}, with all 24
-run/q endpoints informative and coverage-complete and all support calls false.
+case/q endpoints informative and coverage-complete and all support calls false.
 Its value is in claim discipline: the audit stack can reject a stronger
 higher-order extension rather than automatically convert it into a positive
 claim. Future extensions of the null family, rank regime, source surface, or
