@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
 
 \usepackage{amsmath,amssymb}
 \usepackage{array}
@@ -9,15 +10,17 @@
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{1\baselineskip}
+\emergencystretch=3em
 
 \newcommand{\code}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\breakcode}[1]{\begingroup\urlstyle{tt}\nolinkurl{#1}\endgroup}
+\newcommand{\splitcode}[2]{\texttt{#1\allowbreak#2}}
 
 \title{Gate12C-1:\\
 A Higher-Order Negative Control for Compressed-Overlap\\
 Parenthesization Sensitivity in LLM Replay Artifacts}
 \author{Aoi Kawasaki}
-\date{Paper-body draft, July 2026}
+\date{July 2026}
 
 \begin{document}
 \maketitle
@@ -28,8 +31,9 @@ replay artifacts. The test asks whether compressed-overlap parenthesization
 sensitivity on the canonical twelve-source-run surface exceeds a matched
 spectrum-preserving orientation null under a frozen equal-rank protocol. The
 execution completed with status \code{complete} and grid outcome
-\code{no_directional_support}: all 24 case/q endpoints were informative and
-coverage-complete, and all \code{q_support} and \code{run_support} calls were
+\breakcode{no_directional_support}: all 24 case/q endpoints were informative
+and coverage-complete, and all \breakcode{q_support} and
+\breakcode{run_support} calls were
 false. Under this protocol, the run provides no support for the tested
 associator-excess hypothesis. The result is a claim-boundary result, not
 evidence transfer to Gate12B and not a model-evaluation or physical-structure
@@ -110,7 +114,7 @@ The following were frozen before execution:
 \begin{itemize}
     \item canonical twelve source-run surface;
     \item eligible-triangle criteria;
-    \item \code{equal_rank_alpha} rank regime;
+    \item \breakcode{equal_rank_alpha} rank regime;
     \item matched orientation-null family;
     \item orientation-null draw settings;
     \item aggregation hierarchy;
@@ -121,7 +125,8 @@ The following were frozen before execution:
 Throughout this note, a \emph{source-run case} means one of the twelve
 canonical Gate12A source runs. A \emph{root row} is one cyclic rooting of an
 eligible triangle at one compression rank. A \emph{source block} is a
-predeclared source-sample block identified by \code{source_sample_block_id}; a
+predeclared source-sample block identified by
+\breakcode{source_sample_block_id}; a
 cycle belongs to a valid single-sample block only when all three nodes resolve
 to that same block. A \emph{case/q endpoint} means one predeclared endpoint for
 one source-run case and one nontrivial compression rank \code{q}.
@@ -137,13 +142,16 @@ Setting & Frozen value or rule \\
 \hline
 Source surface & 12 canonical Gate12A source-run cases. \\
 \hline
-Rank surface & \code{equal_rank_alpha}; common rank 3 on the canonical grid. \\
+Rank surface & \breakcode{equal_rank_alpha}; common rank 3 on the canonical grid. \\
 \hline
 Compression ranks & Nontrivial ranks 1 and 2. \\
 \hline
+Split-gap threshold & \breakcode{tau_split_rel} equal to \code{1e-3} on both
+inner products. \\
+\hline
 Null family & Matched orientation null preserving per-edge singular spectra. \\
 \hline
-Orientation-null seed & \code{gate12c1_first_empirical_orientation_null_v1}. \\
+Orientation-null seed & \breakcode{gate12c1_first_empirical_orientation_null_v1}. \\
 \hline
 Requested null draws & 255. \\
 \hline
@@ -162,7 +170,7 @@ Multiplicity correction & Holm correction over the 24 endpoint family at
 familywise level 0.05. \\
 \hline
 Support rule & Case/q support is assigned after coverage, hierarchy,
-directional testing, and multiplicity correction; \code{run_support} requires
+directional testing, and multiplicity correction; \breakcode{run_support} requires
 both tested q endpoints. \\
 \hline
 \end{tabular}
@@ -183,7 +191,7 @@ artifacts and triangle-cycle records. \\
 Probe & Compressed-overlap transport composition, compared across
 parenthesizations. \\
 \hline
-Rank regime & \code{equal_rank_alpha} construction; no rectangular rank-mismatch
+Rank regime & \breakcode{equal_rank_alpha} construction; no rectangular rank-mismatch
 result is reported. \\
 \hline
 Null family & Matched orientation-randomized null preserving each edge's
@@ -225,18 +233,34 @@ M\sb{0}=C(v\sb{1}\leftarrow v\sb{0}),\quad
 M\sb{1}=C(v\sb{2}\leftarrow v\sb{1}),\quad
 M\sb{2}=C(v\sb{0}\leftarrow v\sb{2})
 \]
-denote the three raw-overlap operators on the directed edges. If
-\(X=U\Sigma V^{\mathsf T}\), let \(U\sb q\) and \(V\sb q\) contain the first
-\(q\) singular-vector columns and let \(\Sigma\sb q\) contain the retained
-singular values. The frozen compression operator returns the reconstructed
-rank-\(q\) matrix
+denote the three raw-overlap operators on the directed edges. The operator
+\(C(v\sb j\leftarrow v\sb i)\) maps column coordinates at \(v\sb i\) to
+column coordinates at \(v\sb j\). Matrices act on column vectors from the
+left, and products compose right-to-left; therefore
+\(M\sb 2M\sb 1M\sb 0\) maps the \(v\sb 0\) space around the ordered cycle
+back to itself.
+
+If \(X=U\Sigma V^{\mathsf T}\), singular values are ordered
+nonincreasingly. Let \(U\sb q\) and \(V\sb q\) contain the first \(q\)
+singular-vector columns and let \(\Sigma\sb q\) contain the retained singular
+values. The frozen compression operator returns the reconstructed rank-\(q\)
+matrix
 \[
 Q\sb q(X)=U\sb q\Sigma\sb q V\sb q^{\mathsf T}.
 \]
-The same construction is applied to observed and null products. A split is
-aggregation-eligible only when the retained and discarded singular values are
-separated by the frozen relative-gap rule; a near-degenerate cut is not forced
-through an arbitrary singular-vector basis. The two parenthesized branches are
+The same construction is applied to observed and null products. For the
+ordered singular values of \(X\), the frozen split gap is
+\[
+g\sb q(X)=
+\frac{\sigma\sb q(X)-\sigma\sb{q+1}(X)}
+{\max\{\sigma\sb 1(X),\epsilon\}},
+\qquad \epsilon=10^{-12}.
+\]
+Both inner products \(M\sb 2M\sb 1\) and \(M\sb 1M\sb 0\) must satisfy
+\(g\sb q>\tau\sb{\mathrm{split}}\), with frozen
+\(\tau\sb{\mathrm{split}}=10^{-3}\). The same threshold applies to every
+null product. A near-degenerate cut is not forced through an arbitrary
+singular-vector basis. The two parenthesized branches are
 \[
 L\sb{q}=Q\sb{q}(M\sb{2}M\sb{1})M\sb{0},\quad
 R\sb{q}=M\sb{2}Q\sb{q}(M\sb{1}M\sb{0}),
@@ -251,14 +275,24 @@ These displayed terms correspond to runner fields \code{M0}, \code{M1},
 
 \subsection{Eligible Triangle and Compressed-Overlap Readout}
 
-The probe compares parenthesization-sensitive compositions of local
-compressed-overlap transport objects derived from the existing artifact
-surface. The relevant question is whether the real artifact cycles exceed their
-matched null counterparts under the frozen decision rule.
+An eligible triangle is a Gate12A-defined residual-bearing explicit triangle
+with \breakcode{holonomy_status} equal to \code{defined}, all three legs marked
+\breakcode{equal_rank_orthogonal}, one common positive node rank \(r\geq 2\), and
+stable left and right cuts at the selected \(q\). The canonical surface has
+\(r=3\), tests \(q\in\{1,2\}\), and evaluates all three cyclic roots. If an
+observed root fails either cut, that root is aggregation-ineligible; because a
+valid cycle/q requires exactly three valid roots, the cycle/q is then excluded
+and counted in coverage diagnostics. A failed cut on a null product invalidates
+that draw for the affected row and invokes the frozen retry accounting.
 
-This note does not introduce a new theory layer; it restates the runner
-notation needed to identify the tracked protocol records. The authoritative
-result and closeout records are listed in Section~\ref{sec:reproducibility}.
+For each source-run case, the expected cycle denominator is the distinct set of
+preflight-eligible cycles frozen by the Gate12C-0 census. The expected block
+denominator is the distinct set of \breakcode{single_sample}
+\breakcode{source_sample_block_id} values represented by those cycles before
+primary filtering. Repeated block identifiers are aggregated as one block; a
+block is represented at \(q\) when it contains at least one valid cycle/q. A
+missing, mixed, or undefined block assignment forces coverage failure, as does
+a zero expected-block denominator. No row, cycle, or block is imputed.
 
 \subsection{Matched Orientation Null}
 
@@ -276,13 +310,14 @@ edge operators and reuses that triple across all three cyclic roots and both
 tested compression ranks. For an observed edge spectrum \(\Sigma\sb e\), the
 null edge has the form
 \[
-\widetilde C\sb e^{(b)}=L\sb e^{(b)}\Sigma\sb e
-R\sb e^{(b)\mathsf T}.
+\widetilde C\sb e^{(b)}=
+O\sb{e,\mathrm L}^{(b)}\Sigma\sb e
+O\sb{e,\mathrm R}^{(b)\mathsf T}.
 \]
-The left and right orientations are separately seeded from a stable SHA256
-hash of the frozen null seed, cycle identifier, edge identifier, draw index,
-and orientation-side label. Hash-derived standard-normal matrices are reduced
-by QR decomposition and column-sign normalization to obtain the deterministic
+The two orientation matrices are separately seeded from a stable SHA256 hash of
+the frozen null seed, cycle identifier, edge identifier, draw index, and
+orientation-side label. Hash-derived standard-normal matrices are reduced by QR
+decomposition and column-sign normalization to obtain the deterministic
 orthogonal orientations. Null accounting records valid, invalid-cut, and total
 attempt counts; retries continue until 255 valid draws are obtained or the
 frozen maximum of 1024 attempts is reached. Draws with a near-degenerate
@@ -291,18 +326,19 @@ compression cut are marked invalid rather than assigned an arbitrary SVD basis.
 \subsection{Support Rule}
 
 The frozen hierarchy produces endpoint-level and source-run-case support calls.
-For an observed root-row readout \(a\sb{\mathrm{obs}}\), valid null readouts
-\(a\sb b\), and frozen \(\epsilon=10^{-12}\), the primary row effect is
+For an observed root-row readout \(a\sb{q,\mathrm{obs}}\), valid null-draw
+readouts \(a\sb q^{(b)}\), and frozen \(\epsilon=10^{-12}\), the primary row
+effect is
 \[
-d=\log\!\left(
-\frac{a\sb{\mathrm{obs}}+\epsilon}
-{\operatorname{median}\sb b(a\sb b)+\epsilon}
+d\sb q=\log\!\left(
+\frac{a\sb{q,\mathrm{obs}}+\epsilon}
+{\operatorname{median}\sb b\{a\sb q^{(b)}\}+\epsilon}
 \right).
 \]
 This row effect and the row-level null summaries are telemetry; they do not by
 themselves assign support or discovery claims.
 
-For each \code{q}, the hierarchy takes the median row effect across all three
+For each \code{q}, the hierarchy takes the median \(d\sb q\) across all three
 valid cyclic roots to obtain a cycle/q value, the median across valid cycles in
 one source block to obtain a source-block/q score, and the median across source
 blocks to obtain the case/q median. The source-block scores, rather than
@@ -323,11 +359,11 @@ When \(n=0\), the endpoint is non-informative and receives
 \(p\sb{\mathrm{raw}}=1\).
 
 Holm correction is then applied across all 24 case/q endpoints. A case/q
-endpoint receives \code{q_support} only when coverage passes, the sign test is
+endpoint receives \breakcode{q_support} only when coverage passes, the sign test is
 informative, the case/q median exceeds the frozen zero tolerance, and the
 Holm-adjusted one-sided value is below 0.05. Coverage-failed and non-informative
 endpoints remain in that family with raw value 1. A source-run case receives
-\code{run_support} only when both tested q endpoints satisfy that rule. In the
+\breakcode{run_support} only when both tested q endpoints satisfy that rule. In the
 recorded execution, no endpoint failed coverage and no support call was
 positive.
 
@@ -338,6 +374,10 @@ Gate12C-1 completed over the canonical twelve Gate12A source-run surface.
 Table~\ref{tab:primary-result} gives the primary decision-boundary summary used
 by this note. The 24 endpoints are the twelve canonical source-run cases times
 two nontrivial compression ranks.
+
+A source-run case is \emph{q-discordant} when the two \breakcode{q_support} calls
+differ or when the signs of the two case/q medians differ. The sign map uses the
+frozen \(10^{-12}\) zero tolerance and returns \(-1\), \(0\), or \(+1\).
 
 \begin{table}[ht]
 \centering
@@ -350,11 +390,11 @@ Field & Value \\
 \hline
 Execution status & \code{complete} \\
 \hline
-Grid outcome & \code{no_directional_support} \\
+Grid outcome & \breakcode{no_directional_support} \\
 \hline
 Supporting run count & 0 \\
 \hline
-q-discordant run count & 0 \\
+q-discordant source-run count & 0 \\
 \hline
 Coverage-limited endpoint count & 0 \\
 \hline
@@ -362,7 +402,8 @@ Endpoint family & 24 case/q endpoints \\
 \hline
 Coverage & 24/24 informative and coverage-complete \\
 \hline
-Support calls & All \code{q_support} and \code{run_support} calls false \\
+Support calls & All \breakcode{q_support} and \breakcode{run_support} calls
+false \\
 \hline
 \end{tabular}
 \end{table}
@@ -388,11 +429,11 @@ Coverage-complete endpoints & 24/24 \\
 \hline
 Coverage-limited endpoints & 0 \\
 \hline
-Endpoints with \code{q_support} & 0/24 \\
+Endpoints with \breakcode{q_support} & 0/24 \\
 \hline
 Source-run cases with both q endpoints supported & 0/12 \\
 \hline
-Grid outcome & \code{no_directional_support} \\
+Grid outcome & \breakcode{no_directional_support} \\
 \hline
 \end{tabular}
 \end{table}
@@ -406,9 +447,10 @@ No case/q endpoint received a positive support call, and the source-run-case
 support count was zero. Under the frozen equal-rank protocol, the real Gate12A
 artifact cycles did not satisfy the predeclared directional-excess support rule
 relative to the matched orientation-randomized, edge-spectrum-preserving null.
-The tracked result memo reports the per-endpoint coverage, sign counts, case/q
-medians, raw and Holm-adjusted values, and support calls; this note summarizes
-the decision boundary rather than reproducing row-level telemetry.
+Appendix~\ref{app:endpoint-audit} reports the per-endpoint coverage, sign
+counts, case/q medians, raw and Holm-adjusted values, and support calls. The
+tables expose the complete decision family without reproducing root-row or
+secondary telemetry.
 
 \section{Interpretation}
 \label{sec:interpretation}
@@ -436,6 +478,12 @@ The limitations are mostly consequences of the predeclared design:
 \begin{itemize}
     \item \textbf{Current source-run surface only.} The result is bounded to the
     canonical twelve Gate12A source runs used by the frozen plan.
+    \item \textbf{Block-aware decision calibration.} Source-sample blocks are
+    the predeclared sign-test units so that overlapping root and cycle rows are
+    not counted as separate observations. The design does not establish
+    independence across source blocks or authorize population-level inference;
+    dependence among blocks would limit the inferential reading of the exact
+    binomial calibration beyond this frozen decision rule.
     \item \textbf{One null family.} The primary null tests excess relative to
     orientation-randomized cycles with preserved edge spectra. It is not a test
     against every possible structural randomization, and other nulls require
@@ -476,7 +524,7 @@ negative control without turning the latter into support for the former.
 \label{sec:claim-boundary}
 
 The claim ceiling is compact. Gate12C-1 reports a completed predeclared
-negative control with \code{no_directional_support}. It does not report a
+negative control with \breakcode{no_directional_support}. It does not report a
 physical-structure discovery, a safety or deployment guarantee, a model-quality
 ranking, a correctness classification rule, a weight-level causal mechanism,
 Gate12B overlay evidence, or a rectangular rank-mismatch result.
@@ -503,7 +551,7 @@ Record & Role \\
 Gate12C-0 feasibility census for the equal-rank source surface. \\
 \hline
 \breakcode{workstream/234_GATE12C_EQUAL_RANK_ALPHA_IMPLEMENTATION_CONTRACT.md} &
-\code{equal_rank_alpha} implementation contract. \\
+\breakcode{equal_rank_alpha} implementation contract. \\
 \hline
 \breakcode{workstream/235_GATE12C1_FIRST_EMPIRICAL_EXECUTION_PLAN.md} &
 Pre-execution Gate12C-1 plan, null settings, hierarchy, and endpoint family. \\
@@ -520,18 +568,34 @@ Public positioning and manuscript-integration boundary. \\
 \end{tabular}
 \end{table}
 
-The tracked result memo pins the execution to frozen runner commit
-\breakcode{8d5613bffe5b6c91d0956c812404072eb76e98c6}, runner-script SHA256
-\breakcode{b363fd874a0538dc548853e97e8ec17c0eb84be5658f6e2f01f60d2a12789c3e},
-summary-tool commit
-\breakcode{6b66f49710f4b7cbdae7e5a282d14d1d81723b30}, summary-script SHA256
-\breakcode{9e527c0363875de912f9abf9ba38acb462a13b0b62da6e14be35d4c3526df708},
-and case-manifest SHA256
-\breakcode{dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704}.
-The tracked records are versioned in
-\url{https://github.com/Udonburo/pale-ale}; the execution identifiers above
-provide immutable provenance anchors for the runner, summarizer, and case
-manifest recorded by the result memo.
+The protocol and result records above are pinned to
+\href{https://github.com/Udonburo/pale-ale/tree/187ca27d1d0fffde949cd603af61f0ee5fcb1b0a}
+{repository snapshot}
+\splitcode{187ca27d1d0fffde949c}{d603af61f0ee5fcb1b0a}. The result memo records
+the immutable execution identifiers in Table~\ref{tab:execution-provenance}.
+
+\begin{table}[ht]
+\centering
+\scriptsize
+\caption{Execution provenance anchors recorded by the tracked result memo.}
+\label{tab:execution-provenance}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.67\textwidth}@{}}
+\toprule
+Identifier & Recorded value \\
+\midrule
+Frozen runner commit &
+\splitcode{8d5613bffe5b6c91d095}{6c812404072eb76e98c6} \\
+Runner-script SHA256 &
+\splitcode{b363fd874a0538dc548853e97e8ec17c}{0eb84be5658f6e2f01f60d2a12789c3e} \\
+Summary-tool commit &
+\splitcode{6b66f49710f4b7cbdae7}{e5a282d14d1d81723b30} \\
+Summary-script SHA256 &
+\splitcode{9e527c0363875de912f9abf9ba38acb4}{62a13b0b62da6e14be35d4c3526df708} \\
+Case-manifest SHA256 &
+\splitcode{dae1f2690fc707a166277dac143aafcf}{a5e51e23934428861ddc48cac97ad704} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 Existing \breakcode{zenodo-release-*} directories remain frozen historical
 release snapshots. This note is not part of a refreshed Zenodo package and does
@@ -541,11 +605,115 @@ not update any \breakcode{CHECKSUMS-SHA256.txt} file.
 \label{sec:conclusion}
 
 Gate12C-1 provides no support for associator excess under the frozen equal-rank
-protocol. The completed result is \code{no_directional_support}, with all 24
+protocol. The completed result is \breakcode{no_directional_support}, with all 24
 case/q endpoints informative and coverage-complete and all support calls false.
 Its value is in claim discipline: the audit stack can reject a stronger
 higher-order extension rather than automatically convert it into a positive
 claim. Future extensions of the null family, rank regime, source surface, or
 Gate12B overlay require separate predeclared plans.
+
+\appendix
+
+\section{Endpoint-Level Decision Audit}
+\label{app:endpoint-audit}
+
+Tables~\ref{tab:endpoint-coverage} and~\ref{tab:endpoint-decisions} transcribe
+the predeclared endpoint fields from the tracked result memo. No generated run
+artifact is included. All 24 endpoints had informative test status, passed both
+coverage requirements, and had no failure reason. In
+Table~\ref{tab:endpoint-coverage}, cycle and block counts are shown as
+represented/expected, and the final three columns are positive, negative, and
+tie source-block counts.
+
+{\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{@{}lrrrrrr@{}}
+\caption{Endpoint coverage and source-block sign counts.}
+\label{tab:endpoint-coverage}\\
+\toprule
+Case & \(q\) & Cycles & Blocks & Positive & Negative & Tie \\
+\midrule
+\endfirsthead
+\multicolumn{7}{c}{\tablename\ \thetable\ continued}\\
+\toprule
+Case & \(q\) & Cycles & Blocks & Positive & Negative & Tie \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\code{case_01} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_01} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_02} & 1 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_02} & 2 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_03} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_03} & 2 & 320/320 & 128/128 & 7 & 121 & 0 \\
+\code{case_04} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_04} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_05} & 1 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_05} & 2 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_06} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_06} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_07} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_07} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_08} & 1 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_08} & 2 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_09} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_09} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_10} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_10} & 2 & 320/320 & 128/128 & 1 & 127 & 0 \\
+\code{case_11} & 1 & 500/500 & 200/200 & 0 & 200 & 0 \\
+\code{case_11} & 2 & 500/500 & 200/200 & 9 & 191 & 0 \\
+\code{case_12} & 1 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\code{case_12} & 2 & 320/320 & 128/128 & 0 & 128 & 0 \\
+\end{longtable}
+}
+
+Table~\ref{tab:endpoint-decisions} reports the case/q medians rounded to six
+decimal places for display. Exact recorded decimal values remain in the tracked
+result memo. Raw and Holm-adjusted values are shown without rounding loss
+because all equal 1 in the recorded decision family.
+
+{\scriptsize
+\setlength{\tabcolsep}{5pt}
+\begin{longtable}{@{}lrrrrl@{}}
+\caption{Endpoint directional-test and support decisions.}
+\label{tab:endpoint-decisions}\\
+\toprule
+Case & \(q\) & Case/q median & Raw \(p\) & Holm \(p\) & Support \\
+\midrule
+\endfirsthead
+\multicolumn{6}{c}{\tablename\ \thetable\ continued}\\
+\toprule
+Case & \(q\) & Case/q median & Raw \(p\) & Holm \(p\) & Support \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\code{case_01} & 1 & -3.574093 & 1.0 & 1.0 & \code{false} \\
+\code{case_01} & 2 & -2.001354 & 1.0 & 1.0 & \code{false} \\
+\code{case_02} & 1 & -3.268481 & 1.0 & 1.0 & \code{false} \\
+\code{case_02} & 2 & -2.221682 & 1.0 & 1.0 & \code{false} \\
+\code{case_03} & 1 & -3.212260 & 1.0 & 1.0 & \code{false} \\
+\code{case_03} & 2 & -2.116187 & 1.0 & 1.0 & \code{false} \\
+\code{case_04} & 1 & -3.554964 & 1.0 & 1.0 & \code{false} \\
+\code{case_04} & 2 & -2.526256 & 1.0 & 1.0 & \code{false} \\
+\code{case_05} & 1 & -3.080008 & 1.0 & 1.0 & \code{false} \\
+\code{case_05} & 2 & -2.647950 & 1.0 & 1.0 & \code{false} \\
+\code{case_06} & 1 & -2.884508 & 1.0 & 1.0 & \code{false} \\
+\code{case_06} & 2 & -2.177989 & 1.0 & 1.0 & \code{false} \\
+\code{case_07} & 1 & -2.798490 & 1.0 & 1.0 & \code{false} \\
+\code{case_07} & 2 & -2.298432 & 1.0 & 1.0 & \code{false} \\
+\code{case_08} & 1 & -2.892626 & 1.0 & 1.0 & \code{false} \\
+\code{case_08} & 2 & -2.274441 & 1.0 & 1.0 & \code{false} \\
+\code{case_09} & 1 & -2.869399 & 1.0 & 1.0 & \code{false} \\
+\code{case_09} & 2 & -2.247802 & 1.0 & 1.0 & \code{false} \\
+\code{case_10} & 1 & -3.179593 & 1.0 & 1.0 & \code{false} \\
+\code{case_10} & 2 & -1.807492 & 1.0 & 1.0 & \code{false} \\
+\code{case_11} & 1 & -3.156542 & 1.0 & 1.0 & \code{false} \\
+\code{case_11} & 2 & -1.646118 & 1.0 & 1.0 & \code{false} \\
+\code{case_12} & 1 & -3.272157 & 1.0 & 1.0 & \code{false} \\
+\code{case_12} & 2 & -1.443657 & 1.0 & 1.0 & \code{false} \\
+\end{longtable}
+}
 
 \end{document}
