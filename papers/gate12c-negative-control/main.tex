@@ -26,11 +26,12 @@ Parenthesization Sensitivity in LLM Replay Artifacts}
 \maketitle
 
 \begin{abstract}
-Gate12C-1 is a predeclared higher-order negative control over existing Gate12A
-replay artifacts. The test asks whether compressed-overlap parenthesization
-sensitivity on the canonical twelve-source-run surface exceeds a matched
-spectrum-preserving orientation null under a frozen equal-rank protocol. The
-execution completed with status \code{complete} and grid outcome
+Gate12C-1 is a higher-order negative control over existing Gate12A replay
+artifacts whose protocol and support rule were predeclared before its execution
+and result inspection. The test asks whether compressed-overlap
+parenthesization sensitivity on the canonical twelve-source-run surface exceeds
+a matched spectrum-preserving orientation null under a frozen equal-rank
+protocol. The execution completed with status \code{complete} and grid outcome
 \breakcode{no_directional_support}: all 24 case/q endpoints were informative
 and coverage-complete, and all \breakcode{q_support} and
 \breakcode{run_support} calls were
@@ -147,7 +148,7 @@ Rank surface & \breakcode{equal_rank_alpha}; common rank 3 on the canonical grid
 Compression ranks & Nontrivial ranks 1 and 2. \\
 \hline
 Split-gap threshold & \breakcode{tau_split_rel} equal to \code{1e-3} on both
-inner products. \\
+intermediate two-edge products. \\
 \hline
 Null family & Matched orientation null preserving per-edge singular spectra. \\
 \hline
@@ -256,7 +257,8 @@ g\sb q(X)=
 {\max\{\sigma\sb 1(X),\epsilon\}},
 \qquad \epsilon=10^{-12}.
 \]
-Both inner products \(M\sb 2M\sb 1\) and \(M\sb 1M\sb 0\) must satisfy
+Both intermediate two-edge products \(M\sb 2M\sb 1\) and
+\(M\sb 1M\sb 0\) must satisfy
 \(g\sb q>\tau\sb{\mathrm{split}}\), with frozen
 \(\tau\sb{\mathrm{split}}=10^{-3}\). The same threshold applies to every
 null product. A near-degenerate cut is not forced through an arbitrary
@@ -357,6 +359,11 @@ p\sb{\mathrm{raw}}=\sum\sb{k=s}^{n}\binom{n}{k}2^{-n}.
 \]
 When \(n=0\), the endpoint is non-informative and receives
 \(p\sb{\mathrm{raw}}=1\).
+
+This exact-binomial calculation is the frozen endpoint decision calibration.
+It is not interpreted as population-level inference; that interpretation would
+additionally require independence or exchangeability across source blocks,
+which is not claimed here.
 
 Holm correction is then applied across all 24 case/q endpoints. A case/q
 endpoint receives \breakcode{q_support} only when coverage passes, the sign test is
@@ -670,8 +677,11 @@ Case & \(q\) & Cycles & Blocks & Positive & Negative & Tie \\
 
 Table~\ref{tab:endpoint-decisions} reports the case/q medians rounded to six
 decimal places for display. Exact recorded decimal values remain in the tracked
-result memo. Raw and Holm-adjusted values are shown without rounding loss
-because all equal 1 in the recorded decision family.
+result memo. Raw values are shown as recorded by the frozen summarizer after
+conversion to double precision. For endpoints with positive-block counts, a
+displayed value of 1.0 can represent an exact binomial tail below 1 but within
+machine precision of it. Holm-adjusted values are capped at 1 by the frozen
+procedure.
 
 {\scriptsize
 \setlength{\tabcolsep}{5pt}
@@ -679,12 +689,12 @@ because all equal 1 in the recorded decision family.
 \caption{Endpoint directional-test and support decisions.}
 \label{tab:endpoint-decisions}\\
 \toprule
-Case & \(q\) & Case/q median & Raw \(p\) & Holm \(p\) & Support \\
+Case & \(q\) & Case/q median & Recorded raw \(p\) & Holm \(p\) & Support \\
 \midrule
 \endfirsthead
 \multicolumn{6}{c}{\tablename\ \thetable\ continued}\\
 \toprule
-Case & \(q\) & Case/q median & Raw \(p\) & Holm \(p\) & Support \\
+Case & \(q\) & Case/q median & Recorded raw \(p\) & Holm \(p\) & Support \\
 \midrule
 \endhead
 \bottomrule
