@@ -1,0 +1,152 @@
+{
+  "abandoned_root_inspected": false,
+  "abandoned_root_path": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1",
+  "abandoned_root_used": false,
+  "cases": [
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_transcript_128r_gate9k",
+      "family": "transcript_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_01",
+      "model": "qwen_qwen2_5_0_5b",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_transcript_128r_gate9k"
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_briefing_200r_gate9k",
+      "family": "briefing_200r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_02",
+      "model": "qwen_qwen2_5_0_5b",
+      "preflight_eligible_cycle_count": 500,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_briefing_200r_gate9k"
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_archive_128r_gate9k",
+      "family": "archive_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_03",
+      "model": "qwen_qwen2_5_0_5b",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_archive_128r_gate9k"
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_transcript_128r_gate9k",
+      "family": "transcript_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_04",
+      "model": "qwen_qwen2_5_3b_instruct",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_transcript_128r_gate9k"
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_briefing_200r_gate9k",
+      "family": "briefing_200r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_05",
+      "model": "qwen_qwen2_5_3b_instruct",
+      "preflight_eligible_cycle_count": 500,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_briefing_200r_gate9k"
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_archive_128r_gate9k",
+      "family": "archive_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_06",
+      "model": "qwen_qwen2_5_3b_instruct",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_archive_128r_gate9k"
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_transcript_128r_gate9k",
+      "family": "transcript_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_07",
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_transcript_128r_gate9k"
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_briefing_200r_gate9k",
+      "family": "briefing_200r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_08",
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "preflight_eligible_cycle_count": 500,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_briefing_200r_gate9k"
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_archive_128r_gate9k",
+      "family": "archive_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_09",
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_archive_128r_gate9k"
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_transcript_128r_gate9k",
+      "family": "transcript_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_10",
+      "model": "qwen_qwen3_4b",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_transcript_128r_gate9k"
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_briefing_200r_gate9k",
+      "family": "briefing_200r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_11",
+      "model": "qwen_qwen3_4b",
+      "preflight_eligible_cycle_count": 500,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_briefing_200r_gate9k"
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "expected_source_gate12a_run_id": "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_archive_128r_gate9k",
+      "family": "archive_128r",
+      "gate12c1_run_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001\\case_12",
+      "model": "qwen_qwen3_4b",
+      "preflight_eligible_cycle_count": 320,
+      "source_gate12a_dir": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale\\runs\\gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_archive_128r_gate9k"
+    }
+  ],
+  "clean_execution_root": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001",
+  "orientation_null_max_attempt_count": 1024,
+  "orientation_null_requested_draw_count": 255,
+  "orientation_null_seed": "gate12c1_first_empirical_orientation_null_v1",
+  "plan_id": "gate12c1_first_empirical_execution_plan_v1",
+  "runner_provenance": {
+    "post_merge_main_commit": "8d5613bffe5b6c91d0956c812404072eb76e98c6",
+    "runner_script_sha256": "b363fd874a0538dc548853e97e8ec17c0eb84be5658f6e2f01f60d2a12789c3e"
+  },
+  "schema_version": "gate12c1_first_empirical_case_manifest_v1",
+  "summary_provenance": {
+    "summary_tool_commit": "6b66f49710f4b7cbdae7e5a282d14d1d81723b30",
+    "summary_tool_sha256": "9e527c0363875de912f9abf9ba38acb462a13b0b62da6e14be35d4c3526df708"
+  },
+  "tolerances": {
+    "epsilon": 1e-12,
+    "tau_gauge_operator_covariance_fro": 1e-08,
+    "tau_gauge_scalar_delta_abs": 1e-10,
+    "tau_no_compression_associator_fro": 1e-10,
+    "tau_ordinary_associator_fro": 1e-10,
+    "tau_overlap_singular_value_abs_error": 1e-08,
+    "tau_overlap_sv_min": 1e-08,
+    "tau_split_rel": 0.001,
+    "tau_transport_reconstruction_fro": 1e-08
+  }
+}

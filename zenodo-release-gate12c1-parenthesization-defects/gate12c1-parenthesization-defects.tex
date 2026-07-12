@@ -1,0 +1,740 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pgfplots}
+\usepackage[hidelinks]{hyperref}
+
+\pgfplotsset{compat=1.17}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8\baselineskip}
+\emergencystretch=3em
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\breakcode}[1]{\begingroup\urlstyle{tt}\nolinkurl{#1}\endgroup}
+\newcommand{\splitcode}[2]{\texttt{#1\allowbreak#2}}
+\newcommand{\Q}{Q}
+\newtheorem{proposition}{Proposition}
+
+\title{Compression-Interleaved Parenthesization Defects\\
+in LLM Replay Artifact Graphs:\\
+A Predeclared Null Test}
+\author{Aoi Kawasaki}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Low-rank compression can induce parenthesization sensitivity even though
+ordinary matrix multiplication is associative. We test whether this
+compression-interleaved defect is larger in LLM replay-artifact cycles than
+under an edge-spectrum-matched, graph-unconstrained orientation null. The
+source surface, eligible-cycle criteria, compression ranks, null procedure,
+aggregation hierarchy, and one-sided support rule were fixed before execution.
+Across twelve source runs and two nontrivial compression ranks, all 24
+endpoints were informative and coverage-complete, and none met the predeclared
+criterion for directional excess. Descriptively, all 24 endpoint median
+log-ratios were negative; this reverse-direction regularity was not predeclared
+and is not treated as confirmatory evidence. Because the null preserves
+marginal edge spectra while breaking shared-node realizability, the test cannot
+determine whether the negative comparison reflects a genuinely smaller
+observed defect or inflation of the null caused by destroying shared-node
+coupling. The result therefore does not support the targeted excess claim under
+the frozen protocol and motivates a separate prospective test using
+graph-constrained nulls, held-out runs, and positive controls.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Ordinary matrix multiplication is associative, but an approximation operator
+inserted between multiplications need not respect that identity. If \(\Q_q\)
+denotes rank-\(q\) truncated singular-value reconstruction, then
+\(\Q_q(M_2M_1)M_0\) and \(M_2\Q_q(M_1M_0)\) can differ even though the
+uncompressed products are equal. The difference is a parenthesization defect
+created by the placement of compression, not a failure of matrix
+associativity.
+
+Replay artifact graphs provide a concrete setting in which to measure this
+defect. Their nodes carry local low-dimensional representation frames, their
+directed edges carry overlap operators between frames, and their cycles expose
+whether locally composed transports agree around a shared graph structure. A
+larger defect on observed cycles than under the edge-spectrum-matched,
+graph-unconstrained orientation null would indicate
+that the frozen observable detects directional excess beyond marginal edge
+spectra. The present question is deliberately narrower than whether any defect
+is nonzero.
+
+We report a predeclared test of that question over twelve source runs and two
+nontrivial compression ranks. Its three main empirical results are:
+
+\begin{enumerate}
+    \item all 24 endpoints were informative and coverage-complete;
+    \item none of the 24 endpoints met the predeclared support rule for
+    directional excess over the null; and
+    \item all 24 endpoint median log-ratios were negative, a complete-family
+    direction reported descriptively because a reverse-direction hypothesis
+    was not predeclared.
+\end{enumerate}
+
+We refer to the frozen protocol internally as Gate12C-1. It reads the artifact
+surface created by the Gate12A structural-replay line and is distinct from the
+Gate12B observer-relative closure audit. That project history supplies the data
+and provenance, but the scientific subject of this paper is the
+compression-interleaved parenthesization test itself.
+
+\section{Related Work}
+\label{sec:related-work}
+
+\textbf{Low-rank approximation and truncation order.}
+Truncated singular-value reconstruction is the optimal fixed-rank matrix
+approximation in Frobenius norm under the classical Eckart--Young result
+\cite{eckart1936approximation}. That pointwise optimality does not imply that
+inserting truncation inside a product preserves associativity. More broadly,
+sequentially truncated multilinear decompositions treat the sequence of
+approximation operations as part of the algorithm and can differ from a single
+uninterleaved decomposition \cite{vannieuwenhoven2012truncation}. The present
+observable isolates the analogous order sensitivity for two specified
+intermediate matrix products.
+
+\textbf{Procrustes and polar transport.}
+Orthogonal Procrustes alignment uses an SVD-derived orthogonal map to align two
+coordinate systems \cite{schonemann1966procrustes}; the orthogonal polar factor
+provides the closely related nearest-orthogonal construction
+\cite{higham1986polar}. These methods motivate treating overlap-derived
+orthogonal or partial-isometry maps as transports between local representation
+frames. Here the tested matrices are the frozen raw overlap operators, and the
+rank truncation acts on their two-edge products.
+
+\textbf{Discrete connections, gauges, and representation holonomy.}
+Connection-Laplacian methods place orthogonal transformations on graph edges
+and use their composition to analyze high-dimensional data
+\cite{singer2012vector}. Gauge-equivariant neural networks formalize the demand
+that computations be independent of local frame choices
+\cite{cohen2019gauge}. Recent work on neural representation holonomy likewise
+composes Procrustes-based local alignments around loops and constructs a
+gauge-invariant statistic \cite{sevetlidis2026holonomy}. Our graph, source
+artifacts, null, and parenthesization observable are different, but the shared
+mathematical requirement is that a reported loop quantity not depend on
+arbitrary node-wise orthogonal bases.
+
+Javidnia develops a discrete gauge-theoretic and sheaf-theoretic atlas of LLM
+representations, including spanning-tree gauge fixing and fundamental-cycle
+holonomy \cite{javidnia2026superposition}. Our setting differs in both
+observational substrate and target quantity: we operate on frozen replay
+artifact graphs rather than context-chart representations, and test
+compression-interleaved parenthesization defects against a predeclared
+edge-spectrum-matched, graph-unconstrained orientation null rather than
+estimating representational holonomy.
+
+\textbf{Pale-ale artifact studies.}
+The source surface descends from Structural Replay under a frozen FP32 regime
+\cite{kawasaki2026structural}. The transport-first note defines
+gauge-covariant closure telemetry on replay artifact graphs
+\cite{kawasaki2026telemetry}, and the Gate12B report studies bounded
+observer-relative closure signatures \cite{kawasaki2026observer}. The current
+paper neither re-tests nor extends those empirical claims. It asks a separate,
+predeclared question about compression-interleaved defects relative to a
+specified null.
+
+\section{Formal Setup}
+\label{sec:formal-setup}
+
+Let \(\mathcal{G}=(V,E)\) be a replay artifact graph. Each node \(v\) carries
+an orthonormal local frame \(U_v\) of common active rank \(r\). A directed edge
+from \(v_i\) to \(v_j\) carries the raw overlap operator
+\[
+C(v_j\leftarrow v_i)=U_{v_j}^{\mathsf T}U_{v_i},
+\]
+which maps coordinates at \(v_i\) to coordinates at \(v_j\). Matrices act on
+column vectors from the left, and products compose right-to-left.
+
+For an ordered eligible triangle
+\[
+v_0\longrightarrow v_1\longrightarrow v_2\longrightarrow v_0,
+\]
+write
+\[
+M_0=C(v_1\leftarrow v_0),\qquad
+M_1=C(v_2\leftarrow v_1),\qquad
+M_2=C(v_0\leftarrow v_2).
+\]
+The uncompressed cycle operator \(M_2M_1M_0\) maps the \(v_0\) coordinate
+space to itself.
+
+If \(X=U\Sigma V^{\mathsf T}\) has singular values in nonincreasing order,
+define the rank-\(q\) truncated reconstruction
+\[
+\Q_q(X)=U_q\Sigma_qV_q^{\mathsf T}.
+\]
+For \(\epsilon=10^{-12}\), the boundary-gap diagnostic is
+\[
+g_q(X)=
+\frac{\sigma_q(X)-\sigma_{q+1}(X)}
+{\max\{\sigma_1(X),\epsilon\}}.
+\]
+The frozen protocol requires \(g_q>10^{-3}\) for both intermediate products,
+so the selected rank-\(q\) approximation is separated at its truncation
+boundary.
+
+The two compression-interleaved parenthesizations are
+\[
+L_q=\Q_q(M_2M_1)M_0,
+\qquad
+R_q=M_2\Q_q(M_1M_0),
+\]
+and the scalar defect is
+\[
+a_q=\lVert L_q-R_q\rVert_F.
+\]
+\emph{Associator} is used operationally for the defect induced by the frozen
+intermediate-compression rule; ordinary matrix multiplication itself remains
+associative.
+
+\begin{proposition}[Gauge invariance]
+\label{prop:gauge-invariance}
+Assume
+\[
+\sigma_q(X)>\sigma_{q+1}(X)
+\qquad\text{for }X\in\{M_2M_1,M_1M_0\}.
+\]
+Then the scalar defect is invariant under independent node-wise orthogonal
+changes of basis. In particular, if \(G_i\in O(r)\) and
+\[
+C(v_j\leftarrow v_i)'=G_j^{\mathsf T}
+C(v_j\leftarrow v_i)G_i,
+\]
+then \(a_q'=a_q\).
+\end{proposition}
+
+\begin{proof}
+The strict boundary separation makes the rank-\(q\) reconstructed matrix
+unique, although a particular choice of singular-vector basis within the
+retained or discarded subspace need not be unique. The reconstructed matrix
+therefore obeys the orthogonal covariance identity
+\[
+\Q_q(S^{\mathsf T}XT)=S^{\mathsf T}\Q_q(X)T
+\]
+for orthogonal \(S,T\). For the ordered triangle,
+\[
+M_0'=G_1^{\mathsf T}M_0G_0,\quad
+M_1'=G_2^{\mathsf T}M_1G_1,\quad
+M_2'=G_0^{\mathsf T}M_2G_2.
+\]
+Cancellation of adjacent orthogonal factors and covariance of \(\Q_q\) give
+\[
+L_q'=G_0^{\mathsf T}L_qG_0,
+\qquad
+R_q'=G_0^{\mathsf T}R_qG_0.
+\]
+Thus \(L_q'-R_q'=G_0^{\mathsf T}(L_q-R_q)G_0\). Orthogonal invariance of the
+Frobenius norm yields \(a_q'=a_q\).
+\end{proof}
+
+Proposition~\ref{prop:gauge-invariance} makes \(a_q\) a well-defined scalar on
+the artifact graph rather than a diagnostic tied to one stored choice of local
+bases. Because the split-gap diagnostic depends only on singular values,
+eligibility is also invariant under node-wise orthogonal gauge changes. The
+edge-spectrum-matched, graph-unconstrained orientation null is defined from
+edge spectra, so the full observed-to-null comparison is gauge-independent
+under the frozen protocol. The runner's deterministic gauge control evaluates
+a signed-permutation subset of these changes; Proposition~\ref{prop:gauge-invariance}
+states the corresponding mathematical result for the full orthogonal class at
+strictly separated cuts.
+
+\section{Predeclared Experimental Design}
+\label{sec:design}
+
+The source surface comprised twelve already materialized replay-artifact runs:
+four model lines crossed with transcript, briefing, and archive rendering
+families. The three rendering families are distinct artifact constructions over
+the frozen source benchmark rather than independent task datasets.
+Table~\ref{tab:case-map} gives the case map. Each eligible triangle was
+residual-bearing, had defined Gate12A holonomy, had three
+equal-rank-orthogonal legs with common rank \(r=3\), belonged to a valid
+single-sample source block, and had stable intermediate cuts. The two
+nontrivial ranks were \(q\in\{1,2\}\), evaluated at all three cyclic roots.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Canonical source-run case map. Family labels give the number of
+predeclared source-sample blocks.}
+\label{tab:case-map}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Model line & Transcript (128) & Briefing (200) & Archive (128) \\
+\midrule
+Qwen2.5-0.5B & \code{case_01} & \code{case_02} & \code{case_03} \\
+Qwen2.5-3B-Instruct & \code{case_04} & \code{case_05} & \code{case_06} \\
+Llama-3.2-3B-Instruct & \code{case_07} & \code{case_08} & \code{case_09} \\
+Qwen3-4B & \code{case_10} & \code{case_11} & \code{case_12} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+{\footnotesize
+\emph{Exact model identifiers, in table order:}
+\breakcode{Qwen/Qwen2.5-0.5B};
+\breakcode{Qwen/Qwen2.5-3B-Instruct};
+\breakcode{meta-llama/Llama-3.2-3B-Instruct}; and
+\breakcode{Qwen/Qwen3-4B}.
+}
+
+The comparator was fixed as an \emph{edge-spectrum-matched,
+graph-unconstrained orientation null}. For each observed edge spectrum
+\(\Sigma_e\), null draw \(b\) used
+\[
+\widetilde C_e^{(b)}=
+O_{e,\mathrm L}^{(b)}\Sigma_e
+O_{e,\mathrm R}^{(b)\mathsf T},
+\]
+with independently generated orthogonal left and right orientations. One
+randomized edge triple was reused across the three roots and both values of
+\(q\) within a cycle draw. The procedure requested 255 valid draws, allowed at
+most 1024 attempts when stable-cut requirements failed, and applied the same
+\(10^{-3}\) split-gap threshold to observed and null products. The null
+preserves every edge's singular values but is not required to arise from a
+single consistent choice of bases at shared nodes.
+
+For one observed root and its valid null draws, the primary log-ratio was
+\[
+d_q=\log\left(
+\frac{a_{q,\mathrm{obs}}+\epsilon}
+{\operatorname{median}_b a_q^{(b)}+\epsilon}
+\right).
+\]
+The frozen hierarchy took medians over three roots to obtain a cycle/\(q\)
+value, over valid cycles within each source-sample block to obtain a block
+score, and over represented blocks to obtain an endpoint median. Coverage
+required at least 90\% of expected cycles and 90\% of expected blocks, with no
+imputation.
+
+The confirmatory test was one-sided in the positive direction. Block scores
+above \(10^{-12}\) were positive, scores below \(-10^{-12}\) were negative,
+and intervening values were ties. If \(s\) of \(n\) non-tied block scores were
+positive, the frozen exact-binomial calibration was
+\[
+p_{\mathrm{raw}}=\sum_{k=s}^{n}\binom{n}{k}2^{-n}.
+\]
+Holm correction was applied across all 24 case/\(q\) endpoints
+\cite{holm1979simple}. Endpoint support required complete coverage, an
+informative sign test, a positive endpoint median, and Holm-adjusted
+\(p<0.05\). This calibration is the predeclared decision rule; it is not a
+claim that source blocks form an independent population sample.
+
+\section{Results}
+\label{sec:results}
+
+None of the 24 predeclared endpoints supported directional excess. All
+endpoints were informative and coverage-complete. In addition, every endpoint
+median log-ratio was negative. The latter complete-family direction was not a
+predeclared reverse-direction hypothesis and is reported descriptively only.
+
+A post-hoc descriptive reporting addendum was committed before computing any
+new aggregate (commit \code{671e6d1}). Under that boundary, exponentiating the
+24 endpoint-level hierarchical summaries gives values from 0.028 to 0.236,
+with a median of 0.066 on that summary scale. These are transformed endpoint
+summaries, not raw-row median ratios or a reverse-direction test.
+
+Figure~\ref{fig:endpoint-medians} shows the result at a glance. Each plotted
+point is one predeclared endpoint, with the two ranks paired within each source
+run. The zero line is the boundary between an observed endpoint median above
+and below its corresponding null median; it is not a significance threshold.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.97\textwidth,
+    height=0.45\textwidth,
+    xmin=0.5,
+    xmax=12.5,
+    ymin=-4.0,
+    ymax=0.3,
+    xtick={1,2,3,4,5,6,7,8,9,10,11,12},
+    xticklabels={Q0.5-T,Q0.5-B,Q0.5-A,Q2.5-3-T,Q2.5-3-B,Q2.5-3-A,L3.2-3-T,L3.2-3-B,L3.2-3-A,Q3-4-T,Q3-4-B,Q3-4-A},
+    xlabel={Model--rendering-family case},
+    ylabel={Endpoint median log-ratio},
+    grid=major,
+    legend style={at={(0.5,-0.38)},anchor=north,legend columns=2},
+    x tick label style={rotate=35,anchor=east,font=\scriptsize},
+    y tick label style={font=\small},
+    label style={font=\small}
+]
+\addplot[black,dashed,thick,forget plot] coordinates {(0.5,0) (12.5,0)};
+\addplot+[only marks,mark=*,mark size=2.8pt,blue!70!black]
+coordinates {
+    (0.9,-3.5740928050950265)
+    (1.9,-3.2684813641791877)
+    (2.9,-3.2122596810225494)
+    (3.9,-3.5549637614382585)
+    (4.9,-3.080007754937126)
+    (5.9,-2.8845077502868004)
+    (6.9,-2.798489931764285)
+    (7.9,-2.8926261334664254)
+    (8.9,-2.8693987965738312)
+    (9.9,-3.1795927316313013)
+    (10.9,-3.1565415910695913)
+    (11.9,-3.2721566391421177)
+};
+\addlegendentry{\(q=1\)}
+\addplot+[only marks,mark=square*,mark size=2.6pt,orange!85!black]
+coordinates {
+    (1.1,-2.001353884374879)
+    (2.1,-2.221681568725521)
+    (3.1,-2.1161873154346025)
+    (4.1,-2.526255967842035)
+    (5.1,-2.6479499637931636)
+    (6.1,-2.1779887614208797)
+    (7.1,-2.298431632289879)
+    (8.1,-2.2744405016358136)
+    (9.1,-2.2478015310493333)
+    (10.1,-1.8074924473552518)
+    (11.1,-1.6461179757112587)
+    (12.1,-1.443656902121825)
+};
+\addlegendentry{\(q=2\)}
+\end{axis}
+\end{tikzpicture}
+\caption{All 24 predeclared endpoint median log-ratios, offset horizontally by
+compression rank. T, B, and A denote transcript, briefing, and archive;
+Table~\ref{tab:case-map} gives the full case map. All points fall below the zero
+line. This complete-family direction is descriptive, not a predeclared
+reverse-direction test.}
+\label{fig:endpoint-medians}
+\end{figure}
+
+Table~\ref{tab:endpoint-results} reports the complete primary endpoint family.
+The block sign counts are inputs to the one-sided positive-direction test.
+Every endpoint median remained negative and no endpoint met the frozen support
+rule.
+
+{\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{longtable}{@{}llllrrl@{}}
+\caption{Complete primary endpoint results. The \(n_+/n_-\) column gives
+positive and negative non-tied source-block counts, not a ratio.}\label{tab:endpoint-results}\\
+\toprule
+Case & Model & Family & \(q\) & Median & Blocks \(n_+/n_-\) & Support \\
+\midrule
+\endfirsthead
+\multicolumn{7}{c}{\tablename\ \thetable\ continued}\\
+\toprule
+Case & Model & Family & \(q\) & Median & Blocks \(n_+/n_-\) & Support \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+C01 & Q2.5-0.5B & Transcript & 1 & -3.574093 & 0/128 & No \\
+C01 & Q2.5-0.5B & Transcript & 2 & -2.001354 & 0/128 & No \\
+C02 & Q2.5-0.5B & Briefing & 1 & -3.268481 & 0/200 & No \\
+C02 & Q2.5-0.5B & Briefing & 2 & -2.221682 & 0/200 & No \\
+C03 & Q2.5-0.5B & Archive & 1 & -3.212260 & 0/128 & No \\
+C03 & Q2.5-0.5B & Archive & 2 & -2.116187 & 7/121 & No \\
+C04 & Q2.5-3B-I & Transcript & 1 & -3.554964 & 0/128 & No \\
+C04 & Q2.5-3B-I & Transcript & 2 & -2.526256 & 0/128 & No \\
+C05 & Q2.5-3B-I & Briefing & 1 & -3.080008 & 0/200 & No \\
+C05 & Q2.5-3B-I & Briefing & 2 & -2.647950 & 0/200 & No \\
+C06 & Q2.5-3B-I & Archive & 1 & -2.884508 & 0/128 & No \\
+C06 & Q2.5-3B-I & Archive & 2 & -2.177989 & 0/128 & No \\
+C07 & Llama-3.2-3B-I & Transcript & 1 & -2.798490 & 0/128 & No \\
+C07 & Llama-3.2-3B-I & Transcript & 2 & -2.298432 & 0/128 & No \\
+C08 & Llama-3.2-3B-I & Briefing & 1 & -2.892626 & 0/200 & No \\
+C08 & Llama-3.2-3B-I & Briefing & 2 & -2.274441 & 0/200 & No \\
+C09 & Llama-3.2-3B-I & Archive & 1 & -2.869399 & 0/128 & No \\
+C09 & Llama-3.2-3B-I & Archive & 2 & -2.247802 & 0/128 & No \\
+C10 & Qwen3-4B & Transcript & 1 & -3.179593 & 0/128 & No \\
+C10 & Qwen3-4B & Transcript & 2 & -1.807492 & 1/127 & No \\
+C11 & Qwen3-4B & Briefing & 1 & -3.156542 & 0/200 & No \\
+C11 & Qwen3-4B & Briefing & 2 & -1.646118 & 9/191 & No \\
+C12 & Qwen3-4B & Archive & 1 & -3.272157 & 0/128 & No \\
+C12 & Qwen3-4B & Archive & 2 & -1.443657 & 0/128 & No \\
+\end{longtable}
+}
+
+The confirmatory conclusion follows from the frozen positive-direction rule:
+0/24 endpoints supported excess over the edge-spectrum-matched,
+graph-unconstrained orientation null. This was not a coverage-limited outcome;
+all 24 endpoints represented every expected cycle and source block and had an
+informative sign test. Appendix~\ref{app:p-values} gives the recorded raw and
+Holm-adjusted values.
+
+The descriptive conclusion is separate. The endpoint family itself was fixed
+before execution, so its full direction pattern can be reported without
+selecting a favorable subgroup. Nevertheless, the hypothesis that all or most
+endpoints would be negative was not predeclared, and no reverse-direction
+test, subgroup analysis, or additional significance claim is introduced here.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What the predeclared test rules out}
+
+The result blocks the targeted claim that replay-artifact cycles show positive
+compression-interleaved defect excess over this null under the frozen ranks,
+coverage criteria, aggregation hierarchy, and support rule. It does not show
+that the observed defect is identically zero, and it does not establish a
+general absence of graph structure.
+
+Gate12B addresses a different question: a bounded observer-relative closure
+signature on an existing artifact surface. Gate12C-1 supplies neither positive
+evidence for that result nor a refutation of it. The connection is procedural:
+the same research program can report a bounded positive artifact result while
+declining a stronger, unsupported excess claim.
+
+\subsection{Descriptive reverse-direction regularity}
+
+All 24 endpoint medians were negative, spanning every model line, rendering
+family, and tested rank in the predeclared grid. This is a conspicuous
+complete-family pattern and belongs in the result record. It remains
+descriptive because the protocol did not predeclare a reverse-direction
+hypothesis or a decision rule for family-wide negativity. We therefore do not
+label it confirmatory evidence, a suppression effect, or a discovery of graph
+coherence.
+
+\subsection{What the current null cannot distinguish}
+
+The null matches each edge's singular spectrum but samples its left and right
+orientations independently. At a shared node, adjacent null edges therefore
+need not use one common latent basis. The null can generate edge triples that
+are not realizable by any single node-wise assignment of frames, even though
+each edge is marginally spectrum-matched.
+
+Consequently, the negative endpoint medians admit more than one explanation.
+They may reflect an absence of the targeted positive excess, an increase in
+null defects caused by destroying shared-node coupling, or a combination of
+the two. The present design does not identify which explanation is operative.
+It therefore supports the observed directional comparison but not the causal
+claims that real graphs are coherent or that graph consistency produced the
+negative direction.
+
+\subsection{Next prospective test}
+
+A separate Gate12C-2 plan should predeclare the reverse-direction hypothesis
+and evaluate it on held-out runs. Its null should be graph-constrained and
+node-consistent, so all incident edges inherit compatible orientations from
+shared node transformations. A synthetic positive control should establish
+that the pipeline detects a known compression-interleaved effect, and frozen
+sensitivity checks should test dependence on rank, split-gap threshold, and
+null construction. None of those prospective results is imported into the
+current paper.
+
+\section{Threats to Validity}
+\label{sec:threats}
+
+\begin{itemize}
+    \item \textbf{Edge-spectrum-matched, graph-unconstrained orientation null.} Spectrum matching is edge-wise;
+    shared-node realizability is not preserved. This is the central
+    interpretive limitation of the comparison.
+    \item \textbf{No predeclared positive control.} The execution verified
+    algebraic, gauge, coverage, and deterministic-output controls, but did not
+    include a synthetic instance with a known positive directional effect.
+    Sensitivity to such an effect remains to be demonstrated prospectively.
+    \item \textbf{Fixed source surface.} The evidence is limited to twelve
+    source runs from four dense-transformer model lines and three rendering
+    families. It is not a population-wide claim about LLMs.
+    \item \textbf{Decision calibration.} Source-sample blocks avoid treating
+    overlapping roots and cycles as separate observations, but independence or
+    exchangeability across blocks is not established. The exact-binomial
+    calculation is therefore read as a frozen decision calibration, not broad
+    population inference.
+    \item \textbf{Equal-rank construction.} The common node rank was three and
+    the tested compression ranks were one and two. Rectangular rank mismatch
+    and other compression rules remain outside the claim.
+    \item \textbf{Artifact-level scope.} The observable is defined on replay
+    artifacts. It is not a model-quality ranking, an answer-correctness
+    classifier, a safety guarantee, or a weight-level causal mechanism.
+\end{itemize}
+
+\section{Data and Code Availability}
+\label{sec:availability}
+
+The protocol, code, and tracked endpoint record are available in the public
+\href{https://github.com/Udonburo/pale-ale}{pale-ale repository}. The
+reproducibility surface is indexed as follows:
+
+\begin{itemize}
+    \item the pre-execution protocol and canonical case map are in
+    \breakcode{workstream/235_GATE12C1_FIRST_EMPIRICAL_EXECUTION_PLAN.md};
+    \item the complete endpoint summary and provenance digests are in
+    \breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md};
+    \item the frozen post-hoc descriptive reporting boundary is in
+    \breakcode{workstream/240_GATE12C1_POST_HOC_DESCRIPTIVE_REPORTING_ADDENDUM.md};
+    \item the measurement runner is
+    \breakcode{tools/run_gate12c_compressed_overlap_associator.py}.\\
+    Frozen commit: \code{8d5613bffe5b6c91d0956c812404072eb76e98c6}.\\
+    SHA256: \code{b363fd874a0538dc548853e97e8ec17c0eb84be5658f6e2f01f60d2a12789c3e};
+    \item the grid summarizer is
+    \breakcode{tools/summarize_gate12c1_first_empirical_grid.py}.\\
+    Frozen commit: \code{6b66f49710f4b7cbdae7e5a282d14d1d81723b30}.\\
+    SHA256: \code{9e527c0363875de912f9abf9ba38acb462a13b0b62da6e14be35d4c3526df708};
+    \item the executed case manifest has SHA256\\
+    \code{dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704}.
+\end{itemize}
+
+The companion archival capsule will expose the immutable
+\code{case_manifest.json}, per-case runner manifests and checksums, the endpoint
+file \code{gate12c1_run_q_tests.csv}, the cycle- and block-level score exports,
+the complete summarizer manifest and checksums, and a software-environment
+receipt. Until that capsule is posted, the tracked result memo is the public
+endpoint-level record and the generated aggregation surfaces are not yet
+publicly archived.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+We tested whether compression-interleaved parenthesization defects in LLM
+replay-artifact cycles exceeded an edge-spectrum-matched,
+graph-unconstrained orientation null. All 24 predeclared endpoints were
+informative and coverage-complete, and none supported the targeted positive
+excess claim. Descriptively, all 24 endpoint median log-ratios were negative.
+That reverse-direction regularity was not predeclared and is not confirmatory
+evidence. Because the null breaks shared-node realizability, the current test
+cannot identify whether graph-level coupling contributed to the direction of
+the comparison. A prospective held-out test with a node-consistent null,
+reverse-direction rule, positive control, and frozen sensitivity analysis is
+required to answer that question.
+
+\appendix
+
+\section{Endpoint Directional-Test Audit}
+\label{app:p-values}
+
+Table~\ref{tab:p-values} reports the frozen one-sided positive-direction test
+outputs. Values are shown as recorded by the summarizer after conversion to
+double precision. For endpoints with a nonzero positive-block count, a
+displayed raw value of 1.0 can represent an exact upper-tail probability below
+one but within machine precision of it; Holm-adjusted values are capped at one.
+
+{\scriptsize
+\setlength{\tabcolsep}{6pt}
+\begin{longtable}{@{}lrrrl@{}}
+\caption{Recorded endpoint directional-test values and support calls.}
+\label{tab:p-values}\\
+\toprule
+Case & \(q\) & Recorded raw \(p\) & Holm \(p\) & Support \\
+\midrule
+\endfirsthead
+\multicolumn{5}{c}{\tablename\ \thetable\ continued}\\
+\toprule
+Case & \(q\) & Recorded raw \(p\) & Holm \(p\) & Support \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+C01 & 1 & 1.0 & 1.0 & No \\
+C01 & 2 & 1.0 & 1.0 & No \\
+C02 & 1 & 1.0 & 1.0 & No \\
+C02 & 2 & 1.0 & 1.0 & No \\
+C03 & 1 & 1.0 & 1.0 & No \\
+C03 & 2 & 1.0 & 1.0 & No \\
+C04 & 1 & 1.0 & 1.0 & No \\
+C04 & 2 & 1.0 & 1.0 & No \\
+C05 & 1 & 1.0 & 1.0 & No \\
+C05 & 2 & 1.0 & 1.0 & No \\
+C06 & 1 & 1.0 & 1.0 & No \\
+C06 & 2 & 1.0 & 1.0 & No \\
+C07 & 1 & 1.0 & 1.0 & No \\
+C07 & 2 & 1.0 & 1.0 & No \\
+C08 & 1 & 1.0 & 1.0 & No \\
+C08 & 2 & 1.0 & 1.0 & No \\
+C09 & 1 & 1.0 & 1.0 & No \\
+C09 & 2 & 1.0 & 1.0 & No \\
+C10 & 1 & 1.0 & 1.0 & No \\
+C10 & 2 & 1.0 & 1.0 & No \\
+C11 & 1 & 1.0 & 1.0 & No \\
+C11 & 2 & 1.0 & 1.0 & No \\
+C12 & 1 & 1.0 & 1.0 & No \\
+C12 & 2 & 1.0 & 1.0 & No \\
+\end{longtable}
+}
+
+\begin{thebibliography}{99}
+
+\bibitem{eckart1936approximation}
+Carl Eckart and Gale Young.
+\newblock The approximation of one matrix by another of lower rank.
+\newblock \emph{Psychometrika}, 1:211--218, 1936.
+\newblock doi:10.1007/BF02288367.
+
+\bibitem{vannieuwenhoven2012truncation}
+Nick Vannieuwenhoven, Raf Vandebril, and Karl Meerbergen.
+\newblock A new truncation strategy for the higher-order singular value
+decomposition.
+\newblock \emph{SIAM Journal on Scientific Computing}, 34(2):A1027--A1052,
+2012.
+\newblock doi:10.1137/110836067.
+
+\bibitem{schonemann1966procrustes}
+Peter H. Sch\"onemann.
+\newblock A generalized solution of the orthogonal Procrustes problem.
+\newblock \emph{Psychometrika}, 31(1):1--10, 1966.
+\newblock doi:10.1007/BF02289451.
+
+\bibitem{higham1986polar}
+Nicholas J. Higham.
+\newblock Computing the polar decomposition---with applications.
+\newblock \emph{SIAM Journal on Scientific and Statistical Computing},
+7(4):1160--1174, 1986.
+\newblock doi:10.1137/0907079.
+
+\bibitem{singer2012vector}
+Amit Singer and Hau-Tieng Wu.
+\newblock Vector diffusion maps and the connection Laplacian.
+\newblock \emph{Communications on Pure and Applied Mathematics},
+65(8):1067--1144, 2012.
+\newblock doi:10.1002/cpa.21395.
+
+\bibitem{cohen2019gauge}
+Taco Cohen, Maurice Weiler, Berkay Kicanaoglu, and Max Welling.
+\newblock Gauge equivariant convolutional networks and the icosahedral CNN.
+\newblock In \emph{Proceedings of the 36th International Conference on Machine
+Learning}, volume 97 of PMLR, pages 1321--1330, 2019.
+
+\bibitem{sevetlidis2026holonomy}
+Vasileios Sevetlidis and George Pavlidis.
+\newblock Gauge-invariant representation holonomy.
+\newblock ICLR 2026 poster; arXiv preprint arXiv:2601.21653, 2026.
+\newblock \url{https://openreview.net/forum?id=czJqKToDGq}.
+
+\bibitem{javidnia2026superposition}
+Hossein Javidnia.
+\newblock A Gauge Theory of Superposition: Toward a Sheaf-Theoretic Atlas of
+Neural Representations.
+\newblock arXiv preprint arXiv:2603.00824, 2026.
+
+\bibitem{kawasaki2026structural}
+Aoi Kawasaki.
+\newblock Structural Replay in Dense Transformers Under a Frozen FP32 Regime:
+Evidence from Closed 3B/4B Models and Boundary Results.
+\newblock Zenodo, version 1.0, 2026.
+\newblock doi:10.5281/zenodo.19483162.
+
+\bibitem{kawasaki2026telemetry}
+Aoi Kawasaki.
+\newblock Transport-First Defect Telemetry on Replay Artifact Graphs:
+A Minimal Gauge-Covariant Formulation of Closure Inconsistency.
+\newblock Zenodo, version 0.1, 2026.
+\newblock doi:10.5281/zenodo.19569052.
+
+\bibitem{kawasaki2026observer}
+Aoi Kawasaki.
+\newblock Observer-Relative Closure Signatures on Replay Artifact Graphs:
+A Bounded Source-Facing Audit of Existing LLM Artifacts.
+\newblock Zenodo, 2026.
+\newblock doi:10.5281/zenodo.20080003.
+
+\bibitem{holm1979simple}
+Sture Holm.
+\newblock A simple sequentially rejective multiple test procedure.
+\newblock \emph{Scandinavian Journal of Statistics}, 6(2):65--70, 1979.
+
+\end{thebibliography}
+
+\end{document}

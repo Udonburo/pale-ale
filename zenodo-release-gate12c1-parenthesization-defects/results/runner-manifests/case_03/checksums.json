@@ -1,0 +1,11 @@
+{
+  "manifest.json": "cf40613470f1aa7f867a13a0d71d0def689ef76a175431a3a2ee5d9ab5efa484",
+  "triangle_associator_registry.jsonl": "c495f7af2e40e3ec172de473638a8a4838b173b2902924b66cc40da243ab5229",
+  "triangle_associator_arrays.npz": "9bf1d6894f216e067adeb6c36a950b6f4cbc0ed643b8addce87a3e3a603c8abc",
+  "cycle_associator_summary.jsonl": "cb751246507244ffbe25e787b84970a4c2a845da3058f34655a158a52bb13e86",
+  "compression_sweep_summary.csv": "7dd4fca19f59a23fd6c9628011335f818be2ff34a90bd0e02a71dc942f835d94",
+  "gauge_stability_summary.json": "550b66995bc57de816d1425e73a2fcfc652f38c94fcb2e5d135187d43ed8b3e3",
+  "spectral_orientation_null_summary.jsonl": "88f4df8903652b72e7c70452926df2b5002d6e642db339bce906456438322bd3",
+  "gate12c_status.json": "0a0b71176f817f55400f8175a79c15a59cece0ef9167d8c1a53120854403e06a",
+  "gate12c_read.md": "a8f62ed7c7026c1b8c7ca4b52989a2a7c276061fd632176dee00241642439c7b"
+}

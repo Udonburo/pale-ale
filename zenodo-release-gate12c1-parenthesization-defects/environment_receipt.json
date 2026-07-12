@@ -1,0 +1,30 @@
+{
+  "schema_version": "gate12c1_post_execution_environment_receipt_v1",
+  "receipt_status": "post_execution_reconstruction",
+  "captured_at_utc": "2026-07-12T03:20:15.791743+00:00",
+  "execution_completed_at_or_before_utc": "2026-06-26T11:04:06.320669+00:00",
+  "provenance_statement": "No contemporaneous execution-environment receipt was found. This record was captured later on the same Windows machine and from the same empirical worktree. It documents the currently observed environment and must not be treated as proof that every version was identical at execution time.",
+  "python": {
+    "implementation": "CPython",
+    "version": "3.11.2",
+    "executable": "C:\\Program Files\\Python311\\python.exe"
+  },
+  "packages_required_by_bundled_code": {
+    "numpy_observed_version": "2.2.6",
+    "other_imports": "Python standard library and the bundled local feasibility helper"
+  },
+  "operating_system": {
+    "platform": "Windows-10-10.0.22631-SP0",
+    "system": "Windows",
+    "release": "10",
+    "version": "10.0.22631",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 142 Stepping 12, GenuineIntel"
+  },
+  "execution_receipts_in_capsule": [
+    "results/mechanical_preflight_status.json",
+    "results/case_execution_mechanical_status.json",
+    "results/runner-manifests/case_01/manifest.json through case_12/manifest.json",
+    "results/runner-manifests/case_01/checksums.json through case_12/checksums.json"
+  ]
+}

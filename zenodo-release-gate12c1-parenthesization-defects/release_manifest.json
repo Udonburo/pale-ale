@@ -1,0 +1,50 @@
+{
+  "schema_version": "gate12c1_parenthesization_defects_release_capsule_v1",
+  "status": "release_candidate_not_archived",
+  "title": "Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test",
+  "author": "Aoi Kawasaki",
+  "package_date": "2026-07-12",
+  "repository": "https://github.com/Udonburo/pale-ale",
+  "doi": null,
+  "intended_release_tag": "gate12c1-parenthesization-defects-v1.0.0",
+  "publication_blockers": [
+    "Reserve and insert the Zenodo DOI.",
+    "Create the immutable Git release tag only after the DOI-bearing manuscript and capsule are final."
+  ],
+  "manuscript_source_commit": "e14bc3278062318eeb20e47008a35dc3ea08a129",
+  "manuscript_layout_fix_commit": "61c3ce42111ef7162b6f0ee787649dfb2aaf0ca7",
+  "manuscript_reframing_commit": "00a5eb572f6227fad00399f0da9b10fb4c06d36d",
+  "descriptive_boundary_commit": "671e6d1f2e18230afec0a24904055a3387ec4805",
+  "descriptive_values_commit": "f5f9c703fbdaf83868fb7cd8591c58be72bf9919",
+  "execution": {
+    "measurement_runner_commit": "8d5613bffe5b6c91d0956c812404072eb76e98c6",
+    "measurement_runner_sha256": "b363fd874a0538dc548853e97e8ec17c0eb84be5658f6e2f01f60d2a12789c3e",
+    "grid_summarizer_commit": "6b66f49710f4b7cbdae7e5a282d14d1d81723b30",
+    "grid_summarizer_sha256": "9e527c0363875de912f9abf9ba38acb462a13b0b62da6e14be35d4c3526df708",
+    "case_manifest_sha256": "dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704",
+    "case_count": 12,
+    "endpoint_count": 24,
+    "mechanical_completion_recorded_at_utc": "2026-06-26T11:04:06.320669+00:00"
+  },
+  "reported_result": {
+    "informative_and_coverage_complete_endpoints": 24,
+    "directional_excess_support_endpoints": 0,
+    "negative_endpoint_hierarchical_summaries": 24,
+    "reverse_direction_status": "post_hoc_descriptive_only",
+    "exponentiated_endpoint_summary_min": 0.028040852757616,
+    "exponentiated_endpoint_summary_max": 0.236062919338879,
+    "exponentiated_endpoint_summary_median": 0.065849079252379
+  },
+  "included_generated_surfaces": [
+    "canonical case manifest",
+    "per-case runner manifests and checksum receipts",
+    "complete cycle-level score export",
+    "complete endpoint CSV",
+    "complete block-level score export",
+    "secondary telemetry",
+    "case inventory and grid summary",
+    "mechanical preflight and completion receipts"
+  ],
+  "scope_note": "Large per-case numeric arrays and the frozen Gate12A source artifacts are not duplicated in this compact publication capsule. The complete cycle-, block-, and endpoint-level summary hierarchy is included for audit, but it does not replace the source artifacts required for a full measurement-runner re-execution.",
+  "environment_note": "The environment receipt is a transparent post-execution reconstruction, not a contemporaneous lockfile."
+}
