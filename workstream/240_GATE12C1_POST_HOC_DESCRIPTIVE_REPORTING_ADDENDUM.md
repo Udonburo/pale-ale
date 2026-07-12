@@ -62,3 +62,21 @@ defined endpoint summaries. They do not establish a reverse-direction effect,
 identify a mechanism, or distinguish a genuinely smaller observed defect from
 inflation of the graph-unconstrained null caused by destroying shared-node
 coupling.
+
+## 5. Recorded Descriptive Values
+
+These values were computed only after the reporting boundary above was
+committed as `671e6d1`:
+
+| quantity | recorded value |
+| --- | ---: |
+| negative endpoint summaries | 24/24 |
+| log-ratio minimum | -3.574092805095026 |
+| log-ratio maximum | -1.443656902121825 |
+| log-ratio median | -2.723219947778724 |
+| exponentiated minimum | 0.028040852757616 |
+| exponentiated maximum | 0.236062919338879 |
+| exponentiated median | 0.065849079252379 |
+
+The paper-facing transformed summary is therefore reported, at the frozen
+display precision, as a range from 0.028 to 0.236 with median 0.066.
