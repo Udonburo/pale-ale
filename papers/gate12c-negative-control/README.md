@@ -1,33 +1,40 @@
-# Gate12C-1 Negative-Control Technical Note
+# Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test
 
-Status: first technical-note draft
-Scope: conservative paper source for the Gate12C-1 negative-control result
+Status: companion research paper source
+Protocol name: Gate12C-1
 
-This directory contains a concise draft technical-note source for the Gate12C-1
-negative-control result. It is not a Zenodo package, not a refreshed release
-folder, and not a checksum set.
+This directory contains the paper source for a predeclared test of whether a
+compression-interleaved parenthesization defect is larger in LLM replay
+artifact cycles than under an edge-spectrum-matched, graph-unconstrained
+orientation null.
 
-The draft is based on tracked repository workstream records:
+The paper reports two distinct levels of result:
 
-- `workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md`
-- `workstream/237_GATE12C1_RESULT_CLOSEOUT_AND_NEXT_BOUNDARY.md`
-- `workstream/238_GATE12C1_NEGATIVE_CONTROL_AND_PUBLIC_POSITIONING_PLAN.md`
+- confirmatory: all 24 endpoints were informative and coverage-complete, and
+  none met the frozen support rule for positive directional excess;
+- descriptive: all 24 endpoint median log-ratios were negative, but the
+  reverse-direction hypothesis was not predeclared and is not treated as
+  confirmatory evidence. On the post-hoc endpoint-summary scale fixed before
+  aggregation, exponentiated values range from 0.028 to 0.236 with median
+  0.066.
 
-It does not include generated `runs/` artifacts. It does not run a new
-experiment, inspect generated runs, inspect individual cycles, run a Gate12B
-overlay, modify Gate12A/B/C runners, create a Zenodo package, or update
-`CHECKSUMS-SHA256.txt`.
+The current null preserves marginal edge spectra while breaking shared-node
+realizability. The paper therefore does not conclude that the observed graphs
+are coherent or that graph consistency caused the negative direction.
+Graph-constrained nulls, held-out runs, a predeclared reverse-direction rule,
+positive controls, and sensitivity checks belong to a separate prospective
+Gate12C-2 plan.
 
-Gate12C-1 is treated here only as a predeclared higher-order negative control.
-The draft does not claim a physical-structure discovery, safety or deployment
-guarantee, model-quality ranking, correctness classification, weight-level
-causal mechanism, or Gate12C-1 as positive evidence for Gate12B.
+The manuscript is grounded in these tracked records:
 
-Build target, once a local LaTeX installation is available:
+- workstream/235_GATE12C1_FIRST_EMPIRICAL_EXECUTION_PLAN.md
+- workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md
+- workstream/240_GATE12C1_POST_HOC_DESCRIPTIVE_REPORTING_ADDENDUM.md
+- tools/run_gate12c_compressed_overlap_associator.py
+- tools/summarize_gate12c1_first_empirical_grid.py
 
-```powershell
-pdflatex main.tex
-```
+A separate archival capsule will package the immutable case manifest,
+endpoint and block-level score files, checksums, runner outputs, and software
+environment receipt.
 
-Build products such as `.aux`, `.log`, `.out`, `.toc`, and generated PDFs are
-not committed by this draft.
+Build target, once a local LaTeX installation is available: pdflatex main.tex.
