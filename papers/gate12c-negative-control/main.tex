@@ -278,9 +278,13 @@ Qwen3-4B & \code{case_10} & \code{case_11} & \code{case_12} \\
 \end{tabular}
 \end{table}
 
-The exact model identifiers are \code{Qwen/Qwen2.5-0.5B},
-\code{Qwen/Qwen2.5-3B-Instruct},
-\code{meta-llama/Llama-3.2-3B-Instruct}, and \code{Qwen/Qwen3-4B}.
+{\footnotesize
+\emph{Exact model identifiers, in table order:}
+\breakcode{Qwen/Qwen2.5-0.5B};
+\breakcode{Qwen/Qwen2.5-3B-Instruct};
+\breakcode{meta-llama/Llama-3.2-3B-Instruct}; and
+\breakcode{Qwen/Qwen3-4B}.
+}
 
 The comparator was fixed as an \emph{edge-spectrum-matched,
 graph-unconstrained orientation null}. For each observed edge spectrum
@@ -332,12 +336,10 @@ endpoints were informative and coverage-complete. In addition, every endpoint
 median log-ratio was negative. The latter complete-family direction was not a
 predeclared reverse-direction hypothesis and is reported descriptively only.
 
-A post-hoc descriptive reporting boundary was fixed before computing any new
-aggregate in
-\breakcode{workstream/240_GATE12C1_POST_HOC_DESCRIPTIVE_REPORTING_ADDENDUM.md}
-at commit \code{671e6d1}. Under that boundary, exponentiating the 24
-endpoint-level hierarchical summaries gives values from 0.028 to 0.236, with a
-median of 0.066 on that summary scale. These are transformed endpoint
+A post-hoc descriptive reporting addendum was committed before computing any
+new aggregate (commit \code{671e6d1}). Under that boundary, exponentiating the
+24 endpoint-level hierarchical summaries gives values from 0.028 to 0.236,
+with a median of 0.066 on that summary scale. These are transformed endpoint
 summaries, not raw-row median ratios or a reverse-direction test.
 
 Figure~\ref{fig:endpoint-medians} shows the result at a glance. Each plotted
@@ -365,7 +367,7 @@ and below its corresponding null median; it is not a significance threshold.
     y tick label style={font=\small},
     label style={font=\small}
 ]
-\addplot[black,dashed,thick] coordinates {(0.5,0) (12.5,0)};
+\addplot[black,dashed,thick,forget plot] coordinates {(0.5,0) (12.5,0)};
 \addplot+[only marks,mark=*,mark size=2.8pt,blue!70!black]
 coordinates {
     (0.9,-3.5740928050950265)
@@ -562,16 +564,18 @@ reproducibility surface is indexed as follows:
     \breakcode{workstream/235_GATE12C1_FIRST_EMPIRICAL_EXECUTION_PLAN.md};
     \item the complete endpoint summary and provenance digests are in
     \breakcode{workstream/236_GATE12C1_FIRST_EMPIRICAL_RESULT_MEMO.md};
+    \item the frozen post-hoc descriptive reporting boundary is in
+    \breakcode{workstream/240_GATE12C1_POST_HOC_DESCRIPTIVE_REPORTING_ADDENDUM.md};
     \item the measurement runner is
-    \breakcode{tools/run_gate12c_compressed_overlap_associator.py}, frozen at
-    commit \splitcode{8d5613bffe5b6c91d095}{6c812404072eb76e98c6}, with SHA256
-    \splitcode{b363fd874a0538dc548853e97e8ec17c}{0eb84be5658f6e2f01f60d2a12789c3e};
+    \breakcode{tools/run_gate12c_compressed_overlap_associator.py}.\\
+    Frozen commit: \code{8d5613bffe5b6c91d0956c812404072eb76e98c6}.\\
+    SHA256: \code{b363fd874a0538dc548853e97e8ec17c0eb84be5658f6e2f01f60d2a12789c3e};
     \item the grid summarizer is
-    \breakcode{tools/summarize_gate12c1_first_empirical_grid.py}, frozen at
-    commit \splitcode{6b66f49710f4b7cbdae7}{e5a282d14d1d81723b30}, with SHA256
-    \splitcode{9e527c0363875de912f9abf9ba38acb4}{62a13b0b62da6e14be35d4c3526df708};
-    \item the executed case manifest has SHA256
-    \splitcode{dae1f2690fc707a166277dac143aafcf}{a5e51e23934428861ddc48cac97ad704}.
+    \breakcode{tools/summarize_gate12c1_first_empirical_grid.py}.\\
+    Frozen commit: \code{6b66f49710f4b7cbdae7e5a282d14d1d81723b30}.\\
+    SHA256: \code{9e527c0363875de912f9abf9ba38acb462a13b0b62da6e14be35d4c3526df708};
+    \item the executed case manifest has SHA256\\
+    \code{dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704}.
 \end{itemize}
 
 The companion archival capsule will expose the immutable
