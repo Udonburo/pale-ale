@@ -7,7 +7,19 @@
   "repository": "https://github.com/Udonburo/pale-ale",
   "doi": "10.5281/zenodo.21355572",
   "release_tag": "gate12c1-parenthesization-defects-v1.0.0",
-  "publication_gate": "Publish only after the DOI-bearing PDF, immutable Git tag, and package checksums have been verified to agree.",
+  "license_map": {
+    "non_code_publication_materials": {
+      "spdx_id": "CC-BY-4.0",
+      "applies_to": "Every capsule file except code/ and LICENSE, unless a file states otherwise",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "source_code": {
+      "spdx_id": "MPL-2.0",
+      "applies_to": "code/",
+      "url": "https://www.mozilla.org/MPL/2.0/"
+    }
+  },
+  "publication_gate": "Publish only after the DOI-bearing PDF, immutable Git tag, package checksums, and Zenodo dual-license metadata have been verified to agree.",
   "manuscript_pre_doi_commit": "e14bc3278062318eeb20e47008a35dc3ea08a129",
   "manuscript_layout_fix_commit": "61c3ce42111ef7162b6f0ee787649dfb2aaf0ca7",
   "manuscript_reframing_commit": "00a5eb572f6227fad00399f0da9b10fb4c06d36d",

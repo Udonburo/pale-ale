@@ -40,4 +40,11 @@ runner outputs, software-environment receipt, manuscript source, and final PDF.
 The matching repository snapshot is identified by the immutable tag
 `gate12c1-parenthesization-defects-v1.0.0`.
 
+## Licensing
+
+The manuscript and archived non-code publication materials are licensed under
+Creative Commons Attribution 4.0 International (CC BY 4.0). Source code in the
+archival capsule remains licensed under the Mozilla Public License 2.0
+(MPL 2.0). The file-level mapping is recorded in the capsule's `LICENSES.txt`.
+
 Build target, once a local LaTeX installation is available: pdflatex main.tex.

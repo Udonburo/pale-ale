@@ -15,4 +15,7 @@ reporting addendum, exact runner and summarizer snapshots, case manifest,
 per-case manifests and checksums, endpoint CSV, block-level scores, execution
 receipts, and an explicitly post-execution environment reconstruction.
 
+Licensing is file-scoped: non-code publication materials use CC BY 4.0, while
+source code under `code/` uses MPL 2.0. See `LICENSES.txt` in the capsule.
+
 Immutable source tag: `gate12c1-parenthesization-defects-v1.0.0`

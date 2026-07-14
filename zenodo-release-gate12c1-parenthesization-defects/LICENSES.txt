@@ -1,0 +1,31 @@
+License map
+===========
+
+This release capsule contains materials under two file-scoped licenses. The
+licenses are not alternatives that both apply to every file.
+
+Creative Commons Attribution 4.0 International
+------------------------------------------------
+
+SPDX identifier: CC-BY-4.0
+License: https://creativecommons.org/licenses/by/4.0/
+
+Unless a file states otherwise, CC BY 4.0 applies to every file in this
+capsule except the contents of code/ and the MPL license text in LICENSE. This
+includes the manuscript and TeX source, protocol documents, generated result
+exports, manifests, receipts, and release documentation.
+
+Mozilla Public License 2.0
+--------------------------
+
+SPDX identifier: MPL-2.0
+License: https://www.mozilla.org/MPL/2.0/
+
+MPL 2.0 applies to the source-code files and accompanying code documentation
+under code/. The full MPL 2.0 text is included in LICENSE.
+
+Citation
+--------
+
+Reuse should cite https://doi.org/10.5281/zenodo.21355572. This citation
+request does not replace or add to the license terms.

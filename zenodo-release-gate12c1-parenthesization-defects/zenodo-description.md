@@ -30,3 +30,7 @@ destroying shared-node coupling.
 No new scientific experiment was run to prepare this archival package.
 
 Immutable Git tag: `gate12c1-parenthesization-defects-v1.0.0`
+
+Licensing: non-code publication materials are licensed under CC BY 4.0;
+source code under `code/` is licensed under MPL 2.0. See `LICENSES.txt` for
+the file-level mapping.

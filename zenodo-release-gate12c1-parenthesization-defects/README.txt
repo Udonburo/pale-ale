@@ -37,6 +37,10 @@ Contents
   different Windows checkout contexts and intentionally have different line
   endings; code/README.txt records the hashes and explains the provenance.
 
+- LICENSES.txt
+  File-level mapping between CC BY 4.0 for non-code publication materials and
+  MPL 2.0 for the bundled source code. The full MPL 2.0 text is in LICENSE.
+
 - results/case_manifest.json
   Canonical twelve-case manifest used for execution.
 
@@ -72,8 +76,14 @@ Contents
 Licensing
 ---------
 
-The bundled source code is distributed under the Mozilla Public License 2.0;
-see LICENSE. Data and manuscript reuse should cite
-https://doi.org/10.5281/zenodo.21355572.
+Unless a file states otherwise, every capsule file except the contents of
+code/ and the MPL license text in LICENSE is distributed under Creative
+Commons Attribution 4.0 International (CC BY 4.0). Source code in code/ is
+distributed under the Mozilla Public License 2.0 (MPL 2.0). See LICENSES.txt
+for the file-level mapping and license URLs, and LICENSE for the full MPL 2.0
+text.
+
+Reuse should cite https://doi.org/10.5281/zenodo.21355572. This citation
+request does not replace or add to the license terms.
 
 Repository: https://github.com/Udonburo/pale-ale
