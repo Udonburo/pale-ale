@@ -2,18 +2,17 @@ Title: Compression-Interleaved Parenthesization Defects in LLM Replay
 Artifact Graphs: A Predeclared Null Test
 
 Author: Aoi Kawasaki
-Package date: 2026-07-12
-Package status: release-candidate staging capsule
-DOI: not yet assigned
+Package date: 2026-07-14
+Package status: archival release capsule
+DOI: https://doi.org/10.5281/zenodo.21355572
 
 This capsule contains the manuscript, the frozen protocol and descriptive
 reporting boundary, exact code snapshots, and the generated records needed to
 audit the 24 endpoint results from the Gate12C-1 predeclared null test. No new
 scientific experiment was run to prepare this package.
 
-The package is intentionally not presented as the public archival record until
-a Zenodo DOI has been reserved and the matching immutable Git release tag has
-been created. The intended tag is:
+The package is associated with the reserved Zenodo DOI above and the matching
+immutable Git release tag:
 
   gate12c1-parenthesization-defects-v1.0.0
 
@@ -74,6 +73,7 @@ Licensing
 ---------
 
 The bundled source code is distributed under the Mozilla Public License 2.0;
-see LICENSE. Data and manuscript reuse should cite the final DOI once assigned.
+see LICENSE. Data and manuscript reuse should cite
+https://doi.org/10.5281/zenodo.21355572.
 
 Repository: https://github.com/Udonburo/pale-ale

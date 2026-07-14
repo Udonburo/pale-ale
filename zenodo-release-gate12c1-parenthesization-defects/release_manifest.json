@@ -1,17 +1,14 @@
 {
   "schema_version": "gate12c1_parenthesization_defects_release_capsule_v1",
-  "status": "release_candidate_not_archived",
+  "status": "release_candidate_ready_for_archive",
   "title": "Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test",
   "author": "Aoi Kawasaki",
-  "package_date": "2026-07-12",
+  "package_date": "2026-07-14",
   "repository": "https://github.com/Udonburo/pale-ale",
-  "doi": null,
-  "intended_release_tag": "gate12c1-parenthesization-defects-v1.0.0",
-  "publication_blockers": [
-    "Reserve and insert the Zenodo DOI.",
-    "Create the immutable Git release tag only after the DOI-bearing manuscript and capsule are final."
-  ],
-  "manuscript_source_commit": "e14bc3278062318eeb20e47008a35dc3ea08a129",
+  "doi": "10.5281/zenodo.21355572",
+  "release_tag": "gate12c1-parenthesization-defects-v1.0.0",
+  "publication_gate": "Publish only after the DOI-bearing PDF, immutable Git tag, and package checksums have been verified to agree.",
+  "manuscript_pre_doi_commit": "e14bc3278062318eeb20e47008a35dc3ea08a129",
   "manuscript_layout_fix_commit": "61c3ce42111ef7162b6f0ee787649dfb2aaf0ca7",
   "manuscript_reframing_commit": "00a5eb572f6227fad00399f0da9b10fb4c06d36d",
   "descriptive_boundary_commit": "671e6d1f2e18230afec0a24904055a3387ec4805",

@@ -1,5 +1,7 @@
 # Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test
 
+DOI: https://doi.org/10.5281/zenodo.21355572
+
 This archive contains a companion research paper and compact evidence capsule
 for a predeclared test of whether low-rank-compression-interleaved
 parenthesization defects in LLM replay-artifact cycles exceed an
@@ -26,3 +28,5 @@ a genuinely smaller observed defect or inflation of the null caused by
 destroying shared-node coupling.
 
 No new scientific experiment was run to prepare this archival package.
+
+Immutable Git tag: `gate12c1-parenthesization-defects-v1.0.0`

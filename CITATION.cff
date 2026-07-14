@@ -3,8 +3,10 @@ message: >-
   If you use pale-ale, cite this repository entry and the relevant release
   surface. Use 10.5281/zenodo.19483162 for the April 2026 Gate12A frozen
   technical report, 10.5281/zenodo.19569052 for the transport-first telemetry
-  note, and 10.5281/zenodo.19340221 only for the earlier replication
-  checkpoint / prior release surface.
+  note, 10.5281/zenodo.20080003 for the Gate12B bounded audit, and
+  10.5281/zenodo.21355572 for the Gate12C-1 predeclared null test. Use
+  10.5281/zenodo.19340221 only for the earlier replication checkpoint / prior
+  release surface.
 title: "pale-ale"
 type: software
 authors:
@@ -18,8 +20,10 @@ abstract: >-
   local observation, consistency, and learned systems. The current citable
   release surfaces are role-separated: 10.5281/zenodo.19483162 is the main
   frozen Gate12A technical report, 10.5281/zenodo.19569052 is the mathematical
-  transport-first telemetry note, and 10.5281/zenodo.19340221 is an earlier
-  replication checkpoint / prior release surface.
+  transport-first telemetry note, 10.5281/zenodo.20080003 is the Gate12B
+  bounded audit, 10.5281/zenodo.21355572 is the Gate12C-1 predeclared null
+  test, and 10.5281/zenodo.19340221 is an earlier replication checkpoint /
+  prior release surface.
 references:
   - type: report
     authors:
@@ -47,3 +51,22 @@ references:
     year: 2026
     doi: "10.5281/zenodo.19340221"
     url: "https://doi.org/10.5281/zenodo.19340221"
+  - type: report
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "Observer-Relative Closure Signatures on Replay Artifact Graphs: A Bounded Source-Facing Audit of Existing LLM Artifacts"
+    year: 2026
+    date-released: "2026-05-08"
+    doi: "10.5281/zenodo.20080003"
+    url: "https://doi.org/10.5281/zenodo.20080003"
+  - type: report
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test"
+    year: 2026
+    date-released: "2026-07-14"
+    version: "1.0.0"
+    doi: "10.5281/zenodo.21355572"
+    url: "https://doi.org/10.5281/zenodo.21355572"

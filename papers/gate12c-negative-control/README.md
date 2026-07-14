@@ -1,7 +1,8 @@
 # Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test
 
-Status: companion research paper source
+Status: DOI-bearing release-ready companion research paper source
 Protocol name: Gate12C-1
+Zenodo DOI: https://doi.org/10.5281/zenodo.21355572
 
 This directory contains the paper source for a predeclared test of whether a
 compression-interleaved parenthesization defect is larger in LLM replay
@@ -33,8 +34,10 @@ The manuscript is grounded in these tracked records:
 - tools/run_gate12c_compressed_overlap_associator.py
 - tools/summarize_gate12c1_first_empirical_grid.py
 
-A separate archival capsule will package the immutable case manifest,
-endpoint and block-level score files, checksums, runner outputs, and software
-environment receipt.
+The archival capsule at https://doi.org/10.5281/zenodo.21355572 packages the
+immutable case manifest, endpoint and block-level score files, checksums,
+runner outputs, software-environment receipt, manuscript source, and final PDF.
+The matching repository snapshot is identified by the immutable tag
+`gate12c1-parenthesization-defects-v1.0.0`.
 
 Build target, once a local LaTeX installation is available: pdflatex main.tex.

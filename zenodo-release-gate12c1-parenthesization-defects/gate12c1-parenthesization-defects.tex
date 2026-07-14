@@ -9,6 +9,13 @@
 \usepackage{pgfplots}
 \usepackage[hidelinks]{hyperref}
 
+\hypersetup{
+  pdftitle={Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test},
+  pdfauthor={Aoi Kawasaki},
+  pdfsubject={A predeclared null test on compression-interleaved defects in LLM replay artifact graphs},
+  pdfkeywords={LLM evaluation, replay artifact graph, low-rank compression, gauge invariance, parenthesization defect}
+}
+
 \pgfplotsset{compat=1.17}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.8\baselineskip}
@@ -24,7 +31,7 @@
 in LLM Replay Artifact Graphs:\\
 A Predeclared Null Test}
 \author{Aoi Kawasaki}
-\date{July 2026}
+\date{July 14, 2026}
 
 \begin{document}
 \maketitle
@@ -578,13 +585,18 @@ reproducibility surface is indexed as follows:
     \code{dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704}.
 \end{itemize}
 
-The companion archival capsule will expose the immutable
-\code{case_manifest.json}, per-case runner manifests and checksums, the endpoint
-file \code{gate12c1_run_q_tests.csv}, the cycle- and block-level score exports,
-the complete summarizer manifest and checksums, and a software-environment
-receipt. Until that capsule is posted, the tracked result memo is the public
-endpoint-level record and the generated aggregation surfaces are not yet
-publicly archived.
+The companion archival capsule is available at
+\href{https://doi.org/10.5281/zenodo.21355572}{doi:10.5281/zenodo.21355572}.
+The capsule contains the immutable \breakcode{case_manifest.json}, per-case
+runner manifests, and their checksum receipts. It also contains
+\breakcode{gate12c1_run_q_tests.csv}, the cycle- and block-level score exports,
+the summarizer manifest and checksums, the software-environment receipt, and
+\breakcode{CHECKSUMS-SHA256.txt}.
+
+The corresponding repository snapshot is identified by this immutable tag:
+\begin{center}
+\code{gate12c1-parenthesization-defects-v1.0.0}
+\end{center}
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -700,8 +712,8 @@ Learning}, volume 97 of PMLR, pages 1321--1330, 2019.
 \bibitem{sevetlidis2026holonomy}
 Vasileios Sevetlidis and George Pavlidis.
 \newblock Gauge-invariant representation holonomy.
-\newblock ICLR 2026 poster; arXiv preprint arXiv:2601.21653, 2026.
-\newblock \url{https://openreview.net/forum?id=czJqKToDGq}.
+\newblock arXiv preprint arXiv:2601.21653, 2026.
+\newblock \url{https://arxiv.org/abs/2601.21653}.
 
 \bibitem{javidnia2026superposition}
 Hossein Javidnia.
