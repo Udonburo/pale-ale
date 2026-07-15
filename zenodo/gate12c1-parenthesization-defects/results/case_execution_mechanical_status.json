@@ -1,0 +1,126 @@
+{
+  "cases": [
+    {
+      "case_id": "case_01",
+      "checksums_status": "pass",
+      "elapsed_seconds": 229.691,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_02",
+      "checksums_status": "pass",
+      "elapsed_seconds": 387.91,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_03",
+      "checksums_status": "pass",
+      "elapsed_seconds": 228.55,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_04",
+      "checksums_status": "pass",
+      "elapsed_seconds": 307.268,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_05",
+      "checksums_status": "pass",
+      "elapsed_seconds": 422.953,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_06",
+      "checksums_status": "pass",
+      "elapsed_seconds": 219.042,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_07",
+      "checksums_status": "pass",
+      "elapsed_seconds": 190.911,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_08",
+      "checksums_status": "pass",
+      "elapsed_seconds": 376.746,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_09",
+      "checksums_status": "pass",
+      "elapsed_seconds": 221.954,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_10",
+      "checksums_status": "pass",
+      "elapsed_seconds": 230.056,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_11",
+      "checksums_status": "pass",
+      "elapsed_seconds": 294.534,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    },
+    {
+      "case_id": "case_12",
+      "checksums_status": "pass",
+      "elapsed_seconds": 184.964,
+      "gate12c_status_process_status": "pass",
+      "manifest_provenance_settings_status": "pass",
+      "required_files_present": true,
+      "runner_exit_code": 0,
+      "source_immutability_status": "pass"
+    }
+  ],
+  "schema_version": "gate12c1_case_execution_mechanical_status_v1",
+  "updated_at_utc": "2026-06-26T11:04:06.320669+00:00"
+}

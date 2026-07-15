@@ -1,0 +1,1326 @@
+{
+  "schema_version": "gate12c1_first_empirical_grid_summary_v1",
+  "method_id": "gate12c1_first_empirical_grid_summary_v1",
+  "secondary_checks_are_descriptive": true,
+  "multiple_testing_boundary": {
+    "row_level_discovery_claims_authorized": false,
+    "holm_corrected_endpoint_count": 24,
+    "secondary_checks_holm_corrected": false
+  },
+  "run_q_secondary_telemetry": [
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "transcript_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.4792726598962314,
+      "empirical_p_upper_quantiles": {
+        "min": 0.8828125,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.004120098818475101,
+      "cycle_q_root_spread_median": 0.9634808759643512,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "transcript_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -1.9299937926343975,
+      "empirical_p_upper_quantiles": {
+        "min": 0.66015625,
+        "p25": 0.9921875,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.0027028438087318392,
+      "cycle_q_root_spread_median": 0.7476921368277261,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "briefing_200r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.515410380291522,
+      "empirical_p_upper_quantiles": {
+        "min": 0.85546875,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.006574396383569684,
+      "cycle_q_root_spread_median": 0.9846080567338882,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "briefing_200r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.045038371146461,
+      "empirical_p_upper_quantiles": {
+        "min": 0.51953125,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.0026899320803970145,
+      "cycle_q_root_spread_median": 0.7908065744437176,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "archive_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.4571909758770851,
+      "empirical_p_upper_quantiles": {
+        "min": 0.90234375,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.006296288674522178,
+      "cycle_q_root_spread_median": 1.020122728224502,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "model": "qwen_qwen2_5_0_5b",
+      "family": "archive_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.0247595267341043,
+      "empirical_p_upper_quantiles": {
+        "min": 0.03515625,
+        "p25": 0.97265625,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.002455014224441366,
+      "cycle_q_root_spread_median": 0.6960455097927779,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "transcript_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.4972371446839832,
+      "empirical_p_upper_quantiles": {
+        "min": 0.94140625,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.00451208202969641,
+      "cycle_q_root_spread_median": 0.9442832866347934,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "transcript_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.0676231735107002,
+      "empirical_p_upper_quantiles": {
+        "min": 0.81640625,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.0017390317427412123,
+      "cycle_q_root_spread_median": 0.8645025776248207,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "briefing_200r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.4717675887280501,
+      "empirical_p_upper_quantiles": {
+        "min": 0.87109375,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.007853936181070702,
+      "cycle_q_root_spread_median": 1.0207082420311242,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "briefing_200r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.3021216961730833,
+      "empirical_p_upper_quantiles": {
+        "min": 0.609375,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.0028473218640593196,
+      "cycle_q_root_spread_median": 0.6968959177478433,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "archive_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.494856209820473,
+      "empirical_p_upper_quantiles": {
+        "min": 0.87890625,
+        "p25": 0.9921875,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.009708789431298902,
+      "cycle_q_root_spread_median": 0.8263040256368033,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "model": "qwen_qwen2_5_3b_instruct",
+      "family": "archive_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.3196704760868436,
+      "empirical_p_upper_quantiles": {
+        "min": 0.16015625,
+        "p25": 0.9765625,
+        "median": 0.99609375,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.0037946255042643406,
+      "cycle_q_root_spread_median": 0.7940447185984594,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "transcript_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.7783997345686795,
+      "empirical_p_upper_quantiles": {
+        "min": 0.9296875,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.013629658442039647,
+      "cycle_q_root_spread_median": 1.024182271657787,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "transcript_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -1.8832677006008123,
+      "empirical_p_upper_quantiles": {
+        "min": 0.49609375,
+        "p25": 0.98828125,
+        "median": 0.99609375,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.01411976146542138,
+      "cycle_q_root_spread_median": 0.6975351753740908,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "briefing_200r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.5889865236352547,
+      "empirical_p_upper_quantiles": {
+        "min": 0.91796875,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.015295179533558505,
+      "cycle_q_root_spread_median": 0.9531515997691704,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "briefing_200r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.278648116876827,
+      "empirical_p_upper_quantiles": {
+        "min": 0.62109375,
+        "p25": 0.984375,
+        "median": 0.99609375,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.01655629346121433,
+      "cycle_q_root_spread_median": 0.8387664862795335,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "archive_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.6130098847309535,
+      "empirical_p_upper_quantiles": {
+        "min": 0.8515625,
+        "p25": 0.99609375,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.014696159539552773,
+      "cycle_q_root_spread_median": 0.978467121735233,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "model": "meta_llama_llama_3_2_3b_instruct",
+      "family": "archive_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -2.265560776160343,
+      "empirical_p_upper_quantiles": {
+        "min": 0.6015625,
+        "p25": 0.9765625,
+        "median": 0.99609375,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.01307910686409611,
+      "cycle_q_root_spread_median": 0.9910708199849448,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "model": "qwen_qwen3_4b",
+      "family": "transcript_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -2.0732736794013435,
+      "empirical_p_upper_quantiles": {
+        "min": 0.9609375,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.011388427612326911,
+      "cycle_q_root_spread_median": 1.2031774613824109,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "model": "qwen_qwen3_4b",
+      "family": "transcript_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -1.6212503854573626,
+      "empirical_p_upper_quantiles": {
+        "min": 0.23828125,
+        "p25": 0.87109375,
+        "median": 0.9921875,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.04753600732534585,
+      "cycle_q_root_spread_median": 1.0314648391494012,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "model": "qwen_qwen3_4b",
+      "family": "briefing_200r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -1.8963385738815683,
+      "empirical_p_upper_quantiles": {
+        "min": 0.97265625,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.010603658254180408,
+      "cycle_q_root_spread_median": 1.399051077588513,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "model": "qwen_qwen3_4b",
+      "family": "briefing_200r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -1.6564995740043695,
+      "empirical_p_upper_quantiles": {
+        "min": 0.21875,
+        "p25": 0.9140625,
+        "median": 0.98828125,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.03562654041831466,
+      "cycle_q_root_spread_median": 1.2568644537161688,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "model": "qwen_qwen3_4b",
+      "family": "archive_128r",
+      "compression_rank_q": 1,
+      "hierarchical_block_median_robust_z": -2.1157193003077586,
+      "empirical_p_upper_quantiles": {
+        "min": 0.9140625,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.012188372835881551,
+      "cycle_q_root_spread_median": 1.327790088189977,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "model": "qwen_qwen3_4b",
+      "family": "archive_128r",
+      "compression_rank_q": 2,
+      "hierarchical_block_median_robust_z": -1.5935349256917246,
+      "empirical_p_upper_quantiles": {
+        "min": 0.38671875,
+        "p25": 0.87890625,
+        "median": 0.984375,
+        "p75": 1.0,
+        "max": 1.0
+      },
+      "compressed_associator_rel_median": 0.042664376830252655,
+      "cycle_q_root_spread_median": 1.2535266552399429,
+      "scale_degenerate_row_count": 0,
+      "scale_degenerate_row_rate": 0.0,
+      "incomplete_null_row_count": 0,
+      "incomplete_null_row_rate": 0.0
+    }
+  ],
+  "q1_vs_q2_difference": [
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "run_q2_minus_q1_median": 1.5727389207201474
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "run_q2_minus_q1_median": 1.0467997954536665
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "run_q2_minus_q1_median": 1.096072365587947
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "run_q2_minus_q1_median": 1.0287077935962237
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "run_q2_minus_q1_median": 0.43205779114396226
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "run_q2_minus_q1_median": 0.7065189888659207
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "run_q2_minus_q1_median": 0.5000582994744058
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "run_q2_minus_q1_median": 0.6181856318306118
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "run_q2_minus_q1_median": 0.6215972655244979
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "run_q2_minus_q1_median": 1.3721002842760495
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "run_q2_minus_q1_median": 1.5104236153583326
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "run_q2_minus_q1_median": 1.8284997370202927
+    }
+  ],
+  "low_holonomy_secondary_surface": [
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 30,
+      "selected_represented_block_count": 30,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.8971485163740436
+    },
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 30,
+      "selected_represented_block_count": 30,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.791634788533033
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 55,
+      "selected_represented_block_count": 55,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.2310563283805447
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 55,
+      "selected_represented_block_count": 55,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.5251195555623567
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 36,
+      "selected_represented_block_count": 36,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.3108899950986146
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 36,
+      "selected_represented_block_count": 36,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.309693274456104
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 27,
+      "selected_represented_block_count": 27,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.4392455391431866
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 27,
+      "selected_represented_block_count": 27,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.6529874750567206
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 52,
+      "selected_represented_block_count": 52,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.088455673519549
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 52,
+      "selected_represented_block_count": 52,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.918634001127014
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 37,
+      "selected_represented_block_count": 37,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.861483687809085
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 37,
+      "selected_represented_block_count": 37,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.3771069830123683
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 32,
+      "selected_represented_block_count": 32,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.9813909270675074
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 32,
+      "selected_represented_block_count": 32,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.538379446664572
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 63,
+      "selected_represented_block_count": 63,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.1458899536433114
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 63,
+      "selected_represented_block_count": 63,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.4821399590598743
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 38,
+      "selected_represented_block_count": 38,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.134004622969755
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 38,
+      "selected_represented_block_count": 38,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.516077078508278
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 39,
+      "selected_represented_block_count": 39,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.287730900182171
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 39,
+      "selected_represented_block_count": 39,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -1.666645099271142
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 53,
+      "selected_represented_block_count": 53,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.3594679975511585
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 125,
+      "selected_valid_cycle_count": 125,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 53,
+      "selected_represented_block_count": 53,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -2.1602587947778265
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 1,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 36,
+      "selected_represented_block_count": 36,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -3.4313369036207257
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 2,
+      "selected_expected_cycle_count": 80,
+      "selected_valid_cycle_count": 80,
+      "selected_cycle_coverage_ratio": 1.0,
+      "selected_expected_block_count": 36,
+      "selected_represented_block_count": 36,
+      "selected_block_coverage_ratio": 1.0,
+      "selected_mixed_or_undefined_count": 0,
+      "low_holonomy_run_q_median": -1.212703720792157
+    }
+  ],
+  "spearman_correlations": [
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.41565235797621997,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.6005475340820472,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.652215884465568,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_01",
+      "case_order": 1,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.7269051766152961,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.07085431912786234,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.002024274688131627,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.177761888639569,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_02",
+      "case_order": 2,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.025667804965526755,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.06815943327471236,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.018886451399055933,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.3535125261187311,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_03",
+      "case_order": 3,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.4239374139729684,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.021280590998390834,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.15195687035754035,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.05190333562689293,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_04",
+      "case_order": 4,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.4518894402414604,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.1589577025357064,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.30019110372525337,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.21163009807425176,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_05",
+      "case_order": 5,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.16162614374661669,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.1504605244968847,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.025927841803332585,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.5458121210938272,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_06",
+      "case_order": 6,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.4727816897790206,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.4880718886480743,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.6261949170003959,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.42294795569426713,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_07",
+      "case_order": 7,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.505507888479614,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.8044133969595095,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.15850995488158612,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.6208492822975121,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_08",
+      "case_order": 8,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.45336939368732954,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.7889729870079013,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.7921054359168233,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.6418208407022593,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_09",
+      "case_order": 9,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.5734687369813761,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.48836586524567477,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.6189189466345544,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.191446380183695,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_10",
+      "case_order": 10,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.5772698125325445,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.5152404573276004,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.5768210025319584,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.23116254619808593,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_11",
+      "case_order": 11,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.270475205419742,
+      "cycle_q_count": 500
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 1,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": 0.7067777798224786,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 1,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": 0.7159725180615971,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 2,
+      "predictor": "gate12a_holonomy_residual_fro",
+      "spearman_status": "defined",
+      "spearman_rho": -0.31052613220034003,
+      "cycle_q_count": 320
+    },
+    {
+      "case_id": "case_12",
+      "case_order": 12,
+      "compression_rank_q": 2,
+      "predictor": "edge_compatibility_gap_max",
+      "spearman_status": "defined",
+      "spearman_rho": -0.6896899313645726,
+      "cycle_q_count": 320
+    }
+  ]
+}

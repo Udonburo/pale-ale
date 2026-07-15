@@ -1,0 +1,10 @@
+{
+  "manifest.json": "830ecaf67511a6b88dbad8b3a2cf1c67138d7da2e2f4c7240a1c9bdec0d6c784",
+  "gate12c1_case_inventory.csv": "bd2045875d095716058575a274e334a156160576f65d769d1b655e336df9d79f",
+  "gate12c1_cycle_q_scores.jsonl": "f10a84cf5394dc99b867eaca3c959d93efa0baf6669d82318f16c290cb4c7b66",
+  "gate12c1_block_q_scores.jsonl": "33801ff2086d0fbaf60fb7c4d529890a00ebb16fc5567f665efe3ec14626491b",
+  "gate12c1_run_q_tests.csv": "8ba45737adc04b597f6df671a63a6a7b429d0ad8df8b7f81d3c98ac3ca136ab4",
+  "gate12c1_grid_summary.json": "bacda6af31fe73dc2f62679701601eb8365f9d42690ac622d002131b7ef7f510",
+  "gate12c1_secondary_telemetry.json": "665d5e4894bea98892da3861c731afda74ba6ab75972e2d676fdb7e7e8509eff",
+  "gate12c1_summary_read.md": "d3111616d6f30adb2446465eab0e949fc950d9cb1915a765dda3994712f382e5"
+}

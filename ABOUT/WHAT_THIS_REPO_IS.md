@@ -31,11 +31,15 @@ The broader canvas of the repo includes, but is not limited to:
 
 Not every part of that canvas is frozen into a paper claim at the same time, and not every part of that canvas needs to be stated directly in this repo's public-facing identity.
 
-## Current Public Claim Surface
+## Current Public Claim Surfaces
 
-The current paper-facing line is Gate12A under a frozen FP32 dense-transformer regime.
+The frozen base paper-facing line is Gate12A under a fixed FP32
+dense-transformer regime. Gate12B and Gate12C-1 are separate bounded companion
+surfaces: Gate12B reads observer-relative closure signatures over existing
+artifacts, while Gate12C-1 reports a predeclared parenthesization-defect null
+test.
 
-In that line, the repo now records:
+Within the Gate12A base line, the repo records:
 
 - a fixed Gate8 to Gate12A artifact pipeline
 - structural replay evidence across closed 3B/4B dense-transformer families
