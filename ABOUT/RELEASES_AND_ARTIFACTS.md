@@ -4,7 +4,7 @@ This repo separates the paper-facing release surface from the longer moving rese
 
 ## What Should Be Frozen For A Public Release
 
-For the Gate12A report line, the frozen public package should include:
+For a DOI-bound report line, the frozen public package should include:
 
 - `paper.pdf`
 - full paper source (`main.tex`, bibliography, figure source)
@@ -18,8 +18,11 @@ That is the release surface a reader should be able to cite, download, and inspe
 
 Today, the ingredients already present in the repo are mainly:
 
+- [`../zenodo/README.md`](../zenodo/README.md): the release-capsule index and directory policy for new archival packages
+- [`../zenodo/gate12c1-parenthesization-defects/README.txt`](../zenodo/gate12c1-parenthesization-defects/README.txt): the Gate12C-1 paper and reproducibility capsule
 - [`../zenodo-release/README.txt`](../zenodo-release/README.txt): the April 2026 Gate12A frozen technical report release bundle
 - [`../zenodo-release-transport-first-defect-telemetry/README.txt`](../zenodo-release-transport-first-defect-telemetry/README.txt): the separate mathematical telemetry-note release bundle
+- [`../zenodo-release-gate12b-observer-relative-closure-signatures/README.txt`](../zenodo-release-gate12b-observer-relative-closure-signatures/README.txt): the Gate12B bounded technical report release package
 - [`../docs/reproduce_gate12a.md`](../docs/reproduce_gate12a.md): the short release/reproducibility guide
 - [`../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
 - [`../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
@@ -28,6 +31,18 @@ Today, the ingredients already present in the repo are mainly:
 Local `runs/` directories are generated working outputs and are not the tracked
 public evidence surface. Public release navigation should point to the DOI-bound
 release bundles, selected manifests, checksums, and commit bindings first.
+
+## Archive Directory Policy
+
+New DOI-bound capsules live under `zenodo/<release-slug>/`. Existing top-level
+`zenodo-release*` directories remain at their historical paths because tracked
+documentation, release checks, and external links already depend on those
+locations. They are compatibility-preserving frozen snapshots, not a template
+for new directory names.
+
+Published Git tags remain immutable. Moving the tracked Gate12C-1 copy under
+`zenodo/` on `main` does not alter the capsule path preserved by its release
+tag or the files archived by Zenodo.
 
 ## How GitHub And Zenodo Should Line Up
 

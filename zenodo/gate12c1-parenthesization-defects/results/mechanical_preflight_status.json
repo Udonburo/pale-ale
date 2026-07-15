@@ -1,0 +1,11 @@
+{
+  "abandoned_root_inspected": false,
+  "abandoned_root_path": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1",
+  "abandoned_root_used": false,
+  "case_manifest_sha256": "dae1f2690fc707a166277dac143aafcfa5e51e23934428861ddc48cac97ad704",
+  "clean_execution_root": "C:\\Users\\aoika\\Documents\\GitHub\\pale-ale-gate12c1-empirical\\runs\\gate12c1_first_empirical_v1_clean_001",
+  "schema_version": "gate12c1_clean_execution_mechanical_preflight_v1",
+  "source_case_count": 12,
+  "source_checksum_status": "pass",
+  "source_run_id_status": "pass"
+}

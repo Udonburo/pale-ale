@@ -1,0 +1,40 @@
+{
+  "schema_version": "gate12c1_pdf_build_receipt_v1",
+  "built_at_local_date": "2026-07-14",
+  "source_file": "gate12c1-parenthesization-defects.tex",
+  "source_sha256": "12eb29d6a599aec1b2db59588af546238ea4bf5aa4e82d7b1b144787f8a16947",
+  "output_file": "gate12c1-parenthesization-defects.pdf",
+  "output_sha256": "48fc7ac3fa8a00a52a55e9ab0f31601e002ddd6108e7df103ea54c9ad38b6879",
+  "page_count": 11,
+  "page_size_points": "612 x 792",
+  "engine": {
+    "name": "Tectonic",
+    "version": "0.16.9",
+    "release_asset": "tectonic-0.16.9-x86_64-pc-windows-msvc.zip",
+    "release_asset_sha256": "131a24604785a9600989a3d91225f597df52ac06f00aeffe86fd529f99ee5cdd"
+  },
+  "render_qa": {
+    "renderer": "Poppler pdftoppm 26.02.0-0 Windows package",
+    "renderer_release_asset_sha256": "993e4a94376ed712fafc7058d724ea0b943d118bbd2305cd9ed55174eb85cda5",
+    "rendered_page_count": 11,
+    "visual_review": "all pages reviewed",
+    "checks": [
+      "title and abstract",
+      "PDF title, author, subject, and keyword metadata",
+      "section and page transitions",
+      "gauge-invariance proposition",
+      "case map and exact model identifiers",
+      "24-endpoint figure labels, zero line, offsets, markers, and legend",
+      "endpoint longtable continuation",
+      "data and code paths, hashes, and line wrapping",
+      "appendix table",
+      "bibliography and URL wrapping"
+    ]
+  },
+  "final_log_status": {
+    "overfull_boxes": 0,
+    "underfull_boxes": 0,
+    "unresolved_references": 0,
+    "unresolved_citations": 0
+  }
+}
