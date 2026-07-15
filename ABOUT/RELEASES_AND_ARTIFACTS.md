@@ -6,8 +6,8 @@ This repo separates the paper-facing release surface from the longer moving rese
 
 For a DOI-bound report line, the frozen public package should include:
 
-- `paper.pdf`
-- full paper source (`main.tex`, bibliography, figure source)
+- a rendered manuscript PDF
+- the matching manuscript source, bibliography, and figure sources
 - manifest and checksum material
 - a frozen implementation snapshot
 - artifact bundles, or stable links to separately archived bundles
@@ -40,9 +40,9 @@ documentation, release checks, and external links already depend on those
 locations. They are compatibility-preserving frozen snapshots, not a template
 for new directory names.
 
-Published Git tags remain immutable. Moving the tracked Gate12C-1 copy under
-`zenodo/` on `main` does not alter the capsule path preserved by its release
-tag or the files archived by Zenodo.
+Published Git tags remain immutable. Tracking a byte-identical Gate12C-1 copy
+under `zenodo/` on `main` does not alter the capsule path preserved by its
+release tag or the files archived by Zenodo.
 
 ## How GitHub And Zenodo Should Line Up
 

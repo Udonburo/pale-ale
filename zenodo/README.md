@@ -13,6 +13,10 @@ its own manifest, checksums, licensing, and provenance records.
 New capsules should use `zenodo/<release-slug>/` rather than adding another
 top-level `zenodo-release-*` directory.
 
+Capsule contents are tracked byte-for-byte from their published release tags.
+Internal status fields may record the pre-publication freeze stage; the DOI and
+release index are authoritative for current publication status.
+
 ## Historical Compatibility Paths
 
 The following top-level directories are frozen historical release snapshots:

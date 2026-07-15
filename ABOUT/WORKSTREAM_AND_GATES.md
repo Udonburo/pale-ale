@@ -79,7 +79,9 @@ This is the shortest plain-language map to the current line:
 | Gate10 | trusted-tree settlement court and bounded broader-pattern judgment |
 | Gate11 | admissibility membrane; boundary on what can be reopened |
 | Gate12 | discrete-connection constitution |
-| Gate12A | implementation, replay audit surface, family replication line, and current paper-facing evidence |
+| Gate12A | implementation, replay audit surface, family replication line, and frozen base paper-facing evidence |
+| Gate12B | read-only observer-relative secondary audit over Gate12A artifacts |
+| Gate12C-1 | predeclared compression-interleaved parenthesization null test |
 
 ## Why Workstream Stays Visible
 
