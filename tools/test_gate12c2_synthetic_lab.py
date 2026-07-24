@@ -485,6 +485,14 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             report["dependency_structure"],
             "q1_q2_share_observed_blocks_and_N1_draws_within_case",
         )
+        self.assertEqual(
+            report["accepted_valid_draw_storage"],
+            gate12c2.COMPACT_ACCEPTED_PREFIX_STORAGE_ID,
+        )
+        self.assertEqual(
+            report["accepted_valid_draw_order"],
+            "draw_attempt_order_first_required_valid",
+        )
 
     def test_outer_experiment_accepts_case_specific_block_schedule(self) -> None:
         schedule = {
@@ -552,6 +560,10 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         self.assertFalse(report["locked_execution_authorized"])
         self.assertEqual(len(report["endpoint_rows"]), 24)
         self.assertEqual(len(report["case_rows"]), 12)
+        self.assertEqual(
+            report["accepted_valid_draw_storage"],
+            gate12c2.COMPACT_ACCEPTED_PREFIX_STORAGE_ID,
+        )
         for row in report["endpoint_rows"]:
             self.assertFalse(row["observed_process_modified"])
             self.assertIn("observed", row["component_medians"])

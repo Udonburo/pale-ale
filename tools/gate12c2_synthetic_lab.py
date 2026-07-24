@@ -36,7 +36,7 @@ MECHANISM_CONTROL_SCHEMA_VERSION = "gate12c2_mechanism_control_v0.1"
 INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.2"
 SEED_NAMESPACE_SCHEMA_VERSION = "gate12c2_seed_namespace_v0.2"
 ACCEPTED_DRAW_STREAM_SCHEMA_VERSION = "gate12c2_accepted_draw_stream_v0.1"
-OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.2"
+OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.3"
 GENERATOR_ID = "gate12c2_s0_joint_frames_pcg64_v0.1"
 S1_SHARED_COUPLING_GENERATOR_ID = (
     "gate12c2_s1_shared_node_coupling_reverse_v0.1"
@@ -56,6 +56,7 @@ ALLOWED_DIAGNOSTIC_KERNELS = frozenset(
         BATCHED_DIAGNOSTIC_KERNEL,
     }
 )
+COMPACT_ACCEPTED_PREFIX_STORAGE_ID = "compact_fp64_valid_prefix_v0.1"
 PRIMARY_ALTERNATIVE = "observed_smaller_than_null"
 ALLOWED_ALTERNATIVES = frozenset(
     {
@@ -3482,22 +3483,26 @@ def run_development_outer_experiment(
                 )
             )
         }
-        attempts_by_endpoint_block: dict[
-            tuple[int, int], list[NullDrawAttempt]
-        ] = {
-            (q, block_index): []
-            for q in (1, 2)
-            for block_index in range(case_block_count)
-        }
-        accepted_counts: Counter[tuple[int, int]] = Counter()
+        null_values = np.full(
+            (2, case_block_count, inner_valid_draw_count),
+            np.nan,
+            dtype=np.float64,
+        )
+        accepted_counts = np.zeros(
+            (2, case_block_count),
+            dtype=np.int64,
+        )
+        attempt_counts = np.zeros(
+            (2, case_block_count),
+            dtype=np.int64,
+        )
+        rejection_counts_by_block = [
+            [Counter() for _ in range(case_block_count)]
+            for _ in range(2)
+        ]
         n1_audit_failure_count = 0
         for attempt_index in range(attempt_limit):
-            if all(
-                accepted_counts[(q, block_index)]
-                >= inner_valid_draw_count
-                for q in (1, 2)
-                for block_index in range(case_block_count)
-            ):
+            if np.all(accepted_counts >= inner_valid_draw_count):
                 break
             draw_namespace = OuterSeedNamespace(
                 surface_id="development",
@@ -3510,10 +3515,6 @@ def run_development_outer_experiment(
                 draw_attempt_index=attempt_index,
             )
             draw_seed = typed_seed_token(master_seed, draw_namespace)
-            draw_seed_receipt = typed_seed_receipt(
-                master_seed,
-                draw_namespace,
-            )
             comparison_batches: dict[
                 int,
                 BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
@@ -3551,9 +3552,13 @@ def run_development_outer_experiment(
             n1_audit_failure_count += int(not audit_pass)
             for block_index in range(case_block_count):
                 for q in (1, 2):
-                    key = (q, block_index)
-                    if accepted_counts[key] >= inner_valid_draw_count:
+                    q_index = q - 1
+                    if (
+                        accepted_counts[q_index, block_index]
+                        >= inner_valid_draw_count
+                    ):
                         continue
+                    attempt_counts[q_index, block_index] += 1
                     observed_diagnostic = observed_diagnostics[
                         (block_index, q)
                     ]
@@ -3607,43 +3612,46 @@ def run_development_outer_experiment(
                         accepted = True
                         value = float(comparison_defect)
                         reason = None
-                    accepted_index = (
-                        accepted_counts[key] if accepted else None
-                    )
-                    attempts_by_endpoint_block[key].append(
-                        NullDrawAttempt(
-                            attempt_index=len(
-                                attempts_by_endpoint_block[key]
-                            ),
-                            accepted=accepted,
-                            value=value,
-                            rejection_reason=reason,
-                            accepted_draw_index=accepted_index,
-                            seed_namespace_sha256=str(
-                                draw_seed_receipt["namespace_sha256"]
-                            ),
+                    if accepted:
+                        accepted_index = int(
+                            accepted_counts[q_index, block_index]
                         )
-                    )
-                    accepted_counts[key] += int(accepted)
+                        null_values[
+                            q_index,
+                            block_index,
+                            accepted_index,
+                        ] = float(value)
+                        accepted_counts[q_index, block_index] += 1
+                    else:
+                        rejection_counts_by_block[q_index][
+                            block_index
+                        ][str(reason)] += 1
 
         case_endpoint_receipts: list[dict[str, Any]] = []
         for q in (1, 2):
+            q_index = q - 1
             block_scores: list[float] = []
             block_rows: list[dict[str, Any]] = []
             for block_index, graph in enumerate(observed):
                 observed_diagnostic = observed_diagnostics[(block_index, q)]
-                stream = accepted_valid_draw_stream(
-                    attempts_by_endpoint_block[(q, block_index)],
-                    required_valid_count=inner_valid_draw_count,
+                inner_stream_complete = bool(
+                    accepted_counts[q_index, block_index]
+                    == inner_valid_draw_count
                 )
                 score = None
                 null_median = None
                 if (
                     observed_diagnostic.defect is not None
-                    and stream["complete"]
+                    and inner_stream_complete
                 ):
                     null_median = float(
-                        np.median(stream["accepted_values"])
+                        np.median(
+                            null_values[
+                                q_index,
+                                block_index,
+                                :inner_valid_draw_count,
+                            ]
+                        )
                     )
                     score = float(
                         math.log(observed_diagnostic.defect + epsilon)
@@ -3655,15 +3663,21 @@ def run_development_outer_experiment(
                         "source_block_id": graph.replicate_id,
                         "q": q,
                         "observed": observed_diagnostic.as_dict(),
-                        "inner_stream_complete": bool(stream["complete"]),
+                        "inner_stream_complete": inner_stream_complete,
                         "inner_attempt_count": int(
-                            stream["attempt_count_supplied"]
+                            attempt_counts[q_index, block_index]
                         ),
                         "inner_accepted_count": int(
-                            stream["accepted_count_supplied"]
+                            accepted_counts[q_index, block_index]
                         ),
                         "inner_rejection_reason_counts": (
-                            stream["rejection_reason_counts"]
+                            dict(
+                                sorted(
+                                    rejection_counts_by_block[q_index][
+                                        block_index
+                                    ].items()
+                                )
+                            )
                         ),
                         "null_defect_median": null_median,
                         "block_log_observed_to_N1_defect": score,
@@ -3743,6 +3757,10 @@ def run_development_outer_experiment(
         "inner_valid_draw_count": int(inner_valid_draw_count),
         "max_draw_attempts": int(attempt_limit),
         "diagnostic_kernel": diagnostic_kernel,
+        "accepted_valid_draw_storage": COMPACT_ACCEPTED_PREFIX_STORAGE_ID,
+        "accepted_valid_draw_order": (
+            "draw_attempt_order_first_required_valid"
+        ),
         "dependency_structure": (
             "q1_q2_share_observed_blocks_and_N1_draws_within_case"
         ),
@@ -3836,19 +3854,6 @@ def run_development_outer_calibration(
     }
 
 
-def _component_median(
-    rows: Sequence[Mapping[str, Any]],
-    arm: str,
-    field_name: str,
-) -> float | None:
-    values = [
-        float(row[arm][field_name])
-        for row in rows
-        if row[arm][field_name] is not None
-    ]
-    return float(np.median(values)) if values else None
-
-
 def run_development_s2_identification_experiment(
     *,
     master_seed: str,
@@ -3925,19 +3930,40 @@ def run_development_s2_identification_experiment(
             )
             for q in (1, 2)
         }
-        pair_rows: dict[tuple[int, int], list[dict[str, Any]]] = {
-            (q, block_index): []
-            for q in (1, 2)
-            for block_index in range(case_block_count)
+        component_field_index = {
+            field_name: index
+            for index, field_name in enumerate(component_fields)
         }
-        pair_attempts: dict[tuple[int, int], list[NullDrawAttempt]] = {
-            key: [] for key in pair_rows
+        arm_index = {
+            "observed": 0,
+            "N1": 1,
+            "graph_unconstrained_stressor": 2,
         }
+        component_values = np.full(
+            (
+                2,
+                case_block_count,
+                inner_valid_draw_count,
+                len(arm_index),
+                len(component_fields),
+            ),
+            np.nan,
+            dtype=np.float64,
+        )
+        accepted_counts = np.zeros(
+            (2, case_block_count),
+            dtype=np.int64,
+        )
+        attempt_counts = np.zeros(
+            (2, case_block_count),
+            dtype=np.int64,
+        )
+        rejection_counts_by_block = [
+            [Counter() for _ in range(case_block_count)]
+            for _ in range(2)
+        ]
         for attempt_index in range(attempt_limit):
-            if all(
-                len(pair_rows[key]) >= inner_valid_draw_count
-                for key in pair_rows
-            ):
+            if np.all(accepted_counts >= inner_valid_draw_count):
                 break
             n1_namespace = OuterSeedNamespace(
                 surface_id="development",
@@ -3964,14 +3990,6 @@ def run_development_s2_identification_experiment(
                 master_seed,
                 stress_namespace,
             )
-            pair_seed_sha256 = hashlib.sha256(
-                _canonical_json_bytes(
-                    [
-                        n1_receipt["namespace_sha256"],
-                        stress_receipt["namespace_sha256"],
-                    ]
-                )
-            ).hexdigest()
             n1_diagnostics: dict[
                 int,
                 BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
@@ -4086,9 +4104,13 @@ def run_development_s2_identification_experiment(
                         == "fail"
                     )
                 for q in (1, 2):
-                    key = (q, block_index)
-                    if len(pair_rows[key]) >= inner_valid_draw_count:
+                    q_index = q - 1
+                    if (
+                        accepted_counts[q_index, block_index]
+                        >= inner_valid_draw_count
+                    ):
                         continue
+                    attempt_counts[q_index, block_index] += 1
                     observed_diagnostic = observed_diagnostics[q][block_index]
                     n1_batch_or_rows = n1_diagnostics[q]
                     stress_batch_or_rows = stress_diagnostics[q]
@@ -4126,86 +4148,115 @@ def run_development_s2_identification_experiment(
                         )
                     else:
                         reason = None
-                    accepted_index = (
-                        len(pair_rows[key]) if reason is None else None
+                    if reason is not None:
+                        rejection_counts_by_block[q_index][
+                            block_index
+                        ][reason] += 1
+                        continue
+                    accepted_index = int(
+                        accepted_counts[q_index, block_index]
                     )
-                    pair_attempts[key].append(
-                        NullDrawAttempt(
-                            attempt_index=len(pair_attempts[key]),
-                            accepted=reason is None,
-                            value=(
-                                float(stress_diagnostic.defect)
-                                if reason is None
-                                and stress_diagnostic.defect is not None
-                                else None
-                            ),
-                            rejection_reason=reason,
-                            accepted_draw_index=accepted_index,
-                            seed_namespace_sha256=pair_seed_sha256,
+                    for arm, diagnostic in (
+                        ("observed", observed_diagnostic),
+                        ("N1", n1_diagnostic),
+                        (
+                            "graph_unconstrained_stressor",
+                            stress_diagnostic,
+                        ),
+                    ):
+                        diagnostic_values = (
+                            diagnostic.defect,
+                            diagnostic.tail_left,
+                            diagnostic.tail_right,
+                            diagnostic.propagated_left,
+                            diagnostic.propagated_right,
+                            diagnostic.alignment,
+                            diagnostic.propagation_left,
+                            diagnostic.propagation_right,
                         )
-                    )
-                    if reason is None:
-                        pair_rows[key].append(
-                            {
-                                "attempt_index": attempt_index,
-                                "observed": observed_diagnostic.as_dict(),
-                                "N1": n1_diagnostic.as_dict(),
-                                "graph_unconstrained_stressor": (
-                                    stress_diagnostic.as_dict()
-                                ),
-                                "N1_realizable": n1_realizable,
-                                "stressor_nonrealizable": stress_nonrealizable,
-                                "observed_manifest_sha256": (
-                                    observed_manifest_sha256
-                                ),
-                            }
-                        )
+                        component_values[
+                            q_index,
+                            block_index,
+                            accepted_index,
+                            arm_index[arm],
+                            :,
+                        ] = [
+                            (
+                                np.nan
+                                if value is None
+                                else float(value)
+                            )
+                            for value in diagnostic_values
+                        ]
+                    accepted_counts[q_index, block_index] += 1
 
         case_endpoint_rows: list[dict[str, Any]] = []
         for q in (1, 2):
+            q_index = q - 1
             completed_blocks = 0
             per_block_component_medians: list[dict[str, Any]] = []
             rejection_counts: Counter[str] = Counter()
             for block_index in range(case_block_count):
-                key = (q, block_index)
-                stream = accepted_valid_draw_stream(
-                    pair_attempts[key],
-                    required_valid_count=inner_valid_draw_count,
+                block_rejections = rejection_counts_by_block[q_index][
+                    block_index
+                ]
+                rejection_counts.update(block_rejections)
+                complete = bool(
+                    accepted_counts[q_index, block_index]
+                    == inner_valid_draw_count
                 )
-                rejection_counts.update(stream["rejection_reason_counts"])
-                rows = pair_rows[key][:inner_valid_draw_count]
-                if not stream["complete"] or len(rows) != inner_valid_draw_count:
+                if not complete:
                     continue
                 completed_blocks += 1
+
+                def block_component_median(
+                    arm: str,
+                    field_name: str,
+                ) -> float | None:
+                    values = component_values[
+                        q_index,
+                        block_index,
+                        :inner_valid_draw_count,
+                        arm_index[arm],
+                        component_field_index[field_name],
+                    ]
+                    finite = values[np.isfinite(values)]
+                    return (
+                        float(np.median(finite))
+                        if finite.size
+                        else None
+                    )
+
                 per_block_component_medians.append(
                     {
                         "source_block_id": observed[block_index].replicate_id,
                         "observed": {
-                            field_name: _component_median(
-                                rows,
+                            field_name: block_component_median(
                                 "observed",
                                 field_name,
                             )
                             for field_name in component_fields
                         },
                         "N1": {
-                            field_name: _component_median(
-                                rows,
+                            field_name: block_component_median(
                                 "N1",
                                 field_name,
                             )
                             for field_name in component_fields
                         },
                         "graph_unconstrained_stressor": {
-                            field_name: _component_median(
-                                rows,
+                            field_name: block_component_median(
                                 "graph_unconstrained_stressor",
                                 field_name,
                             )
                             for field_name in component_fields
                         },
-                        "attempt_count": stream["attempt_count_supplied"],
-                        "accepted_count": stream["accepted_count_supplied"],
+                        "attempt_count": int(
+                            attempt_counts[q_index, block_index]
+                        ),
+                        "accepted_count": int(
+                            accepted_counts[q_index, block_index]
+                        ),
                     }
                 )
 
@@ -4341,6 +4392,10 @@ def run_development_s2_identification_experiment(
         "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
         "diagnostic_kernel": diagnostic_kernel,
+        "accepted_valid_draw_storage": COMPACT_ACCEPTED_PREFIX_STORAGE_ID,
+        "accepted_valid_draw_order": (
+            "draw_attempt_order_first_required_valid"
+        ),
         "observed_process_modified": False,
         "paired_null_arms": [
             N1_ID,
