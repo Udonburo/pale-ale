@@ -48,6 +48,14 @@ S2_UNCONSTRAINED_ORIENTATION_ID = (
 SEED_DERIVATION_ID = "sha256_canonical_json_to_uint64_v1"
 REFERENCE_DTYPE = "float64"
 C2_CONTRACT_VERSION = "0.2"
+OBJECT_REFERENCE_DIAGNOSTIC_KERNEL = "object_fp64_reference_v0.1"
+BATCHED_DIAGNOSTIC_KERNEL = "batched_fp64_equivalent_v0.1"
+ALLOWED_DIAGNOSTIC_KERNELS = frozenset(
+    {
+        OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
+        BATCHED_DIAGNOSTIC_KERNEL,
+    }
+)
 PRIMARY_ALTERNATIVE = "observed_smaller_than_null"
 ALLOWED_ALTERNATIVES = frozenset(
     {
@@ -527,6 +535,138 @@ class ResidualDiagnostics:
             ),
             "reference_dtype": REFERENCE_DTYPE,
         }
+
+
+@dataclass(frozen=True)
+class BatchedResidualDiagnostics:
+    """FP64 residual diagnostics for a stack of conformable matrix triples.
+
+    Optional scalar values use NaN internally and are converted back to
+    ``None`` by :meth:`row`.  The object-level ``ResidualDiagnostics`` path
+    remains the reference implementation; this container exists only to make
+    equivalent development calibration computationally tractable.
+    """
+
+    q: int
+    eligibility_status: tuple[str, ...]
+    numerical_status: tuple[str, ...]
+    defect: np.ndarray = field(repr=False)
+    tail_left: np.ndarray = field(repr=False)
+    tail_right: np.ndarray = field(repr=False)
+    propagated_left: np.ndarray = field(repr=False)
+    propagated_right: np.ndarray = field(repr=False)
+    alignment: np.ndarray = field(repr=False)
+    propagation_left: np.ndarray = field(repr=False)
+    propagation_right: np.ndarray = field(repr=False)
+    alignment_status: tuple[str, ...]
+    propagation_left_status: tuple[str, ...]
+    propagation_right_status: tuple[str, ...]
+    matrix_identity_error: np.ndarray = field(repr=False)
+    squared_identity_error: np.ndarray = field(repr=False)
+    relative_gap_left: np.ndarray = field(repr=False)
+    relative_gap_right: np.ndarray = field(repr=False)
+    product_singular_values_left: np.ndarray = field(repr=False)
+    product_singular_values_right: np.ndarray = field(repr=False)
+    schema_version: str = DIAGNOSTIC_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        numeric_vector_names = (
+            "defect",
+            "tail_left",
+            "tail_right",
+            "propagated_left",
+            "propagated_right",
+            "alignment",
+            "propagation_left",
+            "propagation_right",
+            "matrix_identity_error",
+            "squared_identity_error",
+            "relative_gap_left",
+            "relative_gap_right",
+        )
+        vectors: dict[str, np.ndarray] = {}
+        for name in numeric_vector_names:
+            array = np.asarray(getattr(self, name), dtype=np.float64)
+            if array.ndim != 1:
+                raise Gate12C2DevelopmentError(
+                    f"batched diagnostic field {name} must be one-dimensional"
+                )
+            vectors[name] = array.copy()
+            object.__setattr__(self, name, vectors[name])
+        batch_size = len(vectors["defect"])
+        if any(len(array) != batch_size for array in vectors.values()):
+            raise Gate12C2DevelopmentError(
+                "batched diagnostic vectors must have one shared batch size"
+            )
+        for name in (
+            "eligibility_status",
+            "numerical_status",
+            "alignment_status",
+            "propagation_left_status",
+            "propagation_right_status",
+        ):
+            statuses = tuple(str(value) for value in getattr(self, name))
+            if len(statuses) != batch_size:
+                raise Gate12C2DevelopmentError(
+                    f"batched diagnostic status field {name} has wrong length"
+                )
+            object.__setattr__(self, name, statuses)
+        for name in (
+            "product_singular_values_left",
+            "product_singular_values_right",
+        ):
+            spectra = np.asarray(getattr(self, name), dtype=np.float64)
+            if spectra.ndim != 2 or spectra.shape[0] != batch_size:
+                raise Gate12C2DevelopmentError(
+                    f"batched diagnostic spectrum field {name} has wrong shape"
+                )
+            object.__setattr__(self, name, spectra.copy())
+
+    def __len__(self) -> int:
+        return int(self.defect.shape[0])
+
+    @staticmethod
+    def _optional(value: float) -> float | None:
+        numeric = float(value)
+        return None if math.isnan(numeric) else numeric
+
+    def row(self, index: int) -> ResidualDiagnostics:
+        """Materialize one scalar row in the exact reference result type."""
+
+        if index < 0 or index >= len(self):
+            raise IndexError(index)
+        return ResidualDiagnostics(
+            q=int(self.q),
+            eligibility_status=self.eligibility_status[index],
+            numerical_status=self.numerical_status[index],
+            defect=self._optional(self.defect[index]),
+            tail_left=self._optional(self.tail_left[index]),
+            tail_right=self._optional(self.tail_right[index]),
+            propagated_left=self._optional(self.propagated_left[index]),
+            propagated_right=self._optional(self.propagated_right[index]),
+            alignment=self._optional(self.alignment[index]),
+            propagation_left=self._optional(self.propagation_left[index]),
+            propagation_right=self._optional(self.propagation_right[index]),
+            alignment_status=self.alignment_status[index],
+            propagation_left_status=self.propagation_left_status[index],
+            propagation_right_status=self.propagation_right_status[index],
+            matrix_identity_error=self._optional(
+                self.matrix_identity_error[index]
+            ),
+            squared_identity_error=self._optional(
+                self.squared_identity_error[index]
+            ),
+            relative_gap_left=self._optional(self.relative_gap_left[index]),
+            relative_gap_right=self._optional(self.relative_gap_right[index]),
+            product_singular_values_left=tuple(
+                float(value)
+                for value in self.product_singular_values_left[index]
+            ),
+            product_singular_values_right=tuple(
+                float(value)
+                for value in self.product_singular_values_right[index]
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -1583,6 +1723,336 @@ def residual_diagnostics(
     )
 
 
+def batched_residual_diagnostics(
+    m0: np.ndarray,
+    m1: np.ndarray,
+    m2: np.ndarray,
+    *,
+    q: int,
+    relative_gap_min: float = DEFAULT_RELATIVE_GAP_MIN,
+    numerical_atol: float = DEFAULT_NUMERIC_ATOL,
+    degeneracy_atol: float = DEFAULT_DEGENERACY_ATOL,
+) -> BatchedResidualDiagnostics:
+    """Vectorized FP64 equivalent of :func:`residual_diagnostics`.
+
+    The leading axis is the batch axis.  This development kernel deliberately
+    preserves the scalar cut, degeneracy, and numerical-status rules.  It does
+    not alter the estimand, null construction, or decision hierarchy.
+    """
+
+    arrays = [
+        np.asarray(matrix, dtype=np.float64) for matrix in (m0, m1, m2)
+    ]
+    if any(array.ndim != 3 for array in arrays):
+        raise Gate12C2DevelopmentError(
+            "batched m0, m1, and m2 must have shape (batch, rows, columns)"
+        )
+    batch_sizes = {int(array.shape[0]) for array in arrays}
+    if len(batch_sizes) != 1:
+        raise Gate12C2DevelopmentError(
+            "batched m0, m1, and m2 must share one batch size"
+        )
+    batch_size = next(iter(batch_sizes))
+    if batch_size <= 0:
+        raise Gate12C2DevelopmentError(
+            "batched residual diagnostics require at least one matrix triple"
+        )
+    m0_array, m1_array, m2_array = arrays
+    if m1_array.shape[2] != m0_array.shape[1]:
+        raise Gate12C2DevelopmentError("batched m1 @ m0 is not conformable")
+    if m2_array.shape[2] != m1_array.shape[1]:
+        raise Gate12C2DevelopmentError("batched m2 @ m1 is not conformable")
+    if not all(np.all(np.isfinite(array)) for array in arrays):
+        raise Gate12C2DevelopmentError(
+            "batched development diagnostics require finite FP64 inputs"
+        )
+
+    product_left = np.asarray(m2_array @ m1_array, dtype=np.float64)
+    product_right = np.asarray(m1_array @ m0_array, dtype=np.float64)
+    left_u, left_s, left_vh = np.linalg.svd(
+        product_left,
+        full_matrices=False,
+    )
+    right_u, right_s, right_vh = np.linalg.svd(
+        product_right,
+        full_matrices=False,
+    )
+    if not np.all(np.isfinite(left_s)) or not np.all(np.isfinite(right_s)):
+        raise Gate12C2DevelopmentError(
+            "batched development SVD returned a nonfinite spectrum"
+        )
+
+    maximum_rank_left = min(product_left.shape[-2:])
+    maximum_rank_right = min(product_right.shape[-2:])
+    left_gap = np.full(batch_size, np.nan, dtype=np.float64)
+    right_gap = np.full(batch_size, np.nan, dtype=np.float64)
+
+    def cut_status(
+        singular_values: np.ndarray,
+        maximum_rank: int,
+        gap_output: np.ndarray,
+    ) -> tuple[str, ...]:
+        if q <= 0 or q > maximum_rank:
+            return tuple("invalid_q" for _ in range(batch_size))
+        if q == maximum_rank:
+            return tuple("full_rank_control" for _ in range(batch_size))
+        scale = np.maximum(
+            singular_values[:, 0],
+            np.finfo(np.float64).tiny,
+        )
+        gap_output[:] = (
+            singular_values[:, q - 1] - singular_values[:, q]
+        ) / scale
+        return tuple(
+            "eligible" if value > relative_gap_min else "unstable_spectral_cut"
+            for value in gap_output
+        )
+
+    left_status = cut_status(left_s, maximum_rank_left, left_gap)
+    right_status = cut_status(right_s, maximum_rank_right, right_gap)
+    left_reconstructable = np.asarray(
+        [
+            status in {"eligible", "full_rank_control"}
+            for status in left_status
+        ],
+        dtype=bool,
+    )
+    right_reconstructable = np.asarray(
+        [
+            status in {"eligible", "full_rank_control"}
+            for status in right_status
+        ],
+        dtype=bool,
+    )
+    active = left_reconstructable & right_reconstructable
+
+    q_left = np.full_like(product_left, np.nan, dtype=np.float64)
+    q_right = np.full_like(product_right, np.nan, dtype=np.float64)
+    if q > 0 and np.any(left_reconstructable):
+        mask = left_reconstructable
+        q_left[mask] = (
+            left_u[mask, :, :q] * left_s[mask, None, :q]
+        ) @ left_vh[mask, :q, :]
+    if q > 0 and np.any(right_reconstructable):
+        mask = right_reconstructable
+        q_right[mask] = (
+            right_u[mask, :, :q] * right_s[mask, None, :q]
+        ) @ right_vh[mask, :q, :]
+
+    optional_names = (
+        "defect",
+        "tail_left",
+        "tail_right",
+        "propagated_left",
+        "propagated_right",
+        "alignment",
+        "propagation_left",
+        "propagation_right",
+        "matrix_identity_error",
+        "squared_identity_error",
+    )
+    values = {
+        name: np.full(batch_size, np.nan, dtype=np.float64)
+        for name in optional_names
+    }
+    eligibility_status: list[str] = []
+    numerical_status = ["not_evaluated"] * batch_size
+    alignment_status = ["not_evaluated"] * batch_size
+    propagation_left_status = ["not_evaluated"] * batch_size
+    propagation_right_status = ["not_evaluated"] * batch_size
+
+    for index in range(batch_size):
+        if not active[index]:
+            eligibility_status.append(
+                left_status[index]
+                if left_status[index] != "eligible"
+                else right_status[index]
+            )
+        elif (
+            left_status[index] == right_status[index] == "full_rank_control"
+        ):
+            eligibility_status.append("full_rank_control")
+        else:
+            eligibility_status.append("eligible")
+
+    if np.any(active):
+        indices = np.flatnonzero(active)
+        product_left_active = product_left[active]
+        product_right_active = product_right[active]
+        q_left_active = q_left[active]
+        q_right_active = q_right[active]
+        m0_active = m0_array[active]
+        m2_active = m2_array[active]
+        residual_left = np.asarray(
+            product_left_active - q_left_active,
+            dtype=np.float64,
+        )
+        residual_right = np.asarray(
+            product_right_active - q_right_active,
+            dtype=np.float64,
+        )
+        propagated_left_matrix = np.asarray(
+            residual_left @ m0_active,
+            dtype=np.float64,
+        )
+        propagated_right_matrix = np.asarray(
+            m2_active @ residual_right,
+            dtype=np.float64,
+        )
+        left_parenthesization = np.asarray(
+            q_left_active @ m0_active,
+            dtype=np.float64,
+        )
+        right_parenthesization = np.asarray(
+            m2_active @ q_right_active,
+            dtype=np.float64,
+        )
+        defect_matrix = np.asarray(
+            left_parenthesization - right_parenthesization,
+            dtype=np.float64,
+        )
+        decomposition_matrix = np.asarray(
+            propagated_right_matrix - propagated_left_matrix,
+            dtype=np.float64,
+        )
+
+        def frobenius_norm(stack: np.ndarray) -> np.ndarray:
+            return np.sqrt(
+                np.sum(stack * stack, axis=(-2, -1), dtype=np.float64)
+            )
+
+        defect = frobenius_norm(defect_matrix)
+        tail_left = frobenius_norm(residual_left)
+        tail_right = frobenius_norm(residual_right)
+        propagated_left = frobenius_norm(propagated_left_matrix)
+        propagated_right = frobenius_norm(propagated_right_matrix)
+        inner_product = np.sum(
+            propagated_left_matrix * propagated_right_matrix,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+        matrix_identity_error = frobenius_norm(
+            defect_matrix - decomposition_matrix
+        )
+        squared_rhs = (
+            propagated_left * propagated_left
+            + propagated_right * propagated_right
+            - 2.0 * inner_product
+        )
+        squared_identity_error = np.abs(defect * defect - squared_rhs)
+        for name, active_values in (
+            ("defect", defect),
+            ("tail_left", tail_left),
+            ("tail_right", tail_right),
+            ("propagated_left", propagated_left),
+            ("propagated_right", propagated_right),
+            ("matrix_identity_error", matrix_identity_error),
+            ("squared_identity_error", squared_identity_error),
+        ):
+            values[name][active] = active_values
+
+        alignment_defined = (
+            (propagated_left > degeneracy_atol)
+            & (propagated_right > degeneracy_atol)
+        )
+        alignment_values = np.full(len(indices), np.nan, dtype=np.float64)
+        alignment_values[alignment_defined] = np.clip(
+            inner_product[alignment_defined]
+            / (
+                propagated_left[alignment_defined]
+                * propagated_right[alignment_defined]
+            ),
+            -1.0,
+            1.0,
+        )
+        values["alignment"][active] = alignment_values
+
+        propagation_left_defined = tail_left > degeneracy_atol
+        propagation_right_defined = tail_right > degeneracy_atol
+        propagation_left_values = np.full(
+            len(indices),
+            np.nan,
+            dtype=np.float64,
+        )
+        propagation_right_values = np.full(
+            len(indices),
+            np.nan,
+            dtype=np.float64,
+        )
+        propagation_left_values[propagation_left_defined] = (
+            propagated_left[propagation_left_defined]
+            / tail_left[propagation_left_defined]
+        )
+        propagation_right_values[propagation_right_defined] = (
+            propagated_right[propagation_right_defined]
+            / tail_right[propagation_right_defined]
+        )
+        values["propagation_left"][active] = propagation_left_values
+        values["propagation_right"][active] = propagation_right_values
+
+        finite = (
+            np.isfinite(defect)
+            & np.isfinite(tail_left)
+            & np.isfinite(tail_right)
+            & np.isfinite(propagated_left)
+            & np.isfinite(propagated_right)
+            & np.isfinite(matrix_identity_error)
+            & np.isfinite(squared_identity_error)
+        )
+        numerical_pass = (
+            finite
+            & (matrix_identity_error <= numerical_atol)
+            & (squared_identity_error <= numerical_atol)
+        )
+        for local_index, global_index in enumerate(indices):
+            numerical_status[global_index] = (
+                "pass" if numerical_pass[local_index] else "fail"
+            )
+            zero_sides: list[str] = []
+            if propagated_left[local_index] <= degeneracy_atol:
+                zero_sides.append("x")
+            if propagated_right[local_index] <= degeneracy_atol:
+                zero_sides.append("y")
+            alignment_status[global_index] = (
+                "defined"
+                if not zero_sides
+                else "undefined_degenerate_" + "_".join(zero_sides)
+            )
+            propagation_left_status[global_index] = (
+                "defined"
+                if propagation_left_defined[local_index]
+                else "undefined_degenerate_u"
+            )
+            propagation_right_status[global_index] = (
+                "defined"
+                if propagation_right_defined[local_index]
+                else "undefined_degenerate_v"
+            )
+
+    return BatchedResidualDiagnostics(
+        q=q,
+        eligibility_status=tuple(eligibility_status),
+        numerical_status=tuple(numerical_status),
+        defect=values["defect"],
+        tail_left=values["tail_left"],
+        tail_right=values["tail_right"],
+        propagated_left=values["propagated_left"],
+        propagated_right=values["propagated_right"],
+        alignment=values["alignment"],
+        propagation_left=values["propagation_left"],
+        propagation_right=values["propagation_right"],
+        alignment_status=tuple(alignment_status),
+        propagation_left_status=tuple(propagation_left_status),
+        propagation_right_status=tuple(propagation_right_status),
+        matrix_identity_error=values["matrix_identity_error"],
+        squared_identity_error=values["squared_identity_error"],
+        relative_gap_left=left_gap,
+        relative_gap_right=right_gap,
+        product_singular_values_left=left_s,
+        product_singular_values_right=right_s,
+    )
+
+
 def development_residual_mechanism_controls(
     *,
     tail_levels: Sequence[float] = (0.10, 0.20, 0.35, 0.50),
@@ -1759,6 +2229,64 @@ def graph_residual_diagnostics(
         numerical_atol=numerical_atol,
         degeneracy_atol=degeneracy_atol,
     )
+
+
+def batched_graph_residual_diagnostics(
+    graphs: Sequence[SyntheticGraph],
+    *,
+    q: int,
+    relative_gap_min: float = DEFAULT_RELATIVE_GAP_MIN,
+    numerical_atol: float = DEFAULT_NUMERIC_ATOL,
+    degeneracy_atol: float = DEFAULT_DEGENERACY_ATOL,
+) -> BatchedResidualDiagnostics:
+    """Evaluate one graph cohort through the vectorized FP64 kernel."""
+
+    if not graphs:
+        raise Gate12C2DevelopmentError(
+            "batched graph diagnostics require at least one graph"
+        )
+    triples = [cycle_matrices(graph) for graph in graphs]
+    shapes = {
+        tuple(matrix.shape)
+        for triple in triples
+        for matrix in triple
+    }
+    if len(shapes) != 1:
+        raise Gate12C2DevelopmentError(
+            "batched graph diagnostics require one shared square edge shape"
+        )
+    m0 = np.stack([triple[0] for triple in triples], axis=0)
+    m1 = np.stack([triple[1] for triple in triples], axis=0)
+    m2 = np.stack([triple[2] for triple in triples], axis=0)
+    return batched_residual_diagnostics(
+        m0,
+        m1,
+        m2,
+        q=q,
+        relative_gap_min=relative_gap_min,
+        numerical_atol=numerical_atol,
+        degeneracy_atol=degeneracy_atol,
+    )
+
+
+def cohort_residual_diagnostics(
+    graphs: Sequence[SyntheticGraph],
+    *,
+    q: int,
+    diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
+) -> tuple[ResidualDiagnostics, ...]:
+    """Dispatch one cohort through a named, receipt-visible FP64 kernel."""
+
+    if diagnostic_kernel not in ALLOWED_DIAGNOSTIC_KERNELS:
+        raise Gate12C2DevelopmentError(
+            f"unsupported diagnostic kernel: {diagnostic_kernel!r}"
+        )
+    if diagnostic_kernel == OBJECT_REFERENCE_DIAGNOSTIC_KERNEL:
+        return tuple(
+            graph_residual_diagnostics(graph, q=q) for graph in graphs
+        )
+    batch = batched_graph_residual_diagnostics(graphs, q=q)
+    return tuple(batch.row(index) for index in range(len(batch)))
 
 
 def edge_spectrum_marginal_discrepancy(
@@ -2369,6 +2897,7 @@ def run_development_outer_experiment(
     effect_strength: float | None = None,
     max_draw_attempts: int | None = None,
     epsilon: float = 1.0e-12,
+    diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Run one graph-derived 12-case by 2-q development experiment.
 
@@ -2401,6 +2930,10 @@ def run_development_outer_experiment(
         raise Gate12C2DevelopmentError(
             "epsilon must be finite and positive"
         )
+    if diagnostic_kernel not in ALLOWED_DIAGNOSTIC_KERNELS:
+        raise Gate12C2DevelopmentError(
+            f"unsupported diagnostic kernel: {diagnostic_kernel!r}"
+        )
 
     endpoint_inputs: list[EndpointDecisionInput] = []
     endpoint_receipts: list[dict[str, Any]] = []
@@ -2416,9 +2949,15 @@ def run_development_outer_experiment(
             effect_strength=effect_strength,
         )
         observed_diagnostics = {
-            (block_index, q): graph_residual_diagnostics(graph, q=q)
-            for block_index, graph in enumerate(observed)
+            (block_index, q): diagnostic
             for q in (1, 2)
+            for block_index, diagnostic in enumerate(
+                cohort_residual_diagnostics(
+                    observed,
+                    q=q,
+                    diagnostic_kernel=diagnostic_kernel,
+                )
+            )
         }
         attempts_by_endpoint_block: dict[
             tuple[int, int], list[NullDrawAttempt]
@@ -2459,7 +2998,15 @@ def run_development_outer_experiment(
             audit = n1_reassignment_audit(observed, comparison)
             audit_pass = audit["status"] == "pass"
             n1_audit_failure_count += int(not audit_pass)
-            for block_index, graph in enumerate(comparison):
+            comparison_diagnostics = {
+                q: cohort_residual_diagnostics(
+                    comparison,
+                    q=q,
+                    diagnostic_kernel=diagnostic_kernel,
+                )
+                for q in (1, 2)
+            }
+            for block_index, _graph in enumerate(comparison):
                 for q in (1, 2):
                     key = (q, block_index)
                     if accepted_counts[key] >= inner_valid_draw_count:
@@ -2467,10 +3014,9 @@ def run_development_outer_experiment(
                     observed_diagnostic = observed_diagnostics[
                         (block_index, q)
                     ]
-                    comparison_diagnostic = graph_residual_diagnostics(
-                        graph,
-                        q=q,
-                    )
+                    comparison_diagnostic = comparison_diagnostics[q][
+                        block_index
+                    ]
                     if not audit_pass:
                         accepted = False
                         value = None
@@ -2630,6 +3176,7 @@ def run_development_outer_experiment(
         "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
         "max_draw_attempts": int(attempt_limit),
+        "diagnostic_kernel": diagnostic_kernel,
         "dependency_structure": (
             "q1_q2_share_observed_blocks_and_N1_draws_within_case"
         ),
@@ -2649,6 +3196,7 @@ def run_development_outer_calibration(
     inner_valid_draw_count: int,
     effect_strength: float | None = None,
     max_draw_attempts: int | None = None,
+    diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Repeat complete graph-derived outer experiments in development only."""
 
@@ -2665,6 +3213,7 @@ def run_development_outer_calibration(
             inner_valid_draw_count=inner_valid_draw_count,
             effect_strength=effect_strength,
             max_draw_attempts=max_draw_attempts,
+            diagnostic_kernel=diagnostic_kernel,
         )
         for outer_index in range(outer_experiment_count)
     )
@@ -2715,6 +3264,7 @@ def run_development_outer_calibration(
         "epistemic_status": "development_calibration_only",
         "regime_id": regime_id,
         "outer_experiment_count": len(experiments),
+        "diagnostic_kernel": diagnostic_kernel,
         "summary": summary,
         "experiments": list(experiments),
     }
@@ -2742,6 +3292,7 @@ def run_development_s2_identification_experiment(
     max_draw_attempts: int | None = None,
     minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
     epsilon: float = 1.0e-12,
+    diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Pair N1 and the graph-unconstrained stressor on identical observations."""
 
@@ -2770,6 +3321,10 @@ def run_development_s2_identification_experiment(
         raise Gate12C2DevelopmentError(
             "max_draw_attempts cannot be below inner_valid_draw_count"
         )
+    if diagnostic_kernel not in ALLOWED_DIAGNOSTIC_KERNELS:
+        raise Gate12C2DevelopmentError(
+            f"unsupported diagnostic kernel: {diagnostic_kernel!r}"
+        )
 
     component_fields = (
         "a_q",
@@ -2796,6 +3351,14 @@ def run_development_s2_identification_experiment(
         observed_manifest_sha256 = hashlib.sha256(
             _canonical_json_bytes(manifests(observed))
         ).hexdigest()
+        observed_diagnostics = {
+            q: cohort_residual_diagnostics(
+                observed,
+                q=q,
+                diagnostic_kernel=diagnostic_kernel,
+            )
+            for q in (1, 2)
+        }
         pair_rows: dict[tuple[int, int], list[dict[str, Any]]] = {
             (q, block_index): []
             for q in (1, 2)
@@ -2857,6 +3420,22 @@ def run_development_s2_identification_experiment(
             n1_audit_pass = (
                 n1_reassignment_audit(observed, n1_graphs)["status"] == "pass"
             )
+            n1_diagnostics = {
+                q: cohort_residual_diagnostics(
+                    n1_graphs,
+                    q=q,
+                    diagnostic_kernel=diagnostic_kernel,
+                )
+                for q in (1, 2)
+            }
+            stress_diagnostics = {
+                q: cohort_residual_diagnostics(
+                    stress_graphs,
+                    q=q,
+                    diagnostic_kernel=diagnostic_kernel,
+                )
+                for q in (1, 2)
+            }
             for block_index in range(case_block_count):
                 n1_realizable = bool(
                     check_joint_realizability(n1_graphs[block_index])[
@@ -2882,18 +3461,9 @@ def run_development_s2_identification_experiment(
                     key = (q, block_index)
                     if len(pair_rows[key]) >= inner_valid_draw_count:
                         continue
-                    observed_diagnostic = graph_residual_diagnostics(
-                        observed[block_index],
-                        q=q,
-                    )
-                    n1_diagnostic = graph_residual_diagnostics(
-                        n1_graphs[block_index],
-                        q=q,
-                    )
-                    stress_diagnostic = graph_residual_diagnostics(
-                        stress_graphs[block_index],
-                        q=q,
-                    )
+                    observed_diagnostic = observed_diagnostics[q][block_index]
+                    n1_diagnostic = n1_diagnostics[q][block_index]
+                    stress_diagnostic = stress_diagnostics[q][block_index]
                     if not n1_audit_pass:
                         reason = "n1_assignment_audit_failed"
                     elif not n1_realizable:
@@ -3126,6 +3696,7 @@ def run_development_s2_identification_experiment(
         "outer_experiment_index": int(outer_experiment_index),
         "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
+        "diagnostic_kernel": diagnostic_kernel,
         "observed_process_modified": False,
         "paired_null_arms": [
             N1_ID,
@@ -3147,6 +3718,7 @@ def run_development_s2_identification_calibration(
     inner_valid_draw_count: int,
     max_draw_attempts: int | None = None,
     minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
+    diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Estimate the development S2 attribution rate over full outer units."""
 
@@ -3162,6 +3734,7 @@ def run_development_s2_identification_calibration(
             inner_valid_draw_count=inner_valid_draw_count,
             max_draw_attempts=max_draw_attempts,
             minimum_log_null_inflation=minimum_log_null_inflation,
+            diagnostic_kernel=diagnostic_kernel,
         )
         for outer_index in range(outer_experiment_count)
     )
@@ -3177,6 +3750,7 @@ def run_development_s2_identification_calibration(
         "epistemic_status": "development_s2_calibration_only",
         "regime_id": "S2_null_inflation",
         "outer_experiment_count": len(experiments),
+        "diagnostic_kernel": diagnostic_kernel,
         "identification_rate": interval,
         "identification_gate": {
             "minimum_point_estimate": S2_MIN_POINT_IDENTIFICATION,
