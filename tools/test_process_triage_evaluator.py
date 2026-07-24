@@ -138,12 +138,51 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
                 encoding="utf-8",
             )
             trajectories = triage.load_agent_process_bench_jsonl(path)
-        first = triage.cheap_features(trajectories)
-        second = triage.cheap_features(trajectories)
+        surface = triage.build_feature_surface(trajectories)
+        first = triage.cheap_features(surface)
+        second = triage.cheap_features(surface)
         self.assertEqual(first, second)
         self.assertEqual(len(first), 5)
         self.assertEqual(first[1].prior_tool_error_count, 1)
         self.assertEqual(first[1].normalized_position, 0.5)
+        self.assertEqual(first[0].source_slot, 0)
+
+    def test_feature_firewall_is_invariant_to_outcome_field_mutations(
+        self,
+    ) -> None:
+        original = record(
+            query_index=4,
+            sample_index=2,
+            labels=(1, 0, -1),
+        )
+        mutated = json.loads(json.dumps(original))
+        mutated["step_labels"] = {
+            key: (1 if value != 1 else 0)
+            for key, value in mutated["step_labels"].items()
+        }
+        mutated["ground_truth"] = {"secret": "changed"}
+        mutated["final_label"] = 0
+        mutated["answer_text"] = "changed final answer"
+        first = triage.parse_agent_process_bench_record(
+            original,
+            domain="bfcl",
+        )
+        second = triage.parse_agent_process_bench_record(
+            mutated,
+            domain="bfcl",
+        )
+        first_surface = triage.build_feature_surface((first,))
+        second_surface = triage.build_feature_surface((second,))
+        self.assertEqual(
+            triage.feature_surface_receipt(first_surface)["sha256"],
+            triage.feature_surface_receipt(second_surface)["sha256"],
+        )
+        self.assertEqual(
+            triage.cheap_features(first_surface),
+            triage.cheap_features(second_surface),
+        )
+        with self.assertRaises(triage.ProcessTriageDevelopmentError):
+            triage.cheap_features((first,))
 
     def test_label_alignment_mismatch_is_rejected(self) -> None:
         malformed = record(
@@ -278,7 +317,9 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             )
             for index in range(10)
         )
-        features = triage.cheap_features(trajectories)
+        features = triage.cheap_features(
+            triage.build_feature_surface(trajectories)
+        )
         baseline = triage.position_only_scores(features)
         augmented = dict(baseline)
         result = triage.compare_score_surfaces(
@@ -297,6 +338,201 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             ],
             0.0,
         )
+
+    def test_source_slot_is_opaque_and_available_as_categorical_baseline(
+        self,
+    ) -> None:
+        trajectories = tuple(
+            triage.parse_agent_process_bench_record(
+                record(
+                    query_index=0,
+                    sample_index=slot,
+                    labels=(1, -1),
+                ),
+                domain="bfcl",
+            )
+            for slot in range(3)
+        )
+        features = triage.cheap_features(
+            triage.build_feature_surface(trajectories)
+        )
+        scores = triage.source_slot_only_scores(
+            features,
+            source_slot_weights={0: -1.0, 1: 0.0, 2: 1.0},
+        )
+        self.assertEqual(scores[trajectories[0].steps[0].row_id], -1.0)
+        self.assertEqual(scores[trajectories[2].steps[0].row_id], 1.0)
+        summary = triage.dataset_admission_summary(trajectories)
+        self.assertEqual(
+            summary["named_source_model_mapping_status"],
+            triage.SOURCE_MODEL_MAPPING_STATUS,
+        )
+        self.assertFalse(
+            summary["named_source_model_interpretation_authorized"]
+        )
+        self.assertEqual(
+            summary["pooled"]["source_slot_counts"],
+            {"0": 1, "1": 1, "2": 1},
+        )
+
+    def test_near_duplicate_grouping_is_label_blind_and_deterministic(
+        self,
+    ) -> None:
+        shared = " ".join(f"token{index}" for index in range(100))
+        first_record = record(
+            query_index=10,
+            sample_index=0,
+            labels=(-1,),
+        )
+        second_record = record(
+            query_index=11,
+            sample_index=0,
+            labels=(1,),
+        )
+        first_record["question"] = shared + " variantA"
+        second_record["question"] = shared + " variantB"
+        first_record["task_description"] = {"purpose": "same"}
+        second_record["task_description"] = {"purpose": "same"}
+        trajectories = tuple(
+            triage.parse_agent_process_bench_record(row, domain="tau2")
+            for row in (first_record, second_record)
+        )
+        self.assertNotEqual(
+            trajectories[0].group_id,
+            trajectories[1].group_id,
+        )
+        manifest = triage.near_duplicate_group_manifest(trajectories)
+        repeat = triage.near_duplicate_group_manifest(
+            tuple(reversed(trajectories))
+        )
+        self.assertEqual(manifest, repeat)
+        self.assertEqual(manifest["linked_pair_count"], 1)
+        self.assertEqual(manifest["component_count"], 1)
+        self.assertEqual(manifest["manual_adjudication"], "prohibited")
+        aliases = manifest["group_aliases"]
+        self.assertEqual(
+            aliases[trajectories[0].group_id],
+            aliases[trajectories[1].group_id],
+        )
+
+        third_record = record(
+            query_index=12,
+            sample_index=0,
+            labels=(1,),
+        )
+        third_record["question"] = "entirely unrelated short task"
+        third_record["task_description"] = {"purpose": "different"}
+        third = triage.parse_agent_process_bench_record(
+            third_record,
+            domain="tau2",
+        )
+        expanded = (*trajectories, third)
+        expanded_manifest = triage.near_duplicate_group_manifest(expanded)
+        split = triage.grouped_domain_split(
+            expanded,
+            split_seed="near-duplicate-split",
+            development_groups_per_domain=1,
+            group_aliases=expanded_manifest["group_aliases"],
+        )
+        self.assertEqual(split["development_group_count"], 1)
+        self.assertEqual(split["locked_group_count"], 1)
+        selected = triage.subset_by_groups(
+            expanded,
+            split["development_group_ids"],
+            group_aliases=expanded_manifest["group_aliases"],
+        )
+        self.assertIn(len(selected), {1, 2})
+
+    def test_paired_group_bootstrap_reuses_draws_and_recomputes_budget(
+        self,
+    ) -> None:
+        trajectories = tuple(
+            triage.parse_agent_process_bench_record(
+                record(
+                    query_index=query_index,
+                    sample_index=sample_index,
+                    labels=(1, -1) if sample_index == 0 else (1, 1),
+                ),
+                domain=domain,
+            )
+            for domain in ("bfcl", "tau2")
+            for query_index in range(4)
+            for sample_index in range(2)
+        )
+        features = triage.cheap_features(
+            triage.build_feature_surface(trajectories)
+        )
+        baseline = {feature.row_id: 0.0 for feature in features}
+        augmented = dict(baseline)
+        for trajectory in trajectories:
+            if trajectory.first_actionable_row_id is not None:
+                augmented[trajectory.first_actionable_row_id] = 10.0
+        first = triage.paired_domain_group_bootstrap(
+            trajectories,
+            baseline_scores=baseline,
+            augmented_scores=augmented,
+            replicates=25,
+            seed="bootstrap-test",
+            budget_fraction=0.25,
+        )
+        second = triage.paired_domain_group_bootstrap(
+            tuple(reversed(trajectories)),
+            baseline_scores=baseline,
+            augmented_scores=augmented,
+            replicates=25,
+            seed="bootstrap-test",
+            budget_fraction=0.25,
+        )
+        self.assertEqual(first, second)
+        self.assertTrue(first["global_budget_recomputed_each_replicate"])
+        self.assertEqual(first["replicates"], 25)
+        recall_interval = first["paired_percentile_intervals"][
+            "first_actionable_defect_recall"
+        ]
+        self.assertEqual(recall_interval["defined_replicate_count"], 25)
+        self.assertGreaterEqual(recall_interval["percentile_95_lower"], 0.0)
+        assessment = triage.assess_operational_success(
+            first,
+            rule=triage.OperationalSuccessRule(),
+        )
+        self.assertEqual(
+            assessment["rule_status"],
+            "candidate_not_frozen",
+        )
+
+    def test_largest_group_sensitivity_recomputes_comparison(self) -> None:
+        rows = []
+        for sample_index in range(3):
+            rows.append(
+                triage.parse_agent_process_bench_record(
+                    record(
+                        query_index=0,
+                        sample_index=sample_index,
+                        labels=(1, -1),
+                    ),
+                    domain="bfcl",
+                )
+            )
+        rows.append(
+            triage.parse_agent_process_bench_record(
+                record(query_index=1, sample_index=0, labels=(1, -1)),
+                domain="bfcl",
+            )
+        )
+        trajectories = tuple(rows)
+        features = triage.cheap_features(
+            triage.build_feature_surface(trajectories)
+        )
+        scores = {feature.row_id: feature.normalized_position for feature in features}
+        result = triage.leave_largest_group_out_sensitivity(
+            trajectories,
+            baseline_scores=scores,
+            augmented_scores=scores,
+            budget_fraction=0.5,
+        )
+        self.assertEqual(result["maximum_group_trajectory_count"], 3)
+        self.assertEqual(result["largest_group_count"], 1)
+        self.assertEqual(result["rows"][0]["remaining_trajectory_count"], 1)
 
 
 if __name__ == "__main__":

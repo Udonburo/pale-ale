@@ -34,6 +34,10 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             self.assertEqual(
                 gate12c2.check_joint_realizability(graph)["status"], "pass"
             )
+            self.assertEqual(
+                gate12c2.check_block_gram_realizability(graph)["status"],
+                "pass",
+            )
             for node in graph.nodes:
                 identity = node.frame.T @ node.frame
                 np.testing.assert_allclose(
@@ -108,6 +112,13 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
                 for key, values in null_frames_by_stratum.items()
             },
         )
+        audit = gate12c2.n1_reassignment_audit(observed, reassigned)
+        self.assertEqual(audit["status"], "pass")
+        self.assertEqual(audit["fixed_point_count"], 0)
+        self.assertEqual(audit["same_graph_assignment_count"], 0)
+        self.assertEqual(audit["unique_donor_count"], 36)
+        self.assertFalse(audit["reused_donor_counts"])
+        self.assertFalse(audit["derangement_ineligible_strata"])
 
     def test_residual_decomposition_identity(self) -> None:
         rng = np.random.Generator(np.random.PCG64(20260724))
@@ -169,6 +180,12 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         check = gate12c2.check_joint_realizability(corrupt_graph)
         self.assertEqual(check["status"], "fail")
         self.assertEqual(check["failures"][0]["reason"], "overlap_mismatch")
+        block_check = gate12c2.check_block_gram_realizability(corrupt_graph)
+        self.assertEqual(block_check["status"], "fail")
+        self.assertEqual(
+            block_check["failures"][0]["reason"],
+            "block_overlap_mismatch",
+        )
 
     def test_development_report_refuses_type_i_claim(self) -> None:
         observed = gate12c2.generate_s0_cohort(
@@ -191,11 +208,243 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             report["joint_realizability"]["comparison_pass_count"], 16
         )
         self.assertEqual(
+            report["joint_realizability"][
+                "comparison_block_gram_pass_count"
+            ],
+            16,
+        )
+        self.assertEqual(report["n1_assignment_audit"]["status"], "pass")
+        self.assertIn("N1 is the sole primary candidate", report[
+            "candidate_selection_policy"
+        ])
+        self.assertIn(
+            "product_singular_values_left",
+            report["rows"][0]["observed"],
+        )
+        self.assertEqual(
             report["type_i_calibration"]["status"],
             "not_estimated_without_frozen_decision_rule",
         )
         self.assertIsNone(
             report["type_i_calibration"]["false_positive_rate"]
+        )
+
+    @staticmethod
+    def _pipeline_inputs(
+        supported: set[tuple[int, int]],
+    ) -> tuple[object, ...]:
+        rows = []
+        for case_order in range(12):
+            for q in (1, 2):
+                is_supported = (case_order, q) in supported
+                rows.append(
+                    gate12c2.EndpointDecisionInput(
+                        case_id=f"case-{case_order:02d}",
+                        case_order=case_order,
+                        model=f"model-{case_order % 4}",
+                        family=f"family-{case_order // 4}",
+                        q=q,
+                        coverage_complete=True,
+                        informative=True,
+                        median_log_ratio=1.0 if is_supported else -1.0,
+                        raw_p=0.001 if is_supported else 1.0,
+                    )
+                )
+        return tuple(rows)
+
+    def test_pipeline_calibration_keeps_type_i_units_separate(self) -> None:
+        no_support = gate12c2.complete_pipeline_decision(
+            self._pipeline_inputs(set())
+        )
+        endpoint_only = gate12c2.complete_pipeline_decision(
+            self._pipeline_inputs({(0, 1)})
+        )
+        one_run = gate12c2.complete_pipeline_decision(
+            self._pipeline_inputs({(0, 1), (0, 2)})
+        )
+        self.assertFalse(no_support["any_endpoint_support"])
+        self.assertTrue(endpoint_only["any_endpoint_support"])
+        self.assertFalse(endpoint_only["any_run_support"])
+        self.assertFalse(endpoint_only["directional_grid_positive"])
+        self.assertTrue(one_run["any_run_support"])
+        self.assertEqual(one_run["grid_outcome"], "partial_or_structured")
+        self.assertTrue(one_run["directional_grid_positive"])
+
+        summary = gate12c2.summarize_outer_calibration(
+            (no_support, endpoint_only, one_run)
+        )
+        self.assertEqual(summary["outer_experiment_count"], 3)
+        self.assertAlmostEqual(
+            summary["family_wise_fpr"]["estimate"],
+            2.0 / 3.0,
+        )
+        self.assertAlmostEqual(
+            summary["run_level_fpr"]["estimate"],
+            1.0 / 3.0,
+        )
+        self.assertAlmostEqual(
+            summary["grid_level_positive_rate"]["estimate"],
+            1.0 / 3.0,
+        )
+        self.assertEqual(summary["acceptance_rule"]["status"], "not_frozen")
+
+    def test_pipeline_decision_rejects_incomplete_outer_unit(self) -> None:
+        with self.assertRaises(gate12c2.Gate12C2DevelopmentError):
+            gate12c2.complete_pipeline_decision(
+                self._pipeline_inputs(set())[:-1]
+            )
+
+    def test_residual_mechanism_controls_are_separated(self) -> None:
+        controls = gate12c2.development_residual_mechanism_controls()
+        self.assertEqual(set(controls), {"tail", "propagation", "alignment"})
+        tail_defects = []
+        for row in controls["tail"]:
+            diagnostic = row.diagnostics
+            self.assertEqual(diagnostic.numerical_status, "pass")
+            self.assertAlmostEqual(diagnostic.tail_left, row.level)
+            self.assertAlmostEqual(diagnostic.tail_right, row.level)
+            self.assertAlmostEqual(diagnostic.propagation_left, 1.0)
+            self.assertAlmostEqual(diagnostic.propagation_right, 1.0)
+            self.assertAlmostEqual(diagnostic.alignment, 0.0)
+            self.assertFalse(row.as_dict()["end_to_end_s1_satisfied"])
+            tail_defects.append(diagnostic.defect)
+        self.assertEqual(tail_defects, sorted(tail_defects))
+
+        propagation_defects = []
+        for row in controls["propagation"]:
+            diagnostic = row.diagnostics
+            self.assertAlmostEqual(diagnostic.tail_left, 0.2)
+            self.assertAlmostEqual(diagnostic.tail_right, 0.2)
+            self.assertAlmostEqual(
+                diagnostic.propagation_left,
+                row.level,
+            )
+            self.assertAlmostEqual(
+                diagnostic.propagation_right,
+                row.level,
+            )
+            propagation_defects.append(diagnostic.defect)
+        self.assertEqual(propagation_defects, sorted(propagation_defects))
+
+        alignments = []
+        alignment_defects = []
+        for row in controls["alignment"]:
+            diagnostic = row.diagnostics
+            self.assertAlmostEqual(diagnostic.propagated_left, 0.2)
+            self.assertAlmostEqual(diagnostic.propagated_right, 0.2)
+            alignments.append(diagnostic.alignment)
+            alignment_defects.append(diagnostic.defect)
+        self.assertEqual(alignments, sorted(alignments, reverse=True))
+        self.assertEqual(alignment_defects, sorted(alignment_defects))
+
+    def test_s2_orientation_stress_preserves_spectra_but_breaks_graph(
+        self,
+    ) -> None:
+        observed = gate12c2.generate_s0_cohort(
+            replicate_count=8,
+            master_seed="s2-observed",
+        )
+        comparison = gate12c2.s2_graph_unconstrained_orientation_draw(
+            observed,
+            orientation_seed="s2-orientation",
+        )
+        discrepancy = gate12c2.edge_spectrum_marginal_discrepancy(
+            observed,
+            comparison,
+        )
+        self.assertLessEqual(
+            discrepancy["maximum_absolute_sorted_difference"],
+            1.0e-12,
+        )
+        self.assertTrue(
+            all(
+                gate12c2.check_joint_realizability(graph)["status"] == "fail"
+                for graph in comparison
+            )
+        )
+        self.assertTrue(
+            all(
+                gate12c2.check_block_gram_realizability(graph)["status"]
+                == "fail"
+                for graph in comparison
+            )
+        )
+        report = gate12c2.development_s2_null_inflation_report(
+            observed,
+            comparison,
+            q=1,
+        )
+        self.assertFalse(report["observed_process_modified"])
+        self.assertFalse(report["comparison_is_candidate_null"])
+        self.assertEqual(report["valid_pair_count"], 8)
+        self.assertEqual(
+            report["realizability_failure_count"]["block_gram_checker"],
+            8,
+        )
+        self.assertIn("a_q", report["component_difference_medians"])
+
+    def test_s1_shared_coupling_is_graph_realizable_and_graded(self) -> None:
+        n1_medians = []
+        for effect_strength in (0.02, 0.05, 0.10, 0.20):
+            observed = gate12c2.generate_s1_shared_node_coupling_cohort(
+                replicate_count=24,
+                master_seed="s1-test",
+                effect_strength=effect_strength,
+            )
+            comparison = gate12c2.n1_role_constrained_reassignment(
+                observed,
+                reassignment_seed="s1-n1",
+            )
+            report = gate12c2.development_s1_known_reverse_report(
+                observed,
+                comparison,
+                q=1,
+            )
+            self.assertEqual(report["informative_pair_count"], 24)
+            self.assertGreaterEqual(report["observed_smaller_count"], 22)
+            self.assertGreater(
+                report["component_medians"]["a_q"]["observed"],
+                0.0,
+            )
+            self.assertEqual(
+                report["joint_realizability"]["N1_block_gram_pass_count"],
+                24,
+            )
+            self.assertEqual(
+                report["power"]["status"],
+                "not_estimated_without_outer_experiments",
+            )
+            n1_medians.append(report["component_medians"]["a_q"]["N1"])
+        self.assertEqual(n1_medians, sorted(n1_medians))
+
+    def test_inner_draw_stability_uses_nested_stream_only(self) -> None:
+        rng = np.random.Generator(np.random.PCG64(123))
+        draws = rng.lognormal(size=1023)
+        first = gate12c2.nested_inner_draw_stability(
+            draws,
+            observed_value=0.5,
+            runtime_seconds_by_prefix={
+                255: 1.0,
+                511: 2.0,
+                1023: 4.0,
+            },
+        )
+        second = gate12c2.nested_inner_draw_stability(
+            draws,
+            observed_value=0.5,
+            runtime_seconds_by_prefix={
+                255: 1.0,
+                511: 2.0,
+                1023: 4.0,
+            },
+        )
+        self.assertEqual(first, second)
+        self.assertTrue(first["nested_prefix_contract"])
+        self.assertEqual(first["prefix_counts"], [255, 511, 1023])
+        self.assertIsNone(first["selected_draw_count"])
+        self.assertIn(
+            "best_observed_FPR",
+            first["selection_basis_prohibited"],
         )
 
 
