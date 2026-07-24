@@ -10,7 +10,7 @@ is developed:
 * reproducible cheap baseline features;
 * a global eligible-row review budget;
 * deterministic tie handling; and
-* paired highest-group bootstrap and clean-trajectory review burden.
+* paired leakage-control-cluster bootstrap and clean-trajectory review burden.
 
 No structural signal is defined here.  This is development infrastructure, not
 a held-out benchmark claim.
@@ -28,23 +28,31 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 
-TRAJECTORY_SCHEMA_VERSION = "pale_ale_process_trajectory_v0.2"
+TRAJECTORY_SCHEMA_VERSION = "pale_ale_process_trajectory_v0.3"
 FEATURE_SURFACE_SCHEMA_VERSION = "pale_ale_feature_firewall_v0.1"
-FEATURE_SCHEMA_VERSION = "pale_ale_process_cheap_features_v0.2"
-EVALUATION_SCHEMA_VERSION = "pale_ale_global_review_budget_v0.2"
-BOOTSTRAP_SCHEMA_VERSION = "pale_ale_group_bootstrap_v0.1"
+FEATURE_SCHEMA_VERSION = "pale_ale_process_cheap_features_v0.3"
+EVALUATION_SCHEMA_VERSION = "pale_ale_global_review_budget_v0.3"
+BOOTSTRAP_SCHEMA_VERSION = "pale_ale_cluster_bootstrap_v0.2"
 NEAR_DUPLICATE_SCHEMA_VERSION = "pale_ale_task_surface_near_duplicate_v0.1"
+FREEZE_CANDIDATE_SCHEMA_VERSION = "pale_ale_triage_freeze_candidate_v0.2"
 AGENT_PROCESS_BENCH_MAPPING_ID = "agent_process_bench_negative_step_v0.1"
 AGENT_PROCESS_BENCH_GROUPING_ID = (
     "agent_process_bench_domain_task_surface_sha256_v0.1"
 )
-GROUP_SPLIT_ID = "sha256_domain_group_order_v0.1"
+GROUP_SPLIT_ID = "sha256_domain_cluster_order_v0.2"
+BASELINE_CV_ID = "sha256_domain_cluster_four_fold_cv_v0.1"
+BASELINE_CV_SEED_ID = "pale-ale-agent-process-bench-baseline-cv-v0.2"
+BASELINE_CV_FOLD_COUNT = 4
 NEAR_DUPLICATE_METRIC_ID = "unicode_word_set_jaccard_v1"
 NEAR_DUPLICATE_THRESHOLD = 0.95
 SOURCE_MODEL_MAPPING_STATUS = (
     "unresolved_public_record_exposes_sample_index_only"
 )
-BOOTSTRAP_RESAMPLING_ID = "sha256_domain_stratified_group_bootstrap_v1"
+BOOTSTRAP_RESAMPLING_ID = "sha256_domain_stratified_cluster_bootstrap_v2"
+INFORMATION_HORIZON = "full_trajectory_retrospective"
+LEAKAGE_CONTROL_UNIT = "visible_task_surface_cluster"
+AGENT_PROCESS_BENCH_DEVELOPMENT_CLUSTERS_PER_DOMAIN = 12
+AGENT_PROCESS_BENCH_BOOTSTRAP_REPLICATES = 10_000
 
 TOOL_ERROR_PATTERN = re.compile(
     r"\b(error|failed|failure|exception|traceback|timeout|timed out|"
@@ -316,6 +324,93 @@ class OperationalSuccessRule:
     status: str = "candidate_not_frozen"
 
 
+@dataclass(frozen=True)
+class BaselineFreezeCandidate:
+    """Machine-readable low-capacity baseline specification."""
+
+    model_class: str = "L2_regularized_logistic_regression"
+    row_target: str = "first_actionable_defect_row_only"
+    numeric_preprocessing: str = "development_fit_standardization"
+    categorical_encoding: str = "development_fit_one_hot"
+    regularization_grid: tuple[float, ...] = (0.1, 1.0, 10.0)
+    cross_validation_unit: str = LEAKAGE_CONTROL_UNIT
+    information_horizon: str = INFORMATION_HORIZON
+    status: str = "freeze_candidate_feature_label_association_unopened"
+    schema_version: str = FREEZE_CANDIDATE_SCHEMA_VERSION
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "status": self.status,
+            "model_class": self.model_class,
+            "penalty": "L2",
+            "objective": (
+                "sum_binary_log_loss_plus_nonintercept_L2_over_2C"
+            ),
+            "class_weight": "none",
+            "intercept_penalized": False,
+            "solver": {
+                "algorithm": "deterministic_damped_newton",
+                "maximum_iterations": 100,
+                "gradient_infinity_tolerance": 1.0e-8,
+                "minimum_line_search_step": 2.0**-20,
+                "reference_dtype": "float64",
+            },
+            "row_target": self.row_target,
+            "numeric_features": [
+                "normalized_position",
+                "eligible_trajectory_length",
+                "prior_exact_retry_count",
+                "prior_same_tool_count",
+                "preceding_tool_error",
+                "prior_tool_error_count",
+                "lexical_drift_from_previous",
+                "content_character_count",
+            ],
+            "categorical_features": [
+                "domain",
+                "artifact_type",
+                "source_slot",
+            ],
+            "source_slot_semantics": "opaque_categorical_nuisance_only",
+            "numeric_preprocessing": self.numeric_preprocessing,
+            "zero_variance_numeric_scale": 1.0,
+            "categorical_encoding": self.categorical_encoding,
+            "unknown_category_policy": "all_zero_indicators",
+            "regularization_grid": [
+                float(value) for value in self.regularization_grid
+            ],
+            "cross_validation_unit": self.cross_validation_unit,
+            "cross_validation_surface": "development_clusters_only",
+            "cross_validation_folds": BASELINE_CV_FOLD_COUNT,
+            "cross_validation_assignment_id": BASELINE_CV_ID,
+            "cross_validation_seed_id": BASELINE_CV_SEED_ID,
+            "hyperparameter_selection": {
+                "primary_metric": (
+                    "out_of_fold_first_actionable_defect_recall_at_global_"
+                    "10_percent_row_budget"
+                ),
+                "direction": "maximize",
+                "tie_breakers_in_order": [
+                    "lower_out_of_fold_clean_row_allocation",
+                    "smaller_regularization_C",
+                ],
+                "refit_surface": "all_development_clusters",
+            },
+            "information_horizon": self.information_horizon,
+            "prohibited_model_families": [
+                "tree_ensemble",
+                "neural_model",
+                "expanded_hyperparameter_search",
+            ],
+            "locked_models": {
+                "baseline_only_count": 1,
+                "baseline_plus_structural_count": 1,
+                "same_model_class_and_preprocessing_required": True,
+            },
+        }
+
+
 def _tool_error_between(
     messages: Sequence[Mapping[str, Any]],
     start_exclusive: int,
@@ -554,6 +649,7 @@ def feature_surface_receipt(
     return {
         "schema_version": FEATURE_SURFACE_SCHEMA_VERSION,
         "firewall_status": "outcome_fields_absent_by_type",
+        "information_horizon": INFORMATION_HORIZON,
         "trajectory_count": len(surfaces),
         "row_count": sum(len(surface.steps) for surface in surfaces),
         "sha256": hashlib.sha256(encoded).hexdigest(),
@@ -851,6 +947,7 @@ def evaluate_global_review_budget(
     return {
         "schema_version": EVALUATION_SCHEMA_VERSION,
         "epistemic_status": "development_only",
+        "information_horizon": INFORMATION_HORIZON,
         "review_unit": "eligible_assistant_message",
         "ranking_scope": "global_evaluation_surface_pool",
         "tie_breaker": (
@@ -860,7 +957,7 @@ def evaluate_global_review_budget(
         "eligible_row_count": len(steps),
         "selected_row_count": budget,
         "trajectory_count": len(trajectories),
-        "independent_group_count": len(
+        "leakage_control_cluster_count": len(
             {trajectory.group_id for trajectory in trajectories}
         ),
         "positive_trajectory_count": len(positive),
@@ -892,13 +989,13 @@ def evaluate_global_review_budget(
             if domain_recalls
             else None
         ),
-        "group_macro_first_actionable_defect_recall": (
+        "cluster_macro_first_actionable_defect_recall": (
             sum(group_recalls) / len(group_recalls)
             if group_recalls
             else None
         ),
         "domain_metrics": domain_metrics,
-        "group_metrics": group_metrics,
+        "cluster_metrics": group_metrics,
         "selected_row_ids": [step.row_id for step in selected],
     }
 
@@ -948,13 +1045,14 @@ def compare_score_surfaces(
             "domain_macro_first_actionable_defect_recall": difference(
                 "domain_macro_first_actionable_defect_recall"
             ),
-            "group_macro_first_actionable_defect_recall": difference(
-                "group_macro_first_actionable_defect_recall"
+            "cluster_macro_first_actionable_defect_recall": difference(
+                "cluster_macro_first_actionable_defect_recall"
             ),
         },
         "uncertainty": {
-            "status": "not_estimated_until_grouped_resampling_rule_is_frozen",
-            "resampling_unit": "highest_independent_group",
+            "status": "not_estimated_until_cluster_resampling_rule_is_frozen",
+            "resampling_unit": LEAKAGE_CONTROL_UNIT,
+            "statistical_independence_claimed": False,
         },
     }
 
@@ -1099,10 +1197,10 @@ def paired_domain_group_bootstrap(
     seed: str,
     budget_fraction: float = 0.10,
 ) -> dict[str, Any]:
-    """Paired, domain-stratified highest-group bootstrap.
+    """Paired, domain-stratified leakage-control-cluster bootstrap.
 
-    Each replicate samples groups with replacement within domain, preserves all
-    trajectories and rows in a sampled group, then recomputes the global
+    Each replicate samples clusters with replacement within domain, preserves
+    all trajectories and rows in a sampled cluster, then recomputes the global
     ranking and review budget for both score surfaces on that same sample.
     """
 
@@ -1122,7 +1220,7 @@ def paired_domain_group_bootstrap(
         "clean_trajectory_alert_rate",
         "actionable_row_precision",
         "domain_macro_first_actionable_defect_recall",
-        "group_macro_first_actionable_defect_recall",
+        "cluster_macro_first_actionable_defect_recall",
     )
     replicate_differences: dict[str, list[float]] = {
         field: [] for field in fields
@@ -1166,10 +1264,11 @@ def paired_domain_group_bootstrap(
         "schema_version": BOOTSTRAP_SCHEMA_VERSION,
         "epistemic_status": "development_only",
         "resampling_id": BOOTSTRAP_RESAMPLING_ID,
-        "resampling_unit": "highest_independent_task_surface_group",
+        "resampling_unit": LEAKAGE_CONTROL_UNIT,
+        "statistical_independence_claimed": False,
         "stratification": "domain",
         "pairing": (
-            "baseline and augmented scores share every resampled group draw"
+            "baseline and augmented scores share every resampled cluster draw"
         ),
         "global_budget_recomputed_each_replicate": True,
         "replicates": int(replicates),
@@ -1240,19 +1339,19 @@ def assess_operational_success(
     }
 
 
-def leave_largest_group_out_sensitivity(
+def leave_largest_cluster_out_sensitivity(
     trajectories: Sequence[TriageTrajectory],
     *,
     baseline_scores: Mapping[str, float],
     augmented_scores: Mapping[str, float],
     budget_fraction: float = 0.10,
 ) -> dict[str, Any]:
-    """Recompute the comparison after omitting each maximum-size group."""
+    """Recompute the comparison after omitting each maximum-size cluster."""
 
     group_counts = Counter(trajectory.group_id for trajectory in trajectories)
     if not group_counts:
         raise ProcessTriageDevelopmentError(
-            "largest-group sensitivity requires trajectories"
+            "largest-cluster sensitivity requires trajectories"
         )
     maximum_count = max(group_counts.values())
     largest_group_ids = sorted(
@@ -1282,7 +1381,7 @@ def leave_largest_group_out_sensitivity(
         )
         rows.append(
             {
-                "omitted_group_id": omitted_group_id,
+                "omitted_cluster_id": omitted_group_id,
                 "omitted_trajectory_count": maximum_count,
                 "remaining_trajectory_count": len(subset),
                 "paired_point_differences": comparison[
@@ -1293,10 +1392,27 @@ def leave_largest_group_out_sensitivity(
     return {
         "schema_version": EVALUATION_SCHEMA_VERSION,
         "epistemic_status": "development_sensitivity",
-        "maximum_group_trajectory_count": maximum_count,
-        "largest_group_count": len(largest_group_ids),
+        "maximum_cluster_trajectory_count": maximum_count,
+        "largest_cluster_count": len(largest_group_ids),
         "rows": rows,
     }
+
+
+def leave_largest_group_out_sensitivity(
+    trajectories: Sequence[TriageTrajectory],
+    *,
+    baseline_scores: Mapping[str, float],
+    augmented_scores: Mapping[str, float],
+    budget_fraction: float = 0.10,
+) -> dict[str, Any]:
+    """Backward-compatible alias; new code should say clusters."""
+
+    return leave_largest_cluster_out_sensitivity(
+        trajectories,
+        baseline_scores=baseline_scores,
+        augmented_scores=augmented_scores,
+        budget_fraction=budget_fraction,
+    )
 
 
 def near_duplicate_group_manifest(
@@ -1450,14 +1566,16 @@ def grouped_domain_split(
     split_seed: str,
     development_groups_per_domain: int,
     group_aliases: Mapping[str, str] | None = None,
+    protected_locked_group_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
-    """Create a deterministic domain-stratified split at the group level."""
+    """Create a deterministic domain-stratified leakage-control split."""
 
     if development_groups_per_domain <= 0:
         raise ProcessTriageDevelopmentError(
             "development_groups_per_domain must be positive"
         )
     aliases = dict(group_aliases or {})
+    protected_locked = {str(group_id) for group_id in protected_locked_group_ids}
     groups_by_domain: dict[str, set[str]] = defaultdict(set)
     domain_by_group: dict[str, str] = {}
     for trajectory in trajectories:
@@ -1474,38 +1592,55 @@ def grouped_domain_split(
             )
         groups_by_domain[trajectory.domain].add(effective_group_id)
 
+    all_groups = set().union(*groups_by_domain.values()) if groups_by_domain else set()
+    unknown_protected = protected_locked - all_groups
+    if unknown_protected:
+        raise ProcessTriageDevelopmentError(
+            "protected locked clusters are absent from the admitted surface: "
+            f"{sorted(unknown_protected)}"
+        )
+
     development: list[str] = []
     locked: list[str] = []
     for domain, groups in sorted(groups_by_domain.items()):
-        if len(groups) <= development_groups_per_domain:
+        eligible_development = groups - protected_locked
+        if len(eligible_development) < development_groups_per_domain:
             raise ProcessTriageDevelopmentError(
-                f"domain {domain!r} has too few groups for a locked partition"
+                f"domain {domain!r} has too few unprotected clusters for "
+                "the requested development partition"
             )
         ordered = sorted(
-            groups,
+            eligible_development,
             key=lambda group_id: hashlib.sha256(
                 _canonical_json(
                     [GROUP_SPLIT_ID, split_seed, domain, group_id]
                 ).encode("utf-8")
             ).hexdigest(),
         )
-        development.extend(ordered[:development_groups_per_domain])
-        locked.extend(ordered[development_groups_per_domain:])
+        selected_development = set(
+            ordered[:development_groups_per_domain]
+        )
+        development.extend(sorted(selected_development))
+        locked.extend(sorted(groups - selected_development))
 
     development_set = set(development)
     locked_set = set(locked)
     if development_set & locked_set:
-        raise ProcessTriageDevelopmentError("group split overlap detected")
+        raise ProcessTriageDevelopmentError("cluster split overlap detected")
     return {
         "split_id": GROUP_SPLIT_ID,
         "epistemic_status": "candidate_split_not_yet_frozen",
+        "information_horizon": INFORMATION_HORIZON,
+        "leakage_control_unit": LEAKAGE_CONTROL_UNIT,
+        "statistical_independence_claimed": False,
         "seed_receipt": hashlib.sha256(
             _canonical_json([GROUP_SPLIT_ID, split_seed]).encode("utf-8")
         ).hexdigest(),
-        "development_group_ids": sorted(development),
-        "locked_group_ids": sorted(locked),
-        "development_group_count": len(development),
-        "locked_group_count": len(locked),
+        "development_cluster_ids": sorted(development),
+        "locked_cluster_ids": sorted(locked),
+        "development_cluster_count": len(development),
+        "locked_cluster_count": len(locked),
+        "protected_locked_cluster_ids": sorted(protected_locked),
         "development_trajectory_count": sum(
             aliases.get(trajectory.group_id, trajectory.group_id)
             in development_set
@@ -1516,7 +1651,262 @@ def grouped_domain_split(
             in locked_set
             for trajectory in trajectories
         ),
-        "group_alias_manifest_applied": bool(aliases),
+        "cluster_alias_manifest_applied": bool(aliases),
+    }
+
+
+def agent_process_bench_freeze_candidate_split(
+    trajectories: Sequence[TriageTrajectory],
+    *,
+    split_seed: str,
+    group_aliases: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Build the contract-v0.2 48/141 split candidate without labels."""
+
+    aliases = dict(group_aliases or {})
+    cluster_counts: Counter[str] = Counter(
+        aliases.get(trajectory.group_id, trajectory.group_id)
+        for trajectory in trajectories
+    )
+    if not cluster_counts:
+        raise ProcessTriageDevelopmentError(
+            "AgentProcessBench split requires admitted trajectories"
+        )
+    maximum_trajectory_count = max(cluster_counts.values())
+    protected = {
+        cluster_id
+        for cluster_id, count in cluster_counts.items()
+        if count == maximum_trajectory_count
+    }
+    split = grouped_domain_split(
+        trajectories,
+        split_seed=split_seed,
+        development_groups_per_domain=(
+            AGENT_PROCESS_BENCH_DEVELOPMENT_CLUSTERS_PER_DOMAIN
+        ),
+        group_aliases=aliases,
+        protected_locked_group_ids=protected,
+    )
+    total_cluster_count = (
+        int(split["development_cluster_count"])
+        + int(split["locked_cluster_count"])
+    )
+    expected_development = (
+        AGENT_PROCESS_BENCH_DEVELOPMENT_CLUSTERS_PER_DOMAIN * 4
+    )
+    if total_cluster_count != 189:
+        raise ProcessTriageDevelopmentError(
+            "AgentProcessBench freeze candidate expects exactly 189 "
+            f"leakage-control clusters, found {total_cluster_count}"
+        )
+    if int(split["development_cluster_count"]) != expected_development:
+        raise ProcessTriageDevelopmentError(
+            "AgentProcessBench freeze candidate requires 48 development "
+            "clusters"
+        )
+    if int(split["locked_cluster_count"]) != 141:
+        raise ProcessTriageDevelopmentError(
+            "AgentProcessBench freeze candidate requires 141 locked clusters"
+        )
+    split["schema_version"] = FREEZE_CANDIDATE_SCHEMA_VERSION
+    split["split_contract"] = "12_development_clusters_per_domain_48_141"
+    split["maximum_cluster_trajectory_count"] = maximum_trajectory_count
+    split["maximum_size_clusters_forced_locked"] = True
+    split["selection_fields"] = [
+        "domain",
+        "cluster_trajectory_count_for_maximum_size_protection",
+        "split_seed",
+        "cluster_id",
+    ]
+    split["outcome_fields_used"] = []
+    split["feature_label_association_used"] = False
+    return split
+
+
+def development_cluster_cv_manifest(
+    trajectories: Sequence[TriageTrajectory],
+    *,
+    development_cluster_ids: Iterable[str],
+    group_aliases: Mapping[str, str] | None = None,
+    fold_count: int = BASELINE_CV_FOLD_COUNT,
+    seed_id: str = BASELINE_CV_SEED_ID,
+) -> dict[str, Any]:
+    """Assign development clusters to deterministic domain-stratified folds.
+
+    The assignment uses only domain, cluster ID, a fixed seed identifier, and
+    the requested fold count.  Labels, outcomes, and feature values are not
+    read or represented in the manifest.
+    """
+
+    if fold_count < 2:
+        raise ProcessTriageDevelopmentError(
+            "development CV requires at least two folds"
+        )
+    if not str(seed_id).strip():
+        raise ProcessTriageDevelopmentError(
+            "development CV seed_id must be nonempty"
+        )
+    aliases = dict(group_aliases or {})
+    development = {str(cluster_id) for cluster_id in development_cluster_ids}
+    if not development:
+        raise ProcessTriageDevelopmentError(
+            "development CV requires at least one development cluster"
+        )
+    domain_by_cluster: dict[str, str] = {}
+    for trajectory in trajectories:
+        cluster_id = aliases.get(
+            trajectory.group_id,
+            trajectory.group_id,
+        )
+        if cluster_id not in development:
+            continue
+        previous = domain_by_cluster.setdefault(
+            cluster_id,
+            trajectory.domain,
+        )
+        if previous != trajectory.domain:
+            raise ProcessTriageDevelopmentError(
+                f"development cluster crosses domains: {cluster_id}"
+            )
+    missing = development - set(domain_by_cluster)
+    if missing:
+        raise ProcessTriageDevelopmentError(
+            "development CV clusters are absent from the admitted surface: "
+            f"{sorted(missing)}"
+        )
+
+    clusters_by_domain: dict[str, list[str]] = defaultdict(list)
+    for cluster_id, domain in sorted(domain_by_cluster.items()):
+        clusters_by_domain[domain].append(cluster_id)
+    fold_validation_ids: list[list[str]] = [
+        [] for _ in range(fold_count)
+    ]
+    fold_domain_counts: list[Counter[str]] = [
+        Counter() for _ in range(fold_count)
+    ]
+    for domain, cluster_ids in sorted(clusters_by_domain.items()):
+        if len(cluster_ids) < fold_count:
+            raise ProcessTriageDevelopmentError(
+                f"domain {domain!r} has fewer development clusters than "
+                "CV folds"
+            )
+        ordered = sorted(
+            cluster_ids,
+            key=lambda cluster_id: hashlib.sha256(
+                _canonical_json(
+                    [
+                        BASELINE_CV_ID,
+                        seed_id,
+                        fold_count,
+                        domain,
+                        cluster_id,
+                    ]
+                ).encode("utf-8")
+            ).hexdigest(),
+        )
+        for position, cluster_id in enumerate(ordered):
+            fold_index = position % fold_count
+            fold_validation_ids[fold_index].append(cluster_id)
+            fold_domain_counts[fold_index][domain] += 1
+
+    folds: list[dict[str, Any]] = []
+    seen_validation: set[str] = set()
+    for fold_index, validation_ids in enumerate(fold_validation_ids):
+        validation = set(validation_ids)
+        if seen_validation & validation:
+            raise ProcessTriageDevelopmentError(
+                "development CV validation clusters overlap"
+            )
+        seen_validation.update(validation)
+        training = development - validation
+        folds.append(
+            {
+                "fold_index": fold_index,
+                "training_cluster_ids": sorted(training),
+                "validation_cluster_ids": sorted(validation),
+                "training_cluster_count": len(training),
+                "validation_cluster_count": len(validation),
+                "validation_domain_counts": {
+                    domain: count
+                    for domain, count in sorted(
+                        fold_domain_counts[fold_index].items()
+                    )
+                },
+            }
+        )
+    if seen_validation != development:
+        raise ProcessTriageDevelopmentError(
+            "development CV does not cover every development cluster once"
+        )
+    return {
+        "schema_version": FREEZE_CANDIDATE_SCHEMA_VERSION,
+        "epistemic_status": (
+            "feature_label_association_unopened_cv_manifest"
+        ),
+        "assignment_id": BASELINE_CV_ID,
+        "seed_id": seed_id,
+        "fold_count": fold_count,
+        "stratification": "domain",
+        "resampling_unit": LEAKAGE_CONTROL_UNIT,
+        "statistical_independence_claimed": False,
+        "development_cluster_count": len(development),
+        "validation_coverage_count": len(seen_validation),
+        "label_or_outcome_fields_used": [],
+        "feature_values_used": False,
+        "folds": folds,
+    }
+
+
+def process_triage_freeze_candidate_specification() -> dict[str, Any]:
+    """Return the pre-association metric, model, and uncertainty contract."""
+
+    return {
+        "schema_version": FREEZE_CANDIDATE_SCHEMA_VERSION,
+        "epistemic_status": (
+            "freeze_candidate_feature_label_association_unopened"
+        ),
+        "information_horizon": INFORMATION_HORIZON,
+        "primary_review_protocol": {
+            "unit": "eligible_assistant_message",
+            "scope": "global_locked_surface_pool",
+            "budget_fraction": 0.10,
+            "budget_count_rule": "ceil(0.10 * eligible_row_count)",
+            "tie_breaker": (
+                "score_desc_domain_cluster_trajectory_message_index_row_id"
+            ),
+        },
+        "primary_endpoint": (
+            "first_actionable_defect_recall_at_global_10_percent_row_budget"
+        ),
+        "success_rule": {
+            "minimum_point_recall_gain": 0.10,
+            "minimum_percentile_95_recall_lower": 0.0,
+            "recall_lower_comparison": "strictly_greater_than",
+            "maximum_percentile_95_clean_row_allocation_increase_upper": 0.05,
+        },
+        "bootstrap": {
+            "resampling_id": BOOTSTRAP_RESAMPLING_ID,
+            "resampling_unit": LEAKAGE_CONTROL_UNIT,
+            "statistical_independence_claimed": False,
+            "stratification": "domain",
+            "replicates": AGENT_PROCESS_BENCH_BOOTSTRAP_REPLICATES,
+            "interval": "paired_percentile_95",
+            "global_budget_recomputed_each_replicate": True,
+            "same_resample_for_both_models": True,
+        },
+        "baseline": BaselineFreezeCandidate().as_dict(),
+        "required_guardrails": [
+            "clean_row_allocation",
+            "clean_trajectory_alert_rate",
+        ],
+        "frozen_sensitivities": [
+            "domain_macro",
+            "cluster_macro",
+            "one_alert_per_trajectory",
+            "leave_largest_cluster_out",
+        ],
+        "locked_execution_authorized": False,
+        "structural_signal_opened": False,
     }
 
 
@@ -1530,7 +1920,9 @@ def dataset_admission_summary(
     def summarize(rows: Sequence[TriageTrajectory]) -> dict[str, Any]:
         return {
             "trajectory_count": len(rows),
-            "independent_group_count": len({row.group_id for row in rows}),
+            "leakage_control_cluster_count": len(
+                {row.group_id for row in rows}
+            ),
             "eligible_row_count": sum(len(row.steps) for row in rows),
             "positive_trajectory_count": sum(not row.is_clean for row in rows),
             "clean_trajectory_count": sum(row.is_clean for row in rows),
@@ -1554,7 +1946,9 @@ def dataset_admission_summary(
     return {
         "schema_version": TRAJECTORY_SCHEMA_VERSION,
         "epistemic_status": "schema_and_admission_audit_only",
-        "independent_unit": "domain_visible_task_surface_group",
+        "information_horizon": INFORMATION_HORIZON,
+        "leakage_control_unit": LEAKAGE_CONTROL_UNIT,
+        "statistical_independence_claimed": False,
         "grouping_id": AGENT_PROCESS_BENCH_GROUPING_ID,
         "label_mapping_id": AGENT_PROCESS_BENCH_MAPPING_ID,
         "source_policy_field": "sample_index_as_opaque_source_slot",
@@ -1568,16 +1962,31 @@ def dataset_admission_summary(
     }
 
 
+def subset_by_clusters(
+    trajectories: Sequence[TriageTrajectory],
+    cluster_ids: Iterable[str],
+    *,
+    group_aliases: Mapping[str, str] | None = None,
+) -> tuple[TriageTrajectory, ...]:
+    allowed = set(cluster_ids)
+    aliases = dict(group_aliases or {})
+    return tuple(
+        trajectory
+        for trajectory in trajectories
+        if aliases.get(trajectory.group_id, trajectory.group_id) in allowed
+    )
+
+
 def subset_by_groups(
     trajectories: Sequence[TriageTrajectory],
     group_ids: Iterable[str],
     *,
     group_aliases: Mapping[str, str] | None = None,
 ) -> tuple[TriageTrajectory, ...]:
-    allowed = set(group_ids)
-    aliases = dict(group_aliases or {})
-    return tuple(
-        trajectory
-        for trajectory in trajectories
-        if aliases.get(trajectory.group_id, trajectory.group_id) in allowed
+    """Backward-compatible alias; new code should say clusters."""
+
+    return subset_by_clusters(
+        trajectories,
+        group_ids,
+        group_aliases=group_aliases,
     )

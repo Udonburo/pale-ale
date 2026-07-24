@@ -20,6 +20,36 @@ SPEC.loader.exec_module(gate12c2)
 
 
 class Gate12C2SyntheticLabTest(unittest.TestCase):
+    def test_freeze_candidate_specification_closes_selection_freedom(
+        self,
+    ) -> None:
+        specification = gate12c2.c2_freeze_candidate_specification()
+        self.assertEqual(
+            specification["alternative"],
+            "observed_smaller_than_null",
+        )
+        self.assertEqual(
+            specification["promotion_outcomes"],
+            ["broad_replicated", "strong_broad"],
+        )
+        self.assertFalse(
+            specification["partial_or_structured_is_promotional"]
+        )
+        self.assertEqual(
+            specification["inner_draw_selection"]["prefix_counts"],
+            [255, 511, 1023],
+        )
+        self.assertEqual(
+            specification["inner_draw_selection"]["prefix_basis"],
+            "accepted_valid_draw_index",
+        )
+        self.assertFalse(specification["locked_execution_authorized"])
+        self.assertFalse(
+            specification["real_held_out_execution_authorized"]
+        )
+        self.assertFalse(specification["N2_open"])
+        self.assertFalse(specification["N3_open"])
+
     def test_s0_generation_is_deterministic_and_jointly_realizable(self) -> None:
         first = gate12c2.generate_s0_cohort(
             replicate_count=8,
@@ -246,8 +276,8 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
                         q=q,
                         coverage_complete=True,
                         informative=True,
-                        median_log_ratio=1.0 if is_supported else -1.0,
-                        raw_p=0.001 if is_supported else 1.0,
+                        median_log_ratio=-1.0 if is_supported else 1.0,
+                        directional_raw_p=0.001 if is_supported else 1.0,
                     )
                 )
         return tuple(rows)
@@ -265,15 +295,20 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         self.assertFalse(no_support["any_endpoint_support"])
         self.assertTrue(endpoint_only["any_endpoint_support"])
         self.assertFalse(endpoint_only["any_run_support"])
-        self.assertFalse(endpoint_only["directional_grid_positive"])
+        self.assertFalse(endpoint_only["claim_promotion"])
         self.assertTrue(one_run["any_run_support"])
         self.assertEqual(one_run["grid_outcome"], "partial_or_structured")
-        self.assertTrue(one_run["directional_grid_positive"])
+        self.assertFalse(one_run["claim_promotion"])
+        self.assertFalse(one_run["partial_or_structured_is_promotional"])
 
         summary = gate12c2.summarize_outer_calibration(
             (no_support, endpoint_only, one_run)
         )
         self.assertEqual(summary["outer_experiment_count"], 3)
+        self.assertEqual(
+            summary["epistemic_status"],
+            "development_only_contract_v0.2_gates_applied",
+        )
         self.assertAlmostEqual(
             summary["family_wise_fpr"]["estimate"],
             2.0 / 3.0,
@@ -283,15 +318,186 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             1.0 / 3.0,
         )
         self.assertAlmostEqual(
-            summary["grid_level_positive_rate"]["estimate"],
-            1.0 / 3.0,
+            summary["claim_promotion_false_rate"]["estimate"],
+            0.0,
         )
-        self.assertEqual(summary["acceptance_rule"]["status"], "not_frozen")
+        self.assertEqual(
+            summary["calibration_gate_assessment"]["status"],
+            "development_assessment_under_contract_v0.2",
+        )
 
     def test_pipeline_decision_rejects_incomplete_outer_unit(self) -> None:
         with self.assertRaises(gate12c2.Gate12C2DevelopmentError):
             gate12c2.complete_pipeline_decision(
                 self._pipeline_inputs(set())[:-1]
+            )
+
+    def test_pipeline_direction_is_explicitly_reverse(self) -> None:
+        reverse = gate12c2.complete_pipeline_decision(
+            self._pipeline_inputs({(0, 1), (0, 2)})
+        )
+        endpoint = reverse["endpoint_rows"][0]
+        self.assertEqual(
+            endpoint["alternative"],
+            "observed_smaller_than_null",
+        )
+        self.assertGreater(endpoint["directional_effect"], 0.0)
+        self.assertTrue(endpoint["q_directional_support"])
+
+        wrong_direction = list(self._pipeline_inputs(set()))
+        wrong_direction[0] = gate12c2.EndpointDecisionInput(
+            case_id="case-00",
+            case_order=0,
+            model="model-0",
+            family="family-0",
+            q=1,
+            coverage_complete=True,
+            informative=True,
+            median_log_ratio=1.0,
+            directional_raw_p=0.001,
+        )
+        decision = gate12c2.complete_pipeline_decision(wrong_direction)
+        self.assertFalse(
+            decision["endpoint_rows"][0]["q_directional_support"]
+        )
+
+        sign_test = gate12c2.exact_directional_sign_p(
+            (-1.0, -2.0, -3.0, 1.0)
+        )
+        self.assertEqual(sign_test["directional_count"], 3)
+        self.assertAlmostEqual(sign_test["directional_raw_p"], 5.0 / 16.0)
+
+    def test_typed_seed_namespace_is_order_and_resume_invariant(self) -> None:
+        keys = [
+            gate12c2.OuterSeedNamespace(
+                surface_id="development",
+                null_candidate_id=gate12c2.N1_ID,
+                regime_id="S0_true_null",
+                effect_strength=None,
+                outer_experiment_index=3,
+                case_or_endpoint_id="case-02",
+                cycle_or_root_id="N1_reassigned_block_cohort",
+                draw_attempt_index=index,
+            )
+            for index in range(4)
+        ]
+        forward = {
+            key.draw_attempt_index: gate12c2.typed_seed_receipt("master", key)
+            for key in keys
+        }
+        reverse = {
+            key.draw_attempt_index: gate12c2.typed_seed_receipt("master", key)
+            for key in reversed(keys)
+        }
+        self.assertEqual(forward, reverse)
+        self.assertEqual(
+            forward[2],
+            gate12c2.typed_seed_receipt("master", keys[2]),
+        )
+        self.assertNotEqual(
+            forward[1]["seed_uint64"],
+            forward[2]["seed_uint64"],
+        )
+
+    def test_valid_draw_prefix_is_based_on_acceptance_not_attempt(self) -> None:
+        digest = "a" * 64
+        attempts = (
+            gate12c2.NullDrawAttempt(
+                attempt_index=0,
+                accepted=False,
+                value=None,
+                rejection_reason="unstable_cut",
+                accepted_draw_index=None,
+                seed_namespace_sha256=digest,
+            ),
+            gate12c2.NullDrawAttempt(
+                attempt_index=1,
+                accepted=True,
+                value=1.0,
+                rejection_reason=None,
+                accepted_draw_index=0,
+                seed_namespace_sha256=digest,
+            ),
+            gate12c2.NullDrawAttempt(
+                attempt_index=2,
+                accepted=False,
+                value=None,
+                rejection_reason="numerical_failure",
+                accepted_draw_index=None,
+                seed_namespace_sha256=digest,
+            ),
+            gate12c2.NullDrawAttempt(
+                attempt_index=3,
+                accepted=True,
+                value=2.0,
+                rejection_reason=None,
+                accepted_draw_index=1,
+                seed_namespace_sha256=digest,
+            ),
+        )
+        stream = gate12c2.accepted_valid_draw_stream(
+            attempts,
+            required_valid_count=2,
+        )
+        self.assertTrue(stream["complete"])
+        self.assertEqual(stream["accepted_values"], [1.0, 2.0])
+        self.assertEqual(stream["final_attempt_index"], 3)
+        stability = gate12c2.nested_inner_draw_stability_from_attempts(
+            attempts,
+            observed_value=0.5,
+            prefix_counts=(1, 2),
+        )
+        self.assertEqual(
+            stability["draw_stream_basis"],
+            "accepted_valid_draw_index",
+        )
+        self.assertEqual(stability["attempt_count_to_largest_prefix"], 4)
+
+    def test_graph_derived_outer_experiment_carries_full_hierarchy(self) -> None:
+        report = gate12c2.run_development_outer_experiment(
+            regime_id="S0_true_null",
+            master_seed="outer-unit-test",
+            outer_experiment_index=0,
+            block_count=6,
+            inner_valid_draw_count=3,
+            max_draw_attempts=16,
+        )
+        self.assertEqual(report["surface_id"], "development")
+        self.assertFalse(report["locked_execution_authorized"])
+        self.assertEqual(len(report["case_receipts"]), 12)
+        self.assertEqual(len(report["endpoint_receipts"]), 24)
+        self.assertEqual(
+            report["pipeline_decision"]["endpoint_count"],
+            24,
+        )
+        self.assertEqual(
+            report["dependency_structure"],
+            "q1_q2_share_observed_blocks_and_N1_draws_within_case",
+        )
+
+    def test_s2_outer_experiment_attributes_only_null_side_change(self) -> None:
+        report = gate12c2.run_development_s2_identification_experiment(
+            master_seed="s2-outer-unit-test",
+            outer_experiment_index=0,
+            block_count=4,
+            inner_valid_draw_count=2,
+            max_draw_attempts=10,
+        )
+        self.assertFalse(report["observed_process_modified"])
+        self.assertFalse(report["locked_execution_authorized"])
+        self.assertEqual(len(report["endpoint_rows"]), 24)
+        self.assertEqual(len(report["case_rows"]), 12)
+        for row in report["endpoint_rows"]:
+            self.assertFalse(row["observed_process_modified"])
+            self.assertIn("observed", row["component_medians"])
+            self.assertIn("N1", row["component_medians"])
+            self.assertIn(
+                "graph_unconstrained_stressor",
+                row["component_medians"],
+            )
+            self.assertEqual(
+                set(row["inflation_consistent_channels"]),
+                {"x_increased", "y_increased", "c_decreased"},
             )
 
     def test_residual_mechanism_controls_are_separated(self) -> None:

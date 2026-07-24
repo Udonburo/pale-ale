@@ -146,6 +146,10 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
         self.assertEqual(first[1].prior_tool_error_count, 1)
         self.assertEqual(first[1].normalized_position, 0.5)
         self.assertEqual(first[0].source_slot, 0)
+        self.assertEqual(
+            triage.feature_surface_receipt(surface)["information_horizon"],
+            "full_trajectory_retrospective",
+        )
 
     def test_feature_firewall_is_invariant_to_outcome_field_mutations(
         self,
@@ -272,11 +276,11 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             split_seed="split-test",
             development_groups_per_domain=1,
         )
-        development = set(split["development_group_ids"])
-        locked = set(split["locked_group_ids"])
+        development = set(split["development_cluster_ids"])
+        locked = set(split["locked_cluster_ids"])
         self.assertFalse(development & locked)
-        self.assertEqual(split["development_group_count"], 2)
-        self.assertEqual(split["locked_group_count"], 8)
+        self.assertEqual(split["development_cluster_count"], 2)
+        self.assertEqual(split["locked_cluster_count"], 8)
         self.assertEqual(split["development_trajectory_count"], 4)
         self.assertEqual(split["locked_trajectory_count"], 16)
         repeat = triage.grouped_domain_split(
@@ -285,6 +289,130 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             development_groups_per_domain=1,
         )
         self.assertEqual(split, repeat)
+
+    def test_protected_cluster_is_forced_to_locked_partition(self) -> None:
+        trajectories = tuple(
+            triage.parse_agent_process_bench_record(
+                record(
+                    query_index=query_index,
+                    sample_index=sample_index,
+                    labels=(1, -1),
+                ),
+                domain="bfcl",
+            )
+            for query_index in range(4)
+            for sample_index in range(2)
+        )
+        protected = trajectories[0].group_id
+        split = triage.grouped_domain_split(
+            trajectories,
+            split_seed="protected-test",
+            development_groups_per_domain=1,
+            protected_locked_group_ids=(protected,),
+        )
+        self.assertIn(protected, split["locked_cluster_ids"])
+        self.assertNotIn(protected, split["development_cluster_ids"])
+        self.assertEqual(
+            split["protected_locked_cluster_ids"],
+            [protected],
+        )
+
+    def test_freeze_candidate_specification_is_retrospective_and_bounded(
+        self,
+    ) -> None:
+        specification = triage.process_triage_freeze_candidate_specification()
+        self.assertEqual(
+            specification["information_horizon"],
+            "full_trajectory_retrospective",
+        )
+        self.assertEqual(
+            specification["bootstrap"]["resampling_unit"],
+            "visible_task_surface_cluster",
+        )
+        self.assertFalse(
+            specification["bootstrap"]["statistical_independence_claimed"]
+        )
+        self.assertEqual(specification["bootstrap"]["replicates"], 10_000)
+        self.assertEqual(
+            specification["baseline"]["regularization_grid"],
+            [0.1, 1.0, 10.0],
+        )
+        self.assertEqual(
+            specification["baseline"]["solver"]["algorithm"],
+            "deterministic_damped_newton",
+        )
+        self.assertFalse(
+            specification["baseline"]["intercept_penalized"]
+        )
+        self.assertEqual(
+            specification["baseline"]["cross_validation_folds"],
+            4,
+        )
+        self.assertEqual(
+            specification["baseline"]["hyperparameter_selection"][
+                "primary_metric"
+            ],
+            "out_of_fold_first_actionable_defect_recall_at_global_"
+            "10_percent_row_budget",
+        )
+        self.assertFalse(specification["structural_signal_opened"])
+        self.assertFalse(specification["locked_execution_authorized"])
+
+    def test_development_cv_manifest_is_label_blind_and_balanced(
+        self,
+    ) -> None:
+        original_records = {
+            domain: [
+                record(
+                    query_index=query_index,
+                    sample_index=sample_index,
+                    labels=(1, -1),
+                )
+                for query_index in range(4)
+                for sample_index in range(2)
+            ]
+            for domain in ("bfcl", "tau2")
+        }
+        mutated_records = json.loads(json.dumps(original_records))
+        for rows in mutated_records.values():
+            for row in rows:
+                row["step_labels"] = {
+                    key: (0 if value == -1 else -1)
+                    for key, value in row["step_labels"].items()
+                }
+                row["final_label"] = 0
+                row["ground_truth"] = {"changed": True}
+
+        def parse(records: dict[str, list[dict]]) -> tuple:
+            return tuple(
+                triage.parse_agent_process_bench_record(row, domain=domain)
+                for domain, rows in sorted(records.items())
+                for row in rows
+            )
+
+        first = parse(original_records)
+        second = parse(mutated_records)
+        development_ids = {row.group_id for row in first}
+        first_manifest = triage.development_cluster_cv_manifest(
+            first,
+            development_cluster_ids=development_ids,
+            fold_count=2,
+            seed_id="cv-label-blind-test",
+        )
+        second_manifest = triage.development_cluster_cv_manifest(
+            second,
+            development_cluster_ids=development_ids,
+            fold_count=2,
+            seed_id="cv-label-blind-test",
+        )
+        self.assertEqual(first_manifest, second_manifest)
+        self.assertEqual(first_manifest["validation_coverage_count"], 8)
+        for fold in first_manifest["folds"]:
+            self.assertEqual(fold["validation_cluster_count"], 4)
+            self.assertEqual(
+                fold["validation_domain_counts"],
+                {"bfcl": 2, "tau2": 2},
+            )
 
     def test_admission_summary_counts_groups_not_only_trajectories(self) -> None:
         trajectories = tuple(
@@ -301,7 +429,7 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
         )
         summary = triage.dataset_admission_summary(trajectories)["pooled"]
         self.assertEqual(summary["trajectory_count"], 6)
-        self.assertEqual(summary["independent_group_count"], 3)
+        self.assertEqual(summary["leakage_control_cluster_count"], 3)
         self.assertEqual(summary["positive_trajectory_count"], 3)
         self.assertEqual(summary["clean_trajectory_count"], 3)
 
@@ -330,7 +458,7 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
         self.assertEqual(result["epistemic_status"], "development_only")
         self.assertEqual(
             result["uncertainty"]["status"],
-            "not_estimated_until_grouped_resampling_rule_is_frozen",
+            "not_estimated_until_cluster_resampling_rule_is_frozen",
         )
         self.assertEqual(
             result["paired_point_differences"][
@@ -434,11 +562,11 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             development_groups_per_domain=1,
             group_aliases=expanded_manifest["group_aliases"],
         )
-        self.assertEqual(split["development_group_count"], 1)
-        self.assertEqual(split["locked_group_count"], 1)
-        selected = triage.subset_by_groups(
+        self.assertEqual(split["development_cluster_count"], 1)
+        self.assertEqual(split["locked_cluster_count"], 1)
+        selected = triage.subset_by_clusters(
             expanded,
-            split["development_group_ids"],
+            split["development_cluster_ids"],
             group_aliases=expanded_manifest["group_aliases"],
         )
         self.assertIn(len(selected), {1, 2})
@@ -530,8 +658,8 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
             augmented_scores=scores,
             budget_fraction=0.5,
         )
-        self.assertEqual(result["maximum_group_trajectory_count"], 3)
-        self.assertEqual(result["largest_group_count"], 1)
+        self.assertEqual(result["maximum_cluster_trajectory_count"], 3)
+        self.assertEqual(result["largest_cluster_count"], 1)
         self.assertEqual(result["rows"][0]["remaining_trajectory_count"], 1)
 
 

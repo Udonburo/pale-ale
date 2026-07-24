@@ -30,10 +30,13 @@ import numpy as np
 GRAPH_SCHEMA_VERSION = "gate12c2_synthetic_graph_v0.1"
 DIAGNOSTIC_SCHEMA_VERSION = "gate12c2_residual_diagnostics_v0.2"
 DEVELOPMENT_REPORT_SCHEMA_VERSION = "gate12c2_development_report_v0.2"
-PIPELINE_DECISION_SCHEMA_VERSION = "gate12c2_pipeline_decision_v0.1"
-OUTER_CALIBRATION_SCHEMA_VERSION = "gate12c2_outer_calibration_v0.1"
+PIPELINE_DECISION_SCHEMA_VERSION = "gate12c2_pipeline_decision_v0.2"
+OUTER_CALIBRATION_SCHEMA_VERSION = "gate12c2_outer_calibration_v0.2"
 MECHANISM_CONTROL_SCHEMA_VERSION = "gate12c2_mechanism_control_v0.1"
-INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.1"
+INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.2"
+SEED_NAMESPACE_SCHEMA_VERSION = "gate12c2_seed_namespace_v0.2"
+ACCEPTED_DRAW_STREAM_SCHEMA_VERSION = "gate12c2_accepted_draw_stream_v0.1"
+OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.1"
 GENERATOR_ID = "gate12c2_s0_joint_frames_pcg64_v0.1"
 S1_SHARED_COUPLING_GENERATOR_ID = (
     "gate12c2_s1_shared_node_coupling_reverse_v0.1"
@@ -44,6 +47,20 @@ S2_UNCONSTRAINED_ORIENTATION_ID = (
 )
 SEED_DERIVATION_ID = "sha256_canonical_json_to_uint64_v1"
 REFERENCE_DTYPE = "float64"
+C2_CONTRACT_VERSION = "0.2"
+PRIMARY_ALTERNATIVE = "observed_smaller_than_null"
+ALLOWED_ALTERNATIVES = frozenset(
+    {
+        PRIMARY_ALTERNATIVE,
+        "observed_larger_than_null",
+    }
+)
+CALIBRATION_PROMOTION_OUTCOMES = frozenset(
+    {
+        "strong_broad",
+        "broad_replicated",
+    }
+)
 N1_ESCALATION_POLICY = (
     "N1 is the sole primary candidate. N2 may be opened only after a "
     "documented failure of at least one predeclared required N1 gate; "
@@ -57,10 +74,131 @@ DEFAULT_RELATIVE_GAP_MIN = 1.0e-8
 DEFAULT_HOLM_ALPHA = 0.05
 DEFAULT_PRIMARY_ZERO_TOLERANCE = 1.0e-12
 PIPELINE_ENDPOINT_COUNT = 24
+ONE_SIDED_95_Z = 1.6448536269514722
+S0_MAX_POINT_FPR = 0.05
+S0_MAX_ONE_SIDED_95_UPPER = 0.07
+S1_MIN_POINT_POWER = 0.80
+S1_MIN_ONE_SIDED_95_LOWER = 0.75
+S2_MIN_POINT_IDENTIFICATION = 0.80
+S2_MIN_ONE_SIDED_95_LOWER = 0.75
+S2_MIN_LOG_NULL_INFLATION = 0.05
 
 
 class Gate12C2DevelopmentError(ValueError):
     """Raised when a development graph or operation violates its contract."""
+
+
+@dataclass(frozen=True)
+class OuterSeedNamespace:
+    """Typed, scheduling-invariant seed key for one attempted draw."""
+
+    surface_id: str
+    null_candidate_id: str
+    regime_id: str
+    effect_strength: float | None
+    outer_experiment_index: int
+    case_or_endpoint_id: str
+    cycle_or_root_id: str
+    draw_attempt_index: int
+    contract_version: str = C2_CONTRACT_VERSION
+    schema_version: str = SEED_NAMESPACE_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.surface_id not in {"development", "locked_synthetic"}:
+            raise Gate12C2DevelopmentError(
+                "surface_id must be development or locked_synthetic"
+            )
+        for name in (
+            "null_candidate_id",
+            "regime_id",
+            "case_or_endpoint_id",
+            "cycle_or_root_id",
+            "contract_version",
+        ):
+            if not str(getattr(self, name)).strip():
+                raise Gate12C2DevelopmentError(
+                    f"seed namespace field {name} must be nonempty"
+                )
+        if self.effect_strength is not None and not math.isfinite(
+            float(self.effect_strength)
+        ):
+            raise Gate12C2DevelopmentError(
+                "effect_strength must be finite when present"
+            )
+        if self.outer_experiment_index < 0 or self.draw_attempt_index < 0:
+            raise Gate12C2DevelopmentError(
+                "outer and draw attempt indices must be nonnegative"
+            )
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "contract_version": self.contract_version,
+            "surface_id": self.surface_id,
+            "null_candidate_id": self.null_candidate_id,
+            "regime_id": self.regime_id,
+            "effect_strength": (
+                None
+                if self.effect_strength is None
+                else float(self.effect_strength)
+            ),
+            "outer_experiment_index": int(self.outer_experiment_index),
+            "case_or_endpoint_id": self.case_or_endpoint_id,
+            "cycle_or_root_id": self.cycle_or_root_id,
+            "draw_attempt_index": int(self.draw_attempt_index),
+        }
+
+
+@dataclass(frozen=True)
+class NullDrawAttempt:
+    """One auditable attempted null draw before valid-prefix extraction."""
+
+    attempt_index: int
+    accepted: bool
+    value: float | None
+    rejection_reason: str | None
+    accepted_draw_index: int | None
+    seed_namespace_sha256: str
+
+    def __post_init__(self) -> None:
+        if self.attempt_index < 0:
+            raise Gate12C2DevelopmentError(
+                "draw attempt index must be nonnegative"
+            )
+        if self.accepted:
+            if (
+                self.value is None
+                or not math.isfinite(float(self.value))
+                or self.accepted_draw_index is None
+                or self.accepted_draw_index < 0
+                or self.rejection_reason is not None
+            ):
+                raise Gate12C2DevelopmentError(
+                    "accepted draw requires finite value, accepted index, "
+                    "and no rejection reason"
+                )
+        elif (
+            self.value is not None
+            or self.accepted_draw_index is not None
+            or not str(self.rejection_reason or "").strip()
+        ):
+            raise Gate12C2DevelopmentError(
+                "rejected draw requires a reason and no value or accepted index"
+            )
+        if len(self.seed_namespace_sha256) != 64:
+            raise Gate12C2DevelopmentError(
+                "seed namespace receipt must be a SHA-256 hex digest"
+            )
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "attempt_index": int(self.attempt_index),
+            "accepted": bool(self.accepted),
+            "value": None if self.value is None else float(self.value),
+            "rejection_reason": self.rejection_reason,
+            "accepted_draw_index": self.accepted_draw_index,
+            "seed_namespace_sha256": self.seed_namespace_sha256,
+        }
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
@@ -86,6 +224,119 @@ def _seed_receipt(master_seed: str) -> str:
 
 def _rng(master_seed: str, *parts: object) -> np.random.Generator:
     return np.random.Generator(np.random.PCG64(_derived_seed(master_seed, *parts)))
+
+
+def typed_seed_receipt(
+    master_seed: str,
+    namespace: OuterSeedNamespace,
+) -> dict[str, Any]:
+    """Return the exact canonical namespace and deterministic seed receipt."""
+
+    namespace_payload = namespace.as_dict()
+    namespace_bytes = _canonical_json_bytes(namespace_payload)
+    seed_payload = [
+        SEED_DERIVATION_ID,
+        str(master_seed),
+        namespace_payload,
+    ]
+    digest = hashlib.sha256(_canonical_json_bytes(seed_payload)).digest()
+    return {
+        "schema_version": SEED_NAMESPACE_SCHEMA_VERSION,
+        "seed_derivation_id": SEED_DERIVATION_ID,
+        "namespace": namespace_payload,
+        "namespace_sha256": hashlib.sha256(namespace_bytes).hexdigest(),
+        "seed_receipt_sha256": hashlib.sha256(
+            _canonical_json_bytes(seed_payload)
+        ).hexdigest(),
+        "seed_uint64": int.from_bytes(
+            digest[:8],
+            byteorder="big",
+            signed=False,
+        ),
+    }
+
+
+def typed_seed_token(
+    master_seed: str,
+    namespace: OuterSeedNamespace,
+) -> str:
+    """Return a non-secret deterministic token suitable for nested generators."""
+
+    return str(typed_seed_receipt(master_seed, namespace)["seed_receipt_sha256"])
+
+
+def c2_freeze_candidate_specification() -> dict[str, Any]:
+    """Return the contract-v0.2 decision schema without opening locked data."""
+
+    return {
+        "schema_version": "gate12c2_freeze_candidate_v0.2",
+        "epistemic_status": "development_freeze_candidate",
+        "contract_version": C2_CONTRACT_VERSION,
+        "alternative": PRIMARY_ALTERNATIVE,
+        "directional_effect": "-median_log_observed_to_null_defect",
+        "directional_p": "lower_tail_one_sided_sign_p",
+        "multiplicity": "Holm_over_24_case_q_endpoints",
+        "promotion_outcomes": sorted(CALIBRATION_PROMOTION_OUTCOMES),
+        "partial_or_structured_is_promotional": False,
+        "candidate_policy": N1_ESCALATION_POLICY,
+        "S0_gates": {
+            "family_wise_fpr": {
+                "maximum_point_estimate": S0_MAX_POINT_FPR,
+                "maximum_one_sided_95_upper": (
+                    S0_MAX_ONE_SIDED_95_UPPER
+                ),
+            },
+            "claim_promotion_false_rate": {
+                "maximum_point_estimate": S0_MAX_POINT_FPR,
+                "maximum_one_sided_95_upper": (
+                    S0_MAX_ONE_SIDED_95_UPPER
+                ),
+            },
+        },
+        "S1_gate": {
+            "minimum_primary_effect_power": S1_MIN_POINT_POWER,
+            "minimum_one_sided_95_lower": S1_MIN_ONE_SIDED_95_LOWER,
+        },
+        "S2_gate": {
+            "minimum_identification_rate": S2_MIN_POINT_IDENTIFICATION,
+            "minimum_one_sided_95_lower": (
+                S2_MIN_ONE_SIDED_95_LOWER
+            ),
+            "minimum_log_stressor_to_N1_null_defect": (
+                S2_MIN_LOG_NULL_INFLATION
+            ),
+            "component_rule": (
+                "x_increased_or_y_increased_or_c_decreased"
+            ),
+        },
+        "inner_draw_selection": {
+            "prefix_counts": [255, 511, 1023],
+            "prefix_basis": "accepted_valid_draw_index",
+            "minimum_endpoint_decision_agreement": 0.99,
+            "maximum_absolute_endpoint_median_log_ratio_shift": 0.05,
+            "maximum_absolute_S0_family_wise_fpr_shift": 0.01,
+            "prohibited_selection_bases": [
+                "best_observed_FPR",
+                "best_observed_power",
+                "most_favorable_direction",
+            ],
+        },
+        "seed_namespace_fields": [
+            "contract_version",
+            "surface_id",
+            "null_candidate_id",
+            "regime_id",
+            "effect_strength",
+            "outer_experiment_index",
+            "case_or_endpoint_id",
+            "cycle_or_root_id",
+            "draw_attempt_index",
+        ],
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+    }
 
 
 def _orthonormalize(matrix: np.ndarray) -> np.ndarray:
@@ -274,7 +525,8 @@ class EndpointDecisionInput:
     coverage_complete: bool
     informative: bool
     median_log_ratio: float | None
-    raw_p: float
+    directional_raw_p: float
+    alternative: str = PRIMARY_ALTERNATIVE
 
 
 @dataclass(frozen=True)
@@ -1974,6 +2226,991 @@ def development_s0_n1_report(
     }
 
 
+def _outer_case_grid() -> tuple[dict[str, Any], ...]:
+    """Return the fixed 4-model by 3-family synthetic case surface."""
+
+    return tuple(
+        {
+            "case_id": f"case-{case_order:02d}",
+            "case_order": case_order,
+            "model": f"model-{case_order % 4}",
+            "family": f"family-{case_order // 4}",
+        }
+        for case_order in range(12)
+    )
+
+
+def _outer_observed_cohort(
+    *,
+    regime_id: str,
+    master_seed: str,
+    outer_experiment_index: int,
+    case: Mapping[str, Any],
+    block_count: int,
+    effect_strength: float | None,
+) -> tuple[tuple[SyntheticGraph, ...], dict[str, Any]]:
+    namespace = OuterSeedNamespace(
+        surface_id="development",
+        null_candidate_id=N1_ID,
+        regime_id=regime_id,
+        effect_strength=effect_strength,
+        outer_experiment_index=outer_experiment_index,
+        case_or_endpoint_id=str(case["case_id"]),
+        cycle_or_root_id="observed_block_cohort",
+        draw_attempt_index=0,
+    )
+    receipt = typed_seed_receipt(master_seed, namespace)
+    seed_token = str(receipt["seed_receipt_sha256"])
+    family = (
+        f"outer:{case['family']}:{case['case_id']}:{regime_id}"
+    )
+    if regime_id in {"S0_true_null", "S2_null_inflation"}:
+        if effect_strength not in {None, 0.0}:
+            raise Gate12C2DevelopmentError(
+                "S0/S2 outer experiments require zero or absent effect strength"
+            )
+        cohort = generate_s0_cohort(
+            replicate_count=block_count,
+            master_seed=seed_token,
+            family=family,
+        )
+    elif regime_id == "S1_known_reverse_shared_node_coupling":
+        if effect_strength is None or effect_strength <= 0.0:
+            raise Gate12C2DevelopmentError(
+                "S1 outer experiments require a positive effect strength"
+            )
+        cohort = generate_s1_shared_node_coupling_cohort(
+            replicate_count=block_count,
+            master_seed=seed_token,
+            effect_strength=float(effect_strength),
+            family=family,
+        )
+    else:
+        raise Gate12C2DevelopmentError(
+            f"unsupported outer experiment regime: {regime_id!r}"
+        )
+    return cohort, receipt
+
+
+def run_development_outer_experiment(
+    *,
+    regime_id: str,
+    master_seed: str,
+    outer_experiment_index: int,
+    block_count: int,
+    inner_valid_draw_count: int,
+    effect_strength: float | None = None,
+    max_draw_attempts: int | None = None,
+    epsilon: float = 1.0e-12,
+) -> dict[str, Any]:
+    """Run one graph-derived 12-case by 2-q development experiment.
+
+    q=1 and q=2 share the exact observed blocks and attempted N1 draws within
+    each case. The resulting dependence is therefore carried into the complete
+    endpoint-family decision rather than replaced by independent endpoint toys.
+    Locked surface IDs are intentionally unavailable in this runner.
+    """
+
+    if outer_experiment_index < 0:
+        raise Gate12C2DevelopmentError(
+            "outer_experiment_index must be nonnegative"
+        )
+    if block_count < 4:
+        raise Gate12C2DevelopmentError(
+            "outer experiments require at least four source blocks per case"
+        )
+    if inner_valid_draw_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "inner_valid_draw_count must be positive"
+        )
+    attempt_limit = (
+        max(inner_valid_draw_count * 4, inner_valid_draw_count + 8)
+        if max_draw_attempts is None
+        else int(max_draw_attempts)
+    )
+    if attempt_limit < inner_valid_draw_count:
+        raise Gate12C2DevelopmentError(
+            "max_draw_attempts cannot be below inner_valid_draw_count"
+        )
+    if not math.isfinite(epsilon) or epsilon <= 0.0:
+        raise Gate12C2DevelopmentError(
+            "epsilon must be finite and positive"
+        )
+
+    endpoint_inputs: list[EndpointDecisionInput] = []
+    endpoint_receipts: list[dict[str, Any]] = []
+    case_receipts: list[dict[str, Any]] = []
+    for case in _outer_case_grid():
+        observed, observed_seed = _outer_observed_cohort(
+            regime_id=regime_id,
+            master_seed=master_seed,
+            outer_experiment_index=outer_experiment_index,
+            case=case,
+            block_count=block_count,
+            effect_strength=effect_strength,
+        )
+        observed_diagnostics = {
+            (block_index, q): graph_residual_diagnostics(graph, q=q)
+            for block_index, graph in enumerate(observed)
+            for q in (1, 2)
+        }
+        attempts_by_endpoint_block: dict[
+            tuple[int, int], list[NullDrawAttempt]
+        ] = {
+            (q, block_index): []
+            for q in (1, 2)
+            for block_index in range(block_count)
+        }
+        accepted_counts: Counter[tuple[int, int]] = Counter()
+        n1_audit_failure_count = 0
+        for attempt_index in range(attempt_limit):
+            if all(
+                accepted_counts[(q, block_index)]
+                >= inner_valid_draw_count
+                for q in (1, 2)
+                for block_index in range(block_count)
+            ):
+                break
+            draw_namespace = OuterSeedNamespace(
+                surface_id="development",
+                null_candidate_id=N1_ID,
+                regime_id=regime_id,
+                effect_strength=effect_strength,
+                outer_experiment_index=outer_experiment_index,
+                case_or_endpoint_id=str(case["case_id"]),
+                cycle_or_root_id="N1_reassigned_block_cohort",
+                draw_attempt_index=attempt_index,
+            )
+            draw_seed = typed_seed_token(master_seed, draw_namespace)
+            draw_seed_receipt = typed_seed_receipt(
+                master_seed,
+                draw_namespace,
+            )
+            comparison = n1_role_constrained_reassignment(
+                observed,
+                reassignment_seed=draw_seed,
+            )
+            audit = n1_reassignment_audit(observed, comparison)
+            audit_pass = audit["status"] == "pass"
+            n1_audit_failure_count += int(not audit_pass)
+            for block_index, graph in enumerate(comparison):
+                for q in (1, 2):
+                    key = (q, block_index)
+                    if accepted_counts[key] >= inner_valid_draw_count:
+                        continue
+                    observed_diagnostic = observed_diagnostics[
+                        (block_index, q)
+                    ]
+                    comparison_diagnostic = graph_residual_diagnostics(
+                        graph,
+                        q=q,
+                    )
+                    if not audit_pass:
+                        accepted = False
+                        value = None
+                        reason = "n1_assignment_audit_failed"
+                    elif observed_diagnostic.defect is None:
+                        accepted = False
+                        value = None
+                        reason = (
+                            "observed_" + observed_diagnostic.eligibility_status
+                        )
+                    elif comparison_diagnostic.defect is None:
+                        accepted = False
+                        value = None
+                        reason = (
+                            "null_" + comparison_diagnostic.eligibility_status
+                        )
+                    elif comparison_diagnostic.numerical_status != "pass":
+                        accepted = False
+                        value = None
+                        reason = "null_numerical_failure"
+                    else:
+                        accepted = True
+                        value = float(comparison_diagnostic.defect)
+                        reason = None
+                    accepted_index = (
+                        accepted_counts[key] if accepted else None
+                    )
+                    attempts_by_endpoint_block[key].append(
+                        NullDrawAttempt(
+                            attempt_index=len(
+                                attempts_by_endpoint_block[key]
+                            ),
+                            accepted=accepted,
+                            value=value,
+                            rejection_reason=reason,
+                            accepted_draw_index=accepted_index,
+                            seed_namespace_sha256=str(
+                                draw_seed_receipt["namespace_sha256"]
+                            ),
+                        )
+                    )
+                    accepted_counts[key] += int(accepted)
+
+        case_endpoint_receipts: list[dict[str, Any]] = []
+        for q in (1, 2):
+            block_scores: list[float] = []
+            block_rows: list[dict[str, Any]] = []
+            for block_index, graph in enumerate(observed):
+                observed_diagnostic = observed_diagnostics[(block_index, q)]
+                stream = accepted_valid_draw_stream(
+                    attempts_by_endpoint_block[(q, block_index)],
+                    required_valid_count=inner_valid_draw_count,
+                )
+                score = None
+                null_median = None
+                if (
+                    observed_diagnostic.defect is not None
+                    and stream["complete"]
+                ):
+                    null_median = float(
+                        np.median(stream["accepted_values"])
+                    )
+                    score = float(
+                        math.log(observed_diagnostic.defect + epsilon)
+                        - math.log(null_median + epsilon)
+                    )
+                    block_scores.append(score)
+                block_rows.append(
+                    {
+                        "source_block_id": graph.replicate_id,
+                        "q": q,
+                        "observed": observed_diagnostic.as_dict(),
+                        "inner_stream_complete": bool(stream["complete"]),
+                        "inner_attempt_count": int(
+                            stream["attempt_count_supplied"]
+                        ),
+                        "inner_accepted_count": int(
+                            stream["accepted_count_supplied"]
+                        ),
+                        "inner_rejection_reason_counts": (
+                            stream["rejection_reason_counts"]
+                        ),
+                        "null_defect_median": null_median,
+                        "block_log_observed_to_N1_defect": score,
+                    }
+                )
+            sign_test = exact_directional_sign_p(
+                block_scores,
+                alternative=PRIMARY_ALTERNATIVE,
+            )
+            coverage_complete = len(block_scores) == block_count
+            directional_raw_p = (
+                float(sign_test["directional_raw_p"])
+                if coverage_complete
+                else 1.0
+            )
+            endpoint_inputs.append(
+                EndpointDecisionInput(
+                    case_id=str(case["case_id"]),
+                    case_order=int(case["case_order"]),
+                    model=str(case["model"]),
+                    family=str(case["family"]),
+                    q=q,
+                    coverage_complete=coverage_complete,
+                    informative=(
+                        coverage_complete
+                        and sign_test["test_status"] == "informative"
+                    ),
+                    median_log_ratio=(
+                        float(np.median(block_scores))
+                        if block_scores
+                        else None
+                    ),
+                    directional_raw_p=directional_raw_p,
+                    alternative=PRIMARY_ALTERNATIVE,
+                )
+            )
+            case_endpoint_receipts.append(
+                {
+                    "endpoint_id": f"{case['case_id']}:q{q}",
+                    "q": q,
+                    "expected_block_count": block_count,
+                    "represented_block_count": len(block_scores),
+                    "coverage_complete": coverage_complete,
+                    "sign_test": sign_test,
+                    "block_rows": block_rows,
+                }
+            )
+        endpoint_receipts.extend(case_endpoint_receipts)
+        case_receipts.append(
+            {
+                **dict(case),
+                "observed_seed_receipt": observed_seed,
+                "observed_manifest_sha256": hashlib.sha256(
+                    _canonical_json_bytes(manifests(observed))
+                ).hexdigest(),
+                "n1_audit_failure_count": n1_audit_failure_count,
+                "endpoint_ids": [
+                    row["endpoint_id"] for row in case_endpoint_receipts
+                ],
+            }
+        )
+
+    decision = complete_pipeline_decision(endpoint_inputs)
+    return {
+        "schema_version": OUTER_EXPERIMENT_SCHEMA_VERSION,
+        "epistemic_status": "development_outer_experiment_only",
+        "contract_version": C2_CONTRACT_VERSION,
+        "surface_id": "development",
+        "locked_execution_authorized": False,
+        "regime_id": regime_id,
+        "effect_strength": (
+            None if effect_strength is None else float(effect_strength)
+        ),
+        "outer_experiment_index": int(outer_experiment_index),
+        "block_count_per_case": int(block_count),
+        "inner_valid_draw_count": int(inner_valid_draw_count),
+        "max_draw_attempts": int(attempt_limit),
+        "dependency_structure": (
+            "q1_q2_share_observed_blocks_and_N1_draws_within_case"
+        ),
+        "alternative": PRIMARY_ALTERNATIVE,
+        "case_receipts": case_receipts,
+        "endpoint_receipts": endpoint_receipts,
+        "pipeline_decision": decision,
+    }
+
+
+def run_development_outer_calibration(
+    *,
+    regime_id: str,
+    master_seed: str,
+    outer_experiment_count: int,
+    block_count: int,
+    inner_valid_draw_count: int,
+    effect_strength: float | None = None,
+    max_draw_attempts: int | None = None,
+) -> dict[str, Any]:
+    """Repeat complete graph-derived outer experiments in development only."""
+
+    if outer_experiment_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "outer_experiment_count must be positive"
+        )
+    experiments = tuple(
+        run_development_outer_experiment(
+            regime_id=regime_id,
+            master_seed=master_seed,
+            outer_experiment_index=outer_index,
+            block_count=block_count,
+            inner_valid_draw_count=inner_valid_draw_count,
+            effect_strength=effect_strength,
+            max_draw_attempts=max_draw_attempts,
+        )
+        for outer_index in range(outer_experiment_count)
+    )
+    decisions = tuple(
+        experiment["pipeline_decision"] for experiment in experiments
+    )
+    if regime_id == "S0_true_null":
+        summary = summarize_outer_calibration(decisions)
+    elif regime_id == "S1_known_reverse_shared_node_coupling":
+        promotion_interval = _wilson_interval(
+            sum(bool(decision["claim_promotion"]) for decision in decisions),
+            len(decisions),
+        )
+        summary = {
+            "schema_version": OUTER_CALIBRATION_SCHEMA_VERSION,
+            "epistemic_status": "development_power_assessment_only",
+            "regime_id": regime_id,
+            "effect_strength": float(effect_strength),
+            "outer_experiment_count": len(decisions),
+            "claim_promotion_power": promotion_interval,
+            "power_gate": {
+                "minimum_point_estimate": S1_MIN_POINT_POWER,
+                "minimum_one_sided_95_lower": (
+                    S1_MIN_ONE_SIDED_95_LOWER
+                ),
+                "pass": bool(
+                    promotion_interval["estimate"] >= S1_MIN_POINT_POWER
+                    and promotion_interval["wilson_one_sided_95_lower"]
+                    >= S1_MIN_ONE_SIDED_95_LOWER
+                ),
+                "locked_execution_authorized": False,
+            },
+            "grid_outcome_counts": dict(
+                sorted(
+                    Counter(
+                        str(decision["grid_outcome"])
+                        for decision in decisions
+                    ).items()
+                )
+            ),
+        }
+    else:
+        raise Gate12C2DevelopmentError(
+            f"unsupported calibration regime: {regime_id!r}"
+        )
+    return {
+        "schema_version": OUTER_CALIBRATION_SCHEMA_VERSION,
+        "epistemic_status": "development_calibration_only",
+        "regime_id": regime_id,
+        "outer_experiment_count": len(experiments),
+        "summary": summary,
+        "experiments": list(experiments),
+    }
+
+
+def _component_median(
+    rows: Sequence[Mapping[str, Any]],
+    arm: str,
+    field_name: str,
+) -> float | None:
+    values = [
+        float(row[arm][field_name])
+        for row in rows
+        if row[arm][field_name] is not None
+    ]
+    return float(np.median(values)) if values else None
+
+
+def run_development_s2_identification_experiment(
+    *,
+    master_seed: str,
+    outer_experiment_index: int,
+    block_count: int,
+    inner_valid_draw_count: int,
+    max_draw_attempts: int | None = None,
+    minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
+    epsilon: float = 1.0e-12,
+) -> dict[str, Any]:
+    """Pair N1 and the graph-unconstrained stressor on identical observations."""
+
+    if outer_experiment_index < 0:
+        raise Gate12C2DevelopmentError(
+            "outer_experiment_index must be nonnegative"
+        )
+    if block_count < 4 or inner_valid_draw_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "S2 requires at least four blocks and one valid inner draw"
+        )
+    if (
+        not math.isfinite(minimum_log_null_inflation)
+        or minimum_log_null_inflation < 0.0
+    ):
+        raise Gate12C2DevelopmentError(
+            "minimum_log_null_inflation must be finite and nonnegative"
+        )
+    attempt_limit = (
+        max(inner_valid_draw_count * 4, inner_valid_draw_count + 8)
+        if max_draw_attempts is None
+        else int(max_draw_attempts)
+    )
+    if attempt_limit < inner_valid_draw_count:
+        raise Gate12C2DevelopmentError(
+            "max_draw_attempts cannot be below inner_valid_draw_count"
+        )
+
+    component_fields = (
+        "a_q",
+        "u_q",
+        "v_q",
+        "x_q",
+        "y_q",
+        "c_q",
+        "p_L_q",
+        "p_R_q",
+    )
+    endpoint_rows: list[dict[str, Any]] = []
+    case_rows: list[dict[str, Any]] = []
+    for case in _outer_case_grid():
+        observed, observed_seed = _outer_observed_cohort(
+            regime_id="S2_null_inflation",
+            master_seed=master_seed,
+            outer_experiment_index=outer_experiment_index,
+            case=case,
+            block_count=block_count,
+            effect_strength=None,
+        )
+        observed_manifest_sha256 = hashlib.sha256(
+            _canonical_json_bytes(manifests(observed))
+        ).hexdigest()
+        pair_rows: dict[tuple[int, int], list[dict[str, Any]]] = {
+            (q, block_index): []
+            for q in (1, 2)
+            for block_index in range(block_count)
+        }
+        pair_attempts: dict[tuple[int, int], list[NullDrawAttempt]] = {
+            key: [] for key in pair_rows
+        }
+        for attempt_index in range(attempt_limit):
+            if all(
+                len(pair_rows[key]) >= inner_valid_draw_count
+                for key in pair_rows
+            ):
+                break
+            n1_namespace = OuterSeedNamespace(
+                surface_id="development",
+                null_candidate_id=N1_ID,
+                regime_id="S2_null_inflation",
+                effect_strength=None,
+                outer_experiment_index=outer_experiment_index,
+                case_or_endpoint_id=str(case["case_id"]),
+                cycle_or_root_id="N1_paired_null_cohort",
+                draw_attempt_index=attempt_index,
+            )
+            stress_namespace = OuterSeedNamespace(
+                surface_id="development",
+                null_candidate_id=S2_UNCONSTRAINED_ORIENTATION_ID,
+                regime_id="S2_null_inflation",
+                effect_strength=None,
+                outer_experiment_index=outer_experiment_index,
+                case_or_endpoint_id=str(case["case_id"]),
+                cycle_or_root_id="graph_unconstrained_stress_cohort",
+                draw_attempt_index=attempt_index,
+            )
+            n1_receipt = typed_seed_receipt(master_seed, n1_namespace)
+            stress_receipt = typed_seed_receipt(
+                master_seed,
+                stress_namespace,
+            )
+            pair_seed_sha256 = hashlib.sha256(
+                _canonical_json_bytes(
+                    [
+                        n1_receipt["namespace_sha256"],
+                        stress_receipt["namespace_sha256"],
+                    ]
+                )
+            ).hexdigest()
+            n1_graphs = n1_role_constrained_reassignment(
+                observed,
+                reassignment_seed=str(n1_receipt["seed_receipt_sha256"]),
+            )
+            stress_graphs = s2_graph_unconstrained_orientation_draw(
+                observed,
+                orientation_seed=str(
+                    stress_receipt["seed_receipt_sha256"]
+                ),
+                draw_index=attempt_index,
+            )
+            n1_audit_pass = (
+                n1_reassignment_audit(observed, n1_graphs)["status"] == "pass"
+            )
+            for block_index in range(block_count):
+                n1_realizable = bool(
+                    check_joint_realizability(n1_graphs[block_index])[
+                        "status"
+                    ]
+                    == "pass"
+                    and check_block_gram_realizability(
+                        n1_graphs[block_index]
+                    )["status"]
+                    == "pass"
+                )
+                stress_nonrealizable = bool(
+                    check_joint_realizability(stress_graphs[block_index])[
+                        "status"
+                    ]
+                    == "fail"
+                    and check_block_gram_realizability(
+                        stress_graphs[block_index]
+                    )["status"]
+                    == "fail"
+                )
+                for q in (1, 2):
+                    key = (q, block_index)
+                    if len(pair_rows[key]) >= inner_valid_draw_count:
+                        continue
+                    observed_diagnostic = graph_residual_diagnostics(
+                        observed[block_index],
+                        q=q,
+                    )
+                    n1_diagnostic = graph_residual_diagnostics(
+                        n1_graphs[block_index],
+                        q=q,
+                    )
+                    stress_diagnostic = graph_residual_diagnostics(
+                        stress_graphs[block_index],
+                        q=q,
+                    )
+                    if not n1_audit_pass:
+                        reason = "n1_assignment_audit_failed"
+                    elif not n1_realizable:
+                        reason = "n1_realizability_failed"
+                    elif not stress_nonrealizable:
+                        reason = "stressor_failed_to_break_realizability"
+                    elif observed_diagnostic.defect is None:
+                        reason = (
+                            "observed_" + observed_diagnostic.eligibility_status
+                        )
+                    elif n1_diagnostic.defect is None:
+                        reason = "n1_" + n1_diagnostic.eligibility_status
+                    elif stress_diagnostic.defect is None:
+                        reason = (
+                            "stressor_" + stress_diagnostic.eligibility_status
+                        )
+                    else:
+                        reason = None
+                    accepted_index = (
+                        len(pair_rows[key]) if reason is None else None
+                    )
+                    pair_attempts[key].append(
+                        NullDrawAttempt(
+                            attempt_index=len(pair_attempts[key]),
+                            accepted=reason is None,
+                            value=(
+                                float(stress_diagnostic.defect)
+                                if reason is None
+                                and stress_diagnostic.defect is not None
+                                else None
+                            ),
+                            rejection_reason=reason,
+                            accepted_draw_index=accepted_index,
+                            seed_namespace_sha256=pair_seed_sha256,
+                        )
+                    )
+                    if reason is None:
+                        pair_rows[key].append(
+                            {
+                                "attempt_index": attempt_index,
+                                "observed": observed_diagnostic.as_dict(),
+                                "N1": n1_diagnostic.as_dict(),
+                                "graph_unconstrained_stressor": (
+                                    stress_diagnostic.as_dict()
+                                ),
+                                "N1_realizable": n1_realizable,
+                                "stressor_nonrealizable": stress_nonrealizable,
+                                "observed_manifest_sha256": (
+                                    observed_manifest_sha256
+                                ),
+                            }
+                        )
+
+        case_endpoint_rows: list[dict[str, Any]] = []
+        for q in (1, 2):
+            completed_blocks = 0
+            per_block_component_medians: list[dict[str, Any]] = []
+            rejection_counts: Counter[str] = Counter()
+            for block_index in range(block_count):
+                key = (q, block_index)
+                stream = accepted_valid_draw_stream(
+                    pair_attempts[key],
+                    required_valid_count=inner_valid_draw_count,
+                )
+                rejection_counts.update(stream["rejection_reason_counts"])
+                rows = pair_rows[key][:inner_valid_draw_count]
+                if not stream["complete"] or len(rows) != inner_valid_draw_count:
+                    continue
+                completed_blocks += 1
+                per_block_component_medians.append(
+                    {
+                        "source_block_id": observed[block_index].replicate_id,
+                        "observed": {
+                            field_name: _component_median(
+                                rows,
+                                "observed",
+                                field_name,
+                            )
+                            for field_name in component_fields
+                        },
+                        "N1": {
+                            field_name: _component_median(
+                                rows,
+                                "N1",
+                                field_name,
+                            )
+                            for field_name in component_fields
+                        },
+                        "graph_unconstrained_stressor": {
+                            field_name: _component_median(
+                                rows,
+                                "graph_unconstrained_stressor",
+                                field_name,
+                            )
+                            for field_name in component_fields
+                        },
+                        "attempt_count": stream["attempt_count_supplied"],
+                        "accepted_count": stream["accepted_count_supplied"],
+                    }
+                )
+
+            def across_blocks(arm: str, field_name: str) -> float | None:
+                values = [
+                    float(row[arm][field_name])
+                    for row in per_block_component_medians
+                    if row[arm][field_name] is not None
+                ]
+                return float(np.median(values)) if values else None
+
+            component_medians = {
+                arm: {
+                    field_name: across_blocks(arm, field_name)
+                    for field_name in component_fields
+                }
+                for arm in (
+                    "observed",
+                    "N1",
+                    "graph_unconstrained_stressor",
+                )
+            }
+            n1_defect = component_medians["N1"]["a_q"]
+            stress_defect = component_medians[
+                "graph_unconstrained_stressor"
+            ]["a_q"]
+            log_null_inflation = (
+                None
+                if n1_defect is None or stress_defect is None
+                else float(
+                    math.log(stress_defect + epsilon)
+                    - math.log(n1_defect + epsilon)
+                )
+            )
+            n1_x = component_medians["N1"]["x_q"]
+            n1_y = component_medians["N1"]["y_q"]
+            n1_c = component_medians["N1"]["c_q"]
+            stress_x = component_medians[
+                "graph_unconstrained_stressor"
+            ]["x_q"]
+            stress_y = component_medians[
+                "graph_unconstrained_stressor"
+            ]["y_q"]
+            stress_c = component_medians[
+                "graph_unconstrained_stressor"
+            ]["c_q"]
+            channels = {
+                "x_increased": bool(
+                    n1_x is not None
+                    and stress_x is not None
+                    and stress_x > n1_x + DEFAULT_PRIMARY_ZERO_TOLERANCE
+                ),
+                "y_increased": bool(
+                    n1_y is not None
+                    and stress_y is not None
+                    and stress_y > n1_y + DEFAULT_PRIMARY_ZERO_TOLERANCE
+                ),
+                "c_decreased": bool(
+                    n1_c is not None
+                    and stress_c is not None
+                    and stress_c < n1_c - DEFAULT_PRIMARY_ZERO_TOLERANCE
+                ),
+            }
+            coverage_complete = completed_blocks == block_count
+            endpoint_identified = bool(
+                coverage_complete
+                and log_null_inflation is not None
+                and log_null_inflation > minimum_log_null_inflation
+                and any(channels.values())
+            )
+            row = {
+                "endpoint_id": f"{case['case_id']}:q{q}",
+                **dict(case),
+                "q": q,
+                "coverage_complete": coverage_complete,
+                "completed_block_count": completed_blocks,
+                "expected_block_count": block_count,
+                "observed_process_modified": False,
+                "observed_manifest_sha256": observed_manifest_sha256,
+                "log_stressor_to_N1_null_defect": log_null_inflation,
+                "minimum_log_null_inflation": (
+                    float(minimum_log_null_inflation)
+                ),
+                "inflation_consistent_channels": channels,
+                "endpoint_identified": endpoint_identified,
+                "component_medians": component_medians,
+                "rejection_reason_counts": dict(sorted(rejection_counts.items())),
+                "block_rows": per_block_component_medians,
+            }
+            endpoint_rows.append(row)
+            case_endpoint_rows.append(row)
+        case_identified = bool(
+            len(case_endpoint_rows) == 2
+            and all(row["endpoint_identified"] for row in case_endpoint_rows)
+        )
+        case_rows.append(
+            {
+                **dict(case),
+                "q1_identified": bool(
+                    case_endpoint_rows[0]["endpoint_identified"]
+                ),
+                "q2_identified": bool(
+                    case_endpoint_rows[1]["endpoint_identified"]
+                ),
+                "case_identified": case_identified,
+                "observed_seed_receipt": observed_seed,
+            }
+        )
+
+    identified_cases = [row for row in case_rows if row["case_identified"]]
+    family_counts = Counter(row["family"] for row in identified_cases)
+    model_counts = Counter(row["model"] for row in identified_cases)
+    all_families = {row["family"] for row in case_rows}
+    all_models = {row["model"] for row in case_rows}
+    breadth_pass = bool(
+        all(family_counts[family] >= 3 for family in all_families)
+        and all(model_counts[model] >= 2 for model in all_models)
+    )
+    identified_case_count = len(identified_cases)
+    identification_success = bool(
+        identified_case_count == 12
+        or (identified_case_count >= 10 and breadth_pass)
+    )
+    return {
+        "schema_version": OUTER_EXPERIMENT_SCHEMA_VERSION,
+        "epistemic_status": "development_s2_identification_only",
+        "contract_version": C2_CONTRACT_VERSION,
+        "surface_id": "development",
+        "locked_execution_authorized": False,
+        "regime_id": "S2_null_inflation",
+        "outer_experiment_index": int(outer_experiment_index),
+        "block_count_per_case": int(block_count),
+        "inner_valid_draw_count": int(inner_valid_draw_count),
+        "observed_process_modified": False,
+        "paired_null_arms": [
+            N1_ID,
+            S2_UNCONSTRAINED_ORIENTATION_ID,
+        ],
+        "identified_case_count": identified_case_count,
+        "breadth_pass": breadth_pass,
+        "identification_success": identification_success,
+        "endpoint_rows": endpoint_rows,
+        "case_rows": case_rows,
+    }
+
+
+def run_development_s2_identification_calibration(
+    *,
+    master_seed: str,
+    outer_experiment_count: int,
+    block_count: int,
+    inner_valid_draw_count: int,
+    max_draw_attempts: int | None = None,
+    minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
+) -> dict[str, Any]:
+    """Estimate the development S2 attribution rate over full outer units."""
+
+    if outer_experiment_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "outer_experiment_count must be positive"
+        )
+    experiments = tuple(
+        run_development_s2_identification_experiment(
+            master_seed=master_seed,
+            outer_experiment_index=outer_index,
+            block_count=block_count,
+            inner_valid_draw_count=inner_valid_draw_count,
+            max_draw_attempts=max_draw_attempts,
+            minimum_log_null_inflation=minimum_log_null_inflation,
+        )
+        for outer_index in range(outer_experiment_count)
+    )
+    interval = _wilson_interval(
+        sum(
+            bool(experiment["identification_success"])
+            for experiment in experiments
+        ),
+        len(experiments),
+    )
+    return {
+        "schema_version": OUTER_CALIBRATION_SCHEMA_VERSION,
+        "epistemic_status": "development_s2_calibration_only",
+        "regime_id": "S2_null_inflation",
+        "outer_experiment_count": len(experiments),
+        "identification_rate": interval,
+        "identification_gate": {
+            "minimum_point_estimate": S2_MIN_POINT_IDENTIFICATION,
+            "minimum_one_sided_95_lower": (
+                S2_MIN_ONE_SIDED_95_LOWER
+            ),
+            "minimum_log_null_inflation": float(
+                minimum_log_null_inflation
+            ),
+            "required_component_channels": [
+                "x_increased",
+                "y_increased",
+                "c_decreased",
+            ],
+            "channel_rule": "at_least_one",
+            "pass": bool(
+                interval["estimate"] >= S2_MIN_POINT_IDENTIFICATION
+                and interval["wilson_one_sided_95_lower"]
+                >= S2_MIN_ONE_SIDED_95_LOWER
+            ),
+            "locked_execution_authorized": False,
+        },
+        "experiments": list(experiments),
+    }
+
+
+def _directional_effect(
+    median_log_ratio: float | None,
+    *,
+    alternative: str,
+) -> float | None:
+    if alternative not in ALLOWED_ALTERNATIVES:
+        raise Gate12C2DevelopmentError(
+            f"unsupported directional alternative: {alternative!r}"
+        )
+    if median_log_ratio is None:
+        return None
+    numeric = float(median_log_ratio)
+    if not math.isfinite(numeric):
+        raise Gate12C2DevelopmentError(
+            "median log ratio must be finite when present"
+        )
+    return (
+        -numeric
+        if alternative == "observed_smaller_than_null"
+        else numeric
+    )
+
+
+def exact_directional_sign_p(
+    block_scores: Sequence[float],
+    *,
+    alternative: str = PRIMARY_ALTERNATIVE,
+    zero_tolerance: float = DEFAULT_PRIMARY_ZERO_TOLERANCE,
+) -> dict[str, Any]:
+    """Exact one-sided sign value in the explicitly declared direction."""
+
+    if alternative not in ALLOWED_ALTERNATIVES:
+        raise Gate12C2DevelopmentError(
+            f"unsupported directional alternative: {alternative!r}"
+        )
+    if not math.isfinite(zero_tolerance) or zero_tolerance < 0.0:
+        raise Gate12C2DevelopmentError(
+            "zero_tolerance must be finite and nonnegative"
+        )
+    signs = [
+        _sign_with_tolerance(float(value), zero_tolerance=zero_tolerance)
+        for value in block_scores
+    ]
+    if any(sign is None for sign in signs):
+        raise Gate12C2DevelopmentError(
+            "block scores must be finite for the sign test"
+        )
+    positive_count = sum(sign == 1 for sign in signs)
+    negative_count = sum(sign == -1 for sign in signs)
+    tie_count = sum(sign == 0 for sign in signs)
+    directional_count = (
+        negative_count
+        if alternative == "observed_smaller_than_null"
+        else positive_count
+    )
+    informative_count = positive_count + negative_count
+    if informative_count == 0:
+        raw_p = 1.0
+        status = "non_informative"
+    else:
+        numerator = sum(
+            math.comb(informative_count, count)
+            for count in range(directional_count, informative_count + 1)
+        )
+        raw_p = float(numerator / (2**informative_count))
+        status = "informative"
+    return {
+        "alternative": alternative,
+        "test_status": status,
+        "positive_count": int(positive_count),
+        "negative_count": int(negative_count),
+        "tie_count": int(tie_count),
+        "directional_count": int(directional_count),
+        "informative_count": int(informative_count),
+        "directional_raw_p": raw_p,
+    }
+
+
 def _holm_adjusted_p_values(
     endpoints: Sequence[EndpointDecisionInput],
 ) -> dict[tuple[str, int], tuple[float, int]]:
@@ -1984,7 +3221,7 @@ def _holm_adjusted_p_values(
     ordered = sorted(
         endpoints,
         key=lambda endpoint: (
-            float(endpoint.raw_p),
+            float(endpoint.directional_raw_p),
             int(endpoint.case_order),
             int(endpoint.q),
         ),
@@ -1992,7 +3229,7 @@ def _holm_adjusted_p_values(
     adjusted: dict[tuple[str, int], tuple[float, int]] = {}
     running = 0.0
     for position, endpoint in enumerate(ordered, start=1):
-        raw_p = float(endpoint.raw_p)
+        raw_p = float(endpoint.directional_raw_p)
         if not math.isfinite(raw_p) or not 0.0 <= raw_p <= 1.0:
             raise Gate12C2DevelopmentError(
                 f"invalid raw p-value for {endpoint.case_id}/q={endpoint.q}"
@@ -2024,7 +3261,7 @@ def complete_pipeline_decision(
     holm_alpha: float = DEFAULT_HOLM_ALPHA,
     zero_tolerance: float = DEFAULT_PRIMARY_ZERO_TOLERANCE,
 ) -> dict[str, Any]:
-    """Run one complete Gate12C-style 24-endpoint decision hierarchy.
+    """Run one complete reverse-direction 24-endpoint decision hierarchy.
 
     This function defines the unit that an outer S0 calibration must repeat.
     It intentionally refuses single-triangle or single-endpoint substitutes.
@@ -2039,6 +3276,12 @@ def complete_pipeline_decision(
     keys = [(endpoint.case_id, endpoint.q) for endpoint in endpoints]
     if len(set(keys)) != len(keys):
         raise Gate12C2DevelopmentError("duplicate case/q endpoint")
+    alternatives = {endpoint.alternative for endpoint in endpoints}
+    if alternatives != {PRIMARY_ALTERNATIVE}:
+        raise Gate12C2DevelopmentError(
+            "Gate12C-2 calibration requires the explicit "
+            f"{PRIMARY_ALTERNATIVE!r} alternative"
+        )
     case_orders = {
         endpoint.case_id: endpoint.case_order for endpoint in endpoints
     }
@@ -2079,11 +3322,15 @@ def complete_pipeline_decision(
                 f"non-finite median for {endpoint.case_id}/q={endpoint.q}"
             )
         adjusted_p, sort_position = adjusted[(endpoint.case_id, endpoint.q)]
-        q_support = bool(
+        directional_effect = _directional_effect(
+            median,
+            alternative=endpoint.alternative,
+        )
+        q_directional_support = bool(
             endpoint.coverage_complete
             and endpoint.informative
-            and median is not None
-            and float(median) > zero_tolerance
+            and directional_effect is not None
+            and directional_effect > zero_tolerance
             and adjusted_p < holm_alpha
         )
         row = {
@@ -2095,13 +3342,15 @@ def complete_pipeline_decision(
             "q": int(endpoint.q),
             "coverage_complete": bool(endpoint.coverage_complete),
             "informative": bool(endpoint.informative),
+            "alternative": endpoint.alternative,
             "median_log_ratio": (
                 None if median is None else float(median)
             ),
-            "raw_p": float(endpoint.raw_p),
-            "holm_adjusted_p": adjusted_p,
+            "directional_effect": directional_effect,
+            "directional_raw_p": float(endpoint.directional_raw_p),
+            "holm_adjusted_directional_p": adjusted_p,
             "holm_sort_position": sort_position,
-            "q_support": q_support,
+            "q_directional_support": q_directional_support,
             "run_support": False,
             "q_discordant_run": None,
         }
@@ -2114,7 +3363,10 @@ def complete_pipeline_decision(
     ):
         q1 = by_q[1]
         q2 = by_q[2]
-        run_support = bool(q1["q_support"] and q2["q_support"])
+        run_support = bool(
+            q1["q_directional_support"]
+            and q2["q_directional_support"]
+        )
         sign_q1 = _sign_with_tolerance(
             q1["median_log_ratio"],
             zero_tolerance=zero_tolerance,
@@ -2127,7 +3379,8 @@ def complete_pipeline_decision(
             None
             if sign_q1 is None or sign_q2 is None
             else bool(
-                bool(q1["q_support"]) != bool(q2["q_support"])
+                bool(q1["q_directional_support"])
+                != bool(q2["q_directional_support"])
                 or sign_q1 != sign_q2
             )
         )
@@ -2176,27 +3429,28 @@ def complete_pipeline_decision(
     else:
         grid_outcome = "partial_or_structured"
 
-    directional_grid_positive = grid_outcome in {
-        "strong_broad",
-        "broad_replicated",
-        "partial_or_structured",
-    }
+    claim_promotion = grid_outcome in CALIBRATION_PROMOTION_OUTCOMES
     return {
         "schema_version": PIPELINE_DECISION_SCHEMA_VERSION,
         "epistemic_status": "development_calibration_unit",
-        "independent_unit": "complete_24_endpoint_outer_experiment",
+        "outer_monte_carlo_unit": "complete_24_endpoint_outer_experiment",
+        "alternative": PRIMARY_ALTERNATIVE,
         "holm_alpha": float(holm_alpha),
         "zero_tolerance": float(zero_tolerance),
         "endpoint_count": len(endpoint_rows),
-        "q_support_count": sum(row["q_support"] for row in endpoint_rows),
+        "q_directional_support_count": sum(
+            row["q_directional_support"] for row in endpoint_rows
+        ),
         "any_endpoint_support": any(
-            row["q_support"] for row in endpoint_rows
+            row["q_directional_support"] for row in endpoint_rows
         ),
         "supporting_run_count": support_count,
         "any_run_support": support_count > 0,
         "q_discordant_run_count": q_discordant_count,
         "grid_outcome": grid_outcome,
-        "directional_grid_positive": directional_grid_positive,
+        "claim_promotion": claim_promotion,
+        "promotion_outcomes": sorted(CALIBRATION_PROMOTION_OUTCOMES),
+        "partial_or_structured_is_promotional": False,
         "endpoint_rows": endpoint_rows,
         "run_rows": run_rows,
     }
@@ -2206,7 +3460,7 @@ def _wilson_interval(
     successes: int,
     total: int,
     *,
-    z: float = 1.959963984540054,
+    z: float = ONE_SIDED_95_Z,
 ) -> dict[str, float | int]:
     if total <= 0 or successes < 0 or successes > total:
         raise Gate12C2DevelopmentError("invalid binomial counts")
@@ -2225,8 +3479,54 @@ def _wilson_interval(
         "successes": int(successes),
         "total": int(total),
         "estimate": float(proportion),
-        "wilson_95_lower": float(max(0.0, center - half_width)),
-        "wilson_95_upper": float(min(1.0, center + half_width)),
+        "confidence_level": 0.95,
+        "interval_sidedness": "one_sided_bounds",
+        "wilson_one_sided_95_lower": float(
+            max(0.0, center - half_width)
+        ),
+        "wilson_one_sided_95_upper": float(
+            min(1.0, center + half_width)
+        ),
+    }
+
+
+def _assess_s0_calibration_gates(
+    *,
+    family_wise: Mapping[str, Any],
+    claim_promotion: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Apply contract-v0.2 S0 gates to development estimates."""
+
+    def passes(interval: Mapping[str, Any]) -> bool:
+        return bool(
+            float(interval["estimate"]) <= S0_MAX_POINT_FPR
+            and float(interval["wilson_one_sided_95_upper"])
+            <= S0_MAX_ONE_SIDED_95_UPPER
+        )
+
+    family_wise_pass = passes(family_wise)
+    promotion_pass = passes(claim_promotion)
+    return {
+        "status": "development_assessment_under_contract_v0.2",
+        "contract_version": C2_CONTRACT_VERSION,
+        "family_wise_safety": {
+            "maximum_point_estimate": S0_MAX_POINT_FPR,
+            "maximum_one_sided_95_upper": (
+                S0_MAX_ONE_SIDED_95_UPPER
+            ),
+            "pass": family_wise_pass,
+        },
+        "claim_promotion_safety": {
+            "promotion_outcomes": sorted(CALIBRATION_PROMOTION_OUTCOMES),
+            "partial_or_structured_included": False,
+            "maximum_point_estimate": S0_MAX_POINT_FPR,
+            "maximum_one_sided_95_upper": (
+                S0_MAX_ONE_SIDED_95_UPPER
+            ),
+            "pass": promotion_pass,
+        },
+        "overall_pass": bool(family_wise_pass and promotion_pass),
+        "locked_execution_authorized": False,
     }
 
 
@@ -2235,8 +3535,9 @@ def summarize_outer_calibration(
 ) -> dict[str, Any]:
     """Summarize repeated complete-pipeline outer experiments.
 
-    Endpoint FPR, family-wise FPR, run-level FPR, and grid-level positive rate
-    remain separate estimands.  No acceptance threshold is supplied here.
+    Endpoint FPR, family-wise FPR, run-level FPR, and claim-promotion rate
+    remain separate estimands. Contract-v0.2 safety gates are applied without
+    upgrading the development-only epistemic status.
     """
 
     if not decisions:
@@ -2247,13 +3548,13 @@ def summarize_outer_calibration(
     endpoint_successes: Counter[str] = Counter()
     any_endpoint_count = 0
     any_run_count = 0
-    grid_positive_count = 0
+    claim_promotion_count = 0
     outcome_counts: Counter[str] = Counter()
     for index, decision in enumerate(decisions):
         if (
             decision.get("schema_version")
             != PIPELINE_DECISION_SCHEMA_VERSION
-            or decision.get("independent_unit")
+            or decision.get("outer_monte_carlo_unit")
             != "complete_24_endpoint_outer_experiment"
             or int(decision.get("endpoint_count", -1))
             != PIPELINE_ENDPOINT_COUNT
@@ -2275,33 +3576,38 @@ def summarize_outer_calibration(
             )
         for row in rows:
             endpoint_successes[str(row["endpoint_id"])] += int(
-                bool(row["q_support"])
+                bool(row["q_directional_support"])
             )
         any_endpoint_count += int(bool(decision["any_endpoint_support"]))
         any_run_count += int(bool(decision["any_run_support"]))
-        grid_positive_count += int(bool(decision["directional_grid_positive"]))
+        claim_promotion_count += int(bool(decision["claim_promotion"]))
         outcome_counts[str(decision["grid_outcome"])] += 1
 
     total = len(decisions)
     assert expected_endpoint_ids is not None
     return {
         "schema_version": OUTER_CALIBRATION_SCHEMA_VERSION,
-        "epistemic_status": "development_only_no_acceptance_threshold",
-        "outer_independent_unit": "complete_24_endpoint_outer_experiment",
+        "epistemic_status": (
+            "development_only_contract_v0.2_gates_applied"
+        ),
+        "outer_monte_carlo_unit": "complete_24_endpoint_outer_experiment",
+        "alternative": PRIMARY_ALTERNATIVE,
         "outer_experiment_count": total,
         "type_i_estimands": {
             "endpoint_fpr": (
-                "P(q_support for a named case/q endpoint under S0)"
+                "P(reverse-direction support for a named case/q endpoint "
+                "under S0)"
             ),
             "family_wise_fpr": (
-                "P(at least one of 24 endpoints has q_support under S0)"
+                "P(at least one of 24 endpoints supports the reverse "
+                "direction under S0)"
             ),
             "run_level_fpr": (
                 "P(at least one case has both q endpoints supported under S0)"
             ),
-            "grid_level_positive_rate": (
-                "P(final grid outcome is strong_broad, broad_replicated, "
-                "or partial_or_structured under S0)"
+            "claim_promotion_false_rate": (
+                "P(final grid outcome is strong_broad or broad_replicated "
+                "under S0)"
             ),
         },
         "endpoint_fpr": {
@@ -2313,20 +3619,120 @@ def summarize_outer_calibration(
         },
         "family_wise_fpr": _wilson_interval(any_endpoint_count, total),
         "run_level_fpr": _wilson_interval(any_run_count, total),
-        "grid_level_positive_rate": _wilson_interval(
-            grid_positive_count,
+        "claim_promotion_false_rate": _wilson_interval(
+            claim_promotion_count,
             total,
         ),
         "grid_outcome_counts": dict(sorted(outcome_counts.items())),
-        "acceptance_rule": {
-            "status": "not_frozen",
-            "warning": (
-                "Sample counts alone do not define acceptance. FPR, power, "
-                "null-inflation, nuisance-match, and instability thresholds "
-                "must be frozen before locked execution."
+        "calibration_gate_assessment": _assess_s0_calibration_gates(
+            family_wise=_wilson_interval(any_endpoint_count, total),
+            claim_promotion=_wilson_interval(
+                claim_promotion_count,
+                total,
             ),
-        },
+        ),
     }
+
+
+def accepted_valid_draw_stream(
+    attempts: Sequence[NullDrawAttempt],
+    *,
+    required_valid_count: int,
+) -> dict[str, Any]:
+    """Extract an auditable valid-draw prefix from ordered attempts."""
+
+    if required_valid_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "required_valid_count must be positive"
+        )
+    ordered = tuple(attempts)
+    expected_attempt_indices = tuple(range(len(ordered)))
+    actual_attempt_indices = tuple(attempt.attempt_index for attempt in ordered)
+    if actual_attempt_indices != expected_attempt_indices:
+        raise Gate12C2DevelopmentError(
+            "draw attempts must be contiguous and ordered from zero"
+        )
+    accepted = [attempt for attempt in ordered if attempt.accepted]
+    expected_accepted_indices = list(range(len(accepted)))
+    actual_accepted_indices = [
+        int(attempt.accepted_draw_index)
+        for attempt in accepted
+        if attempt.accepted_draw_index is not None
+    ]
+    if actual_accepted_indices != expected_accepted_indices:
+        raise Gate12C2DevelopmentError(
+            "accepted draw indices must be contiguous in attempt order"
+        )
+    prefix = accepted[:required_valid_count]
+    complete = len(prefix) == required_valid_count
+    final_attempt_index = (
+        prefix[-1].attempt_index if complete and prefix else None
+    )
+    return {
+        "schema_version": ACCEPTED_DRAW_STREAM_SCHEMA_VERSION,
+        "required_valid_count": int(required_valid_count),
+        "attempt_count_supplied": len(ordered),
+        "accepted_count_supplied": len(accepted),
+        "complete": complete,
+        "final_attempt_index": final_attempt_index,
+        "accepted_values": [
+            float(attempt.value)
+            for attempt in prefix
+            if attempt.value is not None
+        ],
+        "accepted_seed_namespace_sha256": [
+            attempt.seed_namespace_sha256 for attempt in prefix
+        ],
+        "rejection_reason_counts": dict(
+            sorted(
+                Counter(
+                    str(attempt.rejection_reason)
+                    for attempt in ordered
+                    if not attempt.accepted
+                ).items()
+            )
+        ),
+        "attempts": [attempt.as_dict() for attempt in ordered],
+    }
+
+
+def nested_inner_draw_stability_from_attempts(
+    attempts: Sequence[NullDrawAttempt],
+    *,
+    observed_value: float,
+    prefix_counts: Sequence[int] = (255, 511, 1023),
+    decision_alpha: float = 0.05,
+    runtime_seconds_by_prefix: Mapping[int, float] | None = None,
+) -> dict[str, Any]:
+    """Evaluate nested prefixes after rejection, never by attempt prefix."""
+
+    counts = tuple(int(count) for count in prefix_counts)
+    if not counts:
+        raise Gate12C2DevelopmentError("prefix_counts must be nonempty")
+    stream = accepted_valid_draw_stream(
+        attempts,
+        required_valid_count=max(counts),
+    )
+    if not stream["complete"]:
+        raise Gate12C2DevelopmentError(
+            "insufficient accepted valid draws for the largest prefix"
+        )
+    report = nested_inner_draw_stability(
+        stream["accepted_values"],
+        observed_value=observed_value,
+        prefix_counts=counts,
+        decision_alpha=decision_alpha,
+        runtime_seconds_by_prefix=runtime_seconds_by_prefix,
+    )
+    report["draw_stream_basis"] = "accepted_valid_draw_index"
+    report["attempt_count_to_largest_prefix"] = (
+        int(stream["final_attempt_index"]) + 1
+    )
+    report["rejection_reason_counts"] = stream["rejection_reason_counts"]
+    report["accepted_seed_namespace_sha256"] = (
+        stream["accepted_seed_namespace_sha256"]
+    )
+    return report
 
 
 def nested_inner_draw_stability(
