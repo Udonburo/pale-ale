@@ -170,6 +170,51 @@ class Gate12C2BatchedKernelTest(unittest.TestCase):
                     batched.row(index),
                 )
 
+    def test_array_n1_reproduces_object_donors_and_cycle_matrices(self) -> None:
+        observed = gate12c2.generate_s1_shared_node_coupling_cohort(
+            replicate_count=12,
+            master_seed="array-n1-observed",
+            effect_strength=0.25,
+        )
+        seed = "array-n1-reassignment"
+        reference = gate12c2.n1_role_constrained_reassignment(
+            observed,
+            reassignment_seed=seed,
+        )
+        array = gate12c2.n1_role_constrained_array_reassignment(
+            observed,
+            reassignment_seed=seed,
+        )
+        self.assertEqual(array.audit["status"], "pass")
+        self.assertEqual(
+            array.audit["fixed_point_count"],
+            0,
+        )
+        source_index_by_reference = {
+            f"{graph.replicate_id}/{node.node_id}": graph_index
+            for graph_index, graph in enumerate(observed)
+            for node in graph.nodes
+        }
+        for graph_index, graph in enumerate(reference):
+            donor_manifest = graph.metadata["donor_node_ids"]
+            for role_index, node_id in enumerate(graph.cycle_node_ids):
+                self.assertEqual(
+                    int(array.donor_indices[graph_index, role_index]),
+                    source_index_by_reference[donor_manifest[node_id]],
+                )
+            expected_matrices = gate12c2.cycle_matrices(graph)
+            for actual_matrices, expected_matrix in zip(
+                (array.m0, array.m1, array.m2),
+                expected_matrices,
+                strict=True,
+            ):
+                np.testing.assert_allclose(
+                    actual_matrices[graph_index],
+                    expected_matrix,
+                    rtol=0.0,
+                    atol=0.0,
+                )
+
     def test_rejects_malformed_or_nonfinite_batches(self) -> None:
         identity = np.eye(3, dtype=np.float64)
         with self.assertRaises(gate12c2.Gate12C2DevelopmentError):

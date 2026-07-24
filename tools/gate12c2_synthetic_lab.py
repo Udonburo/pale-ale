@@ -1445,6 +1445,199 @@ def n1_role_constrained_reassignment(
     return tuple(result)
 
 
+@dataclass(frozen=True)
+class N1ArrayReassignment:
+    """Array-native representation of one exact N1 reassignment draw."""
+
+    replicate_ids: tuple[str, ...]
+    donor_indices: np.ndarray = field(repr=False)
+    reassigned_frames: np.ndarray = field(repr=False)
+    m0: np.ndarray = field(repr=False)
+    m1: np.ndarray = field(repr=False)
+    m2: np.ndarray = field(repr=False)
+    audit: Mapping[str, Any]
+    kernel_id: str = "n1_array_reassignment_equivalent_v0.1"
+
+    def __post_init__(self) -> None:
+        donor_indices = np.asarray(self.donor_indices, dtype=np.int64)
+        frames = np.asarray(self.reassigned_frames, dtype=np.float64)
+        matrices = [
+            np.asarray(getattr(self, name), dtype=np.float64)
+            for name in ("m0", "m1", "m2")
+        ]
+        batch_size = len(self.replicate_ids)
+        if donor_indices.shape != (batch_size, 3):
+            raise Gate12C2DevelopmentError(
+                "N1 array donor indices must have shape (batch, 3)"
+            )
+        if frames.ndim != 4 or frames.shape[:2] != (batch_size, 3):
+            raise Gate12C2DevelopmentError(
+                "N1 array frames must have shape (batch, 3, ambient, rank)"
+            )
+        if any(
+            matrix.ndim != 3 or matrix.shape[0] != batch_size
+            for matrix in matrices
+        ):
+            raise Gate12C2DevelopmentError(
+                "N1 array cycle matrices must share the reassignment batch"
+            )
+        object.__setattr__(self, "donor_indices", donor_indices.copy())
+        object.__setattr__(self, "reassigned_frames", frames.copy())
+        for name, matrix in zip(("m0", "m1", "m2"), matrices, strict=True):
+            object.__setattr__(self, name, matrix.copy())
+
+
+def n1_role_constrained_array_reassignment(
+    graphs: Sequence[SyntheticGraph],
+    *,
+    reassignment_seed: str,
+) -> N1ArrayReassignment:
+    """Reproduce N1 exactly without materializing node and graph objects.
+
+    This kernel is intentionally limited to the three-node, one-cycle cohort
+    used by the C-2 outer laboratory.  It uses the same canonical hash sort and
+    cyclic donor assignment as :func:`n1_role_constrained_reassignment`.
+    """
+
+    if len(graphs) < 2:
+        raise Gate12C2DevelopmentError("N1 requires at least two graphs")
+    replicate_ids = tuple(graph.replicate_id for graph in graphs)
+    if len(set(replicate_ids)) != len(replicate_ids):
+        raise Gate12C2DevelopmentError("replicate IDs must be unique")
+
+    cycle_nodes: list[tuple[NodeFrame, NodeFrame, NodeFrame]] = []
+    for graph in graphs:
+        if len(graph.nodes) != 3 or len(graph.cycle_node_ids) != 3:
+            raise Gate12C2DevelopmentError(
+                "N1 array kernel requires exactly three nodes in one cycle"
+            )
+        node_map = graph.node_map()
+        ordered = tuple(node_map[node_id] for node_id in graph.cycle_node_ids)
+        if {node.node_id for node in ordered} != {
+            node.node_id for node in graph.nodes
+        }:
+            raise Gate12C2DevelopmentError(
+                "N1 array kernel requires every node to lie on the cycle"
+            )
+        cycle_nodes.append(ordered)
+
+    frame_shapes = {
+        tuple(node.frame.shape)
+        for ordered in cycle_nodes
+        for node in ordered
+    }
+    if len(frame_shapes) != 1:
+        raise Gate12C2DevelopmentError(
+            "N1 array kernel requires one shared node-frame shape"
+        )
+    role_strata = tuple(cycle_nodes[0][role_index].stratum for role_index in range(3))
+    if len(set(role_strata)) != 3:
+        raise Gate12C2DevelopmentError(
+            "N1 array kernel requires three distinct cycle-node strata"
+        )
+    for ordered in cycle_nodes:
+        if tuple(node.stratum for node in ordered) != role_strata:
+            raise Gate12C2DevelopmentError(
+                "N1 array kernel requires one fixed stratum per cycle role"
+            )
+
+    batch_size = len(graphs)
+    donor_indices = np.empty((batch_size, 3), dtype=np.int64)
+    for role_index, stratum in enumerate(role_strata):
+        target_indices = sorted(
+            range(batch_size),
+            key=lambda graph_index: hashlib.sha256(
+                _canonical_json_bytes(
+                    [
+                        N1_ID,
+                        reassignment_seed,
+                        list(stratum),
+                        replicate_ids[graph_index],
+                        cycle_nodes[graph_index][role_index].node_id,
+                    ]
+                )
+            ).hexdigest(),
+        )
+        for position, target_index in enumerate(target_indices):
+            donor_indices[target_index, role_index] = target_indices[
+                (position + 1) % batch_size
+            ]
+
+    source_frames = np.stack(
+        [
+            np.stack([node.frame for node in ordered], axis=0)
+            for ordered in cycle_nodes
+        ],
+        axis=0,
+    )
+    role_indices = np.arange(3, dtype=np.int64)[None, :]
+    reassigned_frames = source_frames[donor_indices, role_indices]
+    m0 = np.asarray(
+        np.swapaxes(reassigned_frames[:, 1], 1, 2)
+        @ reassigned_frames[:, 0],
+        dtype=np.float64,
+    )
+    m1 = np.asarray(
+        np.swapaxes(reassigned_frames[:, 2], 1, 2)
+        @ reassigned_frames[:, 1],
+        dtype=np.float64,
+    )
+    m2 = np.asarray(
+        np.swapaxes(reassigned_frames[:, 0], 1, 2)
+        @ reassigned_frames[:, 2],
+        dtype=np.float64,
+    )
+
+    fixed_point_count = int(
+        np.sum(
+            donor_indices
+            == np.arange(batch_size, dtype=np.int64)[:, None]
+        )
+    )
+    reused_donor_counts: dict[str, int] = {}
+    unused_donor_count = 0
+    for role_index in range(3):
+        counts = np.bincount(
+            donor_indices[:, role_index],
+            minlength=batch_size,
+        )
+        unused_donor_count += int(np.sum(counts == 0))
+        for donor_index in np.flatnonzero(counts > 1):
+            reused_donor_counts[
+                f"role-{role_index}/source-{int(donor_index)}"
+            ] = int(counts[donor_index])
+    audit_status = (
+        "pass"
+        if fixed_point_count == 0
+        and unused_donor_count == 0
+        and not reused_donor_counts
+        else "fail"
+    )
+    audit = {
+        "audit_id": "n1_array_derangement_audit_v0.1",
+        "status": audit_status,
+        "assignment_count": int(batch_size * 3),
+        "stratum_count": 3,
+        "stratum_size": int(batch_size),
+        "fixed_point_count": fixed_point_count,
+        "same_graph_assignment_count": fixed_point_count,
+        "crossed_stratum_count": 0,
+        "unused_donor_count": unused_donor_count,
+        "reused_donor_counts": reused_donor_counts,
+        "canonical_hash_sort_shared_with_object_generator": True,
+        "edge_construction": "target_frame_transpose_times_source_frame",
+    }
+    return N1ArrayReassignment(
+        replicate_ids=replicate_ids,
+        donor_indices=donor_indices,
+        reassigned_frames=reassigned_frames,
+        m0=m0,
+        m1=m1,
+        m2=m2,
+        audit=audit,
+    )
+
+
 def s2_graph_unconstrained_orientation_draw(
     graphs: Sequence[SyntheticGraph],
     *,
@@ -2991,22 +3184,42 @@ def run_development_outer_experiment(
                 master_seed,
                 draw_namespace,
             )
-            comparison = n1_role_constrained_reassignment(
-                observed,
-                reassignment_seed=draw_seed,
-            )
-            audit = n1_reassignment_audit(observed, comparison)
-            audit_pass = audit["status"] == "pass"
-            n1_audit_failure_count += int(not audit_pass)
-            comparison_diagnostics = {
-                q: cohort_residual_diagnostics(
-                    comparison,
-                    q=q,
-                    diagnostic_kernel=diagnostic_kernel,
+            comparison_batches: dict[
+                int,
+                BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
+            ]
+            if diagnostic_kernel == BATCHED_DIAGNOSTIC_KERNEL:
+                array_comparison = n1_role_constrained_array_reassignment(
+                    observed,
+                    reassignment_seed=draw_seed,
                 )
-                for q in (1, 2)
-            }
-            for block_index, _graph in enumerate(comparison):
+                audit_pass = array_comparison.audit["status"] == "pass"
+                comparison_batches = {
+                    q: batched_residual_diagnostics(
+                        array_comparison.m0,
+                        array_comparison.m1,
+                        array_comparison.m2,
+                        q=q,
+                    )
+                    for q in (1, 2)
+                }
+            else:
+                comparison = n1_role_constrained_reassignment(
+                    observed,
+                    reassignment_seed=draw_seed,
+                )
+                audit = n1_reassignment_audit(observed, comparison)
+                audit_pass = audit["status"] == "pass"
+                comparison_batches = {
+                    q: cohort_residual_diagnostics(
+                        comparison,
+                        q=q,
+                        diagnostic_kernel=diagnostic_kernel,
+                    )
+                    for q in (1, 2)
+                }
+            n1_audit_failure_count += int(not audit_pass)
+            for block_index in range(case_block_count):
                 for q in (1, 2):
                     key = (q, block_index)
                     if accepted_counts[key] >= inner_valid_draw_count:
@@ -3014,9 +3227,32 @@ def run_development_outer_experiment(
                     observed_diagnostic = observed_diagnostics[
                         (block_index, q)
                     ]
-                    comparison_diagnostic = comparison_diagnostics[q][
-                        block_index
-                    ]
+                    batch_or_rows = comparison_batches[q]
+                    if isinstance(
+                        batch_or_rows,
+                        BatchedResidualDiagnostics,
+                    ):
+                        batch_defect = float(
+                            batch_or_rows.defect[block_index]
+                        )
+                        comparison_defect = (
+                            None if math.isnan(batch_defect) else batch_defect
+                        )
+                        comparison_eligibility_status = (
+                            batch_or_rows.eligibility_status[block_index]
+                        )
+                        comparison_numerical_status = (
+                            batch_or_rows.numerical_status[block_index]
+                        )
+                    else:
+                        comparison_diagnostic = batch_or_rows[block_index]
+                        comparison_defect = comparison_diagnostic.defect
+                        comparison_eligibility_status = (
+                            comparison_diagnostic.eligibility_status
+                        )
+                        comparison_numerical_status = (
+                            comparison_diagnostic.numerical_status
+                        )
                     if not audit_pass:
                         accepted = False
                         value = None
@@ -3027,19 +3263,19 @@ def run_development_outer_experiment(
                         reason = (
                             "observed_" + observed_diagnostic.eligibility_status
                         )
-                    elif comparison_diagnostic.defect is None:
+                    elif comparison_defect is None:
                         accepted = False
                         value = None
                         reason = (
-                            "null_" + comparison_diagnostic.eligibility_status
+                            "null_" + comparison_eligibility_status
                         )
-                    elif comparison_diagnostic.numerical_status != "pass":
+                    elif comparison_numerical_status != "pass":
                         accepted = False
                         value = None
                         reason = "null_numerical_failure"
                     else:
                         accepted = True
-                        value = float(comparison_diagnostic.defect)
+                        value = float(comparison_defect)
                         reason = None
                     accepted_index = (
                         accepted_counts[key] if accepted else None
