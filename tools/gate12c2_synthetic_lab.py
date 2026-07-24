@@ -36,7 +36,7 @@ MECHANISM_CONTROL_SCHEMA_VERSION = "gate12c2_mechanism_control_v0.1"
 INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.2"
 SEED_NAMESPACE_SCHEMA_VERSION = "gate12c2_seed_namespace_v0.2"
 ACCEPTED_DRAW_STREAM_SCHEMA_VERSION = "gate12c2_accepted_draw_stream_v0.1"
-OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.1"
+OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.2"
 GENERATOR_ID = "gate12c2_s0_joint_frames_pcg64_v0.1"
 S1_SHARED_COUPLING_GENERATOR_ID = (
     "gate12c2_s1_shared_node_coupling_reverse_v0.1"
@@ -74,6 +74,11 @@ DEFAULT_RELATIVE_GAP_MIN = 1.0e-8
 DEFAULT_HOLM_ALPHA = 0.05
 DEFAULT_PRIMARY_ZERO_TOLERANCE = 1.0e-12
 PIPELINE_ENDPOINT_COUNT = 24
+REFERENCE_BLOCK_COUNT_BY_FAMILY = {
+    "family-0": 128,
+    "family-1": 200,
+    "family-2": 128,
+}
 ONE_SIDED_95_Z = 1.6448536269514722
 S0_MAX_POINT_FPR = 0.05
 S0_MAX_ONE_SIDED_95_UPPER = 0.07
@@ -320,6 +325,17 @@ def c2_freeze_candidate_specification() -> dict[str, Any]:
                 "best_observed_power",
                 "most_favorable_direction",
             ],
+        },
+        "reference_block_hierarchy": {
+            "source": "Gate12C-1 rendering-family block counts",
+            "block_count_by_family": dict(
+                sorted(REFERENCE_BLOCK_COUNT_BY_FAMILY.items())
+            ),
+            "use": (
+                "development calibration reference; a later real-held-out "
+                "contract must independently freeze its own schedule"
+            ),
+            "locked_schedule_frozen": False,
         },
         "seed_namespace_fields": [
             "contract_version",
@@ -2240,6 +2256,57 @@ def _outer_case_grid() -> tuple[dict[str, Any], ...]:
     )
 
 
+def reference_block_count_schedule() -> dict[str, int]:
+    """Return the C-1-shaped 128/200/128 family schedule for development."""
+
+    return {
+        str(case["case_id"]): REFERENCE_BLOCK_COUNT_BY_FAMILY[
+            str(case["family"])
+        ]
+        for case in _outer_case_grid()
+    }
+
+
+def _resolve_block_count_schedule(
+    block_count: int | Mapping[str, int],
+) -> dict[str, int]:
+    cases = _outer_case_grid()
+    case_ids = {str(case["case_id"]) for case in cases}
+    if isinstance(block_count, Mapping):
+        supplied = {str(key): int(value) for key, value in block_count.items()}
+        if set(supplied) != case_ids:
+            raise Gate12C2DevelopmentError(
+                "case-specific block schedule must cover the fixed 12 cases exactly"
+            )
+        schedule = supplied
+    else:
+        schedule = {
+            str(case["case_id"]): int(block_count) for case in cases
+        }
+    if any(value < 4 for value in schedule.values()):
+        raise Gate12C2DevelopmentError(
+            "outer experiments require at least four source blocks per case"
+        )
+    return schedule
+
+
+def _block_count_receipt(
+    schedule: Mapping[str, int],
+) -> dict[str, Any]:
+    values = set(int(value) for value in schedule.values())
+    return {
+        "mode": (
+            "uniform" if len(values) == 1 else "case_specific"
+        ),
+        "uniform_block_count": (
+            next(iter(values)) if len(values) == 1 else None
+        ),
+        "block_count_by_case": {
+            key: int(schedule[key]) for key in sorted(schedule)
+        },
+    }
+
+
 def _outer_observed_cohort(
     *,
     regime_id: str,
@@ -2297,7 +2364,7 @@ def run_development_outer_experiment(
     regime_id: str,
     master_seed: str,
     outer_experiment_index: int,
-    block_count: int,
+    block_count: int | Mapping[str, int],
     inner_valid_draw_count: int,
     effect_strength: float | None = None,
     max_draw_attempts: int | None = None,
@@ -2305,20 +2372,18 @@ def run_development_outer_experiment(
 ) -> dict[str, Any]:
     """Run one graph-derived 12-case by 2-q development experiment.
 
+    ``block_count`` may be one uniform integer or an exact 12-case mapping.
     q=1 and q=2 share the exact observed blocks and attempted N1 draws within
     each case. The resulting dependence is therefore carried into the complete
-    endpoint-family decision rather than replaced by independent endpoint toys.
-    Locked surface IDs are intentionally unavailable in this runner.
+    endpoint-family decision rather than replaced by independent endpoint
+    toys. Locked surface IDs are intentionally unavailable in this runner.
     """
 
     if outer_experiment_index < 0:
         raise Gate12C2DevelopmentError(
             "outer_experiment_index must be nonnegative"
         )
-    if block_count < 4:
-        raise Gate12C2DevelopmentError(
-            "outer experiments require at least four source blocks per case"
-        )
+    block_schedule = _resolve_block_count_schedule(block_count)
     if inner_valid_draw_count <= 0:
         raise Gate12C2DevelopmentError(
             "inner_valid_draw_count must be positive"
@@ -2341,12 +2406,13 @@ def run_development_outer_experiment(
     endpoint_receipts: list[dict[str, Any]] = []
     case_receipts: list[dict[str, Any]] = []
     for case in _outer_case_grid():
+        case_block_count = block_schedule[str(case["case_id"])]
         observed, observed_seed = _outer_observed_cohort(
             regime_id=regime_id,
             master_seed=master_seed,
             outer_experiment_index=outer_experiment_index,
             case=case,
-            block_count=block_count,
+            block_count=case_block_count,
             effect_strength=effect_strength,
         )
         observed_diagnostics = {
@@ -2359,7 +2425,7 @@ def run_development_outer_experiment(
         ] = {
             (q, block_index): []
             for q in (1, 2)
-            for block_index in range(block_count)
+            for block_index in range(case_block_count)
         }
         accepted_counts: Counter[tuple[int, int]] = Counter()
         n1_audit_failure_count = 0
@@ -2368,7 +2434,7 @@ def run_development_outer_experiment(
                 accepted_counts[(q, block_index)]
                 >= inner_valid_draw_count
                 for q in (1, 2)
-                for block_index in range(block_count)
+                for block_index in range(case_block_count)
             ):
                 break
             draw_namespace = OuterSeedNamespace(
@@ -2495,7 +2561,7 @@ def run_development_outer_experiment(
                 block_scores,
                 alternative=PRIMARY_ALTERNATIVE,
             )
-            coverage_complete = len(block_scores) == block_count
+            coverage_complete = len(block_scores) == case_block_count
             directional_raw_p = (
                 float(sign_test["directional_raw_p"])
                 if coverage_complete
@@ -2526,7 +2592,7 @@ def run_development_outer_experiment(
                 {
                     "endpoint_id": f"{case['case_id']}:q{q}",
                     "q": q,
-                    "expected_block_count": block_count,
+                    "expected_block_count": case_block_count,
                     "represented_block_count": len(block_scores),
                     "coverage_complete": coverage_complete,
                     "sign_test": sign_test,
@@ -2537,6 +2603,7 @@ def run_development_outer_experiment(
         case_receipts.append(
             {
                 **dict(case),
+                "expected_block_count": case_block_count,
                 "observed_seed_receipt": observed_seed,
                 "observed_manifest_sha256": hashlib.sha256(
                     _canonical_json_bytes(manifests(observed))
@@ -2560,7 +2627,7 @@ def run_development_outer_experiment(
             None if effect_strength is None else float(effect_strength)
         ),
         "outer_experiment_index": int(outer_experiment_index),
-        "block_count_per_case": int(block_count),
+        "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
         "max_draw_attempts": int(attempt_limit),
         "dependency_structure": (
@@ -2578,7 +2645,7 @@ def run_development_outer_calibration(
     regime_id: str,
     master_seed: str,
     outer_experiment_count: int,
-    block_count: int,
+    block_count: int | Mapping[str, int],
     inner_valid_draw_count: int,
     effect_strength: float | None = None,
     max_draw_attempts: int | None = None,
@@ -2670,7 +2737,7 @@ def run_development_s2_identification_experiment(
     *,
     master_seed: str,
     outer_experiment_index: int,
-    block_count: int,
+    block_count: int | Mapping[str, int],
     inner_valid_draw_count: int,
     max_draw_attempts: int | None = None,
     minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
@@ -2682,7 +2749,8 @@ def run_development_s2_identification_experiment(
         raise Gate12C2DevelopmentError(
             "outer_experiment_index must be nonnegative"
         )
-    if block_count < 4 or inner_valid_draw_count <= 0:
+    block_schedule = _resolve_block_count_schedule(block_count)
+    if inner_valid_draw_count <= 0:
         raise Gate12C2DevelopmentError(
             "S2 requires at least four blocks and one valid inner draw"
         )
@@ -2716,12 +2784,13 @@ def run_development_s2_identification_experiment(
     endpoint_rows: list[dict[str, Any]] = []
     case_rows: list[dict[str, Any]] = []
     for case in _outer_case_grid():
+        case_block_count = block_schedule[str(case["case_id"])]
         observed, observed_seed = _outer_observed_cohort(
             regime_id="S2_null_inflation",
             master_seed=master_seed,
             outer_experiment_index=outer_experiment_index,
             case=case,
-            block_count=block_count,
+            block_count=case_block_count,
             effect_strength=None,
         )
         observed_manifest_sha256 = hashlib.sha256(
@@ -2730,7 +2799,7 @@ def run_development_s2_identification_experiment(
         pair_rows: dict[tuple[int, int], list[dict[str, Any]]] = {
             (q, block_index): []
             for q in (1, 2)
-            for block_index in range(block_count)
+            for block_index in range(case_block_count)
         }
         pair_attempts: dict[tuple[int, int], list[NullDrawAttempt]] = {
             key: [] for key in pair_rows
@@ -2788,7 +2857,7 @@ def run_development_s2_identification_experiment(
             n1_audit_pass = (
                 n1_reassignment_audit(observed, n1_graphs)["status"] == "pass"
             )
-            for block_index in range(block_count):
+            for block_index in range(case_block_count):
                 n1_realizable = bool(
                     check_joint_realizability(n1_graphs[block_index])[
                         "status"
@@ -2883,7 +2952,7 @@ def run_development_s2_identification_experiment(
             completed_blocks = 0
             per_block_component_medians: list[dict[str, Any]] = []
             rejection_counts: Counter[str] = Counter()
-            for block_index in range(block_count):
+            for block_index in range(case_block_count):
                 key = (q, block_index)
                 stream = accepted_valid_draw_stream(
                     pair_attempts[key],
@@ -2986,7 +3055,7 @@ def run_development_s2_identification_experiment(
                     and stress_c < n1_c - DEFAULT_PRIMARY_ZERO_TOLERANCE
                 ),
             }
-            coverage_complete = completed_blocks == block_count
+            coverage_complete = completed_blocks == case_block_count
             endpoint_identified = bool(
                 coverage_complete
                 and log_null_inflation is not None
@@ -2999,7 +3068,7 @@ def run_development_s2_identification_experiment(
                 "q": q,
                 "coverage_complete": coverage_complete,
                 "completed_block_count": completed_blocks,
-                "expected_block_count": block_count,
+                "expected_block_count": case_block_count,
                 "observed_process_modified": False,
                 "observed_manifest_sha256": observed_manifest_sha256,
                 "log_stressor_to_N1_null_defect": log_null_inflation,
@@ -3021,6 +3090,7 @@ def run_development_s2_identification_experiment(
         case_rows.append(
             {
                 **dict(case),
+                "expected_block_count": case_block_count,
                 "q1_identified": bool(
                     case_endpoint_rows[0]["endpoint_identified"]
                 ),
@@ -3054,7 +3124,7 @@ def run_development_s2_identification_experiment(
         "locked_execution_authorized": False,
         "regime_id": "S2_null_inflation",
         "outer_experiment_index": int(outer_experiment_index),
-        "block_count_per_case": int(block_count),
+        "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
         "observed_process_modified": False,
         "paired_null_arms": [
@@ -3073,7 +3143,7 @@ def run_development_s2_identification_calibration(
     *,
     master_seed: str,
     outer_experiment_count: int,
-    block_count: int,
+    block_count: int | Mapping[str, int],
     inner_valid_draw_count: int,
     max_draw_attempts: int | None = None,
     minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,

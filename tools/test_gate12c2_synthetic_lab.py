@@ -49,6 +49,17 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         )
         self.assertFalse(specification["N2_open"])
         self.assertFalse(specification["N3_open"])
+        self.assertEqual(
+            specification["reference_block_hierarchy"][
+                "block_count_by_family"
+            ],
+            {"family-0": 128, "family-1": 200, "family-2": 128},
+        )
+        self.assertFalse(
+            specification["reference_block_hierarchy"][
+                "locked_schedule_frozen"
+            ]
+        )
 
     def test_s0_generation_is_deterministic_and_jointly_realizable(self) -> None:
         first = gate12c2.generate_s0_cohort(
@@ -474,6 +485,60 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             report["dependency_structure"],
             "q1_q2_share_observed_blocks_and_N1_draws_within_case",
         )
+
+    def test_outer_experiment_accepts_case_specific_block_schedule(self) -> None:
+        schedule = {
+            case["case_id"]: 4 + int(case["family"].split("-")[1])
+            for case in gate12c2._outer_case_grid()
+        }
+        report = gate12c2.run_development_outer_experiment(
+            regime_id="S0_true_null",
+            master_seed="outer-schedule-unit-test",
+            outer_experiment_index=0,
+            block_count=schedule,
+            inner_valid_draw_count=1,
+            max_draw_attempts=8,
+        )
+        self.assertEqual(
+            report["block_count_schedule"]["mode"],
+            "case_specific",
+        )
+        self.assertEqual(
+            report["block_count_schedule"]["block_count_by_case"],
+            schedule,
+        )
+        expected = {
+            row["case_id"]: row["expected_block_count"]
+            for row in report["case_receipts"]
+        }
+        self.assertEqual(expected, schedule)
+        for row in report["endpoint_receipts"]:
+            self.assertEqual(
+                row["expected_block_count"],
+                schedule[row["endpoint_id"].split(":", 1)[0]],
+            )
+
+    def test_s2_accepts_case_specific_block_schedule(self) -> None:
+        schedule = {
+            case["case_id"]: 4 + int(case["family"].split("-")[1])
+            for case in gate12c2._outer_case_grid()
+        }
+        report = gate12c2.run_development_s2_identification_experiment(
+            master_seed="s2-schedule-unit-test",
+            outer_experiment_index=0,
+            block_count=schedule,
+            inner_valid_draw_count=1,
+            max_draw_attempts=8,
+        )
+        self.assertEqual(
+            report["block_count_schedule"]["block_count_by_case"],
+            schedule,
+        )
+        for row in report["endpoint_rows"]:
+            self.assertEqual(
+                row["expected_block_count"],
+                schedule[row["case_id"]],
+            )
 
     def test_s2_outer_experiment_attributes_only_null_side_change(self) -> None:
         report = gate12c2.run_development_s2_identification_experiment(
