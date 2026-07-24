@@ -11,9 +11,10 @@ from dataclasses import replace
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+from threadpoolctl import threadpool_limits
 
 import process_triage_baseline as baseline
-from process_triage_baseline_diagnostics import _diagnostic_design
+from process_triage_baseline_diagnostics import _helmert_contrast
 from process_triage_evaluator import (
     BASELINE_CV_FOLD_COUNT,
     BASELINE_CV_ID,
@@ -138,11 +139,236 @@ def _base_design(
             "design_column_count": int(matrix.shape[1]),
             "column_names": list(encoder.column_names),
         }
-    return _diagnostic_design(
-        encoder,
+
+    numeric = set(numeric_features)
+    categorical = set(categorical_features)
+    if not numeric <= set(baseline.NUMERIC_FEATURE_NAMES):
+        raise ProcessTriageDevelopmentError(
+            "structural ablation requested an unknown numeric feature"
+        )
+    if not categorical <= set(baseline.CATEGORICAL_FEATURE_NAMES):
+        raise ProcessTriageDevelopmentError(
+            "structural ablation requested an unknown categorical feature"
+        )
+    blocks = [matrix[:, [0]]]
+    column_names = ["intercept"]
+    for name in numeric_features:
+        column_name = f"numeric:{name}"
+        try:
+            index = encoder.column_names.index(column_name)
+        except ValueError as exc:
+            raise ProcessTriageDevelopmentError(
+                f"structural numeric column is unavailable: {name}"
+            ) from exc
+        blocks.append(matrix[:, [index]])
+        column_names.append(column_name)
+    categorical_levels: dict[str, list[str]] = {}
+    for name in categorical_features:
+        prefix = f"categorical:{name}="
+        indices = [
+            index
+            for index, column_name in enumerate(encoder.column_names)
+            if column_name.startswith(prefix)
+        ]
+        if not indices:
+            raise ProcessTriageDevelopmentError(
+                f"structural categorical column is unavailable: {name}"
+            )
+        categorical_levels[name] = [
+            encoder.column_names[index].removeprefix(prefix)
+            for index in indices
+        ]
+        contrast = _helmert_contrast(len(indices))
+        if contrast.shape[1]:
+            blocks.append(matrix[:, indices] @ contrast)
+            column_names.extend(
+                f"contrast:{name}:{column}"
+                for column in range(contrast.shape[1])
+            )
+    design = np.concatenate(blocks, axis=1)
+    return design, {
+        "parameterization": (
+            "standardized_numeric_plus_orthonormal_centered_helmert"
+        ),
+        "design_column_count": int(design.shape[1]),
+        "column_names": column_names,
+        "categorical_levels": categorical_levels,
+    }
+
+
+def _fit_coefficients_roundoff_safe(
+    matrix: np.ndarray,
+    targets: np.ndarray,
+    *,
+    regularization_c: float,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Use the sealed Newton rule plus a strict-gradient roundoff fallback."""
+    coefficients = np.zeros(matrix.shape[1], dtype=np.float64)
+    current_objective = baseline._objective(
         matrix,
-        numeric_features=numeric_features,
-        categorical_features=categorical_features,
+        targets,
+        coefficients,
+        regularization_c=regularization_c,
+    )
+    last_step = None
+    for iteration in range(baseline.MAXIMUM_ITERATIONS + 1):
+        logits = matrix @ coefficients
+        probabilities = baseline._sigmoid(logits)
+        gradient = matrix.T @ (probabilities - targets)
+        gradient[1:] += coefficients[1:] / regularization_c
+        gradient_infinity = float(np.max(np.abs(gradient)))
+        if (
+            gradient_infinity
+            <= baseline.GRADIENT_INFINITY_TOLERANCE
+        ):
+            return coefficients, {
+                "status": "converged",
+                "iterations": iteration,
+                "objective": current_objective,
+                "gradient_infinity_norm": gradient_infinity,
+                "last_line_search_step": last_step,
+                "maximum_iterations": baseline.MAXIMUM_ITERATIONS,
+                "gradient_infinity_tolerance": (
+                    baseline.GRADIENT_INFINITY_TOLERANCE
+                ),
+                "minimum_line_search_step": (
+                    baseline.MINIMUM_LINE_SEARCH_STEP
+                ),
+                "reference_dtype": baseline.REFERENCE_DTYPE,
+                "solver_variant": (
+                    "sealed_damped_newton_with_strict_gradient_"
+                    "roundoff_fallback"
+                ),
+                "roundoff_fallback_used": False,
+            }
+        if iteration == baseline.MAXIMUM_ITERATIONS:
+            break
+
+        variances = probabilities * (1.0 - probabilities)
+        hessian = matrix.T @ (matrix * variances[:, None])
+        regularization = np.zeros(
+            matrix.shape[1],
+            dtype=np.float64,
+        )
+        regularization[1:] = 1.0 / regularization_c
+        hessian += np.diag(regularization)
+        hessian += (
+            np.eye(matrix.shape[1], dtype=np.float64) * 1.0e-12
+        )
+        try:
+            direction = np.linalg.solve(hessian, gradient)
+        except np.linalg.LinAlgError as exc:
+            raise ProcessTriageDevelopmentError(
+                "structural Newton system is singular"
+            ) from exc
+        directional_decrease = float(np.dot(gradient, direction))
+        if (
+            not math.isfinite(directional_decrease)
+            or directional_decrease <= 0.0
+        ):
+            raise ProcessTriageDevelopmentError(
+                "structural Newton direction is not a descent direction"
+            )
+
+        step = 1.0
+        accepted = False
+        roundoff_candidates = []
+        while step >= baseline.MINIMUM_LINE_SEARCH_STEP:
+            candidate = coefficients - step * direction
+            candidate_objective = baseline._objective(
+                matrix,
+                targets,
+                candidate,
+                regularization_c=regularization_c,
+            )
+            candidate_probabilities = baseline._sigmoid(
+                matrix @ candidate
+            )
+            candidate_gradient = (
+                matrix.T @ (candidate_probabilities - targets)
+            )
+            candidate_gradient[1:] += (
+                candidate[1:] / regularization_c
+            )
+            candidate_gradient_infinity = float(
+                np.max(np.abs(candidate_gradient))
+            )
+            numerical_slack = (
+                8.0
+                * np.finfo(np.float64).eps
+                * max(
+                    1.0,
+                    abs(current_objective),
+                    abs(candidate_objective),
+                )
+            )
+            if (
+                candidate_objective
+                <= current_objective + numerical_slack
+                and candidate_gradient_infinity
+                <= baseline.GRADIENT_INFINITY_TOLERANCE
+            ):
+                roundoff_candidates.append(
+                    (
+                        candidate_gradient_infinity,
+                        -step,
+                        candidate,
+                        candidate_objective,
+                        numerical_slack,
+                    )
+                )
+            if candidate_objective <= (
+                current_objective
+                - baseline.ARMIJO_CONSTANT
+                * step
+                * directional_decrease
+            ):
+                coefficients = candidate
+                current_objective = candidate_objective
+                last_step = step
+                accepted = True
+                break
+            step *= 0.5
+        if accepted:
+            continue
+        if roundoff_candidates:
+            (
+                candidate_gradient_infinity,
+                negative_step,
+                candidate,
+                candidate_objective,
+                numerical_slack,
+            ) = min(roundoff_candidates, key=lambda row: (row[0], row[1]))
+            return candidate, {
+                "status": "converged_roundoff_safe",
+                "iterations": iteration + 1,
+                "objective": candidate_objective,
+                "gradient_infinity_norm": (
+                    candidate_gradient_infinity
+                ),
+                "last_line_search_step": -negative_step,
+                "maximum_iterations": baseline.MAXIMUM_ITERATIONS,
+                "gradient_infinity_tolerance": (
+                    baseline.GRADIENT_INFINITY_TOLERANCE
+                ),
+                "minimum_line_search_step": (
+                    baseline.MINIMUM_LINE_SEARCH_STEP
+                ),
+                "reference_dtype": baseline.REFERENCE_DTYPE,
+                "solver_variant": (
+                    "sealed_damped_newton_with_strict_gradient_"
+                    "roundoff_fallback"
+                ),
+                "roundoff_fallback_used": True,
+                "objective_comparison_numerical_slack": (
+                    numerical_slack
+                ),
+            }
+        raise ProcessTriageDevelopmentError(
+            "structural Newton line search did not find an acceptable step"
+        )
+    raise ProcessTriageDevelopmentError(
+        "structural Newton solver did not converge within the frozen limit"
     )
 
 
@@ -156,6 +382,7 @@ def _fit_and_score(
     numeric_features: Sequence[str],
     categorical_features: Sequence[str],
     sealed_full_parameterization: bool,
+    force_single_thread: bool = False,
 ) -> tuple[dict[str, float], dict[str, Any]]:
     encoder = baseline.BaselineEncoder.fit(training_features)
     ordered_training, raw_training = encoder.transform(
@@ -243,11 +470,31 @@ def _fit_and_score(
         ],
         dtype=np.float64,
     )
-    coefficients, fit_diagnostics = baseline._fit_coefficients(
-        training_design,
-        training_targets,
-        regularization_c=regularization_c,
+    single_thread = (
+        force_single_thread
+        or structural_by_row is not None
+        or not sealed_full_parameterization
     )
+    with threadpool_limits(
+        limits=1 if single_thread else None,
+        user_api="blas",
+    ):
+        if single_thread:
+            coefficients, fit_diagnostics = (
+                _fit_coefficients_roundoff_safe(
+                    training_design,
+                    training_targets,
+                    regularization_c=regularization_c,
+                )
+            )
+        else:
+            coefficients, fit_diagnostics = (
+                baseline._fit_coefficients(
+                    training_design,
+                    training_targets,
+                    regularization_c=regularization_c,
+                )
+            )
     probabilities = baseline._sigmoid(
         validation_design @ coefficients
     )
@@ -266,6 +513,7 @@ def _fit_and_score(
             "final_design_column_count": int(
                 training_design.shape[1]
             ),
+            "blas_thread_limit": 1 if single_thread else None,
         },
     )
 
@@ -283,6 +531,7 @@ def fit_development_configuration(
         str
     ] = baseline.CATEGORICAL_FEATURE_NAMES,
     sealed_full_parameterization: bool = True,
+    force_single_thread: bool = False,
 ) -> tuple[dict[str, Any], dict[str, float]]:
     _validate_cv(cv_manifest)
     aliases = dict(group_aliases)
@@ -339,6 +588,7 @@ def fit_development_configuration(
                 sealed_full_parameterization=(
                     sealed_full_parameterization
                 ),
+                force_single_thread=force_single_thread,
             )
             if set(oof_scores) & set(fold_scores):
                 raise ProcessTriageDevelopmentError(
@@ -405,6 +655,7 @@ def fit_development_configuration(
         numeric_features=numeric_features,
         categorical_features=categorical_features,
         sealed_full_parameterization=sealed_full_parameterization,
+        force_single_thread=force_single_thread,
     )
     score_hash = hashlib.sha256(
         _canonical_json(
@@ -432,6 +683,7 @@ def fit_development_configuration(
             "sealed_full_parameterization": (
                 sealed_full_parameterization
             ),
+            "force_single_thread": force_single_thread,
             "candidate_rows": candidates,
             "selected_regularization_c": selected_c,
             "selected_oof_evaluation": evaluation,
@@ -701,6 +953,7 @@ def run_structural_development(
         group_aliases=group_aliases,
         configuration_id="label_permutation_cheap_reference",
         structural_by_row=None,
+        force_single_thread=True,
     )
     permuted_augmented, _ = fit_development_configuration(
         permuted_trajectories,
@@ -709,6 +962,7 @@ def run_structural_development(
         group_aliases=group_aliases,
         configuration_id="label_permutation_plus_structural",
         structural_by_row=score_maps["primary"],
+        force_single_thread=True,
     )
 
     return {

@@ -7,6 +7,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 
 def _load(name: str):
     path = Path(__file__).with_name(f"{name}.py")
@@ -120,6 +122,29 @@ class ProcessTriageStructuralDevelopmentTest(unittest.TestCase):
         )
         self.assertEqual(receipt["singleton_stratum_count"], 0)
 
+    def test_roundoff_safe_solver_retains_strict_gradient_gate(self) -> None:
+        matrix = np.asarray(
+            [
+                [1.0, -1.0],
+                [1.0, -0.5],
+                [1.0, 0.5],
+                [1.0, 1.0],
+            ],
+            dtype=np.float64,
+        )
+        targets = np.asarray([0.0, 0.0, 1.0, 1.0])
+        _, diagnostics = (
+            development._fit_coefficients_roundoff_safe(
+                matrix,
+                targets,
+                regularization_c=1.0,
+            )
+        )
+        self.assertLessEqual(
+            diagnostics["gradient_infinity_norm"],
+            baseline.GRADIENT_INFINITY_TOLERANCE,
+        )
+
     def test_development_report_reproduces_sealed_baseline(self) -> None:
         baseline_report = baseline.fit_development_baseline(
             self.trajectories,
@@ -155,6 +180,12 @@ class ProcessTriageStructuralDevelopmentTest(unittest.TestCase):
         )
         self.assertFalse(
             report["prospective_locked_partition_scored"]
+        )
+        self.assertEqual(
+            report["primary_augmented"]["refit_diagnostics"][
+                "blas_thread_limit"
+            ],
+            1,
         )
 
 
