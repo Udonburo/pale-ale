@@ -91,6 +91,29 @@ class ProcessTriageEvaluatorTest(unittest.TestCase):
         self.assertFalse(first.is_clean)
         self.assertTrue(second.is_clean)
 
+    def test_task_surface_group_id_does_not_depend_on_outcomes(self) -> None:
+        original = record(
+            query_index=7,
+            sample_index=0,
+            labels=(1, -1),
+        )
+        mutated = json.loads(json.dumps(original))
+        mutated["step_labels"] = {
+            key: -value for key, value in mutated["step_labels"].items()
+        }
+        mutated["final_label"] = 0
+        mutated["ground_truth"] = {"changed": True}
+        self.assertEqual(
+            triage.agent_process_bench_task_surface_group_id(
+                original,
+                domain="bfcl",
+            ),
+            triage.agent_process_bench_task_surface_group_id(
+                mutated,
+                domain="bfcl",
+            ),
+        )
+
     def test_visible_task_duplicate_across_query_indices_stays_in_one_group(
         self,
     ) -> None:

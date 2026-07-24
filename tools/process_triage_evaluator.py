@@ -173,6 +173,16 @@ def _agent_process_bench_group_id(
     return f"{domain}:task-surface:{digest}"
 
 
+def agent_process_bench_task_surface_group_id(
+    record: Mapping[str, Any],
+    *,
+    domain: str,
+) -> str:
+    """Return the exact pre-outcome group ID without parsing labels."""
+
+    return _agent_process_bench_group_id(record, domain=domain)
+
+
 def _task_surface_text(record: Mapping[str, Any]) -> str:
     surface = _normalized_task_surface(record)
     return "\n".join(
