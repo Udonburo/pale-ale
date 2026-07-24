@@ -185,6 +185,7 @@ class Gate12C2BatchedKernelTest(unittest.TestCase):
             observed,
             reassignment_seed=seed,
         )
+        realizability = gate12c2.n1_array_realizability_checks(array)
         self.assertEqual(array.audit["status"], "pass")
         self.assertEqual(
             array.audit["fixed_point_count"],
@@ -196,6 +197,14 @@ class Gate12C2BatchedKernelTest(unittest.TestCase):
             for node in graph.nodes
         }
         for graph_index, graph in enumerate(reference):
+            self.assertEqual(
+                realizability["direct_status"][graph_index],
+                gate12c2.check_joint_realizability(graph)["status"],
+            )
+            self.assertEqual(
+                realizability["block_gram_status"][graph_index],
+                gate12c2.check_block_gram_realizability(graph)["status"],
+            )
             donor_manifest = graph.metadata["donor_node_ids"]
             for role_index, node_id in enumerate(graph.cycle_node_ids):
                 self.assertEqual(
@@ -214,6 +223,47 @@ class Gate12C2BatchedKernelTest(unittest.TestCase):
                     rtol=0.0,
                     atol=0.0,
                 )
+
+    def test_array_s2_reproduces_object_edges_and_realizability(self) -> None:
+        observed = gate12c2.generate_s0_cohort(
+            replicate_count=12,
+            master_seed="array-s2-observed",
+        )
+        seed = "array-s2-orientation"
+        reference = gate12c2.s2_graph_unconstrained_orientation_draw(
+            observed,
+            orientation_seed=seed,
+            draw_index=3,
+        )
+        array = gate12c2.s2_array_unconstrained_orientation_draw(
+            observed,
+            orientation_seed=seed,
+            draw_index=3,
+        )
+        for graph_index, graph in enumerate(reference):
+            for actual_matrices, expected_matrix in zip(
+                (array.m0, array.m1, array.m2),
+                gate12c2.cycle_matrices(graph),
+                strict=True,
+            ):
+                np.testing.assert_allclose(
+                    actual_matrices[graph_index],
+                    expected_matrix,
+                    rtol=0.0,
+                    atol=0.0,
+                )
+            self.assertEqual(
+                array.direct_realizability_status[graph_index],
+                gate12c2.check_joint_realizability(graph)["status"],
+            )
+            self.assertEqual(
+                array.block_gram_realizability_status[graph_index],
+                gate12c2.check_block_gram_realizability(graph)["status"],
+            )
+            self.assertLessEqual(
+                float(array.spectrum_preservation_error[graph_index]),
+                2.0e-15,
+            )
 
     def test_rejects_malformed_or_nonfinite_batches(self) -> None:
         identity = np.eye(3, dtype=np.float64)

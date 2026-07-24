@@ -375,6 +375,26 @@ def _orthonormalize(matrix: np.ndarray) -> np.ndarray:
     return np.asarray(q_matrix * signs, dtype=np.float64)
 
 
+def _batched_orthonormalize(matrices: np.ndarray) -> np.ndarray:
+    """Stacked equivalent of :func:`_orthonormalize` for finite FP64 inputs."""
+
+    arrays = np.asarray(matrices, dtype=np.float64)
+    if (
+        arrays.ndim != 3
+        or arrays.shape[0] <= 0
+        or arrays.shape[1] < arrays.shape[2]
+        or not np.all(np.isfinite(arrays))
+    ):
+        raise Gate12C2DevelopmentError(
+            "batched frame candidates must be finite with shape "
+            "(batch, rows, columns) and rows >= columns"
+        )
+    q_matrix, r_matrix = np.linalg.qr(arrays, mode="reduced")
+    diagonal = np.diagonal(r_matrix, axis1=-2, axis2=-1)
+    signs = np.where(diagonal < 0.0, -1.0, 1.0)
+    return np.asarray(q_matrix * signs[:, None, :], dtype=np.float64)
+
+
 @dataclass(frozen=True)
 class NodeFrame:
     node_id: str
@@ -1638,6 +1658,127 @@ def n1_role_constrained_array_reassignment(
     )
 
 
+def n1_array_realizability_checks(
+    reassignment: N1ArrayReassignment,
+    *,
+    atol: float = DEFAULT_NUMERIC_ATOL,
+) -> dict[str, Any]:
+    """Independently check array N1 edges through direct and block-Gram paths."""
+
+    frames = reassignment.reassigned_frames
+    batch_size, _, ambient_dim, local_rank = frames.shape
+    expected_edges = np.stack(
+        (
+            np.swapaxes(frames[:, 1], 1, 2) @ frames[:, 0],
+            np.swapaxes(frames[:, 2], 1, 2) @ frames[:, 1],
+            np.swapaxes(frames[:, 0], 1, 2) @ frames[:, 2],
+        ),
+        axis=1,
+    )
+    actual_edges = np.stack(
+        (reassignment.m0, reassignment.m1, reassignment.m2),
+        axis=1,
+    )
+    direct_edge_errors = np.sqrt(
+        np.sum(
+            (actual_edges - expected_edges) ** 2,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+    )
+    maximum_direct_error = np.max(direct_edge_errors, axis=1)
+    direct_pass = np.isfinite(maximum_direct_error) & (
+        maximum_direct_error <= atol
+    )
+
+    frame_grams = np.swapaxes(frames, -2, -1) @ frames
+    identity = np.eye(local_rank, dtype=np.float64)
+    diagonal_errors = np.sqrt(
+        np.sum(
+            (frame_grams - identity[None, None]) ** 2,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+    )
+    maximum_diagonal_error = np.max(diagonal_errors, axis=1)
+    concatenated = np.concatenate(
+        [frames[:, role_index] for role_index in range(3)],
+        axis=2,
+    )
+    block_gram = np.swapaxes(concatenated, -2, -1) @ concatenated
+    symmetry_error = np.sqrt(
+        np.sum(
+            (block_gram - np.swapaxes(block_gram, -2, -1)) ** 2,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+    )
+    eigenvalues = np.linalg.eigvalsh(
+        0.5 * (block_gram + np.swapaxes(block_gram, -2, -1))
+    )
+    minimum_eigenvalue = np.min(eigenvalues, axis=1)
+    numerical_rank = np.linalg.matrix_rank(
+        block_gram,
+        tol=max(atol, np.finfo(float).eps),
+    )
+    block_edges = np.stack(
+        (
+            block_gram[
+                :,
+                local_rank : 2 * local_rank,
+                0:local_rank,
+            ],
+            block_gram[
+                :,
+                2 * local_rank : 3 * local_rank,
+                local_rank : 2 * local_rank,
+            ],
+            block_gram[
+                :,
+                0:local_rank,
+                2 * local_rank : 3 * local_rank,
+            ],
+        ),
+        axis=1,
+    )
+    block_edge_errors = np.sqrt(
+        np.sum(
+            (actual_edges - block_edges) ** 2,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+    )
+    maximum_block_edge_error = np.max(block_edge_errors, axis=1)
+    block_pass = (
+        np.isfinite(maximum_diagonal_error)
+        & (maximum_diagonal_error <= atol)
+        & np.isfinite(symmetry_error)
+        & (symmetry_error <= atol)
+        & np.isfinite(minimum_eigenvalue)
+        & (minimum_eigenvalue >= -atol)
+        & (numerical_rank <= ambient_dim)
+        & np.isfinite(maximum_block_edge_error)
+        & (maximum_block_edge_error <= atol)
+    )
+    return {
+        "checker_id": "n1_array_direct_and_block_gram_v0.1",
+        "batch_size": int(batch_size),
+        "direct_status": tuple(
+            "pass" if value else "fail" for value in direct_pass
+        ),
+        "block_gram_status": tuple(
+            "pass" if value else "fail" for value in block_pass
+        ),
+        "maximum_direct_edge_error": maximum_direct_error,
+        "maximum_diagonal_error": maximum_diagonal_error,
+        "symmetry_error": symmetry_error,
+        "minimum_eigenvalue": minimum_eigenvalue,
+        "numerical_rank": numerical_rank,
+        "maximum_block_edge_error": maximum_block_edge_error,
+        "atol": float(atol),
+    }
+
+
 def s2_graph_unconstrained_orientation_draw(
     graphs: Sequence[SyntheticGraph],
     *,
@@ -1717,6 +1858,195 @@ def s2_graph_unconstrained_orientation_draw(
             )
         )
     return tuple(result)
+
+
+@dataclass(frozen=True)
+class S2ArrayOrientationDraw:
+    """Array-native S2 stress draw with explicit realizability diagnostics."""
+
+    replicate_ids: tuple[str, ...]
+    m0: np.ndarray = field(repr=False)
+    m1: np.ndarray = field(repr=False)
+    m2: np.ndarray = field(repr=False)
+    edge_singular_values: np.ndarray = field(repr=False)
+    direct_realizability_status: tuple[str, ...]
+    block_gram_realizability_status: tuple[str, ...]
+    maximum_edge_reconstruction_error: np.ndarray = field(repr=False)
+    spectrum_preservation_error: np.ndarray = field(repr=False)
+    kernel_id: str = "s2_array_orientation_equivalent_v0.1"
+
+    def __post_init__(self) -> None:
+        batch_size = len(self.replicate_ids)
+        for name in ("m0", "m1", "m2"):
+            matrix = np.asarray(getattr(self, name), dtype=np.float64)
+            if matrix.ndim != 3 or matrix.shape[0] != batch_size:
+                raise Gate12C2DevelopmentError(
+                    f"S2 array field {name} has wrong shape"
+                )
+            object.__setattr__(self, name, matrix.copy())
+        spectra = np.asarray(self.edge_singular_values, dtype=np.float64)
+        if spectra.ndim != 3 or spectra.shape[:2] != (batch_size, 3):
+            raise Gate12C2DevelopmentError(
+                "S2 array edge spectra must have shape (batch, 3, rank)"
+            )
+        object.__setattr__(self, "edge_singular_values", spectra.copy())
+        for name in (
+            "maximum_edge_reconstruction_error",
+            "spectrum_preservation_error",
+        ):
+            values = np.asarray(getattr(self, name), dtype=np.float64)
+            if values.shape != (batch_size,):
+                raise Gate12C2DevelopmentError(
+                    f"S2 array diagnostic field {name} has wrong shape"
+                )
+            object.__setattr__(self, name, values.copy())
+        for name in (
+            "direct_realizability_status",
+            "block_gram_realizability_status",
+        ):
+            statuses = tuple(str(value) for value in getattr(self, name))
+            if len(statuses) != batch_size:
+                raise Gate12C2DevelopmentError(
+                    f"S2 array status field {name} has wrong length"
+                )
+            object.__setattr__(self, name, statuses)
+
+
+def s2_array_unconstrained_orientation_draw(
+    graphs: Sequence[SyntheticGraph],
+    *,
+    orientation_seed: str,
+    draw_index: int = 0,
+    atol: float = DEFAULT_NUMERIC_ATOL,
+) -> S2ArrayOrientationDraw:
+    """Reproduce the S2 stress draw with stacked QR and matrix operations."""
+
+    if not graphs:
+        raise Gate12C2DevelopmentError(
+            "S2 array orientation requires at least one graph"
+        )
+    if draw_index < 0:
+        raise Gate12C2DevelopmentError("draw_index must be nonnegative")
+    replicate_ids = tuple(graph.replicate_id for graph in graphs)
+    if len(set(replicate_ids)) != len(replicate_ids):
+        raise Gate12C2DevelopmentError("replicate IDs must be unique")
+
+    observed_matrices: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+    edge_ids: list[tuple[str, str, str]] = []
+    for graph in graphs:
+        matrices = cycle_matrices(graph)
+        shapes = {tuple(matrix.shape) for matrix in matrices}
+        if len(shapes) != 1:
+            raise Gate12C2DevelopmentError(
+                "S2 array kernel requires one edge shape per graph"
+            )
+        observed_matrices.append(matrices)
+        n0, n1, n2 = graph.cycle_node_ids
+        edge_map = graph.edge_map()
+        edge_ids.append(
+            (
+                edge_map[(n0, n1)].edge_id,
+                edge_map[(n1, n2)].edge_id,
+                edge_map[(n2, n0)].edge_id,
+            )
+        )
+    all_shapes = {
+        tuple(matrix.shape)
+        for matrices in observed_matrices
+        for matrix in matrices
+    }
+    if len(all_shapes) != 1:
+        raise Gate12C2DevelopmentError(
+            "S2 array kernel requires one shared edge shape"
+        )
+    rows, columns = next(iter(all_shapes))
+    inner = min(rows, columns)
+
+    singular_values = np.empty(
+        (len(graphs), 3, inner),
+        dtype=np.float64,
+    )
+    left_candidates = np.empty(
+        (len(graphs), 3, rows, inner),
+        dtype=np.float64,
+    )
+    right_candidates = np.empty(
+        (len(graphs), 3, columns, inner),
+        dtype=np.float64,
+    )
+    for graph_index, graph in enumerate(graphs):
+        for edge_index, matrix in enumerate(observed_matrices[graph_index]):
+            singular_values[graph_index, edge_index] = np.linalg.svd(
+                matrix,
+                compute_uv=False,
+            )
+            left_candidates[graph_index, edge_index] = _rng(
+                orientation_seed,
+                "S2",
+                draw_index,
+                graph.replicate_id,
+                edge_ids[graph_index][edge_index],
+                "left",
+            ).normal(size=(rows, inner))
+            right_candidates[graph_index, edge_index] = _rng(
+                orientation_seed,
+                "S2",
+                draw_index,
+                graph.replicate_id,
+                edge_ids[graph_index][edge_index],
+                "right",
+            ).normal(size=(columns, inner))
+
+    flattened_count = len(graphs) * 3
+    left = _batched_orthonormalize(
+        left_candidates.reshape(flattened_count, rows, inner)
+    ).reshape(len(graphs), 3, rows, inner)
+    right = _batched_orthonormalize(
+        right_candidates.reshape(flattened_count, columns, inner)
+    ).reshape(len(graphs), 3, columns, inner)
+    stress_edges = np.asarray(
+        (left * singular_values[:, :, None, :])
+        @ np.swapaxes(right, -2, -1),
+        dtype=np.float64,
+    )
+    observed_edges = np.stack(
+        [
+            np.stack(matrices, axis=0)
+            for matrices in observed_matrices
+        ],
+        axis=0,
+    )
+    edge_errors = np.sqrt(
+        np.sum(
+            (stress_edges - observed_edges) ** 2,
+            axis=(-2, -1),
+            dtype=np.float64,
+        )
+    )
+    maximum_edge_error = np.max(edge_errors, axis=1)
+    stress_spectra = np.linalg.svd(stress_edges, compute_uv=False)
+    spectrum_error = np.max(
+        np.abs(stress_spectra - singular_values),
+        axis=(1, 2),
+    )
+    nonrealizable = maximum_edge_error > atol
+    direct_status = tuple(
+        "fail" if value else "pass" for value in nonrealizable
+    )
+    block_gram_status = tuple(
+        "fail" if value else "pass" for value in nonrealizable
+    )
+    return S2ArrayOrientationDraw(
+        replicate_ids=replicate_ids,
+        m0=stress_edges[:, 0],
+        m1=stress_edges[:, 1],
+        m2=stress_edges[:, 2],
+        edge_singular_values=singular_values,
+        direct_realizability_status=direct_status,
+        block_gram_realizability_status=block_gram_status,
+        maximum_edge_reconstruction_error=maximum_edge_error,
+        spectrum_preservation_error=spectrum_error,
+    )
 
 
 def _truncated_reconstruction(
@@ -3642,64 +3972,142 @@ def run_development_s2_identification_experiment(
                     ]
                 )
             ).hexdigest()
-            n1_graphs = n1_role_constrained_reassignment(
-                observed,
-                reassignment_seed=str(n1_receipt["seed_receipt_sha256"]),
-            )
-            stress_graphs = s2_graph_unconstrained_orientation_draw(
-                observed,
-                orientation_seed=str(
-                    stress_receipt["seed_receipt_sha256"]
-                ),
-                draw_index=attempt_index,
-            )
-            n1_audit_pass = (
-                n1_reassignment_audit(observed, n1_graphs)["status"] == "pass"
-            )
-            n1_diagnostics = {
-                q: cohort_residual_diagnostics(
-                    n1_graphs,
-                    q=q,
-                    diagnostic_kernel=diagnostic_kernel,
+            n1_diagnostics: dict[
+                int,
+                BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
+            ]
+            stress_diagnostics: dict[
+                int,
+                BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
+            ]
+            if diagnostic_kernel == BATCHED_DIAGNOSTIC_KERNEL:
+                array_n1 = n1_role_constrained_array_reassignment(
+                    observed,
+                    reassignment_seed=str(
+                        n1_receipt["seed_receipt_sha256"]
+                    ),
                 )
-                for q in (1, 2)
-            }
-            stress_diagnostics = {
-                q: cohort_residual_diagnostics(
-                    stress_graphs,
-                    q=q,
-                    diagnostic_kernel=diagnostic_kernel,
+                array_n1_checks = n1_array_realizability_checks(array_n1)
+                array_stress = s2_array_unconstrained_orientation_draw(
+                    observed,
+                    orientation_seed=str(
+                        stress_receipt["seed_receipt_sha256"]
+                    ),
+                    draw_index=attempt_index,
                 )
-                for q in (1, 2)
-            }
+                n1_audit_pass = array_n1.audit["status"] == "pass"
+                n1_diagnostics = {
+                    q: batched_residual_diagnostics(
+                        array_n1.m0,
+                        array_n1.m1,
+                        array_n1.m2,
+                        q=q,
+                    )
+                    for q in (1, 2)
+                }
+                stress_diagnostics = {
+                    q: batched_residual_diagnostics(
+                        array_stress.m0,
+                        array_stress.m1,
+                        array_stress.m2,
+                        q=q,
+                    )
+                    for q in (1, 2)
+                }
+            else:
+                n1_graphs = n1_role_constrained_reassignment(
+                    observed,
+                    reassignment_seed=str(
+                        n1_receipt["seed_receipt_sha256"]
+                    ),
+                )
+                stress_graphs = s2_graph_unconstrained_orientation_draw(
+                    observed,
+                    orientation_seed=str(
+                        stress_receipt["seed_receipt_sha256"]
+                    ),
+                    draw_index=attempt_index,
+                )
+                n1_audit_pass = (
+                    n1_reassignment_audit(observed, n1_graphs)["status"]
+                    == "pass"
+                )
+                n1_diagnostics = {
+                    q: cohort_residual_diagnostics(
+                        n1_graphs,
+                        q=q,
+                        diagnostic_kernel=diagnostic_kernel,
+                    )
+                    for q in (1, 2)
+                }
+                stress_diagnostics = {
+                    q: cohort_residual_diagnostics(
+                        stress_graphs,
+                        q=q,
+                        diagnostic_kernel=diagnostic_kernel,
+                    )
+                    for q in (1, 2)
+                }
             for block_index in range(case_block_count):
-                n1_realizable = bool(
-                    check_joint_realizability(n1_graphs[block_index])[
-                        "status"
-                    ]
-                    == "pass"
-                    and check_block_gram_realizability(
-                        n1_graphs[block_index]
-                    )["status"]
-                    == "pass"
-                )
-                stress_nonrealizable = bool(
-                    check_joint_realizability(stress_graphs[block_index])[
-                        "status"
-                    ]
-                    == "fail"
-                    and check_block_gram_realizability(
-                        stress_graphs[block_index]
-                    )["status"]
-                    == "fail"
-                )
+                if diagnostic_kernel == BATCHED_DIAGNOSTIC_KERNEL:
+                    n1_realizable = bool(
+                        array_n1_checks["direct_status"][block_index]
+                        == "pass"
+                        and array_n1_checks["block_gram_status"][block_index]
+                        == "pass"
+                    )
+                    stress_nonrealizable = bool(
+                        array_stress.direct_realizability_status[block_index]
+                        == "fail"
+                        and array_stress.block_gram_realizability_status[
+                            block_index
+                        ]
+                        == "fail"
+                    )
+                else:
+                    n1_realizable = bool(
+                        check_joint_realizability(n1_graphs[block_index])[
+                            "status"
+                        ]
+                        == "pass"
+                        and check_block_gram_realizability(
+                            n1_graphs[block_index]
+                        )["status"]
+                        == "pass"
+                    )
+                    stress_nonrealizable = bool(
+                        check_joint_realizability(stress_graphs[block_index])[
+                            "status"
+                        ]
+                        == "fail"
+                        and check_block_gram_realizability(
+                            stress_graphs[block_index]
+                        )["status"]
+                        == "fail"
+                    )
                 for q in (1, 2):
                     key = (q, block_index)
                     if len(pair_rows[key]) >= inner_valid_draw_count:
                         continue
                     observed_diagnostic = observed_diagnostics[q][block_index]
-                    n1_diagnostic = n1_diagnostics[q][block_index]
-                    stress_diagnostic = stress_diagnostics[q][block_index]
+                    n1_batch_or_rows = n1_diagnostics[q]
+                    stress_batch_or_rows = stress_diagnostics[q]
+                    n1_diagnostic = (
+                        n1_batch_or_rows.row(block_index)
+                        if isinstance(
+                            n1_batch_or_rows,
+                            BatchedResidualDiagnostics,
+                        )
+                        else n1_batch_or_rows[block_index]
+                    )
+                    stress_diagnostic = (
+                        stress_batch_or_rows.row(block_index)
+                        if isinstance(
+                            stress_batch_or_rows,
+                            BatchedResidualDiagnostics,
+                        )
+                        else stress_batch_or_rows[block_index]
+                    )
                     if not n1_audit_pass:
                         reason = "n1_assignment_audit_failed"
                     elif not n1_realizable:
