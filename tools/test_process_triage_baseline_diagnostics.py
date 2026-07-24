@@ -7,6 +7,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 
 def _load(name: str):
     path = Path(__file__).with_name(f"{name}.py")
@@ -52,6 +54,57 @@ def record(query_index: int, sample_index: int, labels: tuple[int, ...]) -> dict
 
 
 class ProcessTriageBaselineDiagnosticsTest(unittest.TestCase):
+    def test_helmert_contrast_is_centered_and_orthonormal(self) -> None:
+        contrast = diagnostics._helmert_contrast(5)
+        np.testing.assert_allclose(
+            contrast.T @ contrast,
+            np.eye(4),
+            atol=1.0e-14,
+        )
+        np.testing.assert_allclose(
+            np.ones(5) @ contrast,
+            np.zeros(4),
+            atol=1.0e-14,
+        )
+
+    def test_reduced_categorical_design_is_identifiable(self) -> None:
+        trajectories = tuple(
+            triage.parse_agent_process_bench_record(
+                record(
+                    query_index=query_index,
+                    sample_index=slot,
+                    labels=(1, -1) if query_index % 2 == 0 else (1, 1),
+                ),
+                domain=domain,
+            )
+            for domain in ("bfcl", "tau2")
+            for query_index in range(4)
+            for slot in range(3)
+        )
+        features = triage.cheap_features(
+            triage.build_feature_surface(trajectories)
+        )
+        encoder = baseline.BaselineEncoder.fit(features)
+        _, matrix = encoder.transform(features)
+        design, metadata = diagnostics._diagnostic_design(
+            encoder,
+            matrix,
+            numeric_features=(),
+            categorical_features=("domain", "source_slot"),
+        )
+        self.assertEqual(
+            np.linalg.matrix_rank(design),
+            design.shape[1],
+        )
+        self.assertEqual(
+            metadata["parameterization"],
+            "standardized_numeric_plus_orthonormal_centered_helmert",
+        )
+        self.assertEqual(
+            metadata["design_matrix_rank"],
+            metadata["design_column_count"],
+        )
+
     def test_diagnostics_reproduce_full_hash_and_keep_surfaces_closed(
         self,
     ) -> None:

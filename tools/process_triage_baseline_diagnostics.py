@@ -62,12 +62,37 @@ def _effective_cluster(
     return str(aliases.get(group_id, group_id))
 
 
-def _active_column_indices(
+def _helmert_contrast(level_count: int) -> np.ndarray:
+    """Return a deterministic orthonormal basis for the centered level space."""
+    if level_count < 1:
+        raise ProcessTriageDevelopmentError(
+            "categorical diagnostics require at least one fitted level"
+        )
+    if level_count == 1:
+        return np.empty((1, 0), dtype=np.float64)
+    contrast = np.zeros(
+        (level_count, level_count - 1),
+        dtype=np.float64,
+    )
+    for column in range(level_count - 1):
+        denominator = np.sqrt(
+            float((column + 1) * (column + 2))
+        )
+        contrast[: column + 1, column] = 1.0 / denominator
+        contrast[column + 1, column] = (
+            -float(column + 1) / denominator
+        )
+    return contrast
+
+
+def _diagnostic_design(
     encoder: baseline.BaselineEncoder,
+    matrix: np.ndarray,
     *,
     numeric_features: Sequence[str],
     categorical_features: Sequence[str],
-) -> tuple[int, ...]:
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Build an identifiable reduced design without changing the sealed model."""
     numeric = set(numeric_features)
     categorical = set(categorical_features)
     if not numeric <= set(baseline.NUMERIC_FEATURE_NAMES):
@@ -78,17 +103,59 @@ def _active_column_indices(
         raise ProcessTriageDevelopmentError(
             "diagnostic requested an unknown categorical feature"
         )
-    indices = [0]
-    for index, column in enumerate(encoder.column_names[1:], start=1):
-        if column.startswith("numeric:"):
-            name = column.removeprefix("numeric:")
-            if name in numeric:
-                indices.append(index)
-        elif column.startswith("categorical:"):
-            name = column.removeprefix("categorical:").split("=", 1)[0]
-            if name in categorical:
-                indices.append(index)
-    return tuple(indices)
+
+    blocks = [matrix[:, [0]]]
+    parameter_names = ["intercept"]
+    for name in numeric_features:
+        column_name = f"numeric:{name}"
+        try:
+            index = encoder.column_names.index(column_name)
+        except ValueError as exc:
+            raise ProcessTriageDevelopmentError(
+                f"diagnostic numeric column is unavailable: {name}"
+            ) from exc
+        blocks.append(matrix[:, [index]])
+        parameter_names.append(column_name)
+
+    categorical_levels: dict[str, list[str]] = {}
+    for name in categorical_features:
+        prefix = f"categorical:{name}="
+        indices = [
+            index
+            for index, column_name in enumerate(encoder.column_names)
+            if column_name.startswith(prefix)
+        ]
+        if not indices:
+            raise ProcessTriageDevelopmentError(
+                f"diagnostic categorical column is unavailable: {name}"
+            )
+        levels = [
+            encoder.column_names[index].removeprefix(prefix)
+            for index in indices
+        ]
+        categorical_levels[name] = levels
+        contrast = _helmert_contrast(len(indices))
+        if contrast.shape[1]:
+            blocks.append(matrix[:, indices] @ contrast)
+            parameter_names.extend(
+                f"contrast:{name}:{column}"
+                for column in range(contrast.shape[1])
+            )
+
+    design = np.concatenate(blocks, axis=1)
+    if not np.all(np.isfinite(design)):
+        raise ProcessTriageDevelopmentError(
+            "diagnostic design contains non-finite values"
+        )
+    return design, {
+        "parameterization": (
+            "standardized_numeric_plus_orthonormal_centered_helmert"
+        ),
+        "parameter_names": parameter_names,
+        "categorical_levels": categorical_levels,
+        "design_column_count": int(design.shape[1]),
+        "design_matrix_rank": int(np.linalg.matrix_rank(design)),
+    }
 
 
 def _fit_and_score(
@@ -99,9 +166,11 @@ def _fit_and_score(
     regularization_c: float,
     numeric_features: Sequence[str],
     categorical_features: Sequence[str],
+    reproduce_sealed_full_parameterization: bool = True,
 ) -> tuple[dict[str, float], dict[str, Any]]:
     if (
-        tuple(numeric_features) == baseline.NUMERIC_FEATURE_NAMES
+        reproduce_sealed_full_parameterization
+        and tuple(numeric_features) == baseline.NUMERIC_FEATURE_NAMES
         and tuple(categorical_features)
         == baseline.CATEGORICAL_FEATURE_NAMES
     ):
@@ -132,22 +201,38 @@ def _fit_and_score(
     ordered_validation, validation_matrix = encoder.transform(
         validation_features
     )
-    active = _active_column_indices(
+    training_design, design_diagnostics = _diagnostic_design(
         encoder,
+        training_matrix,
         numeric_features=numeric_features,
         categorical_features=categorical_features,
     )
+    validation_design, validation_design_diagnostics = (
+        _diagnostic_design(
+            encoder,
+            validation_matrix,
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+        )
+    )
+    if (
+        design_diagnostics["parameter_names"]
+        != validation_design_diagnostics["parameter_names"]
+    ):
+        raise ProcessTriageDevelopmentError(
+            "training and validation diagnostic designs disagree"
+        )
     training_targets = np.asarray(
         [float(targets_by_row[row.row_id]) for row in ordered_training],
         dtype=np.float64,
     )
     coefficients, diagnostics = baseline._fit_coefficients(
-        training_matrix[:, active],
+        training_design,
         training_targets,
         regularization_c=regularization_c,
     )
     probabilities = baseline._sigmoid(
-        validation_matrix[:, active] @ coefficients
+        validation_design @ coefficients
     )
     return (
         {
@@ -159,9 +244,10 @@ def _fit_and_score(
         },
         {
             **diagnostics,
-            "active_column_count": len(active),
+            "active_column_count": int(training_design.shape[1]),
             "active_numeric_features": list(numeric_features),
             "active_categorical_features": list(categorical_features),
+            "diagnostic_design": design_diagnostics,
         },
     )
 
@@ -324,6 +410,7 @@ def _leave_one_source_slot_out(
             regularization_c=selected_regularization_c,
             numeric_features=baseline.NUMERIC_FEATURE_NAMES,
             categorical_features=baseline.CATEGORICAL_FEATURE_NAMES,
+            reproduce_sealed_full_parameterization=False,
         )
         pooled_scores.update(scores)
         slot_trajectories = tuple(
