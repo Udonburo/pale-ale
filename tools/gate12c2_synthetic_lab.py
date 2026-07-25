@@ -22,6 +22,7 @@ import json
 import math
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -36,9 +37,9 @@ MECHANISM_CONTROL_SCHEMA_VERSION = "gate12c2_mechanism_control_v0.1"
 INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.2"
 SEED_NAMESPACE_SCHEMA_VERSION = "gate12c2_seed_namespace_v0.2"
 ACCEPTED_DRAW_STREAM_SCHEMA_VERSION = "gate12c2_accepted_draw_stream_v0.1"
-ACCEPTED_DRAW_AUDIT_SCHEMA_VERSION = "gate12c2_accepted_draw_audit_v0.1"
+ACCEPTED_DRAW_AUDIT_SCHEMA_VERSION = "gate12c2_accepted_draw_audit_v0.2"
 SEED_STREAM_AUDIT_SCHEMA_VERSION = "gate12c2_seed_stream_audit_v0.1"
-OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.4"
+OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.5"
 GENERATOR_ID = "gate12c2_s0_joint_frames_pcg64_v0.1"
 S1_SHARED_COUPLING_GENERATOR_ID = (
     "gate12c2_s1_shared_node_coupling_reverse_v0.1"
@@ -59,7 +60,7 @@ ALLOWED_DIAGNOSTIC_KERNELS = frozenset(
     }
 )
 COMPACT_ACCEPTED_PREFIX_STORAGE_ID = (
-    "compact_fp64_valid_prefix_with_replay_commitment_v0.2"
+    "compact_fp64_valid_prefix_with_replay_commitment_v0.3"
 )
 PRIMARY_ALTERNATIVE = "observed_smaller_than_null"
 ALLOWED_ALTERNATIVES = frozenset(
@@ -363,6 +364,77 @@ def _float64_payload_commitment(values: np.ndarray) -> dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=8192)
+def _namespace_hash_sequence_sha256(values: tuple[str, ...]) -> str:
+    return hashlib.sha256(_canonical_json_bytes(values)).hexdigest()
+
+
+def _accepted_sequence_commitment(
+    *,
+    accepted_indices: Sequence[int],
+    value_payload: Mapping[str, Any],
+    seed_namespace_hashes_by_arm: Mapping[str, Sequence[str]],
+) -> str:
+    return hashlib.sha256(
+        _canonical_json_bytes(
+            {
+                "accepted_attempt_index_ranges": (
+                    _contiguous_index_ranges(accepted_indices)
+                ),
+                "accepted_value_payload": dict(value_payload),
+                "accepted_seed_namespace_sequence_sha256_by_arm": {
+                    arm: _namespace_hash_sequence_sha256(
+                        tuple(str(value) for value in values)
+                    )
+                    for arm, values in sorted(
+                        seed_namespace_hashes_by_arm.items()
+                    )
+                },
+            }
+        )
+    ).hexdigest()
+
+
+@lru_cache(maxsize=32_768)
+def _n1_sort_tail_bytes(
+    stratum: tuple[str, str, int, int],
+    replicate_id: str,
+    node_id: str,
+) -> bytes:
+    tail = _canonical_json_bytes(
+        [list(stratum), str(replicate_id), str(node_id)]
+    )
+    return tail[1:]
+
+
+@lru_cache(maxsize=8_192)
+def _n1_sort_prefix_bytes(reassignment_seed: str) -> bytes:
+    return (
+        b"["
+        + _canonical_json_bytes(N1_ID)
+        + b","
+        + _canonical_json_bytes(str(reassignment_seed))
+        + b","
+    )
+
+
+def _n1_assignment_sort_key(
+    *,
+    reassignment_seed: str,
+    stratum: tuple[str, str, int, int],
+    replicate_id: str,
+    node_id: str,
+) -> str:
+    payload = _n1_sort_prefix_bytes(str(reassignment_seed)) + (
+        _n1_sort_tail_bytes(
+            tuple(stratum),
+            str(replicate_id),
+            str(node_id),
+        )
+    )
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _seed_stream_audit(
     receipts_by_arm: Mapping[str, Sequence[Mapping[str, Any]]],
 ) -> dict[str, Any]:
@@ -494,34 +566,16 @@ def _accepted_draw_audit(
         raise Gate12C2DevelopmentError(
             "accepted payload leading dimension must match accepted count"
         )
-    seed_rows: dict[str, list[str]] = {}
+    seed_rows: dict[str, tuple[str, ...]] = {}
     for arm, raw_receipts in sorted(seed_receipts_by_arm.items()):
         receipts = tuple(raw_receipts)
         if len(receipts) < attempt_count:
             raise Gate12C2DevelopmentError(
                 "seed receipt stream is shorter than the attempted prefix"
             )
-        seed_rows[str(arm)] = [
+        seed_rows[str(arm)] = tuple(
             str(receipts[index]["namespace_sha256"])
             for index in accepted_indices
-        ]
-
-    per_draw_rows = []
-    for accepted_draw_index, attempt_index in enumerate(accepted_indices):
-        per_draw_rows.append(
-            {
-                "accepted_draw_index": accepted_draw_index,
-                "attempt_index": attempt_index,
-                "seed_namespace_sha256": {
-                    arm: values[accepted_draw_index]
-                    for arm, values in seed_rows.items()
-                },
-                "value_row_sha256": hashlib.sha256(
-                    np.ascontiguousarray(
-                        value_array[accepted_draw_index]
-                    ).tobytes()
-                ).hexdigest(),
-            }
         )
     prefix_counts = sorted(
         {
@@ -534,24 +588,31 @@ def _accepted_draw_audit(
         }
     )
     prefix_commitments = {}
+    full_value_payload = _float64_payload_commitment(value_array)
     for count in prefix_counts:
+        prefix_value_payload = (
+            full_value_payload
+            if count == len(accepted_indices)
+            else _float64_payload_commitment(value_array[:count])
+        )
+        prefix_seed_rows = {
+            arm: values[:count] for arm, values in seed_rows.items()
+        }
         prefix_commitments[str(count)] = {
             "accepted_count": count,
             "accepted_attempt_index_ranges": _contiguous_index_ranges(
                 accepted_indices[:count]
             ),
-            "accepted_value_payload": _float64_payload_commitment(
-                value_array[:count]
-            ),
+            "accepted_value_payload": prefix_value_payload,
             "accepted_seed_namespace_sequence_sha256_by_arm": {
-                arm: hashlib.sha256(
-                    _canonical_json_bytes(values[:count])
-                ).hexdigest()
-                for arm, values in seed_rows.items()
+                arm: _namespace_hash_sequence_sha256(values)
+                for arm, values in prefix_seed_rows.items()
             },
-            "accepted_sequence_sha256": hashlib.sha256(
-                _canonical_json_bytes(per_draw_rows[:count])
-            ).hexdigest(),
+            "accepted_sequence_sha256": _accepted_sequence_commitment(
+                accepted_indices=accepted_indices[:count],
+                value_payload=prefix_value_payload,
+                seed_namespace_hashes_by_arm=prefix_seed_rows,
+            ),
         }
 
     complete = len(accepted_indices) == required_valid_count
@@ -594,16 +655,16 @@ def _accepted_draw_audit(
                 rejection_indices_by_reason.items()
             )
         },
-        "accepted_value_payload": _float64_payload_commitment(value_array),
+        "accepted_value_payload": full_value_payload,
         "accepted_seed_namespace_sequence_sha256_by_arm": {
-            arm: hashlib.sha256(
-                _canonical_json_bytes(values)
-            ).hexdigest()
+            arm: _namespace_hash_sequence_sha256(values)
             for arm, values in seed_rows.items()
         },
-        "accepted_sequence_sha256": hashlib.sha256(
-            _canonical_json_bytes(per_draw_rows)
-        ).hexdigest(),
+        "accepted_sequence_sha256": _accepted_sequence_commitment(
+            accepted_indices=accepted_indices,
+            value_payload=full_value_payload,
+            seed_namespace_hashes_by_arm=seed_rows,
+        ),
         "accepted_prefix_commitments": prefix_commitments,
         "replay_contract": (
             "regenerate_attempts_in_canonical_index_order_from_the_plan_"
@@ -1744,17 +1805,12 @@ def n1_role_constrained_reassignment(
             )
         ordered = sorted(
             entries,
-            key=lambda item: hashlib.sha256(
-                _canonical_json_bytes(
-                    [
-                        N1_ID,
-                        reassignment_seed,
-                        list(stratum),
-                        item[0],
-                        item[1].node_id,
-                    ]
-                )
-            ).hexdigest(),
+            key=lambda item: _n1_assignment_sort_key(
+                reassignment_seed=reassignment_seed,
+                stratum=stratum,
+                replicate_id=item[0],
+                node_id=item[1].node_id,
+            ),
         )
         for index, target in enumerate(ordered):
             donor = ordered[(index + 1) % len(ordered)]
@@ -1901,17 +1957,12 @@ def n1_role_constrained_array_reassignment(
     for role_index, stratum in enumerate(role_strata):
         target_indices = sorted(
             range(batch_size),
-            key=lambda graph_index: hashlib.sha256(
-                _canonical_json_bytes(
-                    [
-                        N1_ID,
-                        reassignment_seed,
-                        list(stratum),
-                        replicate_ids[graph_index],
-                        cycle_nodes[graph_index][role_index].node_id,
-                    ]
-                )
-            ).hexdigest(),
+            key=lambda graph_index: _n1_assignment_sort_key(
+                reassignment_seed=reassignment_seed,
+                stratum=stratum,
+                replicate_id=replicate_ids[graph_index],
+                node_id=cycle_nodes[graph_index][role_index].node_id,
+            ),
         )
         for position, target_index in enumerate(target_indices):
             donor_indices[target_index, role_index] = target_indices[

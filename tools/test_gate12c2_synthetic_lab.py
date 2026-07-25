@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import sys
 import unittest
@@ -160,6 +161,30 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         self.assertEqual(audit["unique_donor_count"], 36)
         self.assertFalse(audit["reused_donor_counts"])
         self.assertFalse(audit["derangement_ineligible_strata"])
+
+    def test_n1_cached_sort_key_is_byte_identical_to_frozen_key(self) -> None:
+        seed = "seed-\u65e5\u672c\u8a9e"
+        stratum = ("source", "family-\u03b1", 9, 4)
+        replicate_id = "replicate-\u03b2"
+        node_id = "node-\u03b3"
+        frozen = hashlib.sha256(
+            gate12c2._canonical_json_bytes(
+                [
+                    gate12c2.N1_ID,
+                    seed,
+                    list(stratum),
+                    replicate_id,
+                    node_id,
+                ]
+            )
+        ).hexdigest()
+        optimized = gate12c2._n1_assignment_sort_key(
+            reassignment_seed=seed,
+            stratum=stratum,
+            replicate_id=replicate_id,
+            node_id=node_id,
+        )
+        self.assertEqual(optimized, frozen)
 
     def test_residual_decomposition_identity(self) -> None:
         rng = np.random.Generator(np.random.PCG64(20260724))
