@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -573,6 +574,57 @@ class Gate12C2DevelopmentShardsTest(unittest.TestCase):
                         authorization_receipt=authorization,
                     )
             self.assertFalse((output_dir / "plan.json").exists())
+
+    def test_forced_process_kill_leaves_detectable_partial(self) -> None:
+        plan = self.build_plan(indices=(0,))
+        with tempfile.TemporaryDirectory() as temporary:
+            output_dir = Path(temporary) / "sharded"
+            partial = (
+                output_dir
+                / "shards"
+                / ".outer-000000.json.gz.forced-kill.tmp"
+            )
+            child_code = (
+                "import os,pathlib,sys,time;"
+                "p=pathlib.Path(sys.argv[1]);"
+                "p.parent.mkdir(parents=True,exist_ok=True);"
+                "h=p.open('xb');"
+                "h.write(b'forced-kill-partial');"
+                "h.flush();"
+                "os.fsync(h.fileno());"
+                "print('ready',flush=True);"
+                "time.sleep(60)"
+            )
+            process = subprocess.Popen(
+                [sys.executable, "-c", child_code, str(partial)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=(
+                    subprocess.CREATE_NO_WINDOW if sys.platform == "win32"
+                    else 0
+                ),
+            )
+            self.assertEqual(process.stdout.readline().strip(), "ready")
+            process.terminate()
+            process.communicate(timeout=10)
+            process.stdout.close()
+            process.stderr.close()
+            self.assertNotEqual(process.returncode, 0)
+            self.assertTrue(partial.exists())
+            with self.assertRaises(shards.Gate12C2ShardError):
+                self.execute(
+                    plan,
+                    output_dir=output_dir,
+                    worker_count=1,
+                )
+            partial.unlink()
+            recovered = self.execute(
+                plan,
+                output_dir=output_dir,
+                worker_count=1,
+            )
+            self.assertTrue(recovered["all_outer_indices_present"])
 
     def test_canonical_json_rejects_nonfinite_values(self) -> None:
         for value in (float("nan"), float("inf"), float("-inf")):
