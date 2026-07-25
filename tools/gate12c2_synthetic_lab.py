@@ -36,7 +36,9 @@ MECHANISM_CONTROL_SCHEMA_VERSION = "gate12c2_mechanism_control_v0.1"
 INNER_DRAW_STABILITY_SCHEMA_VERSION = "gate12c2_inner_draw_stability_v0.2"
 SEED_NAMESPACE_SCHEMA_VERSION = "gate12c2_seed_namespace_v0.2"
 ACCEPTED_DRAW_STREAM_SCHEMA_VERSION = "gate12c2_accepted_draw_stream_v0.1"
-OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.3"
+ACCEPTED_DRAW_AUDIT_SCHEMA_VERSION = "gate12c2_accepted_draw_audit_v0.1"
+SEED_STREAM_AUDIT_SCHEMA_VERSION = "gate12c2_seed_stream_audit_v0.1"
+OUTER_EXPERIMENT_SCHEMA_VERSION = "gate12c2_outer_experiment_v0.4"
 GENERATOR_ID = "gate12c2_s0_joint_frames_pcg64_v0.1"
 S1_SHARED_COUPLING_GENERATOR_ID = (
     "gate12c2_s1_shared_node_coupling_reverse_v0.1"
@@ -56,7 +58,9 @@ ALLOWED_DIAGNOSTIC_KERNELS = frozenset(
         BATCHED_DIAGNOSTIC_KERNEL,
     }
 )
-COMPACT_ACCEPTED_PREFIX_STORAGE_ID = "compact_fp64_valid_prefix_v0.1"
+COMPACT_ACCEPTED_PREFIX_STORAGE_ID = (
+    "compact_fp64_valid_prefix_with_replay_commitment_v0.2"
+)
 PRIMARY_ALTERNATIVE = "observed_smaller_than_null"
 ALLOWED_ALTERNATIVES = frozenset(
     {
@@ -96,6 +100,7 @@ S1_MIN_ONE_SIDED_95_LOWER = 0.75
 S2_MIN_POINT_IDENTIFICATION = 0.80
 S2_MIN_ONE_SIDED_95_LOWER = 0.75
 S2_MIN_LOG_NULL_INFLATION = 0.05
+AUDIT_ACCEPTED_PREFIX_COUNTS = (255, 511, 1023)
 
 
 class Gate12C2DevelopmentError(ValueError):
@@ -277,6 +282,335 @@ def typed_seed_token(
     """Return a non-secret deterministic token suitable for nested generators."""
 
     return str(typed_seed_receipt(master_seed, namespace)["seed_receipt_sha256"])
+
+
+def _contiguous_index_ranges(indices: Sequence[int]) -> list[dict[str, int]]:
+    """Losslessly encode a strictly increasing integer sequence as ranges."""
+
+    values = tuple(int(value) for value in indices)
+    if any(value < 0 for value in values):
+        raise Gate12C2DevelopmentError(
+            "attempt indices must be nonnegative"
+        )
+    if any(right <= left for left, right in zip(values, values[1:])):
+        raise Gate12C2DevelopmentError(
+            "attempt indices must be unique and strictly increasing"
+        )
+    if not values:
+        return []
+    result: list[dict[str, int]] = []
+    start = values[0]
+    end = values[0]
+    for value in values[1:]:
+        if value == end + 1:
+            end = value
+            continue
+        result.append(
+            {
+                "start": start,
+                "end_inclusive": end,
+                "count": end - start + 1,
+            }
+        )
+        start = end = value
+    result.append(
+        {
+            "start": start,
+            "end_inclusive": end,
+            "count": end - start + 1,
+        }
+    )
+    return result
+
+
+def _expand_index_ranges(
+    ranges: Sequence[Mapping[str, Any]],
+) -> tuple[int, ...]:
+    """Decode and validate the canonical range representation."""
+
+    result: list[int] = []
+    for row in ranges:
+        start = int(row["start"])
+        end = int(row["end_inclusive"])
+        count = int(row["count"])
+        if start < 0 or end < start or count != end - start + 1:
+            raise Gate12C2DevelopmentError(
+                "invalid attempt-index range"
+            )
+        result.extend(range(start, end + 1))
+    values = tuple(result)
+    if any(right <= left for left, right in zip(values, values[1:])):
+        raise Gate12C2DevelopmentError(
+            "attempt-index ranges overlap or are out of order"
+        )
+    return values
+
+
+def _float64_payload_commitment(values: np.ndarray) -> dict[str, Any]:
+    """Commit an exact FP64 payload while keeping the shard storage bounded."""
+
+    array = np.ascontiguousarray(np.asarray(values, dtype="<f8"))
+    return {
+        "dtype": "float64_little_endian",
+        "order": "C",
+        "shape": [int(value) for value in array.shape],
+        "byte_count": int(array.nbytes),
+        "payload_sha256": hashlib.sha256(array.tobytes()).hexdigest(),
+        "retention": (
+            "sha256_commitment_regenerable_from_seed_namespace_"
+            "and_frozen_implementation"
+        ),
+    }
+
+
+def _seed_stream_audit(
+    receipts_by_arm: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> dict[str, Any]:
+    """Commit every attempted typed seed namespace without repeating it per block."""
+
+    if not receipts_by_arm:
+        raise Gate12C2DevelopmentError(
+            "seed-stream audit requires at least one arm"
+        )
+    arm_rows: dict[str, Any] = {}
+    expected_count: int | None = None
+    for arm, raw_receipts in sorted(receipts_by_arm.items()):
+        receipts = tuple(dict(receipt) for receipt in raw_receipts)
+        if expected_count is None:
+            expected_count = len(receipts)
+        elif len(receipts) != expected_count:
+            raise Gate12C2DevelopmentError(
+                "seed-stream arms must contain the same attempt count"
+            )
+        namespaces = [dict(receipt["namespace"]) for receipt in receipts]
+        indices = [
+            int(namespace["draw_attempt_index"]) for namespace in namespaces
+        ]
+        if indices != list(range(len(receipts))):
+            raise Gate12C2DevelopmentError(
+                "seed-stream attempts must be contiguous from zero"
+            )
+        templates = []
+        for namespace in namespaces:
+            template = dict(namespace)
+            template.pop("draw_attempt_index", None)
+            templates.append(template)
+        if templates and any(template != templates[0] for template in templates):
+            raise Gate12C2DevelopmentError(
+                "seed-stream namespace fields changed across attempts"
+            )
+        namespace_hashes = [
+            str(receipt["namespace_sha256"]) for receipt in receipts
+        ]
+        seed_hashes = [
+            str(receipt["seed_receipt_sha256"]) for receipt in receipts
+        ]
+        arm_rows[str(arm)] = {
+            "namespace_template": templates[0] if templates else None,
+            "attempt_count": len(receipts),
+            "attempt_index_rule": "contiguous_zero_based",
+            "namespace_sha256_sequence_sha256": hashlib.sha256(
+                _canonical_json_bytes(namespace_hashes)
+            ).hexdigest(),
+            "seed_receipt_sha256_sequence_sha256": hashlib.sha256(
+                _canonical_json_bytes(seed_hashes)
+            ).hexdigest(),
+            "first_namespace_sha256": (
+                namespace_hashes[0] if namespace_hashes else None
+            ),
+            "last_namespace_sha256": (
+                namespace_hashes[-1] if namespace_hashes else None
+            ),
+        }
+    return {
+        "schema_version": SEED_STREAM_AUDIT_SCHEMA_VERSION,
+        "attempt_count": int(expected_count or 0),
+        "arms": arm_rows,
+        "replay_basis": (
+            "plan_master_seed_plus_namespace_template_plus_attempt_index"
+        ),
+    }
+
+
+def _accepted_draw_audit(
+    *,
+    accepted_attempt_indices: Sequence[int],
+    rejection_attempt_indices_by_reason: Mapping[str, Sequence[int]],
+    attempt_count: int,
+    required_valid_count: int,
+    max_draw_attempts: int,
+    accepted_values: np.ndarray,
+    seed_receipts_by_arm: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> dict[str, Any]:
+    """Encode one block/q valid stream with lossless attempt provenance.
+
+    Scientific values are committed byte-for-byte rather than repeated inline.
+    The plan seed, typed namespaces, frozen implementation hashes, accepted
+    attempt mapping, and payload commitment are sufficient to regenerate and
+    verify the exact FP64 stream.
+    """
+
+    accepted_indices = tuple(int(value) for value in accepted_attempt_indices)
+    if attempt_count < 0 or required_valid_count <= 0:
+        raise Gate12C2DevelopmentError(
+            "attempt and required-valid counts are invalid"
+        )
+    if max_draw_attempts < required_valid_count:
+        raise Gate12C2DevelopmentError(
+            "max draw attempts cannot be below the required valid count"
+        )
+    _contiguous_index_ranges(accepted_indices)
+    if any(index >= attempt_count for index in accepted_indices):
+        raise Gate12C2DevelopmentError(
+            "accepted attempt index lies outside the attempted prefix"
+        )
+
+    rejection_indices_by_reason: dict[str, tuple[int, ...]] = {}
+    for reason, indices in rejection_attempt_indices_by_reason.items():
+        if not str(reason).strip():
+            raise Gate12C2DevelopmentError(
+                "rejection reasons must be nonempty"
+            )
+        values = tuple(int(value) for value in indices)
+        _contiguous_index_ranges(values)
+        if any(index >= attempt_count for index in values):
+            raise Gate12C2DevelopmentError(
+                "rejection attempt index lies outside the attempted prefix"
+            )
+        rejection_indices_by_reason[str(reason)] = values
+
+    classified = list(accepted_indices)
+    for values in rejection_indices_by_reason.values():
+        classified.extend(values)
+    if sorted(classified) != list(range(attempt_count)):
+        raise Gate12C2DevelopmentError(
+            "every attempted draw must be classified exactly once"
+        )
+
+    value_array = np.ascontiguousarray(
+        np.asarray(accepted_values, dtype="<f8")
+    )
+    if value_array.ndim == 0 or value_array.shape[0] != len(accepted_indices):
+        raise Gate12C2DevelopmentError(
+            "accepted payload leading dimension must match accepted count"
+        )
+    seed_rows: dict[str, list[str]] = {}
+    for arm, raw_receipts in sorted(seed_receipts_by_arm.items()):
+        receipts = tuple(raw_receipts)
+        if len(receipts) < attempt_count:
+            raise Gate12C2DevelopmentError(
+                "seed receipt stream is shorter than the attempted prefix"
+            )
+        seed_rows[str(arm)] = [
+            str(receipts[index]["namespace_sha256"])
+            for index in accepted_indices
+        ]
+
+    per_draw_rows = []
+    for accepted_draw_index, attempt_index in enumerate(accepted_indices):
+        per_draw_rows.append(
+            {
+                "accepted_draw_index": accepted_draw_index,
+                "attempt_index": attempt_index,
+                "seed_namespace_sha256": {
+                    arm: values[accepted_draw_index]
+                    for arm, values in seed_rows.items()
+                },
+                "value_row_sha256": hashlib.sha256(
+                    np.ascontiguousarray(
+                        value_array[accepted_draw_index]
+                    ).tobytes()
+                ).hexdigest(),
+            }
+        )
+    prefix_counts = sorted(
+        {
+            len(accepted_indices),
+            *(
+                count
+                for count in AUDIT_ACCEPTED_PREFIX_COUNTS
+                if count <= len(accepted_indices)
+            ),
+        }
+    )
+    prefix_commitments = {}
+    for count in prefix_counts:
+        prefix_commitments[str(count)] = {
+            "accepted_count": count,
+            "accepted_attempt_index_ranges": _contiguous_index_ranges(
+                accepted_indices[:count]
+            ),
+            "accepted_value_payload": _float64_payload_commitment(
+                value_array[:count]
+            ),
+            "accepted_seed_namespace_sequence_sha256_by_arm": {
+                arm: hashlib.sha256(
+                    _canonical_json_bytes(values[:count])
+                ).hexdigest()
+                for arm, values in seed_rows.items()
+            },
+            "accepted_sequence_sha256": hashlib.sha256(
+                _canonical_json_bytes(per_draw_rows[:count])
+            ).hexdigest(),
+        }
+
+    complete = len(accepted_indices) == required_valid_count
+    if complete and attempt_count < max_draw_attempts:
+        max_attempt_status = "complete_before_limit"
+    elif complete and attempt_count == max_draw_attempts:
+        max_attempt_status = "complete_at_limit"
+    elif not complete and attempt_count == max_draw_attempts:
+        max_attempt_status = "exhausted_incomplete"
+    else:
+        max_attempt_status = "incomplete_before_limit"
+    if max_attempt_status == "incomplete_before_limit":
+        raise Gate12C2DevelopmentError(
+            "an incomplete stream stopped before its attempt limit"
+        )
+
+    return {
+        "schema_version": ACCEPTED_DRAW_AUDIT_SCHEMA_VERSION,
+        "attempt_count": int(attempt_count),
+        "required_valid_count": int(required_valid_count),
+        "accepted_count": len(accepted_indices),
+        "complete": complete,
+        "max_draw_attempts": int(max_draw_attempts),
+        "max_attempt_status": max_attempt_status,
+        "accepted_draw_index_rule": (
+            "zero_based_position_in_attempt_order"
+        ),
+        "accepted_attempt_index_ranges": _contiguous_index_ranges(
+            accepted_indices
+        ),
+        "rejection_attempt_index_ranges_by_reason": {
+            reason: _contiguous_index_ranges(indices)
+            for reason, indices in sorted(
+                rejection_indices_by_reason.items()
+            )
+        },
+        "rejection_reason_counts": {
+            reason: len(indices)
+            for reason, indices in sorted(
+                rejection_indices_by_reason.items()
+            )
+        },
+        "accepted_value_payload": _float64_payload_commitment(value_array),
+        "accepted_seed_namespace_sequence_sha256_by_arm": {
+            arm: hashlib.sha256(
+                _canonical_json_bytes(values)
+            ).hexdigest()
+            for arm, values in seed_rows.items()
+        },
+        "accepted_sequence_sha256": hashlib.sha256(
+            _canonical_json_bytes(per_draw_rows)
+        ).hexdigest(),
+        "accepted_prefix_commitments": prefix_commitments,
+        "replay_contract": (
+            "regenerate_attempts_in_canonical_index_order_from_the_plan_"
+            "master_seed_and_typed_namespace;_select_the_recorded_accepted_"
+            "indices;verify_the_FP64_payload_and_sequence_SHA256"
+        ),
+    }
 
 
 def c2_freeze_candidate_specification() -> dict[str, Any]:
@@ -3492,6 +3826,11 @@ def run_development_outer_experiment(
             (2, case_block_count),
             dtype=np.int64,
         )
+        accepted_attempt_indices = np.full(
+            (2, case_block_count, inner_valid_draw_count),
+            -1,
+            dtype=np.int64,
+        )
         attempt_counts = np.zeros(
             (2, case_block_count),
             dtype=np.int64,
@@ -3500,6 +3839,11 @@ def run_development_outer_experiment(
             [Counter() for _ in range(case_block_count)]
             for _ in range(2)
         ]
+        rejection_attempt_indices_by_block = [
+            [defaultdict(list) for _ in range(case_block_count)]
+            for _ in range(2)
+        ]
+        draw_seed_receipts: list[dict[str, Any]] = []
         n1_audit_failure_count = 0
         for attempt_index in range(attempt_limit):
             if np.all(accepted_counts >= inner_valid_draw_count):
@@ -3514,7 +3858,12 @@ def run_development_outer_experiment(
                 cycle_or_root_id="N1_reassigned_block_cohort",
                 draw_attempt_index=attempt_index,
             )
-            draw_seed = typed_seed_token(master_seed, draw_namespace)
+            draw_seed_receipt = typed_seed_receipt(
+                master_seed,
+                draw_namespace,
+            )
+            draw_seed_receipts.append(draw_seed_receipt)
+            draw_seed = str(draw_seed_receipt["seed_receipt_sha256"])
             comparison_batches: dict[
                 int,
                 BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
@@ -3621,11 +3970,19 @@ def run_development_outer_experiment(
                             block_index,
                             accepted_index,
                         ] = float(value)
+                        accepted_attempt_indices[
+                            q_index,
+                            block_index,
+                            accepted_index,
+                        ] = int(attempt_index)
                         accepted_counts[q_index, block_index] += 1
                     else:
                         rejection_counts_by_block[q_index][
                             block_index
                         ][str(reason)] += 1
+                        rejection_attempt_indices_by_block[q_index][
+                            block_index
+                        ][str(reason)].append(int(attempt_index))
 
         case_endpoint_receipts: list[dict[str, Any]] = []
         for q in (1, 2):
@@ -3658,6 +4015,32 @@ def run_development_outer_experiment(
                         - math.log(null_median + epsilon)
                     )
                     block_scores.append(score)
+                accepted_count = int(
+                    accepted_counts[q_index, block_index]
+                )
+                draw_audit = _accepted_draw_audit(
+                    accepted_attempt_indices=accepted_attempt_indices[
+                        q_index,
+                        block_index,
+                        :accepted_count,
+                    ],
+                    rejection_attempt_indices_by_reason=(
+                        rejection_attempt_indices_by_block[q_index][
+                            block_index
+                        ]
+                    ),
+                    attempt_count=int(
+                        attempt_counts[q_index, block_index]
+                    ),
+                    required_valid_count=inner_valid_draw_count,
+                    max_draw_attempts=attempt_limit,
+                    accepted_values=null_values[
+                        q_index,
+                        block_index,
+                        :accepted_count,
+                    ],
+                    seed_receipts_by_arm={"N1": draw_seed_receipts},
+                )
                 block_rows.append(
                     {
                         "source_block_id": graph.replicate_id,
@@ -3670,6 +4053,7 @@ def run_development_outer_experiment(
                         "inner_accepted_count": int(
                             accepted_counts[q_index, block_index]
                         ),
+                        "inner_draw_audit": draw_audit,
                         "inner_rejection_reason_counts": (
                             dict(
                                 sorted(
@@ -3735,6 +4119,9 @@ def run_development_outer_experiment(
                     _canonical_json_bytes(manifests(observed))
                 ).hexdigest(),
                 "n1_audit_failure_count": n1_audit_failure_count,
+                "inner_draw_seed_stream_audit": _seed_stream_audit(
+                    {"N1": draw_seed_receipts}
+                ),
                 "endpoint_ids": [
                     row["endpoint_id"] for row in case_endpoint_receipts
                 ],
@@ -3954,6 +4341,11 @@ def run_development_s2_identification_experiment(
             (2, case_block_count),
             dtype=np.int64,
         )
+        accepted_attempt_indices = np.full(
+            (2, case_block_count, inner_valid_draw_count),
+            -1,
+            dtype=np.int64,
+        )
         attempt_counts = np.zeros(
             (2, case_block_count),
             dtype=np.int64,
@@ -3962,6 +4354,12 @@ def run_development_s2_identification_experiment(
             [Counter() for _ in range(case_block_count)]
             for _ in range(2)
         ]
+        rejection_attempt_indices_by_block = [
+            [defaultdict(list) for _ in range(case_block_count)]
+            for _ in range(2)
+        ]
+        n1_seed_receipts: list[dict[str, Any]] = []
+        stress_seed_receipts: list[dict[str, Any]] = []
         for attempt_index in range(attempt_limit):
             if np.all(accepted_counts >= inner_valid_draw_count):
                 break
@@ -3990,6 +4388,8 @@ def run_development_s2_identification_experiment(
                 master_seed,
                 stress_namespace,
             )
+            n1_seed_receipts.append(n1_receipt)
+            stress_seed_receipts.append(stress_receipt)
             n1_diagnostics: dict[
                 int,
                 BatchedResidualDiagnostics | tuple[ResidualDiagnostics, ...],
@@ -4152,6 +4552,9 @@ def run_development_s2_identification_experiment(
                         rejection_counts_by_block[q_index][
                             block_index
                         ][reason] += 1
+                        rejection_attempt_indices_by_block[q_index][
+                            block_index
+                        ][reason].append(int(attempt_index))
                         continue
                     accepted_index = int(
                         accepted_counts[q_index, block_index]
@@ -4189,12 +4592,18 @@ def run_development_s2_identification_experiment(
                             for value in diagnostic_values
                         ]
                     accepted_counts[q_index, block_index] += 1
+                    accepted_attempt_indices[
+                        q_index,
+                        block_index,
+                        accepted_index,
+                    ] = int(attempt_index)
 
         case_endpoint_rows: list[dict[str, Any]] = []
         for q in (1, 2):
             q_index = q - 1
             completed_blocks = 0
             per_block_component_medians: list[dict[str, Any]] = []
+            block_rows: list[dict[str, Any]] = []
             rejection_counts: Counter[str] = Counter()
             for block_index in range(case_block_count):
                 block_rejections = rejection_counts_by_block[q_index][
@@ -4205,7 +4614,55 @@ def run_development_s2_identification_experiment(
                     accepted_counts[q_index, block_index]
                     == inner_valid_draw_count
                 )
+                accepted_count = int(
+                    accepted_counts[q_index, block_index]
+                )
+                draw_audit = _accepted_draw_audit(
+                    accepted_attempt_indices=accepted_attempt_indices[
+                        q_index,
+                        block_index,
+                        :accepted_count,
+                    ],
+                    rejection_attempt_indices_by_reason=(
+                        rejection_attempt_indices_by_block[q_index][
+                            block_index
+                        ]
+                    ),
+                    attempt_count=int(
+                        attempt_counts[q_index, block_index]
+                    ),
+                    required_valid_count=inner_valid_draw_count,
+                    max_draw_attempts=attempt_limit,
+                    accepted_values=component_values[
+                        q_index,
+                        block_index,
+                        :accepted_count,
+                        :,
+                        :,
+                    ],
+                    seed_receipts_by_arm={
+                        "N1": n1_seed_receipts,
+                        "graph_unconstrained_stressor": (
+                            stress_seed_receipts
+                        ),
+                    },
+                )
                 if not complete:
+                    block_rows.append(
+                        {
+                            "source_block_id": (
+                                observed[block_index].replicate_id
+                            ),
+                            "observed": None,
+                            "N1": None,
+                            "graph_unconstrained_stressor": None,
+                            "attempt_count": int(
+                                attempt_counts[q_index, block_index]
+                            ),
+                            "accepted_count": accepted_count,
+                            "inner_draw_audit": draw_audit,
+                        }
+                    )
                     continue
                 completed_blocks += 1
 
@@ -4227,38 +4684,37 @@ def run_development_s2_identification_experiment(
                         else None
                     )
 
-                per_block_component_medians.append(
-                    {
-                        "source_block_id": observed[block_index].replicate_id,
-                        "observed": {
+                component_row = {
+                    "source_block_id": observed[block_index].replicate_id,
+                    "observed": {
                             field_name: block_component_median(
                                 "observed",
                                 field_name,
                             )
                             for field_name in component_fields
-                        },
-                        "N1": {
+                    },
+                    "N1": {
                             field_name: block_component_median(
                                 "N1",
                                 field_name,
                             )
                             for field_name in component_fields
-                        },
-                        "graph_unconstrained_stressor": {
+                    },
+                    "graph_unconstrained_stressor": {
                             field_name: block_component_median(
                                 "graph_unconstrained_stressor",
                                 field_name,
                             )
                             for field_name in component_fields
-                        },
-                        "attempt_count": int(
-                            attempt_counts[q_index, block_index]
-                        ),
-                        "accepted_count": int(
-                            accepted_counts[q_index, block_index]
-                        ),
-                    }
-                )
+                    },
+                    "attempt_count": int(
+                        attempt_counts[q_index, block_index]
+                    ),
+                    "accepted_count": accepted_count,
+                    "inner_draw_audit": draw_audit,
+                }
+                per_block_component_medians.append(component_row)
+                block_rows.append(component_row)
 
             def across_blocks(arm: str, field_name: str) -> float | None:
                 values = [
@@ -4344,7 +4800,7 @@ def run_development_s2_identification_experiment(
                 "endpoint_identified": endpoint_identified,
                 "component_medians": component_medians,
                 "rejection_reason_counts": dict(sorted(rejection_counts.items())),
-                "block_rows": per_block_component_medians,
+                "block_rows": block_rows,
             }
             endpoint_rows.append(row)
             case_endpoint_rows.append(row)
@@ -4364,6 +4820,14 @@ def run_development_s2_identification_experiment(
                 ),
                 "case_identified": case_identified,
                 "observed_seed_receipt": observed_seed,
+                "inner_draw_seed_stream_audit": _seed_stream_audit(
+                    {
+                        "N1": n1_seed_receipts,
+                        "graph_unconstrained_stressor": (
+                            stress_seed_receipts
+                        ),
+                    }
+                ),
             }
         )
 
@@ -4391,6 +4855,7 @@ def run_development_s2_identification_experiment(
         "outer_experiment_index": int(outer_experiment_index),
         "block_count_schedule": _block_count_receipt(block_schedule),
         "inner_valid_draw_count": int(inner_valid_draw_count),
+        "max_draw_attempts": int(attempt_limit),
         "diagnostic_kernel": diagnostic_kernel,
         "accepted_valid_draw_storage": COMPACT_ACCEPTED_PREFIX_STORAGE_ID,
         "accepted_valid_draw_order": (

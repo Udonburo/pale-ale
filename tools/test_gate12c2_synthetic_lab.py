@@ -464,6 +464,101 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
         )
         self.assertEqual(stability["attempt_count_to_largest_prefix"], 4)
 
+    def test_compact_draw_audit_losslessly_classifies_attempts(self) -> None:
+        receipts = [
+            gate12c2.typed_seed_receipt(
+                "audit-master",
+                gate12c2.OuterSeedNamespace(
+                    surface_id="development",
+                    null_candidate_id=gate12c2.N1_ID,
+                    regime_id="S0_true_null",
+                    effect_strength=None,
+                    outer_experiment_index=0,
+                    case_or_endpoint_id="case-00",
+                    cycle_or_root_id="audit-unit",
+                    draw_attempt_index=index,
+                ),
+            )
+            for index in range(5)
+        ]
+        audit = gate12c2._accepted_draw_audit(
+            accepted_attempt_indices=(1, 4),
+            rejection_attempt_indices_by_reason={
+                "unstable_cut": (0, 2),
+                "numerical_failure": (3,),
+            },
+            attempt_count=5,
+            required_valid_count=2,
+            max_draw_attempts=5,
+            accepted_values=np.asarray([1.25, 2.5], dtype=np.float64),
+            seed_receipts_by_arm={"N1": receipts},
+        )
+        self.assertEqual(
+            gate12c2._expand_index_ranges(
+                audit["accepted_attempt_index_ranges"]
+            ),
+            (1, 4),
+        )
+        reconstructed_rejections = {
+            reason: gate12c2._expand_index_ranges(ranges)
+            for reason, ranges in audit[
+                "rejection_attempt_index_ranges_by_reason"
+            ].items()
+        }
+        self.assertEqual(
+            reconstructed_rejections,
+            {
+                "numerical_failure": (3,),
+                "unstable_cut": (0, 2),
+            },
+        )
+        self.assertEqual(audit["max_attempt_status"], "complete_at_limit")
+        self.assertEqual(
+            audit["accepted_value_payload"]["byte_count"],
+            2 * np.dtype(np.float64).itemsize,
+        )
+        self.assertEqual(len(audit["accepted_sequence_sha256"]), 64)
+        self.assertEqual(
+            audit["accepted_prefix_commitments"]["2"][
+                "accepted_value_payload"
+            ]["payload_sha256"],
+            audit["accepted_value_payload"]["payload_sha256"],
+        )
+
+    def test_compact_draw_audit_marks_exhausted_incomplete(self) -> None:
+        receipts = [
+            gate12c2.typed_seed_receipt(
+                "audit-master",
+                gate12c2.OuterSeedNamespace(
+                    surface_id="development",
+                    null_candidate_id=gate12c2.N1_ID,
+                    regime_id="S0_true_null",
+                    effect_strength=None,
+                    outer_experiment_index=0,
+                    case_or_endpoint_id="case-00",
+                    cycle_or_root_id="audit-unit",
+                    draw_attempt_index=index,
+                ),
+            )
+            for index in range(3)
+        ]
+        audit = gate12c2._accepted_draw_audit(
+            accepted_attempt_indices=(1,),
+            rejection_attempt_indices_by_reason={
+                "unstable_cut": (0, 2),
+            },
+            attempt_count=3,
+            required_valid_count=2,
+            max_draw_attempts=3,
+            accepted_values=np.asarray([1.25], dtype=np.float64),
+            seed_receipts_by_arm={"N1": receipts},
+        )
+        self.assertFalse(audit["complete"])
+        self.assertEqual(
+            audit["max_attempt_status"],
+            "exhausted_incomplete",
+        )
+
     def test_graph_derived_outer_experiment_carries_full_hierarchy(self) -> None:
         report = gate12c2.run_development_outer_experiment(
             regime_id="S0_true_null",
@@ -493,6 +588,21 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
             report["accepted_valid_draw_order"],
             "draw_attempt_order_first_required_valid",
         )
+        first_block = report["endpoint_receipts"][0]["block_rows"][0]
+        audit = first_block["inner_draw_audit"]
+        self.assertTrue(audit["complete"])
+        self.assertEqual(audit["accepted_count"], 3)
+        self.assertEqual(
+            gate12c2._expand_index_ranges(
+                audit["accepted_attempt_index_ranges"]
+            ),
+            (0, 1, 2),
+        )
+        seed_audit = report["case_receipts"][0][
+            "inner_draw_seed_stream_audit"
+        ]
+        self.assertEqual(seed_audit["attempt_count"], 3)
+        self.assertIn("N1", seed_audit["arms"])
 
     def test_outer_experiment_accepts_case_specific_block_schedule(self) -> None:
         schedule = {
@@ -525,6 +635,38 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
                 row["expected_block_count"],
                 schedule[row["endpoint_id"].split(":", 1)[0]],
             )
+
+    def test_outer_draw_runs_commit_the_same_accepted_prefix(self) -> None:
+        common = {
+            "regime_id": "S0_true_null",
+            "master_seed": "outer-prefix-commitment-test",
+            "outer_experiment_index": 0,
+            "block_count": 4,
+            "max_draw_attempts": 600,
+            "diagnostic_kernel": gate12c2.BATCHED_DIAGNOSTIC_KERNEL,
+        }
+        shorter = gate12c2.run_development_outer_experiment(
+            **common,
+            inner_valid_draw_count=255,
+        )
+        longer = gate12c2.run_development_outer_experiment(
+            **common,
+            inner_valid_draw_count=511,
+        )
+        shorter_audit = shorter["endpoint_receipts"][0]["block_rows"][0][
+            "inner_draw_audit"
+        ]
+        longer_prefix = longer["endpoint_receipts"][0]["block_rows"][0][
+            "inner_draw_audit"
+        ]["accepted_prefix_commitments"]["255"]
+        self.assertEqual(
+            shorter_audit["accepted_value_payload"]["payload_sha256"],
+            longer_prefix["accepted_value_payload"]["payload_sha256"],
+        )
+        self.assertEqual(
+            shorter_audit["accepted_sequence_sha256"],
+            longer_prefix["accepted_sequence_sha256"],
+        )
 
     def test_s2_accepts_case_specific_block_schedule(self) -> None:
         schedule = {
@@ -576,6 +718,19 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
                 set(row["inflation_consistent_channels"]),
                 {"x_increased", "y_increased", "c_decreased"},
             )
+            self.assertTrue(
+                all(
+                    "inner_draw_audit" in block
+                    for block in row["block_rows"]
+                )
+            )
+        paired_seed_audit = report["case_rows"][0][
+            "inner_draw_seed_stream_audit"
+        ]
+        self.assertEqual(
+            set(paired_seed_audit["arms"]),
+            {"N1", "graph_unconstrained_stressor"},
+        )
 
     def test_residual_mechanism_controls_are_separated(self) -> None:
         controls = gate12c2.development_residual_mechanism_controls()
