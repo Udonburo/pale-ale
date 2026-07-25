@@ -383,6 +383,41 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
             self.assertEqual(alignment["degenerate_count"], 24)
             self.assertFalse(alignment["coverage_gate_pass"])
 
+    def test_partially_degenerate_conditional_surface_is_ineligible(
+        self,
+    ) -> None:
+        results = self._inputs()
+        for draw_count in stability.PREFIX_COUNTS:
+            endpoint = results["S2_null_inflation"][draw_count][0][
+                "endpoint_rows"
+            ][0]
+            for arm in ("observed", "N1", "graph_unconstrained_stressor"):
+                endpoint["component_medians"][arm]["c_q"] = None
+                endpoint["component_coverage"][arm]["c_q"] = {
+                    "expected_count": 10,
+                    "defined_count": 0,
+                    "degenerate_count": 10,
+                    "unexpected_missing_count": 0,
+                    "nonfinite_count": 0,
+                }
+        projection = self._projection(results)
+        self.assertIsNone(projection["selected_draw_count"])
+        for candidate in projection["candidates"]:
+            self.assertFalse(candidate["selection_eligible"])
+            s2 = next(
+                row
+                for row in candidate["regimes"]
+                if row["regime_id"] == "S2_null_inflation"
+            )
+            alignment = next(
+                row
+                for row in s2["component_stability"]
+                if row["field_name"] == "c_q"
+            )
+            self.assertEqual(alignment["compared_count"], 23)
+            self.assertEqual(alignment["degenerate_count"], 1)
+            self.assertFalse(alignment["coverage_gate_pass"])
+
     def test_nan_and_inf_fail_closed(self) -> None:
         for value in (float("nan"), float("inf"), float("-inf")):
             results = self._inputs()

@@ -562,8 +562,8 @@ def _compare_regime(
             )
             or (
                 field_name in S2_CONDITIONALLY_DEFINED_FIELDS
-                and len(values) > 0
-                and len(values) + degenerate_count == comparison_count
+                and len(values) == comparison_count
+                and degenerate_count == 0
             )
         )
         field_coverage_gate_pass &= coverage_pass

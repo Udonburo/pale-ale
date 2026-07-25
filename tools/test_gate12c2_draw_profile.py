@@ -97,6 +97,14 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 "projected_remaining_free_bytes": 8700,
                 "minimum_remaining_free_bytes": 5000,
                 "disk_gate_pass": True,
+                "worker_profile_peak_process_tree_rss_bytes_at_draw_255": 100,
+                "projected_peak_process_tree_rss_bytes_at_draw_1023": 402,
+                "memory_projection_safety_factor": 1.3,
+                "projected_peak_process_tree_rss_bytes_with_safety": 523,
+                "physical_ram_bytes_at_preflight": 10000,
+                "available_physical_memory_bytes_at_preflight": 9000,
+                "maximum_admitted_peak_process_tree_rss_bytes": 7500,
+                "memory_headroom_gate_pass": True,
             },
         )
         authorization = profile.build_execution_authorization(
@@ -224,6 +232,9 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
             regime["regime_id"]: {
                 "output_bytes": 1000,
                 "outer_experiment_count": 1,
+                "process_tree_memory": {
+                    "peak_process_tree_rss_bytes": 100,
+                },
             }
             for regime in profile.REGIME_SPECIFICATIONS
         }
@@ -263,6 +274,14 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     "restored_worktree_clean": True,
                     "implementation_blob_identity": "pass",
                 },
+            ), mock.patch.object(
+                profile,
+                "_physical_ram_bytes",
+                return_value=10000,
+            ), mock.patch.object(
+                profile,
+                "_available_physical_memory_bytes",
+                return_value=9000,
             ):
                 receipt = profile.issue_mechanical_preflight(
                     plan_path=plan_path,
@@ -281,6 +300,69 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 for row in receipt["checks"].values()
             )
         )
+        self.assertTrue(
+            receipt["resource_projection"][
+                "memory_headroom_gate_pass"
+            ]
+        )
+
+    def test_mechanical_preflight_fails_insufficient_memory_headroom(
+        self,
+    ) -> None:
+        plan = self.build_plan()
+        worker_rows = {
+            regime["regime_id"]: {
+                "output_bytes": 1000,
+                "outer_experiment_count": 1,
+                "process_tree_memory": {
+                    "peak_process_tree_rss_bytes": 100,
+                },
+            }
+            for regime in profile.REGIME_SPECIFICATIONS
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plan_path = root / "plan.json"
+            plan_path.write_bytes(profile._canonical_json_bytes(plan))
+            with mock.patch.object(
+                profile,
+                "_verify_prior_worker_profile",
+                return_value={
+                    "path": (root / "worker.json").as_posix(),
+                    "file_sha256": "1" * 64,
+                    "payload_sha256": "2" * 64,
+                    "worker_4_rows": worker_rows,
+                },
+            ), mock.patch.object(
+                profile,
+                "_verify_worker_carry_forward",
+                return_value={
+                    "path": (root / "carry.json").as_posix(),
+                    "file_sha256": "3" * 64,
+                    "payload_sha256": "4" * 64,
+                },
+            ), mock.patch.object(
+                profile,
+                "_physical_ram_bytes",
+                return_value=10000,
+            ), mock.patch.object(
+                profile,
+                "_available_physical_memory_bytes",
+                return_value=500,
+            ):
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "memory-headroom",
+                ):
+                    profile.issue_mechanical_preflight(
+                        plan_path=plan_path,
+                        output_root=root / "profile",
+                        preflight_id="insufficient-memory-test",
+                        recovery_bundle_path=root / "bundle",
+                        worker_profile_receipt_path=root / "worker.json",
+                        worker_carry_forward_receipt_path=root / "carry.json",
+                        restore_scratch_root=root,
+                    )
 
     def test_execution_requires_exact_authorization(self) -> None:
         plan = self.build_plan()

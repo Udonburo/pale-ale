@@ -15,6 +15,7 @@ is the only admitted human-facing projection over completed result shards.
 
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import math
@@ -34,8 +35,8 @@ import gate12c2_synthetic_lab as lab
 import gate12c2_throughput_profile as throughput
 
 
-PLAN_SCHEMA_VERSION = "gate12c2_draw_profile_plan_v0.1"
-PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.2"
+PLAN_SCHEMA_VERSION = "gate12c2_draw_profile_plan_v0.2"
+PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.3"
 AUTHORIZATION_SCHEMA_VERSION = (
     "gate12c2_draw_profile_execution_authorization_v0.2"
 )
@@ -47,7 +48,7 @@ RESOURCE_RECEIPT_SCHEMA_VERSION = (
     "gate12c2_draw_profile_resource_receipt_v0.1"
 )
 RESOURCE_POLICY_SCHEMA_VERSION = (
-    "gate12c2_draw_profile_resource_policy_v0.1"
+    "gate12c2_draw_profile_resource_policy_v0.2"
 )
 MECHANICAL_PREFLIGHT_SCHEMA_VERSION = (
     "gate12c2_draw_profile_mechanical_preflight_v0.1"
@@ -68,10 +69,11 @@ EXECUTION_EVIDENCE_NAME = "execution-evidence.json"
 RESOURCE_RECEIPT_NAME = "resource-receipt.json"
 EXECUTION_RECEIPT_NAME = "execution-receipt.json"
 RESOURCE_DISK_SAFETY_FACTOR = 1.3
+RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR = 1.3
 RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK = 0.5
 RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM = 0.75
 S2_AMENDMENT_PAYLOAD_SHA256 = (
-    "c9ceff435b6e653c02362dc3e50abf0bfc64f1fd80af38819ef412638cbecb8c"
+    "1a44c508486595898b95ae809dcf120a51606c16bb11f8e2e85e7950a0bbff3b"
 )
 REGIME_SPECIFICATIONS = (
     {
@@ -111,6 +113,7 @@ REQUIRED_PREFLIGHT_CHECKS = (
     "strict_no_outcome_analyzer_verified",
     "output_root_verified",
     "disk_gate_verified",
+    "memory_headroom_verified",
     "standalone_recovery_bundle_verified",
     "short_path_restore_rehearsal_verified",
     "worker_profile_carry_forward_verified",
@@ -222,6 +225,13 @@ def _resource_policy() -> dict[str, Any]:
             RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM
         ),
         "disk_projection_safety_factor": RESOURCE_DISK_SAFETY_FACTOR,
+        "memory_projection_safety_factor": (
+            RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR
+        ),
+        "memory_projection_draw_scaling": (
+            "maximum measured worker-4 draw-255 process-tree RSS scaled "
+            "linearly to draw-1023 before applying the safety factor"
+        ),
         "minimum_remaining_fraction_of_prerun_free_disk": (
             RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK
         ),
@@ -720,6 +730,33 @@ def _project_output_bytes(
     return int(math.ceil(total))
 
 
+def _project_peak_process_tree_rss_bytes(
+    worker_profile: Mapping[str, Any],
+) -> int:
+    """Conservatively project draw-1023 RSS from the worker-4 profile."""
+
+    rows = worker_profile["worker_4_rows"]
+    measured_peak = max(
+        int(
+            rows[str(regime["regime_id"])]["process_tree_memory"][
+                "peak_process_tree_rss_bytes"
+            ]
+        )
+        for regime in REGIME_SPECIFICATIONS
+    )
+    if measured_peak <= 0:
+        raise Gate12C2DrawProfileError(
+            "worker profile has no positive process-tree RSS measurement"
+        )
+    return int(
+        math.ceil(
+            measured_peak
+            * REFERENCE_DRAW_COUNT
+            / PREFIX_COUNTS[0]
+        )
+    )
+
+
 def _verify_recovery_bundle(
     bundle_path: Path,
     *,
@@ -943,6 +980,30 @@ def issue_mechanical_preflight(
         verified,
         worker_profile,
     )
+    projected_peak_rss_bytes = _project_peak_process_tree_rss_bytes(
+        worker_profile
+    )
+    physical_ram_bytes = _physical_ram_bytes()
+    available_memory_bytes = _available_physical_memory_bytes()
+    projected_peak_with_safety = int(
+        math.ceil(
+            projected_peak_rss_bytes
+            * RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR
+        )
+    )
+    maximum_admitted_peak = int(
+        physical_ram_bytes
+        * RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM
+    )
+    memory_pass = bool(
+        projected_peak_with_safety <= available_memory_bytes
+        and projected_peak_rss_bytes <= maximum_admitted_peak
+    )
+    if not memory_pass:
+        raise Gate12C2DrawProfileError(
+            "exact draw-profile memory-headroom projection failed the "
+            "frozen gate"
+        )
     disk = shutil.disk_usage(Path(output_root).resolve().parent)
     projected_with_safety = int(
         math.ceil(
@@ -985,6 +1046,31 @@ def issue_mechanical_preflight(
             * RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK
         ),
         "disk_gate_pass": disk_pass,
+        "worker_profile_peak_process_tree_rss_bytes_at_draw_255": max(
+            int(
+                row["process_tree_memory"][
+                    "peak_process_tree_rss_bytes"
+                ]
+            )
+            for row in worker_profile["worker_4_rows"].values()
+        ),
+        "projected_peak_process_tree_rss_bytes_at_draw_1023": (
+            projected_peak_rss_bytes
+        ),
+        "memory_projection_safety_factor": (
+            RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR
+        ),
+        "projected_peak_process_tree_rss_bytes_with_safety": (
+            projected_peak_with_safety
+        ),
+        "physical_ram_bytes_at_preflight": physical_ram_bytes,
+        "available_physical_memory_bytes_at_preflight": (
+            available_memory_bytes
+        ),
+        "maximum_admitted_peak_process_tree_rss_bytes": (
+            maximum_admitted_peak
+        ),
+        "memory_headroom_gate_pass": memory_pass,
     }
     evidence_rows = {
         "complete_plan_rebuilt": {
@@ -1044,6 +1130,26 @@ def issue_mechanical_preflight(
             "status": "pass",
             "evidence_sha256": _sha256_bytes(
                 _canonical_json_bytes(resource_projection)
+            ),
+        },
+        "memory_headroom_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(
+                    {
+                        key: resource_projection[key]
+                        for key in (
+                            "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+                            "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                            "memory_projection_safety_factor",
+                            "projected_peak_process_tree_rss_bytes_with_safety",
+                            "physical_ram_bytes_at_preflight",
+                            "available_physical_memory_bytes_at_preflight",
+                            "maximum_admitted_peak_process_tree_rss_bytes",
+                            "memory_headroom_gate_pass",
+                        )
+                    }
+                )
             ),
         },
         "standalone_recovery_bundle_verified": {
@@ -1216,7 +1322,15 @@ def _verify_preflight(
     if (
         not isinstance(resource_projection, Mapping)
         or resource_projection.get("disk_gate_pass") is not True
+        or resource_projection.get("memory_headroom_gate_pass") is not True
         or int(resource_projection.get("projected_output_bytes", 0)) <= 0
+        or float(
+            resource_projection.get(
+                "disk_projection_safety_factor",
+                -1.0,
+            )
+        )
+        != RESOURCE_DISK_SAFETY_FACTOR
         or int(
             resource_projection.get(
                 "projected_remaining_free_bytes",
@@ -1224,6 +1338,115 @@ def _verify_preflight(
             )
         )
         < int(resource_projection.get("minimum_remaining_free_bytes", 0))
+        or int(
+            resource_projection.get(
+                "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+                0,
+            )
+        )
+        <= 0
+        or int(
+            resource_projection.get(
+                "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                0,
+            )
+        )
+        <= 0
+        or int(
+            resource_projection.get(
+                "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                0,
+            )
+        )
+        != int(
+            math.ceil(
+                int(
+                    resource_projection.get(
+                        "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+                        0,
+                    )
+                )
+                * REFERENCE_DRAW_COUNT
+                / PREFIX_COUNTS[0]
+            )
+        )
+        or float(
+            resource_projection.get(
+                "memory_projection_safety_factor",
+                -1.0,
+            )
+        )
+        != RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR
+        or int(
+            resource_projection.get(
+                "projected_peak_process_tree_rss_bytes_with_safety",
+                0,
+            )
+        )
+        != int(
+            math.ceil(
+                int(
+                    resource_projection.get(
+                        "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                        0,
+                    )
+                )
+                * RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR
+            )
+        )
+        or int(
+            resource_projection.get(
+                "projected_peak_process_tree_rss_bytes_with_safety",
+                0,
+            )
+        )
+        > int(
+            resource_projection.get(
+                "available_physical_memory_bytes_at_preflight",
+                0,
+            )
+        )
+        or int(
+            resource_projection.get(
+                "available_physical_memory_bytes_at_preflight",
+                0,
+            )
+        )
+        <= 0
+        or int(
+            resource_projection.get(
+                "physical_ram_bytes_at_preflight",
+                0,
+            )
+        )
+        <= 0
+        or int(
+            resource_projection.get(
+                "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                0,
+            )
+        )
+        > int(
+            resource_projection.get(
+                "maximum_admitted_peak_process_tree_rss_bytes",
+                0,
+            )
+        )
+        or int(
+            resource_projection.get(
+                "maximum_admitted_peak_process_tree_rss_bytes",
+                0,
+            )
+        )
+        != int(
+            int(
+                resource_projection.get(
+                    "physical_ram_bytes_at_preflight",
+                    0,
+                )
+            )
+            * RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM
+        )
     ):
         raise Gate12C2DrawProfileError(
             "draw profile preflight has invalid resource projection"
@@ -1741,6 +1964,44 @@ def _physical_ram_bytes() -> int:
             pass
     raise Gate12C2DrawProfileError(
         "physical RAM could not be measured mechanically"
+    )
+
+
+def _available_physical_memory_bytes() -> int:
+    """Measure currently available physical memory without caller attestations."""
+
+    if os.name == "nt":
+        class MemoryStatusEx(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+
+        status = MemoryStatusEx()
+        status.dwLength = ctypes.sizeof(MemoryStatusEx)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(
+            ctypes.byref(status)
+        ):
+            available = int(status.ullAvailPhys)
+            if available > 0:
+                return available
+    if hasattr(os, "sysconf"):
+        try:
+            pages = int(os.sysconf("SC_AVPHYS_PAGES"))
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            if pages > 0 and page_size > 0:
+                return pages * page_size
+        except (OSError, ValueError):
+            pass
+    raise Gate12C2DrawProfileError(
+        "available physical memory could not be measured mechanically"
     )
 
 
