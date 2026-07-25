@@ -4353,6 +4353,47 @@ def run_development_s2_identification_experiment(
         "p_L_q",
         "p_R_q",
     )
+    always_defined_component_fields = {
+        "a_q",
+        "u_q",
+        "v_q",
+        "x_q",
+        "y_q",
+    }
+    component_status_code = {
+        "unset": 0,
+        "defined": 1,
+        "degenerate": 2,
+        "unexpected_missing": 3,
+        "nonfinite": 4,
+    }
+
+    def classify_component_status(
+        diagnostic: ResidualDiagnostics,
+        field_name: str,
+        value: float | None,
+    ) -> int:
+        if value is not None and not math.isfinite(float(value)):
+            return component_status_code["nonfinite"]
+        if field_name in always_defined_component_fields:
+            return component_status_code[
+                "defined" if value is not None else "unexpected_missing"
+            ]
+        declared_status = {
+            "c_q": diagnostic.alignment_status,
+            "p_L_q": diagnostic.propagation_left_status,
+            "p_R_q": diagnostic.propagation_right_status,
+        }[field_name]
+        if declared_status == "defined":
+            return component_status_code[
+                "defined" if value is not None else "unexpected_missing"
+            ]
+        if declared_status.startswith("undefined_degenerate"):
+            return component_status_code[
+                "degenerate" if value is None else "unexpected_missing"
+            ]
+        return component_status_code["unexpected_missing"]
+
     endpoint_rows: list[dict[str, Any]] = []
     case_rows: list[dict[str, Any]] = []
     for case in _outer_case_grid():
@@ -4395,6 +4436,10 @@ def run_development_s2_identification_experiment(
             ),
             np.nan,
             dtype=np.float64,
+        )
+        component_status_codes = np.zeros(
+            component_values.shape,
+            dtype=np.int8,
         )
         accepted_counts = np.zeros(
             (2, case_block_count),
@@ -4636,6 +4681,35 @@ def run_development_s2_identification_experiment(
                             diagnostic.propagation_left,
                             diagnostic.propagation_right,
                         )
+                        status_codes = [
+                            classify_component_status(
+                                diagnostic,
+                                field_name,
+                                value,
+                            )
+                            for field_name, value in zip(
+                                component_fields,
+                                diagnostic_values,
+                                strict=True,
+                            )
+                        ]
+                        invalid_statuses = [
+                            component_fields[index]
+                            for index, status in enumerate(status_codes)
+                            if status
+                            in {
+                                component_status_code[
+                                    "unexpected_missing"
+                                ],
+                                component_status_code["nonfinite"],
+                            }
+                        ]
+                        if invalid_statuses:
+                            raise Gate12C2DevelopmentError(
+                                "accepted S2 diagnostic contains unexpected "
+                                "missing or nonfinite components: "
+                                f"{arm}/{invalid_statuses}"
+                            )
                         component_values[
                             q_index,
                             block_index,
@@ -4650,6 +4724,13 @@ def run_development_s2_identification_experiment(
                             )
                             for value in diagnostic_values
                         ]
+                        component_status_codes[
+                            q_index,
+                            block_index,
+                            accepted_index,
+                            arm_index[arm],
+                            :,
+                        ] = status_codes
                     accepted_counts[q_index, block_index] += 1
                     accepted_attempt_indices[
                         q_index,
@@ -4743,6 +4824,58 @@ def run_development_s2_identification_experiment(
                         else None
                     )
 
+                def block_component_definition_counts(
+                    arm: str,
+                    field_name: str,
+                ) -> dict[str, int]:
+                    codes = component_status_codes[
+                        q_index,
+                        block_index,
+                        :inner_valid_draw_count,
+                        arm_index[arm],
+                        component_field_index[field_name],
+                    ]
+                    counts = {
+                        "expected_count": int(inner_valid_draw_count),
+                        "defined_count": int(
+                            np.count_nonzero(
+                                codes == component_status_code["defined"]
+                            )
+                        ),
+                        "degenerate_count": int(
+                            np.count_nonzero(
+                                codes
+                                == component_status_code["degenerate"]
+                            )
+                        ),
+                        "unexpected_missing_count": int(
+                            np.count_nonzero(
+                                codes
+                                == component_status_code[
+                                    "unexpected_missing"
+                                ]
+                            )
+                        ),
+                        "nonfinite_count": int(
+                            np.count_nonzero(
+                                codes == component_status_code["nonfinite"]
+                            )
+                        ),
+                    }
+                    if sum(
+                        counts[key]
+                        for key in (
+                            "defined_count",
+                            "degenerate_count",
+                            "unexpected_missing_count",
+                            "nonfinite_count",
+                        )
+                    ) != counts["expected_count"]:
+                        raise Gate12C2DevelopmentError(
+                            "S2 component status accounting is incomplete"
+                        )
+                    return counts
+
                 component_row = {
                     "source_block_id": observed[block_index].replicate_id,
                     "observed": {
@@ -4766,6 +4899,20 @@ def run_development_s2_identification_experiment(
                             )
                             for field_name in component_fields
                     },
+                    "component_definition_counts": {
+                        arm: {
+                            field_name: block_component_definition_counts(
+                                arm,
+                                field_name,
+                            )
+                            for field_name in component_fields
+                        }
+                        for arm in (
+                            "observed",
+                            "N1",
+                            "graph_unconstrained_stressor",
+                        )
+                    },
                     "attempt_count": int(
                         attempt_counts[q_index, block_index]
                     ),
@@ -4786,6 +4933,64 @@ def run_development_s2_identification_experiment(
             component_medians = {
                 arm: {
                     field_name: across_blocks(arm, field_name)
+                    for field_name in component_fields
+                }
+                for arm in (
+                    "observed",
+                    "N1",
+                    "graph_unconstrained_stressor",
+                )
+            }
+
+            def endpoint_component_counts(
+                arm: str,
+                field_name: str,
+            ) -> dict[str, int]:
+                expected_count = int(
+                    case_block_count * inner_valid_draw_count
+                )
+                counts = {
+                    "expected_count": expected_count,
+                    "defined_count": 0,
+                    "degenerate_count": 0,
+                    "unexpected_missing_count": 0,
+                    "nonfinite_count": 0,
+                }
+                for block_row in per_block_component_medians:
+                    block_counts = block_row[
+                        "component_definition_counts"
+                    ][arm][field_name]
+                    for key in (
+                        "defined_count",
+                        "degenerate_count",
+                        "unexpected_missing_count",
+                        "nonfinite_count",
+                    ):
+                        counts[key] += int(block_counts[key])
+                accounted = sum(
+                    counts[key]
+                    for key in (
+                        "defined_count",
+                        "degenerate_count",
+                        "unexpected_missing_count",
+                        "nonfinite_count",
+                    )
+                )
+                if accounted > expected_count:
+                    raise Gate12C2DevelopmentError(
+                        "S2 endpoint component status accounting overflowed"
+                    )
+                counts["unexpected_missing_count"] += (
+                    expected_count - accounted
+                )
+                return counts
+
+            component_coverage = {
+                arm: {
+                    field_name: endpoint_component_counts(
+                        arm,
+                        field_name,
+                    )
                     for field_name in component_fields
                 }
                 for arm in (
@@ -4858,6 +5063,7 @@ def run_development_s2_identification_experiment(
                 "inflation_consistent_channels": channels,
                 "endpoint_identified": endpoint_identified,
                 "component_medians": component_medians,
+                "component_coverage": component_coverage,
                 "rejection_reason_counts": dict(sorted(rejection_counts.items())),
                 "block_rows": block_rows,
             }

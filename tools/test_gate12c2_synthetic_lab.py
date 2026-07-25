@@ -740,6 +740,28 @@ class Gate12C2SyntheticLabTest(unittest.TestCase):
                 row["component_medians"],
             )
             self.assertEqual(
+                set(row["component_coverage"]),
+                {
+                    "observed",
+                    "N1",
+                    "graph_unconstrained_stressor",
+                },
+            )
+            for arm in row["component_coverage"].values():
+                for counts in arm.values():
+                    self.assertEqual(
+                        counts["expected_count"],
+                        counts["defined_count"]
+                        + counts["degenerate_count"]
+                        + counts["unexpected_missing_count"]
+                        + counts["nonfinite_count"],
+                    )
+                    self.assertEqual(
+                        counts["unexpected_missing_count"],
+                        0,
+                    )
+                    self.assertEqual(counts["nonfinite_count"], 0)
+            self.assertEqual(
                 set(row["inflation_consistent_channels"]),
                 {"x_increased", "y_increased", "c_decreased"},
             )

@@ -16,12 +16,13 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import gate12c2_development_shards as shards
+import gate12c2_draw_profile as profile
 import gate12c2_synthetic_lab as lab
 
 
-PROJECTION_SCHEMA_VERSION = "gate12c2_no_outcome_draw_stability_v0.1"
+PROJECTION_SCHEMA_VERSION = "gate12c2_no_outcome_draw_stability_v0.2"
 ANALYSIS_MANIFEST_SCHEMA_VERSION = (
-    "gate12c2_no_outcome_draw_stability_manifest_v0.1"
+    "gate12c2_no_outcome_draw_stability_manifest_v0.2"
 )
 PREFIX_COUNTS = (255, 511, 1023)
 REFERENCE_DRAW_COUNT = 1023
@@ -38,6 +39,22 @@ S2_MAGNITUDE_FIELDS = (
     "p_R_q",
 )
 S2_ALIGNMENT_FIELD = "c_q"
+S2_ALWAYS_DEFINED_FIELDS = (
+    "a_q",
+    "u_q",
+    "v_q",
+    "x_q",
+    "y_q",
+)
+S2_CONDITIONALLY_DEFINED_FIELDS = (
+    "c_q",
+    "p_L_q",
+    "p_R_q",
+)
+S2_COMPONENT_FIELDS = (
+    *S2_MAGNITUDE_FIELDS,
+    S2_ALIGNMENT_FIELD,
+)
 REGIMES = (
     "S0_true_null",
     "S1_known_reverse_shared_node_coupling",
@@ -64,6 +81,9 @@ def _implementation_hashes() -> dict[str, str]:
         ),
         "gate12c2_development_shards.py": _sha256_file(
             Path(shards.__file__).resolve()
+        ),
+        "gate12c2_draw_profile.py": _sha256_file(
+            Path(profile.__file__).resolve()
         ),
         "gate12c2_synthetic_lab.py": _sha256_file(
             Path(lab.__file__).resolve()
@@ -100,60 +120,150 @@ def _finite(value: Any, *, context: str) -> float:
     return numeric
 
 
-def _optional_pair_shift(
-    candidate: Any,
-    reference: Any,
-    *,
-    context: str,
-) -> tuple[float | None, bool]:
-    if candidate is None and reference is None:
-        return None, True
-    if candidate is None or reference is None:
+def _component_arm_summary(
+    endpoint: Mapping[str, Any],
+    field_name: str,
+) -> dict[str, tuple[str, float | None]]:
+    components = endpoint.get("component_medians")
+    coverage = endpoint.get("component_coverage")
+    if not isinstance(components, Mapping):
         raise Gate12C2DrawStabilityError(
-            f"{context} has one-sided missingness"
+            "S2 endpoint is missing component_medians"
         )
-    return abs(
-        _finite(candidate, context=f"{context} candidate")
-        - _finite(reference, context=f"{context} reference")
-    ), False
+    if not isinstance(coverage, Mapping):
+        raise Gate12C2DrawStabilityError(
+            "S2 endpoint is missing component_coverage"
+        )
+    arms = ("observed", "N1", "graph_unconstrained_stressor")
+    if set(components) != set(arms) or set(coverage) != set(arms):
+        raise Gate12C2DrawStabilityError(
+            "S2 endpoint changed the frozen component arm surface"
+        )
+    result: dict[str, tuple[str, float | None]] = {}
+    count_keys = {
+        "expected_count",
+        "defined_count",
+        "degenerate_count",
+        "unexpected_missing_count",
+        "nonfinite_count",
+    }
+    for arm in arms:
+        arm_components = components[arm]
+        arm_coverage = coverage[arm]
+        if (
+            not isinstance(arm_components, Mapping)
+            or not isinstance(arm_coverage, Mapping)
+            or set(arm_components)
+            != set(S2_COMPONENT_FIELDS)
+            or set(arm_coverage) != set(arm_components)
+        ):
+            raise Gate12C2DrawStabilityError(
+                f"S2 component surface is incomplete for arm {arm!r}"
+            )
+        counts = arm_coverage[field_name]
+        if not isinstance(counts, Mapping) or set(counts) != count_keys:
+            raise Gate12C2DrawStabilityError(
+                f"S2 coverage counts are incomplete for {arm}/{field_name}"
+            )
+        normalized = {key: int(counts[key]) for key in count_keys}
+        if any(value < 0 for value in normalized.values()):
+            raise Gate12C2DrawStabilityError(
+                f"S2 coverage counts are negative for {arm}/{field_name}"
+            )
+        expected = normalized["expected_count"]
+        accounted = sum(
+            normalized[key]
+            for key in (
+                "defined_count",
+                "degenerate_count",
+                "unexpected_missing_count",
+                "nonfinite_count",
+            )
+        )
+        if expected <= 0 or accounted != expected:
+            raise Gate12C2DrawStabilityError(
+                f"S2 coverage does not conserve expected observations for "
+                f"{arm}/{field_name}"
+            )
+        if (
+            normalized["unexpected_missing_count"] > 0
+            or normalized["nonfinite_count"] > 0
+        ):
+            raise Gate12C2DrawStabilityError(
+                f"S2 component has unexpected missing/nonfinite coverage: "
+                f"{arm}/{field_name}"
+            )
+        value = arm_components[field_name]
+        if field_name in S2_ALWAYS_DEFINED_FIELDS:
+            if (
+                normalized["defined_count"] != expected
+                or normalized["degenerate_count"] != 0
+                or value is None
+            ):
+                raise Gate12C2DrawStabilityError(
+                    f"always-defined S2 component lacks complete coverage: "
+                    f"{arm}/{field_name}"
+                )
+            result[arm] = (
+                "defined",
+                _finite(value, context=f"{arm} {field_name}"),
+            )
+        else:
+            if normalized["defined_count"] == 0:
+                if (
+                    normalized["degenerate_count"] != expected
+                    or value is not None
+                ):
+                    raise Gate12C2DrawStabilityError(
+                        "conditional S2 component has inconsistent "
+                        f"all-degenerate coverage: {arm}/{field_name}"
+                    )
+                result[arm] = ("degenerate", None)
+            else:
+                if value is None:
+                    raise Gate12C2DrawStabilityError(
+                        "conditional S2 component has defined observations "
+                        f"but no summary: {arm}/{field_name}"
+                    )
+                result[arm] = (
+                    "defined",
+                    _finite(value, context=f"{arm} {field_name}"),
+                )
+    return result
 
 
 def _transformed_s2_component(
     endpoint: Mapping[str, Any],
     field_name: str,
-) -> float | None:
-    components = endpoint.get("component_medians")
-    if not isinstance(components, Mapping):
+) -> tuple[float | None, str]:
+    summaries = _component_arm_summary(endpoint, field_name)
+    left_status, left_value = summaries["N1"]
+    right_status, right_value = summaries[
+        "graph_unconstrained_stressor"
+    ]
+    if left_status != right_status:
         raise Gate12C2DrawStabilityError(
-            "S2 endpoint is missing component_medians"
+            f"S2 component {field_name!r} has one-sided degeneracy"
         )
-    n1 = components.get("N1")
-    stressor = components.get("graph_unconstrained_stressor")
-    if not isinstance(n1, Mapping) or not isinstance(stressor, Mapping):
+    if left_status == "degenerate":
+        return None, "degenerate"
+    if left_value is None or right_value is None:
         raise Gate12C2DrawStabilityError(
-            "S2 endpoint is missing one of the frozen null arms"
+            f"S2 component {field_name!r} has unexpected missingness"
         )
-    left = n1.get(field_name)
-    right = stressor.get(field_name)
-    if left is None and right is None:
-        return None
-    if left is None or right is None:
-        raise Gate12C2DrawStabilityError(
-            f"S2 component {field_name!r} has one-sided arm missingness"
-        )
-    left_value = _finite(left, context=f"N1 {field_name}")
-    right_value = _finite(right, context=f"stressor {field_name}")
     if field_name in S2_MAGNITUDE_FIELDS:
         if left_value < 0.0 or right_value < 0.0:
             raise Gate12C2DrawStabilityError(
                 f"S2 magnitude component {field_name!r} is negative"
             )
         epsilon = float(lab.DEFAULT_LOG_EPSILON)
-        return math.log(right_value + epsilon) - math.log(
-            left_value + epsilon
+        return (
+            math.log(right_value + epsilon)
+            - math.log(left_value + epsilon),
+            "defined",
         )
     if field_name == S2_ALIGNMENT_FIELD:
-        return right_value - left_value
+        return right_value - left_value, "defined"
     raise Gate12C2DrawStabilityError(
         f"unsupported S2 component field: {field_name!r}"
     )
@@ -315,7 +425,7 @@ def _decision_and_primary(
     endpoint: Mapping[str, Any],
     *,
     regime_id: str,
-) -> tuple[bool, float | None]:
+) -> tuple[bool, float]:
     if regime_id == "S2_null_inflation":
         decision = endpoint.get("endpoint_identified")
         primary = endpoint.get("log_stressor_to_N1_null_defect")
@@ -326,9 +436,14 @@ def _decision_and_primary(
         raise Gate12C2DrawStabilityError(
             "endpoint decision must be boolean"
         )
-    if primary is not None:
-        primary = _finite(primary, context="endpoint primary summary")
-    return decision, primary
+    if primary is None:
+        raise Gate12C2DrawStabilityError(
+            "always-defined endpoint primary summary is missing"
+        )
+    return decision, _finite(
+        primary,
+        context="endpoint primary summary",
+    )
 
 
 def _compare_regime(
@@ -340,12 +455,17 @@ def _compare_regime(
     agreement_count = 0
     comparison_count = 0
     primary_shifts: list[float] = []
-    primary_joint_missing = 0
-    component_shifts = {
-        field: []
-        for field in (*S2_MAGNITUDE_FIELDS, S2_ALIGNMENT_FIELD)
+    component_shifts = (
+        {
+            field: []
+            for field in S2_COMPONENT_FIELDS
+        }
+        if regime_id == "S2_null_inflation"
+        else {}
+    )
+    component_degenerate = {
+        field: 0 for field in component_shifts
     }
-    component_missing = {field: 0 for field in component_shifts}
     for outer_index in sorted(reference_results):
         candidate_endpoints = _endpoint_map(
             candidate_results[outer_index],
@@ -374,48 +494,79 @@ def _compare_regime(
             agreement_count += int(
                 candidate_decision == reference_decision
             )
-            shift, jointly_missing = _optional_pair_shift(
-                candidate_primary,
-                reference_primary,
-                context=f"{regime_id}/{outer_index}/{endpoint_id} primary",
+            primary_shifts.append(
+                abs(candidate_primary - reference_primary)
             )
-            if jointly_missing:
-                primary_joint_missing += 1
-            else:
-                primary_shifts.append(float(shift))
             if regime_id == "S2_null_inflation":
                 for field_name in component_shifts:
-                    candidate_value = _transformed_s2_component(
-                        candidate,
-                        field_name,
-                    )
-                    reference_value = _transformed_s2_component(
-                        reference,
-                        field_name,
-                    )
-                    component_shift, component_joint_missing = (
-                        _optional_pair_shift(
-                            candidate_value,
-                            reference_value,
-                            context=(
-                                f"{regime_id}/{outer_index}/{endpoint_id}/"
-                                f"{field_name}"
-                            ),
+                    candidate_value, candidate_status = (
+                        _transformed_s2_component(
+                            candidate,
+                            field_name,
                         )
                     )
-                    if component_joint_missing:
-                        component_missing[field_name] += 1
-                    else:
-                        component_shifts[field_name].append(
-                            float(component_shift)
+                    reference_value, reference_status = (
+                        _transformed_s2_component(
+                            reference,
+                            field_name,
                         )
+                    )
+                    if candidate_status != reference_status:
+                        raise Gate12C2DrawStabilityError(
+                            "candidate/reference component definition "
+                            f"changed for {regime_id}/{outer_index}/"
+                            f"{endpoint_id}/{field_name}"
+                        )
+                    if candidate_status == "degenerate":
+                        component_degenerate[field_name] += 1
+                        continue
+                    if candidate_value is None or reference_value is None:
+                        raise Gate12C2DrawStabilityError(
+                            "defined component comparison is unexpectedly "
+                            f"missing for {field_name}"
+                        )
+                    component_shifts[field_name].append(
+                        abs(
+                            _finite(
+                                candidate_value,
+                                context=(
+                                    f"{regime_id}/{outer_index}/"
+                                    f"{endpoint_id}/{field_name} candidate"
+                                ),
+                            )
+                            - _finite(
+                                reference_value,
+                                context=(
+                                    f"{regime_id}/{outer_index}/"
+                                    f"{endpoint_id}/{field_name} reference"
+                                ),
+                            )
+                        )
+                    )
     if comparison_count == 0:
         raise Gate12C2DrawStabilityError(
             "regime comparison contains no endpoints"
         )
     component_rows = []
-    for field_name in (*S2_MAGNITUDE_FIELDS, S2_ALIGNMENT_FIELD):
+    field_coverage_gate_pass = True
+    for field_name in S2_COMPONENT_FIELDS:
+        if regime_id != "S2_null_inflation":
+            continue
         values = component_shifts[field_name]
+        degenerate_count = component_degenerate[field_name]
+        coverage_pass = bool(
+            (
+                field_name in S2_ALWAYS_DEFINED_FIELDS
+                and len(values) == comparison_count
+                and degenerate_count == 0
+            )
+            or (
+                field_name in S2_CONDITIONALLY_DEFINED_FIELDS
+                and len(values) > 0
+                and len(values) + degenerate_count == comparison_count
+            )
+        )
+        field_coverage_gate_pass &= coverage_pass
         component_rows.append(
             {
                 "field_name": field_name,
@@ -425,8 +576,15 @@ def _compare_regime(
                     else "stressor_minus_N1"
                 ),
                 "maximum_absolute_shift": max(values) if values else None,
+                "expected_count": comparison_count,
                 "compared_count": len(values),
-                "jointly_missing_count": component_missing[field_name],
+                "jointly_missing_count": 0,
+                "candidate_only_missing_count": 0,
+                "reference_only_missing_count": 0,
+                "degenerate_count": degenerate_count,
+                "unexpected_missing_count": 0,
+                "nonfinite_count": 0,
+                "coverage_gate_pass": coverage_pass,
             }
         )
     return {
@@ -438,8 +596,15 @@ def _compare_regime(
         "maximum_absolute_primary_summary_shift": (
             max(primary_shifts) if primary_shifts else None
         ),
+        "primary_summary_expected_count": comparison_count,
         "primary_summary_compared_count": len(primary_shifts),
-        "primary_summary_jointly_missing_count": primary_joint_missing,
+        "primary_summary_jointly_missing_count": 0,
+        "primary_summary_candidate_only_missing_count": 0,
+        "primary_summary_reference_only_missing_count": 0,
+        "primary_summary_degenerate_count": 0,
+        "primary_summary_unexpected_missing_count": 0,
+        "primary_summary_nonfinite_count": 0,
+        "field_coverage_gate_pass": field_coverage_gate_pass,
         "component_stability": component_rows,
     }
 
@@ -514,87 +679,53 @@ def _validate_result_surface(
     return normalized
 
 
-def _validated_resource_gate(
-    resource_gate: Mapping[str, Any],
-) -> dict[str, Any]:
-    _require_exact_keys(
-        resource_gate,
-        {
-            "status",
-            "eligible_draw_counts",
-            "receipt_payload_sha256",
-        },
-        context="resource gate",
-    )
-    status = resource_gate["status"]
-    if status not in {"pass", "not_evaluated"}:
-        raise Gate12C2DrawStabilityError(
-            "resource gate status must be pass or not_evaluated"
-        )
-    eligible = sorted(
-        {int(value) for value in resource_gate["eligible_draw_counts"]}
-    )
-    if any(value not in PREFIX_COUNTS for value in eligible):
-        raise Gate12C2DrawStabilityError(
-            "resource gate contains an unsupported draw count"
-        )
-    if status == "not_evaluated" and eligible:
-        raise Gate12C2DrawStabilityError(
-            "an unevaluated resource gate cannot admit draw counts"
-        )
-    receipt_hash = resource_gate["receipt_payload_sha256"]
-    if status == "pass":
-        if (
-            not isinstance(receipt_hash, str)
-            or len(receipt_hash) != 64
-        ):
-            raise Gate12C2DrawStabilityError(
-                "passing resource gate requires a receipt SHA-256"
-            )
-    elif receipt_hash is not None:
-        raise Gate12C2DrawStabilityError(
-            "unevaluated resource gate must not cite a receipt"
-        )
-    return {
-        "status": status,
-        "eligible_draw_counts": eligible,
-        "receipt_payload_sha256": receipt_hash,
-    }
-
-
 def build_no_outcome_projection(
     result_sets: Mapping[str, Mapping[int, Sequence[Mapping[str, Any]]]],
     *,
-    source_plan_payload_sha256_by_regime_and_draw_count: Mapping[
-        str, Mapping[int, str]
-    ],
-    resource_gate: Mapping[str, Any],
+    draw_profile_plan: Mapping[str, Any],
+    execution_receipt: Mapping[str, Any],
+    resource_receipt: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Build a strict projection containing stability deltas only."""
 
     normalized = _validate_result_surface(result_sets)
-    resources = _validated_resource_gate(resource_gate)
-    if set(source_plan_payload_sha256_by_regime_and_draw_count) != set(
-        REGIMES
-    ):
+    try:
+        resources = profile.verify_resource_evidence_chain(
+            draw_profile_plan,
+            execution_receipt,
+            resource_receipt,
+        )
+    except profile.Gate12C2DrawProfileError as exc:
         raise Gate12C2DrawStabilityError(
-            "source plan hash regimes differ from the frozen surface"
+            f"resource evidence chain failed: {exc}"
+        ) from exc
+    source_from_receipt = resources[
+        "source_plan_payload_sha256_by_regime_and_draw_count"
+    ]
+    if set(source_from_receipt) != set(REGIMES):
+        raise Gate12C2DrawStabilityError(
+            "resource evidence changed the frozen regime surface"
         )
     source_hashes: dict[str, dict[str, str]] = {}
     for regime_id in REGIMES:
-        values = source_plan_payload_sha256_by_regime_and_draw_count[
-            regime_id
-        ]
-        if set(values) != set(PREFIX_COUNTS):
+        values = source_from_receipt[regime_id]
+        if set(values) != {str(value) for value in PREFIX_COUNTS}:
             raise Gate12C2DrawStabilityError(
                 "source plan hash draw counts differ from the frozen prefixes"
             )
         source_hashes[regime_id] = {}
         for draw_count in PREFIX_COUNTS:
-            value = values[draw_count]
-            if not isinstance(value, str) or len(value) != 64:
+            value = values[str(draw_count)]
+            if (
+                not isinstance(value, str)
+                or len(value) != 64
+                or any(
+                    character not in "0123456789abcdef"
+                    for character in value
+                )
+            ):
                 raise Gate12C2DrawStabilityError(
-                    "source plan hash must be a 64-character SHA-256"
+                    "source plan hash must be a verified SHA-256"
                 )
             source_hashes[regime_id][str(draw_count)] = value
 
@@ -652,6 +783,12 @@ def build_no_outcome_projection(
             and all(
                 float(row["endpoint_decision_agreement"])
                 >= MINIMUM_ENDPOINT_DECISION_AGREEMENT
+                for row in regime_rows
+            )
+            and all(
+                int(row["primary_summary_compared_count"])
+                == int(row["primary_summary_expected_count"])
+                and bool(row["field_coverage_gate_pass"])
                 for row in regime_rows
             )
             and primary_shifts
@@ -723,8 +860,10 @@ def build_no_outcome_projection(
             "alignment_transform": "stressor_minus_N1",
             "epsilon": float(lab.DEFAULT_LOG_EPSILON),
             "missing_rule": (
-                "both_missing_is_counted_and_excluded_from_numeric_shift;"
-                "one_sided_missing_is_hard_failure"
+                "joint_missingness_is_not_agreement;always_defined_fields_"
+                "require_complete_coverage;conditional_degeneracy_is_"
+                "counted_explicitly;zero_comparable_field_is_ineligible;"
+                "one_sided_missing_or_nonfinite_is_hard_failure"
             ),
             "aggregation_rule": (
                 "maximum_absolute_candidate_minus_1023_shift_over_all_"
@@ -734,7 +873,19 @@ def build_no_outcome_projection(
         "source_plan_payload_sha256_by_regime_and_draw_count": (
             source_hashes
         ),
-        "resource_gate": resources,
+        "resource_gate": {
+            "status": resources["status"],
+            "eligible_draw_counts": resources["eligible_draw_counts"],
+            "draw_profile_plan_payload_sha256": (
+                draw_profile_plan["draw_profile_plan_payload_sha256"]
+            ),
+            "execution_evidence_payload_sha256": resources[
+                "execution_evidence_payload_sha256"
+            ],
+            "resource_receipt_payload_sha256": resources[
+                "resource_receipt_payload_sha256"
+            ],
+        },
         "candidates": candidates,
         "selected_draw_count": min(eligible) if eligible else None,
         "selection_basis_allowed": [
@@ -838,9 +989,39 @@ def validate_no_outcome_projection(
     )
     _require_exact_keys(
         supplied["resource_gate"],
-        {"status", "eligible_draw_counts", "receipt_payload_sha256"},
+        {
+            "status",
+            "eligible_draw_counts",
+            "draw_profile_plan_payload_sha256",
+            "execution_evidence_payload_sha256",
+            "resource_receipt_payload_sha256",
+        },
         context="projected resource gate",
     )
+    resource_gate = supplied["resource_gate"]
+    if (
+        resource_gate["status"] not in {"pass", "fail"}
+        or any(
+            int(value) not in PREFIX_COUNTS
+            for value in resource_gate["eligible_draw_counts"]
+        )
+        or not all(
+            isinstance(resource_gate[key], str)
+            and len(resource_gate[key]) == 64
+            and all(
+                character in "0123456789abcdef"
+                for character in resource_gate[key]
+            )
+            for key in (
+                "draw_profile_plan_payload_sha256",
+                "execution_evidence_payload_sha256",
+                "resource_receipt_payload_sha256",
+            )
+        )
+    ):
+        raise Gate12C2DrawStabilityError(
+            "projected resource gate is not exact-evidence-bound"
+        )
     if set(
         supplied[
             "source_plan_payload_sha256_by_regime_and_draw_count"
@@ -882,16 +1063,30 @@ def validate_no_outcome_projection(
         "endpoint_decision_agreement",
         "endpoint_comparison_count",
         "maximum_absolute_primary_summary_shift",
+        "primary_summary_expected_count",
         "primary_summary_compared_count",
         "primary_summary_jointly_missing_count",
+        "primary_summary_candidate_only_missing_count",
+        "primary_summary_reference_only_missing_count",
+        "primary_summary_degenerate_count",
+        "primary_summary_unexpected_missing_count",
+        "primary_summary_nonfinite_count",
+        "field_coverage_gate_pass",
         "component_stability",
     }
     component_keys = {
         "field_name",
         "transform",
         "maximum_absolute_shift",
+        "expected_count",
         "compared_count",
         "jointly_missing_count",
+        "candidate_only_missing_count",
+        "reference_only_missing_count",
+        "degenerate_count",
+        "unexpected_missing_count",
+        "nonfinite_count",
+        "coverage_gate_pass",
     }
     for candidate in candidates:
         _require_exact_keys(
@@ -914,6 +1109,28 @@ def validate_no_outcome_projection(
                 regime_keys,
                 context="regime stability projection",
             )
+            primary_counts = [
+                int(regime[key])
+                for key in (
+                    "primary_summary_compared_count",
+                    "primary_summary_jointly_missing_count",
+                    "primary_summary_candidate_only_missing_count",
+                    "primary_summary_reference_only_missing_count",
+                    "primary_summary_degenerate_count",
+                    "primary_summary_unexpected_missing_count",
+                    "primary_summary_nonfinite_count",
+                )
+            ]
+            if (
+                any(value < 0 for value in primary_counts)
+                or sum(primary_counts)
+                != int(regime["primary_summary_expected_count"])
+                or int(regime["primary_summary_compared_count"])
+                != int(regime["primary_summary_expected_count"])
+            ):
+                raise Gate12C2DrawStabilityError(
+                    "primary-summary coverage accounting is incomplete"
+                )
             components = regime["component_stability"]
             if not isinstance(components, list):
                 raise Gate12C2DrawStabilityError(
@@ -925,6 +1142,29 @@ def validate_no_outcome_projection(
                     component_keys,
                     context="component stability projection",
                 )
+                counts = [
+                    int(component[key])
+                    for key in (
+                        "compared_count",
+                        "jointly_missing_count",
+                        "candidate_only_missing_count",
+                        "reference_only_missing_count",
+                        "degenerate_count",
+                        "unexpected_missing_count",
+                        "nonfinite_count",
+                    )
+                ]
+                if (
+                    any(value < 0 for value in counts)
+                    or sum(counts) != int(component["expected_count"])
+                    or (
+                        component["coverage_gate_pass"]
+                        and int(component["compared_count"]) <= 0
+                    )
+                ):
+                    raise Gate12C2DrawStabilityError(
+                        "component coverage accounting is inconsistent"
+                    )
     if require_hash:
         claimed = supplied["projection_payload_sha256"]
         unhashed = dict(supplied)
@@ -1024,7 +1264,9 @@ def load_verified_result_sets(
 def build_analysis_manifest(
     output_roots: Mapping[str, Mapping[int, Path]],
     *,
-    resource_gate: Mapping[str, Any],
+    draw_profile_plan_path: Path,
+    execution_receipt_path: Path,
+    resource_receipt_path: Path,
 ) -> dict[str, Any]:
     """Build a read-only, path-bound analysis manifest."""
 
@@ -1043,7 +1285,67 @@ def build_analysis_manifest(
             str(draw_count): Path(by_count[draw_count]).resolve().as_posix()
             for draw_count in PREFIX_COUNTS
         }
-    resources = _validated_resource_gate(resource_gate)
+    evidence_paths = {
+        "draw_profile_plan": Path(draw_profile_plan_path).resolve(),
+        "execution_receipt": Path(execution_receipt_path).resolve(),
+        "resource_receipt": Path(resource_receipt_path).resolve(),
+    }
+    try:
+        import json
+
+        draw_profile_plan = json.loads(
+            evidence_paths["draw_profile_plan"].read_text(
+                encoding="utf-8"
+            )
+        )
+        execution_receipt = json.loads(
+            evidence_paths["execution_receipt"].read_text(
+                encoding="utf-8"
+            )
+        )
+        resource_receipt = json.loads(
+            evidence_paths["resource_receipt"].read_text(
+                encoding="utf-8"
+            )
+        )
+        resources = profile.verify_resource_evidence_chain(
+            draw_profile_plan,
+            execution_receipt,
+            resource_receipt,
+        )
+    except Exception as exc:
+        raise Gate12C2DrawStabilityError(
+            f"analysis resource evidence is invalid: {exc}"
+        ) from exc
+    resource_evidence = {
+        "draw_profile_plan_path": evidence_paths[
+            "draw_profile_plan"
+        ].as_posix(),
+        "draw_profile_plan_file_sha256": _sha256_file(
+            evidence_paths["draw_profile_plan"]
+        ),
+        "draw_profile_plan_payload_sha256": draw_profile_plan[
+            "draw_profile_plan_payload_sha256"
+        ],
+        "execution_receipt_path": evidence_paths[
+            "execution_receipt"
+        ].as_posix(),
+        "execution_receipt_file_sha256": _sha256_file(
+            evidence_paths["execution_receipt"]
+        ),
+        "execution_receipt_payload_sha256": execution_receipt[
+            "execution_receipt_payload_sha256"
+        ],
+        "resource_receipt_path": evidence_paths[
+            "resource_receipt"
+        ].as_posix(),
+        "resource_receipt_file_sha256": _sha256_file(
+            evidence_paths["resource_receipt"]
+        ),
+        "resource_receipt_payload_sha256": resources[
+            "resource_receipt_payload_sha256"
+        ],
+    }
     payload: dict[str, Any] = {
         "schema_version": ANALYSIS_MANIFEST_SCHEMA_VERSION,
         "epistemic_status": "development_draw_stability_analysis_only",
@@ -1057,7 +1359,7 @@ def build_analysis_manifest(
         "public_claim": False,
         "scientific_outcomes_may_be_emitted": False,
         "output_roots": normalized_roots,
-        "resource_gate": resources,
+        "resource_evidence": resource_evidence,
         "implementation_sha256": _implementation_hashes(),
     }
     payload["analysis_manifest_payload_sha256"] = shards._sha256_bytes(
@@ -1091,7 +1393,7 @@ def verify_analysis_manifest(
             "public_claim",
             "scientific_outcomes_may_be_emitted",
             "output_roots",
-            "resource_gate",
+            "resource_evidence",
             "implementation_sha256",
             "analysis_manifest_payload_sha256",
         },
@@ -1111,6 +1413,46 @@ def verify_analysis_manifest(
         raise Gate12C2DrawStabilityError(
             "analysis manifest changed the regime surface"
         )
+    resource_evidence = supplied["resource_evidence"]
+    if not isinstance(resource_evidence, Mapping):
+        raise Gate12C2DrawStabilityError(
+            "analysis manifest resource evidence must be a mapping"
+        )
+    _require_exact_keys(
+        resource_evidence,
+        {
+            "draw_profile_plan_path",
+            "draw_profile_plan_file_sha256",
+            "draw_profile_plan_payload_sha256",
+            "execution_receipt_path",
+            "execution_receipt_file_sha256",
+            "execution_receipt_payload_sha256",
+            "resource_receipt_path",
+            "resource_receipt_file_sha256",
+            "resource_receipt_payload_sha256",
+        },
+        context="analysis manifest resource evidence",
+    )
+    for key in (
+        "draw_profile_plan_file_sha256",
+        "draw_profile_plan_payload_sha256",
+        "execution_receipt_file_sha256",
+        "execution_receipt_payload_sha256",
+        "resource_receipt_file_sha256",
+        "resource_receipt_payload_sha256",
+    ):
+        value = resource_evidence[key]
+        if (
+            not isinstance(value, str)
+            or len(value) != 64
+            or any(
+                character not in "0123456789abcdef"
+                for character in value
+            )
+        ):
+            raise Gate12C2DrawStabilityError(
+                f"analysis manifest has an invalid evidence digest: {key}"
+            )
     typed_roots: dict[str, dict[int, Path]] = {}
     for regime_id in REGIMES:
         by_count = roots[regime_id]
@@ -1126,7 +1468,15 @@ def verify_analysis_manifest(
         }
     expected = build_analysis_manifest(
         typed_roots,
-        resource_gate=supplied["resource_gate"],
+        draw_profile_plan_path=Path(
+            supplied["resource_evidence"]["draw_profile_plan_path"]
+        ),
+        execution_receipt_path=Path(
+            supplied["resource_evidence"]["execution_receipt_path"]
+        ),
+        resource_receipt_path=Path(
+            supplied["resource_evidence"]["resource_receipt_path"]
+        ),
     )
     if supplied != expected:
         raise Gate12C2DrawStabilityError(
@@ -1151,10 +1501,52 @@ def analyze_verified_directories(
         for regime_id in REGIMES
     }
     results, plan_hashes = load_verified_result_sets(roots)
+    evidence = verified["resource_evidence"]
+    try:
+        import json
+
+        draw_profile_plan = json.loads(
+            Path(evidence["draw_profile_plan_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        execution_receipt = json.loads(
+            Path(evidence["execution_receipt_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        resource_receipt = json.loads(
+            Path(evidence["resource_receipt_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        resources = profile.verify_resource_evidence_chain(
+            draw_profile_plan,
+            execution_receipt,
+            resource_receipt,
+        )
+    except Exception as exc:
+        raise Gate12C2DrawStabilityError(
+            f"analysis resource evidence failed at execution: {exc}"
+        ) from exc
+    expected_plan_hashes = {
+        regime_id: {
+            draw_count: resources[
+                "source_plan_payload_sha256_by_regime_and_draw_count"
+            ][regime_id][str(draw_count)]
+            for draw_count in PREFIX_COUNTS
+        }
+        for regime_id in REGIMES
+    }
+    if plan_hashes != expected_plan_hashes:
+        raise Gate12C2DrawStabilityError(
+            "verified result roots do not match the resource evidence chain"
+        )
     projection = build_no_outcome_projection(
         results,
-        source_plan_payload_sha256_by_regime_and_draw_count=plan_hashes,
-        resource_gate=verified["resource_gate"],
+        draw_profile_plan=draw_profile_plan,
+        execution_receipt=execution_receipt,
+        resource_receipt=resource_receipt,
     )
     projection["analysis_manifest_payload_sha256"] = verified[
         "analysis_manifest_payload_sha256"
