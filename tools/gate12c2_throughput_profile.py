@@ -33,6 +33,12 @@ PROFILE_RECEIPT_SCHEMA_VERSION = "gate12c2_throughput_profile_receipt_v0.1"
 PROFILE_CONFIGURATION_SCHEMA_VERSION = (
     "gate12c2_throughput_configuration_v0.1"
 )
+PROFILE_PREFLIGHT_SCHEMA_VERSION = (
+    "gate12c2_throughput_no_outcome_preflight_v0.1"
+)
+PROFILE_AUTHORIZATION_SCHEMA_VERSION = (
+    "gate12c2_throughput_execution_authorization_v0.1"
+)
 PROFILE_ID = "gate12c2_bounded_worker_scaling_v0.1"
 PROFILE_MASTER_SEED_PREFIX = "gate12c2-development-throughput-v0.1"
 PROFILE_MEMORY_SAMPLE_INTERVAL_SECONDS = 0.1
@@ -43,12 +49,19 @@ class Gate12C2ThroughputError(ValueError):
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
-    return json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    try:
+        encoded = json.dumps(
+            payload,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise Gate12C2ThroughputError(
+            f"canonical JSON requires finite, serializable values: {exc}"
+        ) from exc
+    return encoded.encode("utf-8")
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -70,6 +83,9 @@ def _implementation_hashes() -> dict[str, str]:
         "gate12c2_throughput_profile.py": Path(__file__).resolve(),
         "run_gate12c2_development_shards.py": Path(__file__)
         .with_name("run_gate12c2_development_shards.py")
+        .resolve(),
+        "run_gate12c2_throughput_profile.py": Path(__file__)
+        .with_name("run_gate12c2_throughput_profile.py")
         .resolve(),
     }
     return {
@@ -139,10 +155,12 @@ def build_bounded_worker_profile_plan(
         "profile_id": PROFILE_ID,
         "epistemic_status": "development_throughput_only",
         "surface_id": "development",
+        "development_execution_requires_external_authorization": True,
         "locked_execution_authorized": False,
         "real_held_out_execution_authorized": False,
         "N2_open": False,
         "N3_open": False,
+        "public_claim": False,
         "source_commit": str(source_commit),
         "implementation_sha256": _implementation_hashes(),
         "thread_environment": dict(
@@ -206,7 +224,8 @@ def build_bounded_worker_profile_plan(
 
 
 def verify_profile_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
-    payload = dict(plan)
+    supplied = dict(plan)
+    payload = dict(supplied)
     claimed = payload.pop("profile_plan_payload_sha256", None)
     actual = _sha256_bytes(_canonical_json_bytes(payload))
     if claimed != actual:
@@ -225,6 +244,8 @@ def verify_profile_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
         )
     if payload.get("N2_open") is not False or payload.get("N3_open") is not False:
         raise Gate12C2ThroughputError("N2 and N3 must remain closed")
+    if payload.get("public_claim") is not False:
+        raise Gate12C2ThroughputError("public claim must remain closed")
     if payload.get("implementation_sha256") != _implementation_hashes():
         raise Gate12C2ThroughputError(
             "profile implementation hashes no longer match"
@@ -280,8 +301,297 @@ def verify_profile_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
             raise Gate12C2ThroughputError(
                 "profile inner valid draw count must be positive"
             )
-    payload["profile_plan_payload_sha256"] = str(claimed)
+    first = configurations[0]
+    outer_count = len(first["outer_experiment_indices"])
+    inner_count = int(first["inner_valid_draw_count"])
+    workers = tuple(
+        sorted({int(row["worker_count"]) for row in configurations})
+    )
+    if any(
+        len(row["outer_experiment_indices"]) != outer_count
+        or int(row["inner_valid_draw_count"]) != inner_count
+        for row in configurations
+    ):
+        raise Gate12C2ThroughputError(
+            "worker profile configurations changed outer or draw counts"
+        )
+    expected = build_bounded_worker_profile_plan(
+        source_commit=str(payload["source_commit"]),
+        outer_count_per_workload=outer_count,
+        inner_valid_draw_count=inner_count,
+        worker_counts=workers,
+    )
+    if supplied != expected:
+        raise Gate12C2ThroughputError(
+            "profile plan differs from the complete builder contract"
+        )
+    return expected
+
+
+def _profile_output_root(path: Path) -> str:
+    return Path(path).resolve().as_posix()
+
+
+def build_profile_no_outcome_preflight(
+    plan: Mapping[str, Any],
+    *,
+    output_root: Path,
+    preflight_id: str,
+    checks: Mapping[str, bool],
+) -> dict[str, Any]:
+    verified = verify_profile_plan(plan)
+    normalized_checks = {
+        str(key): bool(value) for key, value in checks.items()
+    }
+    if set(normalized_checks) != set(shards.REQUIRED_PREFLIGHT_CHECKS):
+        raise Gate12C2ThroughputError(
+            "profile preflight checks differ from the closed allowlist"
+        )
+    if not all(normalized_checks.values()):
+        raise Gate12C2ThroughputError(
+            "profile preflight requires every check to pass"
+        )
+    if not str(preflight_id).strip():
+        raise Gate12C2ThroughputError("profile preflight_id must be nonempty")
+    payload: dict[str, Any] = {
+        "schema_version": PROFILE_PREFLIGHT_SCHEMA_VERSION,
+        "preflight_id": str(preflight_id),
+        "epistemic_status": "development_profile_preflight_only",
+        "surface_id": "development",
+        "preflight_status": "pass",
+        "development_execution_authorized": False,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "scientific_outcomes_inspected": False,
+        "profile_plan_payload_sha256": verified[
+            "profile_plan_payload_sha256"
+        ],
+        "implementation_sha256": dict(
+            verified["implementation_sha256"]
+        ),
+        "output_root": _profile_output_root(output_root),
+        "checks": dict(sorted(normalized_checks.items())),
+    }
+    payload["preflight_receipt_payload_sha256"] = _sha256_bytes(
+        _canonical_json_bytes(payload)
+    )
     return payload
+
+
+def build_profile_execution_authorization(
+    plan: Mapping[str, Any],
+    preflight_receipt: Mapping[str, Any],
+    *,
+    output_root: Path,
+    authorization_id: str,
+) -> dict[str, Any]:
+    verified = verify_profile_plan(plan)
+    preflight = _verified_profile_preflight(
+        verified,
+        preflight_receipt,
+        output_root=output_root,
+    )
+    if not str(authorization_id).strip():
+        raise Gate12C2ThroughputError(
+            "profile authorization_id must be nonempty"
+        )
+    payload: dict[str, Any] = {
+        "schema_version": PROFILE_AUTHORIZATION_SCHEMA_VERSION,
+        "authorization_id": str(authorization_id),
+        "epistemic_status": "development_profile_authorization_only",
+        "surface_id": "development",
+        "development_execution_authorized": True,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "profile_plan_payload_sha256": verified[
+            "profile_plan_payload_sha256"
+        ],
+        "preflight_receipt_payload_sha256": preflight[
+            "preflight_receipt_payload_sha256"
+        ],
+        "implementation_sha256": dict(
+            verified["implementation_sha256"]
+        ),
+        "output_root": _profile_output_root(output_root),
+    }
+    payload["authorization_receipt_payload_sha256"] = _sha256_bytes(
+        _canonical_json_bytes(payload)
+    )
+    return payload
+
+
+def _verified_profile_preflight(
+    plan: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+    *,
+    output_root: Path,
+) -> dict[str, Any]:
+    verified = verify_profile_plan(plan)
+    if not isinstance(receipt, Mapping):
+        raise Gate12C2ThroughputError(
+            "profile preflight receipt must be a mapping"
+        )
+    supplied = dict(receipt)
+    expected_keys = {
+        "schema_version",
+        "preflight_id",
+        "epistemic_status",
+        "surface_id",
+        "preflight_status",
+        "development_execution_authorized",
+        "locked_execution_authorized",
+        "real_held_out_execution_authorized",
+        "N2_open",
+        "N3_open",
+        "public_claim",
+        "scientific_outcomes_inspected",
+        "profile_plan_payload_sha256",
+        "implementation_sha256",
+        "output_root",
+        "checks",
+        "preflight_receipt_payload_sha256",
+    }
+    try:
+        shards._require_exact_keys(
+            supplied,
+            expected_keys,
+            context="profile preflight receipt",
+        )
+    except shards.Gate12C2ShardError as exc:
+        raise Gate12C2ThroughputError(str(exc)) from exc
+    claimed = supplied["preflight_receipt_payload_sha256"]
+    unhashed = dict(supplied)
+    unhashed.pop("preflight_receipt_payload_sha256")
+    if claimed != _sha256_bytes(_canonical_json_bytes(unhashed)):
+        raise Gate12C2ThroughputError("profile preflight hash mismatch")
+    expected_values = {
+        "schema_version": PROFILE_PREFLIGHT_SCHEMA_VERSION,
+        "epistemic_status": "development_profile_preflight_only",
+        "surface_id": "development",
+        "preflight_status": "pass",
+        "development_execution_authorized": False,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "scientific_outcomes_inspected": False,
+        "profile_plan_payload_sha256": verified[
+            "profile_plan_payload_sha256"
+        ],
+        "implementation_sha256": verified["implementation_sha256"],
+        "output_root": _profile_output_root(output_root),
+    }
+    for key, expected_value in expected_values.items():
+        if supplied[key] != expected_value:
+            raise Gate12C2ThroughputError(
+                f"profile preflight changed frozen field {key!r}"
+            )
+    checks = supplied["checks"]
+    if not isinstance(checks, Mapping):
+        raise Gate12C2ThroughputError(
+            "profile preflight checks must be a mapping"
+        )
+    if set(checks) != set(shards.REQUIRED_PREFLIGHT_CHECKS):
+        raise Gate12C2ThroughputError(
+            "profile preflight check keys differ from the allowlist"
+        )
+    if any(value is not True for value in checks.values()):
+        raise Gate12C2ThroughputError(
+            "profile preflight contains a failed check"
+        )
+    if not str(supplied["preflight_id"]).strip():
+        raise Gate12C2ThroughputError(
+            "profile preflight_id must be nonempty"
+        )
+    return supplied
+
+
+def _verified_profile_authorization(
+    plan: Mapping[str, Any],
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+    *,
+    output_root: Path,
+) -> dict[str, Any]:
+    verified = verify_profile_plan(plan)
+    preflight = _verified_profile_preflight(
+        verified,
+        preflight_receipt,
+        output_root=output_root,
+    )
+    if not isinstance(authorization_receipt, Mapping):
+        raise Gate12C2ThroughputError(
+            "profile authorization receipt must be a mapping"
+        )
+    supplied = dict(authorization_receipt)
+    expected_keys = {
+        "schema_version",
+        "authorization_id",
+        "epistemic_status",
+        "surface_id",
+        "development_execution_authorized",
+        "locked_execution_authorized",
+        "real_held_out_execution_authorized",
+        "N2_open",
+        "N3_open",
+        "public_claim",
+        "profile_plan_payload_sha256",
+        "preflight_receipt_payload_sha256",
+        "implementation_sha256",
+        "output_root",
+        "authorization_receipt_payload_sha256",
+    }
+    try:
+        shards._require_exact_keys(
+            supplied,
+            expected_keys,
+            context="profile execution authorization",
+        )
+    except shards.Gate12C2ShardError as exc:
+        raise Gate12C2ThroughputError(str(exc)) from exc
+    claimed = supplied["authorization_receipt_payload_sha256"]
+    unhashed = dict(supplied)
+    unhashed.pop("authorization_receipt_payload_sha256")
+    if claimed != _sha256_bytes(_canonical_json_bytes(unhashed)):
+        raise Gate12C2ThroughputError(
+            "profile execution authorization hash mismatch"
+        )
+    expected_values = {
+        "schema_version": PROFILE_AUTHORIZATION_SCHEMA_VERSION,
+        "epistemic_status": "development_profile_authorization_only",
+        "surface_id": "development",
+        "development_execution_authorized": True,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "profile_plan_payload_sha256": verified[
+            "profile_plan_payload_sha256"
+        ],
+        "preflight_receipt_payload_sha256": preflight[
+            "preflight_receipt_payload_sha256"
+        ],
+        "implementation_sha256": verified["implementation_sha256"],
+        "output_root": _profile_output_root(output_root),
+    }
+    for key, expected_value in expected_values.items():
+        if supplied[key] != expected_value:
+            raise Gate12C2ThroughputError(
+                f"profile authorization changed frozen field {key!r}"
+            )
+    if not str(supplied["authorization_id"]).strip():
+        raise Gate12C2ThroughputError(
+            "profile authorization_id must be nonempty"
+        )
+    return supplied
 
 
 def _process_table_windows() -> dict[int, int]:
@@ -553,51 +863,112 @@ def _configuration_command(
     configuration: Mapping[str, Any],
     *,
     output_dir: Path,
+    plan_path: Path,
+    preflight_path: Path,
+    authorization_path: Path,
 ) -> list[str]:
-    command = [
+    return [
         sys.executable,
         str(Path(__file__).with_name(
             "run_gate12c2_development_shards.py"
         )),
-        "--regime",
-        str(configuration["regime_id"]),
-        "--master-seed",
-        str(configuration["master_seed"]),
-        "--outer-start",
-        str(min(configuration["outer_experiment_indices"])),
-        "--outer-count",
-        str(len(configuration["outer_experiment_indices"])),
-        "--inner-valid-draw-count",
-        str(configuration["inner_valid_draw_count"]),
+        "--plan",
+        str(plan_path),
+        "--preflight-receipt",
+        str(preflight_path),
+        "--authorization-receipt",
+        str(authorization_path),
         "--workers",
         str(configuration["worker_count"]),
         "--output-dir",
         str(output_dir),
     ]
-    if configuration.get("effect_strength") is not None:
-        command.extend(
-            ["--effect-strength", str(configuration["effect_strength"])]
-        )
-    return command
 
 
 def run_profile_configuration(
     configuration: Mapping[str, Any],
     *,
     output_root: Path,
+    profile_authorization: Mapping[str, Any],
 ) -> dict[str, Any]:
     configuration_id = str(configuration["configuration_id"])
-    output_dir = Path(output_root).resolve() / configuration_id
+    root = Path(output_root).resolve()
+    output_dir = root / configuration_id
     if output_dir.exists() and any(output_dir.iterdir()):
         raise Gate12C2ThroughputError(
             "throughput configurations require a fresh output directory: "
             f"{output_dir}"
         )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    disk_before = shutil.disk_usage(output_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    control_dir = root / ".profile-control" / configuration_id
+    if control_dir.exists():
+        raise Gate12C2ThroughputError(
+            "profile control directory already exists: "
+            f"{control_dir}"
+        )
+    control_dir.mkdir(parents=True, exist_ok=False)
+    expected_plan = shards.build_development_shard_plan(
+        regime_id=str(configuration["regime_id"]),
+        master_seed=str(configuration["master_seed"]),
+        outer_experiment_indices=[
+            int(value)
+            for value in configuration["outer_experiment_indices"]
+        ],
+        block_count=lab.reference_block_count_schedule(),
+        inner_valid_draw_count=int(
+            configuration["inner_valid_draw_count"]
+        ),
+        effect_strength=configuration.get("effect_strength"),
+    )
+    checks = {key: True for key in shards.REQUIRED_PREFLIGHT_CHECKS}
+    parent_authorization_sha256 = str(
+        profile_authorization[
+            "authorization_receipt_payload_sha256"
+        ]
+    )
+    preflight = shards.build_no_outcome_preflight_receipt(
+        expected_plan,
+        output_dir=output_dir,
+        worker_count=int(configuration["worker_count"]),
+        preflight_id=(
+            f"profile-derived::{parent_authorization_sha256}::"
+            f"{configuration_id}"
+        ),
+        checks=checks,
+    )
+    authorization = shards.build_development_execution_authorization(
+        expected_plan,
+        preflight,
+        output_dir=output_dir,
+        worker_count=int(configuration["worker_count"]),
+        authorization_id=(
+            f"profile-derived::{parent_authorization_sha256}::"
+            f"{configuration_id}"
+        ),
+        purpose=f"bounded-throughput-profile::{configuration_id}",
+    )
+    plan_path = control_dir / "plan.json"
+    preflight_path = control_dir / "preflight.json"
+    authorization_path = control_dir / "authorization.json"
+    shards._atomic_write(
+        plan_path,
+        shards._canonical_json_bytes(expected_plan),
+    )
+    shards._atomic_write(
+        preflight_path,
+        shards._canonical_json_bytes(preflight),
+    )
+    shards._atomic_write(
+        authorization_path,
+        shards._canonical_json_bytes(authorization),
+    )
+    disk_before = shutil.disk_usage(root)
     command = _configuration_command(
         configuration,
         output_dir=output_dir,
+        plan_path=plan_path,
+        preflight_path=preflight_path,
+        authorization_path=authorization_path,
     )
     environment = os.environ.copy()
     environment.update(shards.SINGLE_THREAD_ENVIRONMENT)
@@ -636,19 +1007,6 @@ def run_profile_configuration(
     plan = json.loads(
         (output_dir / "plan.json").read_text(encoding="utf-8")
     )
-    expected_plan = shards.build_development_shard_plan(
-        regime_id=str(configuration["regime_id"]),
-        master_seed=str(configuration["master_seed"]),
-        outer_experiment_indices=[
-            int(value)
-            for value in configuration["outer_experiment_indices"]
-        ],
-        block_count=lab.reference_block_count_schedule(),
-        inner_valid_draw_count=int(
-            configuration["inner_valid_draw_count"]
-        ),
-        effect_strength=configuration.get("effect_strength"),
-    )
     if plan != expected_plan:
         raise Gate12C2ThroughputError(
             "executed shard plan differs from the frozen profile configuration"
@@ -683,7 +1041,7 @@ def run_profile_configuration(
     for row in operational_rows:
         for reason, count in row["rejection_reason_counts"].items():
             rejection_counts[str(reason)] += int(count)
-    disk_after = shutil.disk_usage(output_dir)
+    disk_after = shutil.disk_usage(root)
     return {
         "schema_version": PROFILE_CONFIGURATION_SCHEMA_VERSION,
         "configuration_id": configuration_id,
@@ -753,6 +1111,15 @@ def run_profile_configuration(
         ),
         "stdout_payload_sha256": _sha256_bytes(stdout.encode("utf-8")),
         "stderr_payload_sha256": _sha256_bytes(stderr.encode("utf-8")),
+        "derived_preflight_receipt_payload_sha256": preflight[
+            "preflight_receipt_payload_sha256"
+        ],
+        "derived_authorization_receipt_payload_sha256": authorization[
+            "authorization_receipt_payload_sha256"
+        ],
+        "parent_profile_authorization_receipt_payload_sha256": (
+            parent_authorization_sha256
+        ),
         "scientific_outcomes_exposed_in_profile_receipt": False,
     }
 
@@ -851,9 +1218,22 @@ def execute_profile_plan(
     plan: Mapping[str, Any],
     *,
     output_root: Path,
+    preflight_receipt: Mapping[str, Any] | None = None,
+    authorization_receipt: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     verified = verify_profile_plan(plan)
     destination = Path(output_root).resolve()
+    if preflight_receipt is None or authorization_receipt is None:
+        raise Gate12C2ThroughputError(
+            "profile execution requires an exact no-outcome preflight and "
+            "an explicit profile-bound authorization"
+        )
+    authorization = _verified_profile_authorization(
+        verified,
+        preflight_receipt,
+        authorization_receipt,
+        output_root=destination,
+    )
     if destination.exists() and any(destination.iterdir()):
         raise Gate12C2ThroughputError(
             "profile output root must be fresh and empty"
@@ -869,6 +1249,7 @@ def execute_profile_plan(
         run_profile_configuration(
             configuration,
             output_root=destination,
+            profile_authorization=authorization,
         )
         for configuration in verified["configurations"]
     ]
@@ -886,6 +1267,12 @@ def execute_profile_plan(
         "scientific_calibration_result": None,
         "profile_plan_payload_sha256": verified[
             "profile_plan_payload_sha256"
+        ],
+        "preflight_receipt_payload_sha256": preflight_receipt[
+            "preflight_receipt_payload_sha256"
+        ],
+        "authorization_receipt_payload_sha256": authorization[
+            "authorization_receipt_payload_sha256"
         ],
         "source_commit": verified["source_commit"],
         "implementation_sha256": verified["implementation_sha256"],

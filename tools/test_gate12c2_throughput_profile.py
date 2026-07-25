@@ -15,9 +15,32 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import gate12c2_throughput_profile as profile  # noqa: E402
+import gate12c2_development_shards as shards  # noqa: E402
 
 
 class Gate12C2ThroughputProfileTest(unittest.TestCase):
+    def execution_receipts(
+        self,
+        plan: dict[str, object],
+        output_root: Path,
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        checks = {
+            key: True for key in shards.REQUIRED_PREFLIGHT_CHECKS
+        }
+        preflight = profile.build_profile_no_outcome_preflight(
+            plan,
+            output_root=output_root,
+            preflight_id="profile-unit-test-preflight",
+            checks=checks,
+        )
+        authorization = profile.build_profile_execution_authorization(
+            plan,
+            preflight,
+            output_root=output_root,
+            authorization_id="profile-unit-test-authorization",
+        )
+        return preflight, authorization
+
     def test_plan_is_deterministic_and_keeps_science_closed(self) -> None:
         first = profile.build_bounded_worker_profile_plan(
             source_commit="test-commit",
@@ -47,6 +70,58 @@ class Gate12C2ThroughputProfileTest(unittest.TestCase):
         snapshot = profile.process_tree_rss_snapshot(os.getpid())
         self.assertGreater(snapshot["rss_bytes"], 0)
         self.assertIn(str(os.getpid()), snapshot["rss_bytes_by_pid"])
+
+    def test_profile_rejects_rehashed_open_or_extended_plans(self) -> None:
+        plan = profile.build_bounded_worker_profile_plan(
+            source_commit="test-commit",
+            outer_count_per_workload=1,
+            inner_valid_draw_count=1,
+            worker_counts=(1,),
+        )
+        for key, value in (
+            ("locked_execution_authorized", True),
+            ("real_held_out_execution_authorized", True),
+            ("N2_open", True),
+            ("N3_open", True),
+            ("public_claim", True),
+            ("unexpected_permission", False),
+        ):
+            tampered = dict(plan)
+            tampered[key] = value
+            tampered.pop("profile_plan_payload_sha256")
+            tampered["profile_plan_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(tampered)
+                )
+            )
+            with self.subTest(key=key):
+                with self.assertRaises(
+                    profile.Gate12C2ThroughputError
+                ):
+                    profile.verify_profile_plan(tampered)
+
+    def test_profile_execution_requires_exact_authorization(self) -> None:
+        plan = profile.build_bounded_worker_profile_plan(
+            source_commit="test-commit",
+            outer_count_per_workload=1,
+            inner_valid_draw_count=1,
+            worker_counts=(1,),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            with self.assertRaises(profile.Gate12C2ThroughputError):
+                profile.execute_profile_plan(
+                    plan,
+                    output_root=output_root,
+                )
+
+    def test_profile_canonical_json_rejects_nonfinite_values(self) -> None:
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(value=value):
+                with self.assertRaises(
+                    profile.Gate12C2ThroughputError
+                ):
+                    profile._canonical_json_bytes({"value": value})
 
     def test_summary_uses_only_operational_scaling_and_hashes(self) -> None:
         common = {
@@ -123,9 +198,16 @@ class Gate12C2ThroughputProfileTest(unittest.TestCase):
             worker_counts=(1,),
         )
         with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            preflight, authorization = self.execution_receipts(
+                plan,
+                output_root,
+            )
             receipt = profile.execute_profile_plan(
                 plan,
-                output_root=Path(temporary) / "profile",
+                output_root=output_root,
+                preflight_receipt=preflight,
+                authorization_receipt=authorization,
             )
         self.assertIsNone(receipt["scientific_calibration_result"])
         self.assertFalse(receipt["locked_execution_authorized"])

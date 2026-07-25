@@ -39,14 +39,23 @@ from threadpoolctl import threadpool_info, threadpool_limits
 import gate12c2_synthetic_lab as lab
 
 
-PLAN_SCHEMA_VERSION = "gate12c2_development_shard_plan_v0.2"
-SHARD_SCHEMA_VERSION = "gate12c2_development_outer_shard_v0.2"
-INDEX_SCHEMA_VERSION = "gate12c2_development_shard_index_v0.2"
+PLAN_SCHEMA_VERSION = "gate12c2_development_shard_plan_v0.3"
+SHARD_SCHEMA_VERSION = "gate12c2_development_outer_shard_v0.3"
+INDEX_SCHEMA_VERSION = "gate12c2_development_shard_index_v0.3"
 SHARD_SET_VERIFICATION_SCHEMA_VERSION = (
     "gate12c2_development_shard_set_verification_v0.1"
 )
 SCIENTIFIC_PROJECTION_SCHEMA_VERSION = (
-    "gate12c2_development_scientific_projection_v0.2"
+    "gate12c2_development_scientific_projection_v0.3"
+)
+RESULT_EXECUTION_CONTRACT_SCHEMA_VERSION = (
+    "gate12c2_result_execution_contract_v0.1"
+)
+NO_OUTCOME_PREFLIGHT_SCHEMA_VERSION = (
+    "gate12c2_no_outcome_preflight_v0.1"
+)
+EXECUTION_AUTHORIZATION_SCHEMA_VERSION = (
+    "gate12c2_development_execution_authorization_v0.1"
 )
 BLAS_THREAD_LIMIT = 1
 ALLOWED_REGIMES = frozenset(
@@ -56,6 +65,16 @@ ALLOWED_REGIMES = frozenset(
         "S2_null_inflation",
     }
 )
+REQUIRED_PREFLIGHT_CHECKS = (
+    "plan_hash_verified",
+    "implementation_hashes_verified",
+    "numerical_environment_verified",
+    "closed_boundaries_verified",
+    "output_root_verified",
+    "outer_ids_verified",
+    "no_scientific_outcomes_inspected",
+    "recovery_requirement_verified",
+)
 
 
 class Gate12C2ShardError(ValueError):
@@ -63,12 +82,19 @@ class Gate12C2ShardError(ValueError):
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
-    return json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    try:
+        encoded = json.dumps(
+            payload,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise Gate12C2ShardError(
+            f"canonical JSON requires finite, serializable values: {exc}"
+        ) from exc
+    return encoded.encode("utf-8")
 
 
 def _sha256_bytes(payload: bytes) -> str:
@@ -258,6 +284,7 @@ def build_development_shard_plan(
         "epistemic_status": "development_execution_plan_only",
         "contract_version": lab.C2_CONTRACT_VERSION,
         "surface_id": "development",
+        "development_execution_requires_external_authorization": True,
         "locked_execution_authorized": False,
         "real_held_out_execution_authorized": False,
         "regime_id": regime_id,
@@ -276,12 +303,24 @@ def build_development_shard_plan(
         "minimum_log_null_inflation": float(
             minimum_log_null_inflation
         ),
+        "epsilon": float(lab.DEFAULT_LOG_EPSILON),
         "diagnostic_kernel": diagnostic_kernel,
         "accepted_valid_draw_storage": (
             lab.COMPACT_ACCEPTED_PREFIX_STORAGE_ID
         ),
         "outer_experiment_schema": lab.OUTER_EXPERIMENT_SCHEMA_VERSION,
         "seed_namespace_schema": lab.SEED_NAMESPACE_SCHEMA_VERSION,
+        "scientific_execution_parameters": {
+            "reference_dtype": lab.REFERENCE_DTYPE,
+            "numeric_atol": float(lab.DEFAULT_NUMERIC_ATOL),
+            "degeneracy_atol": float(lab.DEFAULT_DEGENERACY_ATOL),
+            "relative_gap_min": float(lab.DEFAULT_RELATIVE_GAP_MIN),
+            "holm_alpha": float(lab.DEFAULT_HOLM_ALPHA),
+            "primary_zero_tolerance": float(
+                lab.DEFAULT_PRIMARY_ZERO_TOLERANCE
+            ),
+            "log_epsilon": float(lab.DEFAULT_LOG_EPSILON),
+        },
         "implementation_sha256": _implementation_hashes(),
         "numerical_environment": _numerical_environment_receipt(),
         "N2_open": False,
@@ -291,34 +330,6 @@ def build_development_shard_plan(
     payload["plan_payload_sha256"] = _sha256_bytes(
         _canonical_json_bytes(payload)
     )
-    return payload
-
-
-def _verified_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
-    payload = dict(plan)
-    claimed = payload.pop("plan_payload_sha256", None)
-    actual = _sha256_bytes(_canonical_json_bytes(payload))
-    if claimed != actual:
-        raise Gate12C2ShardError("development shard plan hash mismatch")
-    if payload.get("schema_version") != PLAN_SCHEMA_VERSION:
-        raise Gate12C2ShardError("unsupported development shard plan schema")
-    if payload.get("surface_id") != "development":
-        raise Gate12C2ShardError("only the development surface is admitted")
-    if payload.get("locked_execution_authorized") is not False:
-        raise Gate12C2ShardError("locked execution must remain closed")
-    current_hashes = _implementation_hashes()
-    if payload.get("implementation_sha256") != current_hashes:
-        raise Gate12C2ShardError(
-            "implementation hashes no longer match the shard plan"
-        )
-    current_environment = _numerical_environment_receipt()
-    if payload.get("numerical_environment") != current_environment:
-        raise Gate12C2ShardError(
-            "numerical environment no longer matches the shard plan"
-        )
-    if int(current_environment["blas_thread_limit"]) != BLAS_THREAD_LIMIT:
-        raise Gate12C2ShardError("the frozen BLAS thread limit changed")
-    payload["plan_payload_sha256"] = str(claimed)
     return payload
 
 
@@ -332,14 +343,526 @@ def _plan_block_schedule(plan: Mapping[str, Any]) -> dict[str, int]:
     return {str(key): int(value) for key, value in raw.items()}
 
 
-def run_planned_outer_experiment(
+def _verified_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
+    """Rebuild and compare the complete admitted plan, never just its hash."""
+
+    if not isinstance(plan, Mapping):
+        raise Gate12C2ShardError("development shard plan must be a mapping")
+    supplied = dict(plan)
+    claimed = supplied.get("plan_payload_sha256")
+    payload = dict(supplied)
+    payload.pop("plan_payload_sha256", None)
+    actual = _sha256_bytes(_canonical_json_bytes(payload))
+    if claimed != actual:
+        raise Gate12C2ShardError("development shard plan hash mismatch")
+    if payload.get("schema_version") != PLAN_SCHEMA_VERSION:
+        raise Gate12C2ShardError("unsupported development shard plan schema")
+    try:
+        expected = build_development_shard_plan(
+            regime_id=str(payload["regime_id"]),
+            master_seed=str(payload["master_seed"]),
+            outer_experiment_indices=[
+                int(value)
+                for value in payload["outer_experiment_indices"]
+            ],
+            block_count=_plan_block_schedule(payload),
+            inner_valid_draw_count=int(
+                payload["inner_valid_draw_count"]
+            ),
+            effect_strength=payload["effect_strength"],
+            max_draw_attempts=payload["max_draw_attempts"],
+            minimum_log_null_inflation=float(
+                payload["minimum_log_null_inflation"]
+            ),
+            diagnostic_kernel=str(payload["diagnostic_kernel"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        if isinstance(exc, Gate12C2ShardError):
+            raise
+        raise Gate12C2ShardError(
+            f"development shard plan cannot be reconstructed: {exc}"
+        ) from exc
+    if supplied != expected:
+        unexpected = sorted(set(supplied) - set(expected))
+        missing = sorted(set(expected) - set(supplied))
+        changed = sorted(
+            key
+            for key in set(supplied) & set(expected)
+            if supplied[key] != expected[key]
+        )
+        raise Gate12C2ShardError(
+            "development shard plan differs from the complete builder "
+            f"contract: missing={missing}, unexpected={unexpected}, "
+            f"changed={changed}"
+        )
+    if int(expected["numerical_environment"]["blas_thread_limit"]) != (
+        BLAS_THREAD_LIMIT
+    ):
+        raise Gate12C2ShardError("the frozen BLAS thread limit changed")
+    return expected
+
+
+def _normalized_output_root(output_dir: Path) -> str:
+    return Path(output_dir).resolve().as_posix()
+
+
+def _require_exact_keys(
+    payload: Mapping[str, Any],
+    expected: set[str],
+    *,
+    context: str,
+) -> None:
+    actual = set(payload)
+    if actual != expected:
+        raise Gate12C2ShardError(
+            f"{context} keys differ from the frozen schema: "
+            f"missing={sorted(expected - actual)}, "
+            f"unexpected={sorted(actual - expected)}"
+        )
+
+
+def build_no_outcome_preflight_receipt(
+    plan: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    worker_count: int,
+    preflight_id: str,
+    checks: Mapping[str, bool],
+) -> dict[str, Any]:
+    """Build a plan-bound, outcome-blind preflight receipt."""
+
+    verified = _verified_plan(plan)
+    if worker_count <= 0:
+        raise Gate12C2ShardError("preflight worker count must be positive")
+    if not str(preflight_id).strip():
+        raise Gate12C2ShardError("preflight_id must be nonempty")
+    normalized_checks = {
+        str(key): bool(value) for key, value in checks.items()
+    }
+    if set(normalized_checks) != set(REQUIRED_PREFLIGHT_CHECKS):
+        raise Gate12C2ShardError(
+            "preflight checks do not match the required closed allowlist"
+        )
+    if not all(normalized_checks.values()):
+        raise Gate12C2ShardError(
+            "a passing preflight requires every frozen check to pass"
+        )
+    payload: dict[str, Any] = {
+        "schema_version": NO_OUTCOME_PREFLIGHT_SCHEMA_VERSION,
+        "preflight_id": str(preflight_id),
+        "epistemic_status": "development_no_outcome_preflight_only",
+        "surface_id": "development",
+        "preflight_status": "pass",
+        "development_execution_authorized": False,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "scientific_outcomes_inspected": False,
+        "plan_payload_sha256": verified["plan_payload_sha256"],
+        "implementation_sha256": dict(
+            verified["implementation_sha256"]
+        ),
+        "numerical_environment_sha256": _sha256_bytes(
+            _canonical_json_bytes(verified["numerical_environment"])
+        ),
+        "output_root": _normalized_output_root(output_dir),
+        "worker_count": int(worker_count),
+        "checks": dict(sorted(normalized_checks.items())),
+    }
+    payload["preflight_receipt_payload_sha256"] = _sha256_bytes(
+        _canonical_json_bytes(payload)
+    )
+    return payload
+
+
+def _verified_no_outcome_preflight(
+    plan: Mapping[str, Any],
+    preflight_receipt: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    worker_count: int,
+) -> dict[str, Any]:
+    verified = _verified_plan(plan)
+    if not isinstance(preflight_receipt, Mapping):
+        raise Gate12C2ShardError("preflight receipt must be a mapping")
+    supplied = dict(preflight_receipt)
+    expected_keys = {
+        "schema_version",
+        "preflight_id",
+        "epistemic_status",
+        "surface_id",
+        "preflight_status",
+        "development_execution_authorized",
+        "locked_execution_authorized",
+        "real_held_out_execution_authorized",
+        "N2_open",
+        "N3_open",
+        "public_claim",
+        "scientific_outcomes_inspected",
+        "plan_payload_sha256",
+        "implementation_sha256",
+        "numerical_environment_sha256",
+        "output_root",
+        "worker_count",
+        "checks",
+        "preflight_receipt_payload_sha256",
+    }
+    _require_exact_keys(
+        supplied,
+        expected_keys,
+        context="no-outcome preflight receipt",
+    )
+    claimed = supplied["preflight_receipt_payload_sha256"]
+    unhashed = dict(supplied)
+    unhashed.pop("preflight_receipt_payload_sha256")
+    if claimed != _sha256_bytes(_canonical_json_bytes(unhashed)):
+        raise Gate12C2ShardError("preflight receipt hash mismatch")
+    closed_values = {
+        "schema_version": NO_OUTCOME_PREFLIGHT_SCHEMA_VERSION,
+        "epistemic_status": "development_no_outcome_preflight_only",
+        "surface_id": "development",
+        "preflight_status": "pass",
+        "development_execution_authorized": False,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "scientific_outcomes_inspected": False,
+        "plan_payload_sha256": verified["plan_payload_sha256"],
+        "implementation_sha256": verified["implementation_sha256"],
+        "numerical_environment_sha256": _sha256_bytes(
+            _canonical_json_bytes(verified["numerical_environment"])
+        ),
+        "output_root": _normalized_output_root(output_dir),
+        "worker_count": int(worker_count),
+    }
+    for key, expected_value in closed_values.items():
+        if supplied[key] != expected_value:
+            raise Gate12C2ShardError(
+                f"preflight receipt changed frozen field {key!r}"
+            )
+    checks = supplied["checks"]
+    if not isinstance(checks, Mapping):
+        raise Gate12C2ShardError("preflight checks must be a mapping")
+    _require_exact_keys(
+        checks,
+        set(REQUIRED_PREFLIGHT_CHECKS),
+        context="preflight checks",
+    )
+    if any(value is not True for value in checks.values()):
+        raise Gate12C2ShardError("preflight receipt contains a failed check")
+    if not str(supplied["preflight_id"]).strip():
+        raise Gate12C2ShardError("preflight_id must be nonempty")
+    return supplied
+
+
+def build_development_execution_authorization(
+    plan: Mapping[str, Any],
+    preflight_receipt: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    worker_count: int,
+    authorization_id: str,
+    purpose: str,
+) -> dict[str, Any]:
+    """Explicitly authorize one plan/output/worker execution after preflight."""
+
+    verified = _verified_plan(plan)
+    preflight = _verified_no_outcome_preflight(
+        verified,
+        preflight_receipt,
+        output_dir=output_dir,
+        worker_count=worker_count,
+    )
+    if not str(authorization_id).strip() or not str(purpose).strip():
+        raise Gate12C2ShardError(
+            "authorization_id and purpose must be nonempty"
+        )
+    payload: dict[str, Any] = {
+        "schema_version": EXECUTION_AUTHORIZATION_SCHEMA_VERSION,
+        "authorization_id": str(authorization_id),
+        "epistemic_status": "development_execution_authorization_only",
+        "surface_id": "development",
+        "development_execution_authorized": True,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "plan_payload_sha256": verified["plan_payload_sha256"],
+        "preflight_receipt_payload_sha256": preflight[
+            "preflight_receipt_payload_sha256"
+        ],
+        "implementation_sha256": dict(
+            verified["implementation_sha256"]
+        ),
+        "output_root": _normalized_output_root(output_dir),
+        "worker_count": int(worker_count),
+        "purpose": str(purpose),
+    }
+    payload["authorization_receipt_payload_sha256"] = _sha256_bytes(
+        _canonical_json_bytes(payload)
+    )
+    return payload
+
+
+def _verified_execution_authorization(
+    plan: Mapping[str, Any],
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    worker_count: int,
+) -> dict[str, Any]:
+    verified = _verified_plan(plan)
+    preflight = _verified_no_outcome_preflight(
+        verified,
+        preflight_receipt,
+        output_dir=output_dir,
+        worker_count=worker_count,
+    )
+    if not isinstance(authorization_receipt, Mapping):
+        raise Gate12C2ShardError(
+            "execution authorization receipt must be a mapping"
+        )
+    supplied = dict(authorization_receipt)
+    expected_keys = {
+        "schema_version",
+        "authorization_id",
+        "epistemic_status",
+        "surface_id",
+        "development_execution_authorized",
+        "locked_execution_authorized",
+        "real_held_out_execution_authorized",
+        "N2_open",
+        "N3_open",
+        "public_claim",
+        "plan_payload_sha256",
+        "preflight_receipt_payload_sha256",
+        "implementation_sha256",
+        "output_root",
+        "worker_count",
+        "purpose",
+        "authorization_receipt_payload_sha256",
+    }
+    _require_exact_keys(
+        supplied,
+        expected_keys,
+        context="development execution authorization",
+    )
+    claimed = supplied["authorization_receipt_payload_sha256"]
+    unhashed = dict(supplied)
+    unhashed.pop("authorization_receipt_payload_sha256")
+    if claimed != _sha256_bytes(_canonical_json_bytes(unhashed)):
+        raise Gate12C2ShardError(
+            "development execution authorization hash mismatch"
+        )
+    expected_values = {
+        "schema_version": EXECUTION_AUTHORIZATION_SCHEMA_VERSION,
+        "epistemic_status": "development_execution_authorization_only",
+        "surface_id": "development",
+        "development_execution_authorized": True,
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "plan_payload_sha256": verified["plan_payload_sha256"],
+        "preflight_receipt_payload_sha256": preflight[
+            "preflight_receipt_payload_sha256"
+        ],
+        "implementation_sha256": verified["implementation_sha256"],
+        "output_root": _normalized_output_root(output_dir),
+        "worker_count": int(worker_count),
+    }
+    for key, expected_value in expected_values.items():
+        if supplied[key] != expected_value:
+            raise Gate12C2ShardError(
+                f"execution authorization changed frozen field {key!r}"
+            )
+    if not str(supplied["authorization_id"]).strip():
+        raise Gate12C2ShardError("authorization_id must be nonempty")
+    if not str(supplied["purpose"]).strip():
+        raise Gate12C2ShardError("authorization purpose must be nonempty")
+    return supplied
+
+
+def _resolved_max_draw_attempts(plan: Mapping[str, Any]) -> int:
+    inner = int(plan["inner_valid_draw_count"])
+    configured = plan["max_draw_attempts"]
+    return (
+        max(inner * 4, inner + 8)
+        if configured is None
+        else int(configured)
+    )
+
+
+def _numerical_execution_contract(
+    plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "blas_thread_limit": BLAS_THREAD_LIMIT,
+        "thread_environment": dict(
+            sorted(SINGLE_THREAD_ENVIRONMENT.items())
+        ),
+        "active_blas_thread_limit_verified": True,
+        "numpy_build": plan["numerical_environment"]["numpy_build"],
+        "scientific_execution_parameters": dict(
+            plan["scientific_execution_parameters"]
+        ),
+        "guarantee_scope": (
+            "same_frozen_software_and_numerical_environment"
+        ),
+        "cross_environment_bitwise_determinism_claimed": False,
+    }
+
+
+def _result_execution_configuration(
     plan: Mapping[str, Any],
     *,
     outer_experiment_index: int,
 ) -> dict[str, Any]:
+    return {
+        "schema_version": RESULT_EXECUTION_CONTRACT_SCHEMA_VERSION,
+        "plan_payload_sha256": str(plan["plan_payload_sha256"]),
+        "contract_version": str(plan["contract_version"]),
+        "surface_id": "development",
+        "locked_execution_authorized": False,
+        "real_held_out_execution_authorized": False,
+        "N2_open": False,
+        "N3_open": False,
+        "public_claim": False,
+        "regime_id": str(plan["regime_id"]),
+        "master_seed_sha256": _sha256_bytes(
+            str(plan["master_seed"]).encode("utf-8")
+        ),
+        "outer_experiment_index": int(outer_experiment_index),
+        "block_count_schedule": dict(plan["block_count_schedule"]),
+        "inner_valid_draw_count": int(
+            plan["inner_valid_draw_count"]
+        ),
+        "effect_strength": plan["effect_strength"],
+        "configured_max_draw_attempts": plan["max_draw_attempts"],
+        "resolved_max_draw_attempts": _resolved_max_draw_attempts(plan),
+        "minimum_log_null_inflation": float(
+            plan["minimum_log_null_inflation"]
+        ),
+        "epsilon": float(plan["epsilon"]),
+        "diagnostic_kernel": str(plan["diagnostic_kernel"]),
+        "accepted_valid_draw_storage": str(
+            plan["accepted_valid_draw_storage"]
+        ),
+        "outer_experiment_schema": str(
+            plan["outer_experiment_schema"]
+        ),
+        "seed_namespace_schema": str(plan["seed_namespace_schema"]),
+        "scientific_execution_parameters": dict(
+            plan["scientific_execution_parameters"]
+        ),
+        "implementation_sha256": dict(plan["implementation_sha256"]),
+        "numerical_environment_sha256": _sha256_bytes(
+            _canonical_json_bytes(plan["numerical_environment"])
+        ),
+    }
+
+
+def _verify_result_against_plan(
+    plan: Mapping[str, Any],
+    result: Mapping[str, Any],
+    *,
+    outer_experiment_index: int,
+) -> None:
+    """Reject self-consistent result hashes with a contradictory configuration."""
+
+    expected = _result_execution_configuration(
+        plan,
+        outer_experiment_index=outer_experiment_index,
+    )
+    if result.get("execution_configuration_contract") != expected:
+        raise Gate12C2ShardError(
+            "outer result execution configuration differs from the plan"
+        )
+    top_level_expected = {
+        "schema_version": plan["outer_experiment_schema"],
+        "contract_version": plan["contract_version"],
+        "surface_id": "development",
+        "locked_execution_authorized": False,
+        "regime_id": plan["regime_id"],
+        "outer_experiment_index": int(outer_experiment_index),
+        "block_count_schedule": plan["block_count_schedule"],
+        "inner_valid_draw_count": int(
+            plan["inner_valid_draw_count"]
+        ),
+        "max_draw_attempts": _resolved_max_draw_attempts(plan),
+        "diagnostic_kernel": plan["diagnostic_kernel"],
+        "accepted_valid_draw_storage": plan[
+            "accepted_valid_draw_storage"
+        ],
+    }
+    for key, expected_value in top_level_expected.items():
+        if result.get(key) != expected_value:
+            raise Gate12C2ShardError(
+                f"outer result changed plan-bound field {key!r}"
+            )
+    effect_strength = result.get("effect_strength")
+    if effect_strength != plan["effect_strength"]:
+        raise Gate12C2ShardError(
+            "outer result effect strength differs from the plan"
+        )
+    if result.get("numerical_execution_contract") != (
+        _numerical_execution_contract(plan)
+    ):
+        raise Gate12C2ShardError(
+            "outer result numerical execution contract differs from the plan"
+        )
+    if plan["regime_id"] == "S2_null_inflation":
+        if result.get("observed_process_modified") is not False:
+            raise Gate12C2ShardError(
+                "S2 outer result modified the observed process"
+            )
+        if result.get("paired_null_arms") != [
+            lab.N1_ID,
+            lab.S2_UNCONSTRAINED_ORIENTATION_ID,
+        ]:
+            raise Gate12C2ShardError(
+                "S2 outer result changed its paired null arms"
+            )
+        endpoint_rows = result.get("endpoint_rows")
+        if not isinstance(endpoint_rows, list) or len(endpoint_rows) != 24:
+            raise Gate12C2ShardError(
+                "S2 outer result must contain exactly 24 endpoints"
+            )
+        for endpoint in endpoint_rows:
+            if endpoint.get("minimum_log_null_inflation") != float(
+                plan["minimum_log_null_inflation"]
+            ):
+                raise Gate12C2ShardError(
+                    "S2 endpoint changed the minimum inflation threshold"
+                )
+
+
+def run_planned_outer_experiment(
+    plan: Mapping[str, Any],
+    *,
+    outer_experiment_index: int,
+    output_dir: Path,
+    worker_count: int,
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+) -> dict[str, Any]:
     """Run one outer unit after validating the immutable development plan."""
 
     verified = _verified_plan(plan)
+    _verified_execution_authorization(
+        verified,
+        preflight_receipt,
+        authorization_receipt,
+        output_dir=output_dir,
+        worker_count=worker_count,
+    )
     index = int(outer_experiment_index)
     admitted = tuple(
         int(value) for value in verified["outer_experiment_indices"]
@@ -356,6 +879,7 @@ def run_planned_outer_experiment(
             verified["inner_valid_draw_count"]
         ),
         "max_draw_attempts": verified["max_draw_attempts"],
+        "epsilon": float(verified["epsilon"]),
         "diagnostic_kernel": str(verified["diagnostic_kernel"]),
     }
     regime_id = str(verified["regime_id"])
@@ -380,18 +904,20 @@ def run_planned_outer_experiment(
         raise Gate12C2ShardError("runner opened a locked surface")
     if int(result["outer_experiment_index"]) != index:
         raise Gate12C2ShardError("runner returned the wrong outer index")
-    result["numerical_execution_contract"] = {
-        "blas_thread_limit": BLAS_THREAD_LIMIT,
-        "thread_environment": dict(
-            sorted(SINGLE_THREAD_ENVIRONMENT.items())
-        ),
-        "active_blas_thread_limit_verified": True,
-        "numpy_build": verified["numerical_environment"]["numpy_build"],
-        "guarantee_scope": (
-            "same_frozen_software_and_numerical_environment"
-        ),
-        "cross_environment_bitwise_determinism_claimed": False,
-    }
+    result["numerical_execution_contract"] = (
+        _numerical_execution_contract(verified)
+    )
+    result["execution_configuration_contract"] = (
+        _result_execution_configuration(
+            verified,
+            outer_experiment_index=index,
+        )
+    )
+    _verify_result_against_plan(
+        verified,
+        result,
+        outer_experiment_index=index,
+    )
     return result
 
 
@@ -538,10 +1064,21 @@ def _write_or_verify_shard(
     plan: Mapping[str, Any],
     output_dir: str,
     outer_experiment_index: int,
+    worker_count: int,
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
 ) -> dict[str, Any]:
     verified = _verified_plan(plan)
+    resolved_output_dir = Path(output_dir).resolve()
+    _verified_execution_authorization(
+        verified,
+        preflight_receipt,
+        authorization_receipt,
+        output_dir=resolved_output_dir,
+        worker_count=worker_count,
+    )
     destination = _shard_path(
-        Path(output_dir).resolve(),
+        resolved_output_dir,
         int(outer_experiment_index),
     )
     if destination.exists():
@@ -559,6 +1096,11 @@ def _write_or_verify_shard(
             raise Gate12C2ShardError(
                 f"existing shard has the wrong outer index: {destination}"
             )
+        _verify_result_against_plan(
+            verified,
+            payload["result"],
+            outer_experiment_index=int(outer_experiment_index),
+        )
         return _shard_index_row(
             destination,
             payload,
@@ -577,6 +1119,10 @@ def _write_or_verify_shard(
     result = run_planned_outer_experiment(
         verified,
         outer_experiment_index=int(outer_experiment_index),
+        output_dir=resolved_output_dir,
+        worker_count=worker_count,
+        preflight_receipt=preflight_receipt,
+        authorization_receipt=authorization_receipt,
     )
     compute_wall_seconds = time.perf_counter() - compute_started
     compute_cpu_seconds = time.process_time() - compute_cpu_started
@@ -832,6 +1378,11 @@ def verify_development_shard_set(
             raise Gate12C2ShardError(
                 f"outer result index mismatch: {path}"
             )
+        _verify_result_against_plan(
+            verified,
+            result,
+            outer_experiment_index=index,
+        )
         rows.append(_shard_index_row(path, payload, reused=False))
 
     canonical_rows = sorted(
@@ -990,6 +1541,8 @@ def execute_development_shard_plan(
     *,
     output_dir: Path,
     worker_count: int = 1,
+    preflight_receipt: Mapping[str, Any] | None = None,
+    authorization_receipt: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute or resume a plan and write a deterministic merge index."""
 
@@ -998,6 +1551,18 @@ def execute_development_shard_plan(
     if worker_count <= 0:
         raise Gate12C2ShardError("worker_count must be positive")
     destination = Path(output_dir).resolve()
+    if preflight_receipt is None or authorization_receipt is None:
+        raise Gate12C2ShardError(
+            "execution requires an exact no-outcome preflight receipt and "
+            "an explicit plan-bound authorization receipt"
+        )
+    _verified_execution_authorization(
+        verified,
+        preflight_receipt,
+        authorization_receipt,
+        output_dir=destination,
+        worker_count=worker_count,
+    )
     destination.mkdir(parents=True, exist_ok=True)
     _assert_no_partial_artifacts(destination)
     plan_path = destination / "plan.json"
@@ -1021,7 +1586,14 @@ def execute_development_shard_plan(
     shard_phase_started = time.perf_counter()
     if worker_count == 1:
         rows = [
-            _write_or_verify_shard(verified, str(destination), index)
+            _write_or_verify_shard(
+                verified,
+                str(destination),
+                index,
+                worker_count,
+                preflight_receipt,
+                authorization_receipt,
+            )
             for index in indices
         ]
     else:
@@ -1032,6 +1604,9 @@ def execute_development_shard_plan(
                     verified,
                     str(destination),
                     index,
+                    worker_count,
+                    preflight_receipt,
+                    authorization_receipt,
                 )
                 for index in indices
             ]

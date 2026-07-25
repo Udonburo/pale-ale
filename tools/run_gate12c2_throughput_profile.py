@@ -15,6 +15,7 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(
         json.dumps(
             payload,
+            allow_nan=False,
             ensure_ascii=False,
             indent=2,
             sort_keys=True,
@@ -36,6 +37,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--workers", type=int, nargs="+", default=[1, 2, 4])
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--receipt-out", type=Path)
+    parser.add_argument("--preflight-receipt", type=Path)
+    parser.add_argument("--authorization-receipt", type=Path)
     return parser.parse_args()
 
 
@@ -69,9 +72,15 @@ def main() -> int:
         )
         return 0
 
-    if args.output_root is None or args.receipt_out is None:
+    if (
+        args.output_root is None
+        or args.receipt_out is None
+        or args.preflight_receipt is None
+        or args.authorization_receipt is None
+    ):
         raise SystemExit(
-            "--execute-plan requires --output-root and --receipt-out"
+            "--execute-plan requires --output-root, --receipt-out, "
+            "--preflight-receipt, and --authorization-receipt"
         )
     plan = json.loads(
         args.execute_plan.read_text(encoding="utf-8")
@@ -79,6 +88,12 @@ def main() -> int:
     receipt = profile.execute_profile_plan(
         plan,
         output_root=args.output_root,
+        preflight_receipt=json.loads(
+            args.preflight_receipt.read_text(encoding="utf-8")
+        ),
+        authorization_receipt=json.loads(
+            args.authorization_receipt.read_text(encoding="utf-8")
+        ),
     )
     _write_json(args.receipt_out, receipt)
     print(

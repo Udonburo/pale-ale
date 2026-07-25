@@ -87,6 +87,7 @@ DEFAULT_DEGENERACY_ATOL = 1.0e-12
 DEFAULT_RELATIVE_GAP_MIN = 1.0e-8
 DEFAULT_HOLM_ALPHA = 0.05
 DEFAULT_PRIMARY_ZERO_TOLERANCE = 1.0e-12
+DEFAULT_LOG_EPSILON = 1.0e-12
 PIPELINE_ENDPOINT_COUNT = 24
 REFERENCE_BLOCK_COUNT_BY_FAMILY = {
     "family-0": 128,
@@ -222,12 +223,19 @@ class NullDrawAttempt:
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
-    return json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    try:
+        encoded = json.dumps(
+            payload,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise Gate12C2DevelopmentError(
+            f"canonical JSON requires finite, serializable values: {exc}"
+        ) from exc
+    return encoded.encode("utf-8")
 
 
 def _derived_seed(master_seed: str, *parts: object) -> int:
@@ -3363,7 +3371,7 @@ def development_s1_known_reverse_report(
     comparison: Sequence[SyntheticGraph],
     *,
     q: int,
-    epsilon: float = 1.0e-12,
+    epsilon: float = DEFAULT_LOG_EPSILON,
 ) -> dict[str, Any]:
     """Summarize a graph-realizable S1 minimal example without claiming power."""
 
@@ -3521,7 +3529,7 @@ def development_s0_n1_report(
     comparison: Sequence[SyntheticGraph],
     *,
     q: int,
-    epsilon: float = 1.0e-12,
+    epsilon: float = DEFAULT_LOG_EPSILON,
 ) -> dict[str, Any]:
     """Build an auditable development summary without estimating type-I error."""
 
@@ -3805,7 +3813,7 @@ def run_development_outer_experiment(
     inner_valid_draw_count: int,
     effect_strength: float | None = None,
     max_draw_attempts: int | None = None,
-    epsilon: float = 1.0e-12,
+    epsilon: float = DEFAULT_LOG_EPSILON,
     diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Run one graph-derived 12-case by 2-q development experiment.
@@ -4300,7 +4308,7 @@ def run_development_s2_identification_experiment(
     inner_valid_draw_count: int,
     max_draw_attempts: int | None = None,
     minimum_log_null_inflation: float = S2_MIN_LOG_NULL_INFLATION,
-    epsilon: float = 1.0e-12,
+    epsilon: float = DEFAULT_LOG_EPSILON,
     diagnostic_kernel: str = OBJECT_REFERENCE_DIAGNOSTIC_KERNEL,
 ) -> dict[str, Any]:
     """Pair N1 and the graph-unconstrained stressor on identical observations."""
@@ -5602,12 +5610,14 @@ def nested_inner_draw_stability(
     decision_alpha: float = 0.05,
     runtime_seconds_by_prefix: Mapping[int, float] | None = None,
 ) -> dict[str, Any]:
-    """Compare nested prefixes without using calibration performance.
+    """Low-level development diagnostic; never export this raw report.
 
     The same deterministic stream is used throughout, so 255 is a prefix of
     511, which is a prefix of 1023.  Draw count may later be selected from
     stability, Monte Carlo precision, and runtime only—not from whichever
     count produces the most favorable FPR or power.
+    Candidate-scale reporting must use ``gate12c2_draw_stability``, whose
+    strict projection excludes raw outcomes.
     """
 
     values = np.asarray(ordered_null_draws, dtype=np.float64)

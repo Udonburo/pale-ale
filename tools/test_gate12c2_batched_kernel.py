@@ -170,6 +170,88 @@ class Gate12C2BatchedKernelTest(unittest.TestCase):
                     batched.row(index),
                 )
 
+    def test_randomized_dimensions_ranks_and_thresholds_match_reference(
+        self,
+    ) -> None:
+        rng = np.random.default_rng(20260725)
+        shapes = (
+            (2, 3, 4, 5, 2),
+            (3, 5, 2, 4, 6),
+            (4, 2, 6, 3, 5),
+            (2, 6, 5, 2, 4),
+        )
+        for batch, p, m, k, n in shapes:
+            m0 = rng.normal(size=(batch, k, n))
+            m1 = rng.normal(size=(batch, m, k))
+            m2 = rng.normal(size=(batch, p, m))
+            maximum_q = max(
+                min(p, k),
+                min(m, n),
+            )
+            for q in range(1, maximum_q + 2):
+                for relative_gap_min in (0.0, 1.0e-3, 0.1):
+                    with self.subTest(
+                        shape=(batch, p, m, k, n),
+                        q=q,
+                        relative_gap_min=relative_gap_min,
+                    ):
+                        batched = gate12c2.batched_residual_diagnostics(
+                            m0,
+                            m1,
+                            m2,
+                            q=q,
+                            relative_gap_min=relative_gap_min,
+                        )
+                        for index in range(batch):
+                            reference = gate12c2.residual_diagnostics(
+                                m0[index],
+                                m1[index],
+                                m2[index],
+                                q=q,
+                                relative_gap_min=relative_gap_min,
+                            )
+                            self.assert_diagnostics_equivalent(
+                                reference,
+                                batched.row(index),
+                                atol=5.0e-12,
+                            )
+
+    def test_near_gap_threshold_status_matches_reference(self) -> None:
+        threshold = gate12c2.DEFAULT_RELATIVE_GAP_MIN
+        matrices = []
+        for multiplier in (
+            1.0 - 1.0e-10,
+            1.0,
+            1.0 + 1.0e-10,
+        ):
+            singular_values = np.asarray(
+                [1.0, 1.0 - threshold * multiplier, 0.25],
+                dtype=np.float64,
+            )
+            matrices.append(np.diag(singular_values))
+        m0 = np.stack(matrices)
+        m1 = np.stack([np.eye(3, dtype=np.float64)] * 3)
+        m2 = np.stack(matrices)
+        batched = gate12c2.batched_residual_diagnostics(
+            m0,
+            m1,
+            m2,
+            q=1,
+            relative_gap_min=threshold,
+        )
+        for index in range(3):
+            reference = gate12c2.residual_diagnostics(
+                m0[index],
+                m1[index],
+                m2[index],
+                q=1,
+                relative_gap_min=threshold,
+            )
+            self.assert_diagnostics_equivalent(
+                reference,
+                batched.row(index),
+            )
+
     def test_array_n1_reproduces_object_donors_and_cycle_matrices(self) -> None:
         observed = gate12c2.generate_s1_shared_node_coupling_cohort(
             replicate_count=12,
