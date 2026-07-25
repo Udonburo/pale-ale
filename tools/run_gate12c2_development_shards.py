@@ -7,10 +7,10 @@ import argparse
 import json
 from pathlib import Path
 
-import gate12c2_synthetic_lab as lab
 from gate12c2_development_shards import (
     build_development_shard_plan,
     execute_development_shard_plan,
+    lab,
 )
 
 
