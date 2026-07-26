@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,7 @@ if str(TOOLS_DIR) not in sys.path:
 
 import gate12c2_draw_profile as profile  # noqa: E402
 import gate12c2_draw_stability as stability  # noqa: E402
+import run_gate12c2_draw_stability as stability_cli  # noqa: E402
 
 
 class Gate12C2DrawStabilityTest(unittest.TestCase):
@@ -346,6 +348,74 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
             stability.Gate12C2DrawStabilityError
         ):
             stability.validate_no_outcome_projection(tampered)
+
+    def test_raw_scientific_values_require_exact_json_numbers(self) -> None:
+        sentinel = "RAW_SCIENTIFIC_DIRECTION_SENTINEL"
+        for value in (True, "0.31", sentinel):
+            results = self._inputs()
+            results["S0_true_null"][255][0]["pipeline_decision"][
+                "endpoint_rows"
+            ][0]["median_log_ratio"] = value
+            with self.subTest(value_type=type(value).__name__):
+                with self.assertRaises(
+                    stability.Gate12C2DrawStabilityError
+                ) as raised:
+                    self._projection(results)
+                self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_coverage_counts_require_exact_json_integers(self) -> None:
+        sentinel = "RAW_COVERAGE_SENTINEL"
+        for value in (True, 10.0, "10", sentinel):
+            results = self._inputs()
+            results["S2_null_inflation"][255][0][
+                "endpoint_rows"
+            ][0]["component_coverage"]["N1"]["a_q"][
+                "expected_count"
+            ] = value
+            with self.subTest(value_type=type(value).__name__):
+                with self.assertRaises(
+                    stability.Gate12C2DrawStabilityError
+                ) as raised:
+                    self._projection(results)
+                self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_public_cli_emits_only_fixed_error_code(self) -> None:
+        sentinel = "RAW_SCIENTIFIC_DIRECTION_SENTINEL"
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = root / "manifest.json"
+            output = root / "projection.json"
+            manifest.write_text("{}", encoding="utf-8")
+            driver = (
+                "import sys;"
+                f"sys.path.insert(0,{str(TOOLS_DIR)!r});"
+                "import run_gate12c2_draw_stability as cli;"
+                "cli.stability.analyze_verified_directories="
+                "(lambda manifest: cli.stability._finite("
+                f"{sentinel!r},context='endpoint primary summary'));"
+                f"sys.argv=['run','--manifest',{str(manifest)!r},"
+                f"'--output',{str(output)!r}];"
+                "raise SystemExit(cli.cli())"
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    driver,
+                ],
+                cwd=str(TOOLS_DIR.parent),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        self.assertEqual(completed.returncode, 2)
+        self.assertEqual(completed.stdout, "")
+        self.assertEqual(
+            completed.stderr.strip(),
+            stability_cli.PUBLIC_ERROR_CODE,
+        )
+        self.assertNotIn(sentinel, completed.stderr)
+        self.assertFalse(output.exists())
 
     def test_all_missing_always_defined_component_fails_closed(self) -> None:
         results = self._inputs()

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -12,13 +13,16 @@ import gate12c2_development_shards as shards
 import gate12c2_draw_stability as stability
 
 
+PUBLIC_ERROR_CODE = "GATE12C2_DRAW_STABILITY_INPUT_REJECTED"
+
+
 def _read_mapping(path: Path, *, label: str) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except Exception:
         raise stability.Gate12C2DrawStabilityError(
-            f"could not read {label} {path}: {exc}"
-        ) from exc
+            f"could not read {label}"
+        ) from None
     if not isinstance(payload, dict):
         raise stability.Gate12C2DrawStabilityError(
             f"{label} must contain a JSON object"
@@ -61,5 +65,13 @@ def main() -> int:
     return 0
 
 
+def cli() -> int:
+    try:
+        return main()
+    except Exception:
+        print(PUBLIC_ERROR_CODE, file=sys.stderr)
+        return 2
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli())

@@ -57,7 +57,7 @@ RESTORE_REHEARSAL_SCHEMA_VERSION = (
     "gate12c2_draw_profile_restore_rehearsal_v0.1"
 )
 WORKER_CARRY_FORWARD_SCHEMA_VERSION = (
-    "gate12c2_worker_profile_carry_forward_v0.1"
+    "gate12c2_worker_profile_carry_forward_v0.2"
 )
 PLAN_ID = "gate12c2-development-accepted-valid-draw-scaling-v0.2"
 WORKER_COUNT = 4
@@ -77,6 +77,80 @@ AUTHORIZATION_MAX_AGE_SECONDS = 30 * 60
 S2_AMENDMENT_PAYLOAD_SHA256 = (
     "ee98b8e54db6d0162fbb26aaf2f658c59a25dde3bc4e30ef45f18fa8df2206ef"
 )
+FROZEN_PRIOR_WORKER_PROFILE_FILE_SHA256 = (
+    "ea4ede57c3b70eaecb24ab3e7f34b2d07dab79a6ff2c7812d273c7e2f280b541"
+)
+FROZEN_PRIOR_WORKER_PROFILE_PAYLOAD_SHA256 = (
+    "26e3d5bda419127da1d920c96d048a3a6f7a20a555c721682eb40c92fd2c4db8"
+)
+FROZEN_PRIOR_WORKER_PROFILE_SOURCE_COMMIT = (
+    "52f8985fcd689d4201e12eab24e990b8f7fe8692"
+)
+FROZEN_PRIOR_WORKER_PROFILE_SCHEMA_VERSION = (
+    "gate12c2_throughput_profile_receipt_v0.1"
+)
+FROZEN_PRIOR_WORKER_PROFILE_KEYS = {
+    "N2_open",
+    "N3_open",
+    "configuration_results",
+    "epistemic_status",
+    "hardware",
+    "implementation_sha256",
+    "locked_execution_authorized",
+    "next_authorization",
+    "profile_id",
+    "profile_plan_payload_sha256",
+    "profile_receipt_payload_sha256",
+    "profile_wall_seconds",
+    "real_held_out_execution_authorized",
+    "schema_version",
+    "scientific_calibration_result",
+    "source_commit",
+    "summary",
+    "surface_id",
+    "thread_environment",
+}
+FROZEN_PRIOR_WORKER_CONFIGURATION_KEYS = {
+    "attempts_per_accepted_draw",
+    "compressed_shard_bytes",
+    "configuration_id",
+    "disk_free_bytes_after",
+    "disk_free_bytes_before",
+    "effective_accepted_draws_per_wall_second",
+    "endpoint_draw_acceptances",
+    "endpoint_draw_attempts",
+    "exhausted_incomplete_stream_count",
+    "index_payload_sha256",
+    "inner_valid_draw_count",
+    "merge_validation_before_write_wall_seconds",
+    "outer_experiment_count",
+    "output_bytes",
+    "plan_payload_sha256",
+    "process_tree_memory",
+    "profile_slice",
+    "regime_id",
+    "rejection_reason_counts",
+    "schema_version",
+    "scientific_outcomes_exposed_in_profile_receipt",
+    "scientific_projection_sha256",
+    "shard_phase_wall_seconds",
+    "stderr_payload_sha256",
+    "stdout_payload_sha256",
+    "sum_outer_compute_wall_seconds",
+    "sum_outer_process_cpu_seconds",
+    "sum_serialization_write_wall_seconds",
+    "unaccounted_rejection_count",
+    "wall_seconds",
+    "worker_count",
+    "workload_id",
+}
+FROZEN_PRIOR_WORKER_MEMORY_KEYS = {
+    "monitor_error",
+    "peak_observed_process_count",
+    "peak_process_tree_rss_bytes",
+    "sample_count",
+    "sample_interval_seconds",
+}
 REGIME_SPECIFICATIONS = (
     {
         "regime_id": "S0_true_null",
@@ -561,6 +635,46 @@ def _verify_self_hash(
     return str(claimed)
 
 
+def _git_blob_sha256(
+    commit: str,
+    relative_path: str,
+    *,
+    allow_missing: bool = False,
+) -> str | None:
+    """Hash one exact repository blob without consulting the worktree."""
+
+    repository_root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        ["git", "show", f"{commit}:{relative_path}"],
+        cwd=str(repository_root),
+        capture_output=True,
+        timeout=120,
+    )
+    if completed.returncode != 0:
+        if allow_missing:
+            return None
+        raise Gate12C2DrawProfileError(
+            "required provenance blob is unavailable"
+        )
+    return _sha256_bytes(completed.stdout)
+
+
+def _git_head() -> str:
+    repository_root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(repository_root),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise Gate12C2DrawProfileError(
+            "could not establish the checked-out source commit"
+        )
+    return completed.stdout.strip()
+
+
 def _partial_artifacts(root: Path) -> list[str]:
     if not root.exists():
         return []
@@ -629,16 +743,108 @@ def _verify_prior_worker_profile(
     receipt_path: Path,
 ) -> dict[str, Any]:
     path = Path(receipt_path).resolve()
+    if not path.is_file():
+        raise Gate12C2DrawProfileError(
+            "frozen worker profile receipt is unavailable"
+        )
+    file_hash = _sha256_file(path)
+    if file_hash != FROZEN_PRIOR_WORKER_PROFILE_FILE_SHA256:
+        raise Gate12C2DrawProfileError(
+            "worker profile receipt is not the frozen official file"
+        )
     payload = _read_json_mapping(path, label="worker profile receipt")
+    _require_exact_keys(
+        payload,
+        FROZEN_PRIOR_WORKER_PROFILE_KEYS,
+        context="frozen worker profile receipt",
+    )
     payload_hash = _verify_self_hash(
         payload,
         hash_field="profile_receipt_payload_sha256",
         label="worker profile receipt",
     )
-    rows = payload.get("configuration_results")
-    if not isinstance(rows, list):
+    if (
+        payload_hash != FROZEN_PRIOR_WORKER_PROFILE_PAYLOAD_SHA256
+        or payload.get("source_commit")
+        != FROZEN_PRIOR_WORKER_PROFILE_SOURCE_COMMIT
+        or payload.get("schema_version")
+        != FROZEN_PRIOR_WORKER_PROFILE_SCHEMA_VERSION
+        or payload.get("profile_id")
+        != "gate12c2_bounded_worker_scaling_v0.1"
+        or payload.get("epistemic_status")
+        != "development_throughput_only"
+        or payload.get("surface_id") != "development"
+        or payload.get("locked_execution_authorized") is not False
+        or payload.get("real_held_out_execution_authorized") is not False
+        or payload.get("scientific_calibration_result") is not None
+        or payload.get("N2_open") is not False
+        or payload.get("N3_open") is not False
+    ):
         raise Gate12C2DrawProfileError(
-            "worker profile receipt lacks configuration results"
+            "worker profile receipt differs from frozen provenance"
+        )
+    implementation = payload.get("implementation_sha256")
+    if not isinstance(implementation, Mapping) or set(implementation) != {
+        "gate12c2_development_shards.py",
+        "gate12c2_synthetic_lab.py",
+        "gate12c2_throughput_profile.py",
+        "run_gate12c2_development_shards.py",
+    }:
+        raise Gate12C2DrawProfileError(
+            "worker profile implementation surface is incomplete"
+        )
+    for name, expected_hash in implementation.items():
+        if (
+            not _is_sha256(expected_hash)
+            or _git_blob_sha256(
+                FROZEN_PRIOR_WORKER_PROFILE_SOURCE_COMMIT,
+                f"tools/{name}",
+            )
+            != expected_hash
+        ):
+            raise Gate12C2DrawProfileError(
+                "worker profile implementation provenance does not match git"
+            )
+    rows = payload.get("configuration_results")
+    expected_configuration_ids = {
+        f"{regime['regime_id']}__w{worker_count}"
+        for regime in REGIME_SPECIFICATIONS
+        for worker_count in (1, 2, 4)
+    }
+    if not isinstance(rows, list) or len(rows) != len(
+        expected_configuration_ids
+    ):
+        raise Gate12C2DrawProfileError(
+            "worker profile receipt is not the exact nine-row surface"
+        )
+    configuration_ids = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise Gate12C2DrawProfileError(
+                "worker profile configuration row is not a mapping"
+            )
+        _require_exact_keys(
+            row,
+            FROZEN_PRIOR_WORKER_CONFIGURATION_KEYS,
+            context="frozen worker profile configuration",
+        )
+        memory = row.get("process_tree_memory")
+        if not isinstance(memory, Mapping):
+            raise Gate12C2DrawProfileError(
+                "worker profile memory evidence is not a mapping"
+            )
+        _require_exact_keys(
+            memory,
+            FROZEN_PRIOR_WORKER_MEMORY_KEYS,
+            context="frozen worker profile memory evidence",
+        )
+        configuration_ids.append(str(row.get("configuration_id")))
+    if (
+        len(set(configuration_ids)) != len(configuration_ids)
+        or set(configuration_ids) != expected_configuration_ids
+    ):
+        raise Gate12C2DrawProfileError(
+            "worker profile configuration IDs differ from the frozen surface"
         )
     admitted = {}
     for regime in REGIME_SPECIFICATIONS:
@@ -680,7 +886,7 @@ def _verify_prior_worker_profile(
         admitted[regime_id] = row
     return {
         "path": path.as_posix(),
-        "file_sha256": _sha256_file(path),
+        "file_sha256": file_hash,
         "payload_sha256": payload_hash,
         "payload": payload,
         "worker_4_rows": admitted,
@@ -692,6 +898,7 @@ def _verify_worker_carry_forward(
     *,
     plan: Mapping[str, Any],
     worker_profile: Mapping[str, Any],
+    smoke_scratch_root: Path,
 ) -> dict[str, Any]:
     path = Path(receipt_path).resolve()
     payload = _read_json_mapping(path, label="worker carry-forward receipt")
@@ -775,22 +982,33 @@ def _verify_worker_carry_forward(
         ]["gate12c2_draw_profile.py"],
     }
     for critical_path, row in comparison.items():
+        prior_blob_hash = _git_blob_sha256(
+            str(payload["prior_commit"]),
+            critical_path,
+            allow_missing=True,
+        )
+        current_blob_hash = _git_blob_sha256(
+            str(payload["current_commit"]),
+            critical_path,
+        )
+        expected_status = (
+            "new_shared_path_with_bounded_equivalence_smoke"
+            if prior_blob_hash is None
+            else (
+                "unchanged"
+                if prior_blob_hash == current_blob_hash
+                else "changed_with_bounded_equivalence_smoke"
+            )
+        )
         if (
             not isinstance(row, Mapping)
             or set(row)
             != {"prior_sha256", "current_sha256", "status"}
             or row["current_sha256"]
             != current_hash_by_path[critical_path]
-            or (
-                row["prior_sha256"] is not None
-                and not _is_sha256(row["prior_sha256"])
-            )
-            or row["status"]
-            not in {
-                "unchanged",
-                "changed_with_bounded_equivalence_smoke",
-                "new_shared_path_with_bounded_equivalence_smoke",
-            }
+            or row["prior_sha256"] != prior_blob_hash
+            or row["current_sha256"] != current_blob_hash
+            or row["status"] != expected_status
         ):
             raise Gate12C2DrawProfileError(
                 f"worker carry-forward critical-file row is invalid: "
@@ -805,7 +1023,7 @@ def _verify_worker_carry_forward(
         smoke,
         {
             "worker_counts",
-            "regime_projection_sha256",
+            "regime_projection_commitments",
             "status",
             "scientific_outcomes_interpreted",
         },
@@ -819,28 +1037,180 @@ def _verify_worker_carry_forward(
         raise Gate12C2DrawProfileError(
             "worker carry-forward smoke inspected scientific outcomes"
         )
-    projection_rows = smoke["regime_projection_sha256"]
+    projection_rows = smoke["regime_projection_commitments"]
     if not isinstance(projection_rows, Mapping) or set(projection_rows) != {
         str(row["regime_id"]) for row in REGIME_SPECIFICATIONS
     }:
         raise Gate12C2DrawProfileError(
             "worker carry-forward smoke changed the regime surface"
         )
-    for regime_id, hashes in projection_rows.items():
+    for regime_id, commitments in projection_rows.items():
         if (
-            not isinstance(hashes, Mapping)
-            or set(hashes) != {"1", "4"}
-            or not all(_is_sha256(value) for value in hashes.values())
-            or hashes["1"] != hashes["4"]
+            not isinstance(commitments, Mapping)
+            or set(commitments) != {"1", "4"}
         ):
             raise Gate12C2DrawProfileError(
-                "worker 1/4 scientific projections differ for "
+                "worker carry-forward commitments are incomplete for "
                 f"{regime_id}"
             )
+        for worker_count, commitment in commitments.items():
+            if (
+                not isinstance(commitment, Mapping)
+                or set(commitment)
+                != {
+                    "plan_payload_sha256",
+                    "scientific_projection_sha256",
+                }
+                or not all(_is_sha256(value) for value in commitment.values())
+            ):
+                raise Gate12C2DrawProfileError(
+                    "worker carry-forward commitment is invalid for "
+                    f"{regime_id}/worker-{worker_count}"
+                )
+        if (
+            commitments["1"]["plan_payload_sha256"]
+            != commitments["4"]["plan_payload_sha256"]
+            or commitments["1"]["scientific_projection_sha256"]
+            != commitments["4"]["scientific_projection_sha256"]
+        ):
+            raise Gate12C2DrawProfileError(
+                "worker 1/4 plan or scientific projections differ for "
+                f"{regime_id}"
+            )
+    scratch_parent = Path(smoke_scratch_root).resolve()
+    if not scratch_parent.is_dir():
+        raise Gate12C2DrawProfileError(
+            "worker smoke scratch root must already exist"
+        )
+    with tempfile.TemporaryDirectory(
+        prefix="g12c2-worker-smoke-",
+        dir=str(scratch_parent),
+    ) as temporary:
+        reconstructed_smoke = _run_bounded_worker_equivalence_smoke(
+            plan,
+            output_root=Path(temporary) / "smoke",
+        )
+    if reconstructed_smoke != dict(smoke):
+        raise Gate12C2DrawProfileError(
+            "worker carry-forward smoke was not mechanically reconstructed"
+        )
     return {
         "path": path.as_posix(),
         "file_sha256": _sha256_file(path),
         "payload_sha256": payload_hash,
+    }
+
+
+def _run_worker_equivalence_smoke_configuration(
+    *,
+    regime_id: str,
+    worker_count: int,
+    output_root: Path,
+) -> dict[str, Any]:
+    subplan = shards.build_development_shard_plan(
+        regime_id=regime_id,
+        master_seed=(
+            "gate12c2-worker-carry-forward-v0.2::"
+            f"{regime_id}"
+        ),
+        outer_experiment_indices=[0],
+        block_count=4,
+        inner_valid_draw_count=1,
+        effect_strength=(
+            0.25
+            if regime_id
+            == "S1_known_reverse_shared_node_coupling"
+            else None
+        ),
+    )
+    run_root = output_root / regime_id / f"worker-{worker_count}"
+    checks = {key: True for key in shards.REQUIRED_PREFLIGHT_CHECKS}
+    preflight = shards.build_no_outcome_preflight_receipt(
+        subplan,
+        output_dir=run_root,
+        worker_count=worker_count,
+        preflight_id=(
+            f"worker-carry-forward-v0.2::{regime_id}::{worker_count}"
+        ),
+        checks=checks,
+    )
+    authorization = shards.build_development_execution_authorization(
+        subplan,
+        preflight,
+        output_dir=run_root,
+        worker_count=worker_count,
+        authorization_id=(
+            f"worker-carry-forward-v0.2::{regime_id}::{worker_count}"
+        ),
+        purpose="bounded-worker-equivalence-smoke",
+    )
+    shards.execute_development_shard_plan(
+        subplan,
+        output_dir=run_root,
+        worker_count=worker_count,
+        preflight_receipt=preflight,
+        authorization_receipt=authorization,
+    )
+    verification = shards.verify_development_shard_index(
+        subplan,
+        output_dir=run_root,
+    )
+    return {
+        "plan_payload_sha256": subplan["plan_payload_sha256"],
+        "scientific_projection_sha256": verification[
+            "scientific_projection_sha256"
+        ],
+    }
+
+
+def _run_bounded_worker_equivalence_smoke(
+    plan: Mapping[str, Any],
+    *,
+    output_root: Path,
+) -> dict[str, Any]:
+    """Reconstruct the exact worker-1/worker-4 provenance commitments."""
+
+    verified = verify_draw_profile_plan(plan)
+    if _git_head() != verified["source_commit"]:
+        raise Gate12C2DrawProfileError(
+            "worker smoke requires the exact checked-out plan commit"
+        )
+    destination = Path(output_root).resolve()
+    if destination.exists() and any(destination.iterdir()):
+        raise Gate12C2DrawProfileError(
+            "worker smoke output root must be fresh and empty"
+        )
+    destination.mkdir(parents=True, exist_ok=True)
+    commitments: dict[str, dict[str, dict[str, str]]] = {}
+    for regime in REGIME_SPECIFICATIONS:
+        regime_id = str(regime["regime_id"])
+        commitments[regime_id] = {
+            str(worker_count): _run_worker_equivalence_smoke_configuration(
+                regime_id=regime_id,
+                worker_count=worker_count,
+                output_root=destination,
+            )
+            for worker_count in (1, 4)
+        }
+        if (
+            commitments[regime_id]["1"]["plan_payload_sha256"]
+            != commitments[regime_id]["4"]["plan_payload_sha256"]
+            or commitments[regime_id]["1"][
+                "scientific_projection_sha256"
+            ]
+            != commitments[regime_id]["4"][
+                "scientific_projection_sha256"
+            ]
+        ):
+            raise Gate12C2DrawProfileError(
+                "worker 1/4 smoke commitments differ for "
+                f"{regime_id}"
+            )
+    return {
+        "worker_counts": [1, 4],
+        "regime_projection_commitments": commitments,
+        "status": "pass",
+        "scientific_outcomes_interpreted": False,
     }
 
 
@@ -1308,6 +1678,7 @@ def issue_mechanical_preflight(
         worker_carry_forward_receipt_path,
         plan=verified,
         worker_profile=worker_profile,
+        smoke_scratch_root=restore_scratch_root,
     )
     projected_output_bytes = _project_output_bytes(
         verified,
@@ -1761,6 +2132,7 @@ def _verify_preflight(
         carry_path,
         plan=verified,
         worker_profile=worker_profile,
+        smoke_scratch_root=restore_scratch_root,
     )
     if reconstructed_carry != dict(carry):
         raise Gate12C2DrawProfileError(

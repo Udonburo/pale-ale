@@ -111,12 +111,24 @@ def _require_exact_keys(
         )
 
 
+def _strict_json_integer(value: Any, *, context: str) -> int:
+    if type(value) is not int:
+        raise Gate12C2DrawStabilityError(
+            f"{context} must be an integer JSON number"
+        ) from None
+    return value
+
+
 def _finite(value: Any, *, context: str) -> float:
+    if type(value) not in {int, float}:
+        raise Gate12C2DrawStabilityError(
+            f"{context} must be a numeric JSON value"
+        ) from None
     numeric = float(value)
     if not math.isfinite(numeric):
         raise Gate12C2DrawStabilityError(
             f"{context} must be finite"
-        )
+        ) from None
     return numeric
 
 
@@ -165,7 +177,13 @@ def _component_arm_summary(
             raise Gate12C2DrawStabilityError(
                 f"S2 coverage counts are incomplete for {arm}/{field_name}"
             )
-        normalized = {key: int(counts[key]) for key in count_keys}
+        normalized = {
+            key: _strict_json_integer(
+                counts[key],
+                context=f"S2 coverage {arm}/{field_name}/{key}",
+            )
+            for key in count_keys
+        }
         if any(value < 0 for value in normalized.values()):
             raise Gate12C2DrawStabilityError(
                 f"S2 coverage counts are negative for {arm}/{field_name}"
@@ -285,11 +303,17 @@ def _keyed_results(
             raise Gate12C2DrawStabilityError(
                 "outer result regime differs from its stability slot"
             )
-        if int(result.get("inner_valid_draw_count", -1)) != draw_count:
+        if _strict_json_integer(
+            result.get("inner_valid_draw_count"),
+            context="outer result inner_valid_draw_count",
+        ) != draw_count:
             raise Gate12C2DrawStabilityError(
                 "outer result draw count differs from its stability slot"
             )
-        outer_index = int(result.get("outer_experiment_index", -1))
+        outer_index = _strict_json_integer(
+            result.get("outer_experiment_index"),
+            context="outer result outer_experiment_index",
+        )
         if outer_index < 0 or outer_index in keyed:
             raise Gate12C2DrawStabilityError(
                 "outer result indices must be unique and nonnegative"
@@ -759,20 +783,36 @@ def build_no_outcome_projection(
                 )
             )
         comparison_count = sum(
-            int(row["endpoint_comparison_count"]) for row in regime_rows
+            _strict_json_integer(
+                row["endpoint_comparison_count"],
+                context="regime endpoint comparison count",
+            )
+            for row in regime_rows
         )
         weighted_agreement = sum(
-            float(row["endpoint_decision_agreement"])
-            * int(row["endpoint_comparison_count"])
+            _finite(
+                row["endpoint_decision_agreement"],
+                context="regime endpoint decision agreement",
+            )
+            * _strict_json_integer(
+                row["endpoint_comparison_count"],
+                context="regime endpoint comparison count",
+            )
             for row in regime_rows
         ) / comparison_count
         primary_shifts = [
-            float(row["maximum_absolute_primary_summary_shift"])
+            _finite(
+                row["maximum_absolute_primary_summary_shift"],
+                context="maximum absolute primary summary shift",
+            )
             for row in regime_rows
             if row["maximum_absolute_primary_summary_shift"] is not None
         ]
         component_shifts = [
-            float(component["maximum_absolute_shift"])
+            _finite(
+                component["maximum_absolute_shift"],
+                context="maximum absolute component shift",
+            )
             for row in regime_rows
             for component in row["component_stability"]
             if component["maximum_absolute_shift"] is not None
@@ -785,13 +825,22 @@ def build_no_outcome_projection(
         stability_pass = bool(
             prefix_pass
             and all(
-                float(row["endpoint_decision_agreement"])
+                _finite(
+                    row["endpoint_decision_agreement"],
+                    context="endpoint decision agreement",
+                )
                 >= MINIMUM_ENDPOINT_DECISION_AGREEMENT
                 for row in regime_rows
             )
             and all(
-                int(row["primary_summary_compared_count"])
-                == int(row["primary_summary_expected_count"])
+                _strict_json_integer(
+                    row["primary_summary_compared_count"],
+                    context="primary summary compared count",
+                )
+                == _strict_json_integer(
+                    row["primary_summary_expected_count"],
+                    context="primary summary expected count",
+                )
                 and bool(row["field_coverage_gate_pass"])
                 for row in regime_rows
             )
@@ -826,7 +875,10 @@ def build_no_outcome_projection(
             }
         )
     eligible = [
-        int(row["draw_count"])
+        _strict_json_integer(
+            row["draw_count"],
+            context="candidate draw count",
+        )
         for row in candidates
         if row["selection_eligible"]
     ]
@@ -1005,8 +1057,13 @@ def validate_no_outcome_projection(
     resource_gate = supplied["resource_gate"]
     if (
         resource_gate["status"] not in {"pass", "fail"}
+        or not isinstance(resource_gate["eligible_draw_counts"], list)
         or any(
-            int(value) not in PREFIX_COUNTS
+            _strict_json_integer(
+                value,
+                context="resource-gate eligible draw count",
+            )
+            not in PREFIX_COUNTS
             for value in resource_gate["eligible_draw_counts"]
         )
         or not all(
@@ -1098,6 +1155,45 @@ def validate_no_outcome_projection(
             candidate_keys,
             context="draw candidate projection",
         )
+        _strict_json_integer(
+            candidate["draw_count"],
+            context="draw candidate draw_count",
+        )
+        _strict_json_integer(
+            candidate["accepted_prefix_match_count"],
+            context="draw candidate accepted-prefix match count",
+        )
+        _strict_json_integer(
+            candidate["accepted_prefix_mismatch_count"],
+            context="draw candidate accepted-prefix mismatch count",
+        )
+        _strict_json_integer(
+            candidate["endpoint_decision_comparison_count"],
+            context="draw candidate endpoint comparison count",
+        )
+        _finite(
+            candidate["endpoint_decision_agreement_overall"],
+            context="draw candidate endpoint agreement",
+        )
+        if candidate["maximum_absolute_primary_summary_shift"] is not None:
+            _finite(
+                candidate["maximum_absolute_primary_summary_shift"],
+                context="draw candidate primary-summary shift",
+            )
+        _finite(
+            candidate["S0_family_wise_false_promotion_absolute_shift"],
+            context="draw candidate S0 family-wise shift",
+        )
+        for boolean_key in (
+            "accepted_prefix_gate_pass",
+            "stability_gate_pass",
+            "resource_gate_pass",
+            "selection_eligible",
+        ):
+            if not isinstance(candidate[boolean_key], bool):
+                raise Gate12C2DrawStabilityError(
+                    f"draw candidate {boolean_key} must be boolean"
+                )
         regimes = candidate["regimes"]
         if (
             not isinstance(regimes, list)
@@ -1113,8 +1209,28 @@ def validate_no_outcome_projection(
                 regime_keys,
                 context="regime stability projection",
             )
+            _finite(
+                regime["endpoint_decision_agreement"],
+                context="regime endpoint decision agreement",
+            )
+            _strict_json_integer(
+                regime["endpoint_comparison_count"],
+                context="regime endpoint comparison count",
+            )
+            if regime["maximum_absolute_primary_summary_shift"] is not None:
+                _finite(
+                    regime["maximum_absolute_primary_summary_shift"],
+                    context="regime primary-summary shift",
+                )
+            if not isinstance(regime["field_coverage_gate_pass"], bool):
+                raise Gate12C2DrawStabilityError(
+                    "regime field coverage gate must be boolean"
+                )
             primary_counts = [
-                int(regime[key])
+                _strict_json_integer(
+                    regime[key],
+                    context=f"regime coverage {key}",
+                )
                 for key in (
                     "primary_summary_compared_count",
                     "primary_summary_jointly_missing_count",
@@ -1125,12 +1241,14 @@ def validate_no_outcome_projection(
                     "primary_summary_nonfinite_count",
                 )
             ]
+            primary_expected = _strict_json_integer(
+                regime["primary_summary_expected_count"],
+                context="regime primary-summary expected count",
+            )
             if (
                 any(value < 0 for value in primary_counts)
-                or sum(primary_counts)
-                != int(regime["primary_summary_expected_count"])
-                or int(regime["primary_summary_compared_count"])
-                != int(regime["primary_summary_expected_count"])
+                or sum(primary_counts) != primary_expected
+                or primary_counts[0] != primary_expected
             ):
                 raise Gate12C2DrawStabilityError(
                     "primary-summary coverage accounting is incomplete"
@@ -1146,8 +1264,20 @@ def validate_no_outcome_projection(
                     component_keys,
                     context="component stability projection",
                 )
+                if component["maximum_absolute_shift"] is not None:
+                    _finite(
+                        component["maximum_absolute_shift"],
+                        context="component maximum absolute shift",
+                    )
+                if not isinstance(component["coverage_gate_pass"], bool):
+                    raise Gate12C2DrawStabilityError(
+                        "component coverage gate must be boolean"
+                    )
                 counts = [
-                    int(component[key])
+                    _strict_json_integer(
+                        component[key],
+                        context=f"component coverage {key}",
+                    )
                     for key in (
                         "compared_count",
                         "jointly_missing_count",
@@ -1158,12 +1288,16 @@ def validate_no_outcome_projection(
                         "nonfinite_count",
                     )
                 ]
+                expected_count = _strict_json_integer(
+                    component["expected_count"],
+                    context="component expected count",
+                )
                 if (
                     any(value < 0 for value in counts)
-                    or sum(counts) != int(component["expected_count"])
+                    or sum(counts) != expected_count
                     or (
                         component["coverage_gate_pass"]
-                        and int(component["compared_count"]) <= 0
+                        and counts[0] <= 0
                     )
                 ):
                     raise Gate12C2DrawStabilityError(
@@ -1232,7 +1366,10 @@ def load_verified_result_sets(
                 raise Gate12C2DrawStabilityError(
                     "development plan occupies the wrong regime slot"
                 )
-            if int(verified_plan["inner_valid_draw_count"]) != draw_count:
+            if _strict_json_integer(
+                verified_plan["inner_valid_draw_count"],
+                context="verified plan inner_valid_draw_count",
+            ) != draw_count:
                 raise Gate12C2DrawStabilityError(
                     "development plan occupies the wrong draw-count slot"
                 )
@@ -1253,12 +1390,16 @@ def load_verified_result_sets(
                 )
             results = []
             for outer_index in verified_plan["outer_experiment_indices"]:
-                shard_path = shards._shard_path(root, int(outer_index))
+                exact_outer_index = _strict_json_integer(
+                    outer_index,
+                    context="verified plan outer experiment index",
+                )
+                shard_path = shards._shard_path(root, exact_outer_index)
                 payload = shards._read_shard(shard_path)
                 shards._verify_result_against_plan(
                     verified_plan,
                     payload["result"],
-                    outer_experiment_index=int(outer_index),
+                    outer_experiment_index=exact_outer_index,
                 )
                 results.append(payload["result"])
             result_sets[regime_id][draw_count] = results
@@ -1344,7 +1485,11 @@ def verify_result_root_evidence(
                 ) from exc
             if (
                 subplan["regime_id"] != regime_id
-                or int(subplan["inner_valid_draw_count"]) != draw_count
+                or _strict_json_integer(
+                    subplan["inner_valid_draw_count"],
+                    context="result-root plan inner_valid_draw_count",
+                )
+                != draw_count
             ):
                 raise Gate12C2DrawStabilityError(
                     "result-root plan occupies the wrong configuration slot"

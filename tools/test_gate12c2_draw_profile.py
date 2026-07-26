@@ -43,6 +43,99 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         )
 
     @staticmethod
+    def _frozen_worker_fixture(
+        root: Path,
+    ) -> tuple[Path, dict[str, object], dict[str, str]]:
+        implementation = {
+            "gate12c2_development_shards.py": "1" * 64,
+            "gate12c2_synthetic_lab.py": "2" * 64,
+            "gate12c2_throughput_profile.py": "3" * 64,
+            "run_gate12c2_development_shards.py": "4" * 64,
+        }
+        rows = []
+        for regime in profile.REGIME_SPECIFICATIONS:
+            regime_id = str(regime["regime_id"])
+            for worker_count in (1, 2, 4):
+                rows.append(
+                    {
+                        "attempts_per_accepted_draw": 1.0,
+                        "compressed_shard_bytes": 100,
+                        "configuration_id": (
+                            f"{regime_id}__w{worker_count}"
+                        ),
+                        "disk_free_bytes_after": 10_000,
+                        "disk_free_bytes_before": 10_100,
+                        "effective_accepted_draws_per_wall_second": 1.0,
+                        "endpoint_draw_acceptances": 100,
+                        "endpoint_draw_attempts": 100,
+                        "exhausted_incomplete_stream_count": 0,
+                        "index_payload_sha256": "5" * 64,
+                        "inner_valid_draw_count": 255,
+                        "merge_validation_before_write_wall_seconds": 0.1,
+                        "outer_experiment_count": 4,
+                        "output_bytes": 1_000 + worker_count,
+                        "plan_payload_sha256": "6" * 64,
+                        "process_tree_memory": {
+                            "monitor_error": None,
+                            "peak_observed_process_count": worker_count,
+                            "peak_process_tree_rss_bytes": (
+                                1_000_000 * worker_count
+                            ),
+                            "sample_count": 2,
+                            "sample_interval_seconds": 0.1,
+                        },
+                        "profile_slice": "worker_scaling",
+                        "regime_id": regime_id,
+                        "rejection_reason_counts": {},
+                        "schema_version": (
+                            "gate12c2_throughput_configuration_v0.1"
+                        ),
+                        "scientific_outcomes_exposed_in_profile_receipt": (
+                            False
+                        ),
+                        "scientific_projection_sha256": "7" * 64,
+                        "shard_phase_wall_seconds": 1.0,
+                        "stderr_payload_sha256": "8" * 64,
+                        "stdout_payload_sha256": "9" * 64,
+                        "sum_outer_compute_wall_seconds": 1.0,
+                        "sum_outer_process_cpu_seconds": 1.0,
+                        "sum_serialization_write_wall_seconds": 0.1,
+                        "unaccounted_rejection_count": 0,
+                        "wall_seconds": 1.0,
+                        "worker_count": worker_count,
+                        "workload_id": f"worker-scaling::{regime_id}",
+                    }
+                )
+        payload: dict[str, object] = {
+            "N2_open": False,
+            "N3_open": False,
+            "configuration_results": rows,
+            "epistemic_status": "development_throughput_only",
+            "hardware": {},
+            "implementation_sha256": implementation,
+            "locked_execution_authorized": False,
+            "next_authorization": "none",
+            "profile_id": "gate12c2_bounded_worker_scaling_v0.1",
+            "profile_plan_payload_sha256": "a" * 64,
+            "profile_wall_seconds": 1.0,
+            "real_held_out_execution_authorized": False,
+            "schema_version": (
+                "gate12c2_throughput_profile_receipt_v0.1"
+            ),
+            "scientific_calibration_result": None,
+            "source_commit": "a" * 40,
+            "summary": {},
+            "surface_id": "development",
+            "thread_environment": {},
+        }
+        payload["profile_receipt_payload_sha256"] = (
+            profile._sha256_bytes(profile._canonical_json_bytes(payload))
+        )
+        path = root / "worker-profile.json"
+        path.write_bytes(profile._canonical_json_bytes(payload))
+        return path, payload, implementation
+
+    @staticmethod
     @contextmanager
     def _mechanical_evidence_context(
         plan: dict[str, object],
@@ -1190,6 +1283,250 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     profile.Gate12C2DrawProfileError
                 ):
                     profile._canonical_json_bytes({"value": value})
+
+    def test_worker_profile_requires_exact_frozen_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path, payload, implementation = self._frozen_worker_fixture(root)
+
+            def blob_hash(
+                _: str,
+                relative_path: str,
+                **__: object,
+            ) -> str:
+                return implementation[Path(relative_path).name]
+
+            patches = (
+                mock.patch.object(
+                    profile,
+                    "FROZEN_PRIOR_WORKER_PROFILE_FILE_SHA256",
+                    profile._sha256_file(path),
+                ),
+                mock.patch.object(
+                    profile,
+                    "FROZEN_PRIOR_WORKER_PROFILE_PAYLOAD_SHA256",
+                    payload["profile_receipt_payload_sha256"],
+                ),
+                mock.patch.object(
+                    profile,
+                    "FROZEN_PRIOR_WORKER_PROFILE_SOURCE_COMMIT",
+                    payload["source_commit"],
+                ),
+                mock.patch.object(
+                    profile,
+                    "_git_blob_sha256",
+                    side_effect=blob_hash,
+                ),
+            )
+            with ExitStack() as stack:
+                for patch in patches:
+                    stack.enter_context(patch)
+                verified = profile._verify_prior_worker_profile(path)
+                self.assertEqual(
+                    verified["file_sha256"],
+                    profile._sha256_file(path),
+                )
+
+                forged = json.loads(json.dumps(payload))
+                for row in forged["configuration_results"]:
+                    if row["worker_count"] == 4:
+                        row["output_bytes"] = 1
+                        row["process_tree_memory"][
+                            "peak_process_tree_rss_bytes"
+                        ] = 1
+                forged.pop("profile_receipt_payload_sha256")
+                forged["profile_receipt_payload_sha256"] = (
+                    profile._sha256_bytes(
+                        profile._canonical_json_bytes(forged)
+                    )
+                )
+                forged_path = root / "forged-worker-profile.json"
+                forged_path.write_bytes(
+                    profile._canonical_json_bytes(forged)
+                )
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "not the frozen official file",
+                ):
+                    profile._verify_prior_worker_profile(forged_path)
+
+    def test_worker_carry_requires_reconstructed_smoke_and_git_blobs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path, worker_payload, implementation = (
+                self._frozen_worker_fixture(root)
+            )
+            current_implementation = {
+                "gate12c2_development_shards.py": "b" * 64,
+                "gate12c2_draw_profile.py": "c" * 64,
+                "gate12c2_synthetic_lab.py": "d" * 64,
+            }
+            prior_by_path = {
+                "tools/gate12c2_development_shards.py": implementation[
+                    "gate12c2_development_shards.py"
+                ],
+                "tools/gate12c2_draw_profile.py": None,
+                "tools/gate12c2_synthetic_lab.py": implementation[
+                    "gate12c2_synthetic_lab.py"
+                ],
+            }
+            current_by_path = {
+                "tools/gate12c2_development_shards.py": (
+                    current_implementation[
+                        "gate12c2_development_shards.py"
+                    ]
+                ),
+                "tools/gate12c2_draw_profile.py": current_implementation[
+                    "gate12c2_draw_profile.py"
+                ],
+                "tools/gate12c2_synthetic_lab.py": current_implementation[
+                    "gate12c2_synthetic_lab.py"
+                ],
+            }
+            smoke = {
+                "worker_counts": [1, 4],
+                "regime_projection_commitments": {
+                    str(regime["regime_id"]): {
+                        worker: {
+                            "plan_payload_sha256": "e" * 64,
+                            "scientific_projection_sha256": "f" * 64,
+                        }
+                        for worker in ("1", "4")
+                    }
+                    for regime in profile.REGIME_SPECIFICATIONS
+                },
+                "status": "pass",
+                "scientific_outcomes_interpreted": False,
+            }
+            plan = {
+                "source_commit": "b" * 40,
+                "implementation_sha256": current_implementation,
+                "numerical_environment_sha256": "0" * 64,
+            }
+            comparison = {}
+            for critical_path in (
+                "tools/gate12c2_development_shards.py",
+                "tools/gate12c2_draw_profile.py",
+                "tools/gate12c2_synthetic_lab.py",
+            ):
+                prior = prior_by_path[critical_path]
+                current = current_by_path[critical_path]
+                comparison[critical_path] = {
+                    "prior_sha256": prior,
+                    "current_sha256": current,
+                    "status": (
+                        "new_shared_path_with_bounded_equivalence_smoke"
+                        if prior is None
+                        else "changed_with_bounded_equivalence_smoke"
+                    ),
+                }
+            carry: dict[str, object] = {
+                "schema_version": (
+                    profile.WORKER_CARRY_FORWARD_SCHEMA_VERSION
+                ),
+                "epistemic_status": (
+                    "development_worker_selection_carry_forward_only"
+                ),
+                "surface_id": "development",
+                "prior_worker_profile_file_sha256": (
+                    profile._sha256_file(path)
+                ),
+                "prior_worker_profile_payload_sha256": worker_payload[
+                    "profile_receipt_payload_sha256"
+                ],
+                "prior_commit": worker_payload["source_commit"],
+                "current_commit": plan["source_commit"],
+                "worker_count": 4,
+                "current_implementation_sha256": current_implementation,
+                "current_numerical_environment_sha256": (
+                    plan["numerical_environment_sha256"]
+                ),
+                "worker_critical_file_comparison": comparison,
+                "bounded_equivalence_smoke": smoke,
+                "status": "pass",
+                "locked_execution_authorized": False,
+                "real_held_out_execution_authorized": False,
+                "N2_open": False,
+                "N3_open": False,
+            }
+            carry["carry_forward_receipt_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(carry)
+                )
+            )
+            carry_path = root / "carry.json"
+            carry_path.write_bytes(profile._canonical_json_bytes(carry))
+            worker_profile = {
+                "path": path.as_posix(),
+                "file_sha256": profile._sha256_file(path),
+                "payload_sha256": worker_payload[
+                    "profile_receipt_payload_sha256"
+                ],
+                "payload": worker_payload,
+                "worker_4_rows": {},
+            }
+
+            def git_blob(
+                commit: str,
+                relative_path: str,
+                *,
+                allow_missing: bool = False,
+            ) -> str | None:
+                if commit == worker_payload["source_commit"]:
+                    value = prior_by_path[relative_path]
+                else:
+                    value = current_by_path[relative_path]
+                if value is None and not allow_missing:
+                    raise profile.Gate12C2DrawProfileError(
+                        "missing fixture blob"
+                    )
+                return value
+
+            with mock.patch.object(
+                profile,
+                "_git_blob_sha256",
+                side_effect=git_blob,
+            ), mock.patch.object(
+                profile,
+                "_run_bounded_worker_equivalence_smoke",
+                return_value=smoke,
+            ):
+                profile._verify_worker_carry_forward(
+                    carry_path,
+                    plan=plan,
+                    worker_profile=worker_profile,
+                    smoke_scratch_root=root,
+                )
+
+                forged = json.loads(json.dumps(carry))
+                for commitments in forged[
+                    "bounded_equivalence_smoke"
+                ]["regime_projection_commitments"].values():
+                    for row in commitments.values():
+                        row["plan_payload_sha256"] = "0" * 64
+                        row["scientific_projection_sha256"] = "0" * 64
+                forged.pop("carry_forward_receipt_payload_sha256")
+                forged["carry_forward_receipt_payload_sha256"] = (
+                    profile._sha256_bytes(
+                        profile._canonical_json_bytes(forged)
+                    )
+                )
+                forged_path = root / "forged-carry.json"
+                forged_path.write_bytes(
+                    profile._canonical_json_bytes(forged)
+                )
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "not mechanically reconstructed",
+                ):
+                    profile._verify_worker_carry_forward(
+                        forged_path,
+                        plan=plan,
+                        worker_profile=worker_profile,
+                        smoke_scratch_root=root,
+                    )
 
 
 if __name__ == "__main__":
