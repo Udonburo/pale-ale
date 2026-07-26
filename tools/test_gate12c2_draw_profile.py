@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -41,6 +42,52 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         return profile.build_draw_profile_plan(
             source_commit="test-source-commit"
         )
+
+    def test_restore_checkout_uses_short_direct_temporary_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary).resolve()
+            with profile._short_restore_checkout(scratch) as checkout:
+                self.assertEqual(checkout.parent, scratch)
+                self.assertTrue(checkout.name.startswith("r"))
+                self.assertLessEqual(len(checkout.name), 16)
+                self.assertTrue(checkout.is_dir())
+            self.assertFalse(checkout.exists())
+
+    def test_restore_checkout_materialization_ignores_host_defaults(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary) / "r"
+            subprocess.run(
+                ["git", "init", str(checkout)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            policy = profile._configure_restore_checkout(checkout)
+            self.assertEqual(
+                policy,
+                profile.RESTORE_CHECKOUT_MATERIALIZATION_POLICY,
+            )
+            for key, expected in (
+                ("core.autocrlf", "false"),
+                ("core.longpaths", "true"),
+            ):
+                actual = subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(checkout),
+                        "config",
+                        "--local",
+                        "--get",
+                        key,
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
+                self.assertEqual(actual, expected)
 
     @staticmethod
     def _frozen_worker_fixture(
@@ -252,6 +299,9 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 "git_fsck_full": "pass",
                 "restored_worktree_clean": True,
                 "implementation_blob_identity": "pass",
+                "checkout_materialization_policy": (
+                    profile.RESTORE_CHECKOUT_MATERIALIZATION_POLICY
+                ),
             }
         carry = {
                 "path": carry_path.as_posix(),
@@ -525,6 +575,9 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     "git_fsck_full": "pass",
                     "restored_worktree_clean": True,
                     "implementation_blob_identity": "pass",
+                    "checkout_materialization_policy": (
+                        profile.RESTORE_CHECKOUT_MATERIALIZATION_POLICY
+                    ),
                 },
             ), mock.patch.object(
                 profile,

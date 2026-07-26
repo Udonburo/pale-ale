@@ -26,9 +26,10 @@ import socket
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 import gate12c2_development_shards as shards
 import gate12c2_synthetic_lab as lab
@@ -36,7 +37,7 @@ import gate12c2_throughput_profile as throughput
 
 
 PLAN_SCHEMA_VERSION = "gate12c2_draw_profile_plan_v0.2"
-PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.4"
+PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.5"
 AUTHORIZATION_SCHEMA_VERSION = (
     "gate12c2_draw_profile_execution_authorization_v0.3"
 )
@@ -74,6 +75,9 @@ RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK = 0.5
 RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM = 0.75
 PREFLIGHT_MAX_AGE_SECONDS = 30 * 60
 AUTHORIZATION_MAX_AGE_SECONDS = 30 * 60
+RESTORE_CHECKOUT_MATERIALIZATION_POLICY = (
+    "core.autocrlf=false;core.longpaths=true"
+)
 S2_AMENDMENT_PAYLOAD_SHA256 = (
     "201a492fafdec1553794880d540d1091d3e3b57df539ac7eb3720e4eaad4be60"
 )
@@ -256,6 +260,7 @@ RECOVERY_EVIDENCE_KEYS = {
     "git_fsck_full",
     "restored_worktree_clean",
     "implementation_blob_identity",
+    "checkout_materialization_policy",
 }
 WORKER_CARRY_EVIDENCE_KEYS = {
     "path",
@@ -1290,11 +1295,7 @@ def _verify_recovery_bundle(
         raise Gate12C2DrawProfileError(
             f"git bundle verify failed: {verify.stderr[-2000:]}"
         )
-    with tempfile.TemporaryDirectory(
-        prefix="g12c2-restore-",
-        dir=str(scratch_parent),
-    ) as temporary:
-        checkout = Path(temporary) / "r"
+    with _short_restore_checkout(scratch_parent) as checkout:
         clone = subprocess.run(
             ["git", "clone", "--no-checkout", str(bundle), str(checkout)],
             capture_output=True,
@@ -1305,6 +1306,7 @@ def _verify_recovery_bundle(
             raise Gate12C2DrawProfileError(
                 f"standalone bundle clone failed: {clone.stderr[-2000:]}"
             )
+        checkout_policy = _configure_restore_checkout(checkout)
         checkout_result = subprocess.run(
             [
                 "git",
@@ -1374,7 +1376,83 @@ def _verify_recovery_bundle(
         "git_fsck_full": "pass",
         "restored_worktree_clean": True,
         "implementation_blob_identity": "pass",
+        "checkout_materialization_policy": checkout_policy,
     }
+
+
+@contextmanager
+def _short_restore_checkout(
+    scratch_parent: Path,
+) -> Iterator[Path]:
+    """Yield one direct, short child checkout under an admitted scratch root."""
+
+    parent = Path(scratch_parent).resolve()
+    # The repository contains tracked paths close to the legacy Windows
+    # MAX_PATH boundary.  The scratch parent is intentionally operator-chosen
+    # and short; keep the generated child name short as well and clone
+    # directly into it.  A descriptive prefix plus another nested checkout
+    # directory can make a complete bundle appear dirty because Git cannot
+    # materialize the longest tracked paths.
+    with tempfile.TemporaryDirectory(
+        prefix="r",
+        dir=str(parent),
+    ) as temporary:
+        checkout = Path(temporary).resolve()
+        if checkout.parent != parent:
+            raise Gate12C2DrawProfileError(
+                "restore checkout escaped the admitted scratch root"
+            )
+        yield checkout
+
+
+def _configure_restore_checkout(checkout: Path) -> str:
+    """Freeze checkout materialization independently of host Git defaults."""
+
+    repository = Path(checkout).resolve()
+    for key, value in (
+        ("core.autocrlf", "false"),
+        ("core.longpaths", "true"),
+    ):
+        configured = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "config",
+                "--local",
+                key,
+                value,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if configured.returncode != 0:
+            raise Gate12C2DrawProfileError(
+                "could not freeze restore checkout materialization"
+            )
+        verified = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "config",
+                "--local",
+                "--get",
+                key,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if (
+            verified.returncode != 0
+            or verified.stdout.strip().lower() != value
+        ):
+            raise Gate12C2DrawProfileError(
+                "restore checkout materialization did not persist"
+            )
+    return RESTORE_CHECKOUT_MATERIALIZATION_POLICY
 
 
 def _verify_recovery_bundle_file(
@@ -1912,6 +1990,8 @@ def _verify_preflight(
         or recovery["git_fsck_full"] != "pass"
         or recovery["restored_worktree_clean"] is not True
         or recovery["implementation_blob_identity"] != "pass"
+        or recovery["checkout_materialization_policy"]
+        != RESTORE_CHECKOUT_MATERIALIZATION_POLICY
     ):
         raise Gate12C2DrawProfileError(
             "draw profile preflight has invalid recovery evidence"
