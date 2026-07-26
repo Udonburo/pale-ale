@@ -8,7 +8,9 @@ import math
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from unittest import mock
 
 
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -20,6 +22,16 @@ import gate12c2_draw_stability as stability  # noqa: E402
 
 
 class Gate12C2DrawStabilityTest(unittest.TestCase):
+    @staticmethod
+    @contextmanager
+    def _control_context(resource: dict[str, object]):
+        with mock.patch.object(
+            profile,
+            "_verify_control_lineage",
+            return_value=resource["control_lineage"],
+        ):
+            yield
+
     @staticmethod
     def _audit(draw_count: int) -> dict[str, object]:
         commitments = {
@@ -224,7 +236,36 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
             disk_free_bytes_after=19 * 1024**3,
             output_bytes=1024**3,
         )
-        resource = profile._build_resource_receipt(plan, evidence)
+        preflight = {
+            "preflight_receipt_payload_sha256": "e" * 64,
+        }
+        authorization = {
+            "authorization_receipt_payload_sha256": "f" * 64,
+            "output_root": Path("test-output").resolve().as_posix(),
+        }
+        consumption = {
+            "consumption_receipt_payload_sha256": "1" * 64,
+        }
+        control = {
+            "preflight_receipt": preflight,
+            "authorization_receipt": authorization,
+            "consumption_receipt": consumption,
+            "preflight_receipt_payload_sha256": "e" * 64,
+            "authorization_receipt_payload_sha256": "f" * 64,
+            "consumption_receipt_payload_sha256": "1" * 64,
+        }
+        with mock.patch.object(
+            profile,
+            "_verify_control_lineage",
+            return_value=control,
+        ):
+            resource = profile._build_resource_receipt(
+                plan,
+                evidence,
+                preflight_receipt=preflight,
+                authorization_receipt=authorization,
+                consumption_receipt=consumption,
+            )
         execution: dict[str, object] = {
             "schema_version": profile.RECEIPT_SCHEMA_VERSION,
             "plan_id": profile.PLAN_ID,
@@ -265,12 +306,13 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
         results: dict[str, dict[int, list[dict[str, object]]]],
     ) -> dict[str, object]:
         plan, execution, resource = self._resource_chain()
-        return stability.build_no_outcome_projection(
-            results,
-            draw_profile_plan=plan,
-            execution_receipt=execution,
-            resource_receipt=resource,
-        )
+        with self._control_context(resource):
+            return stability.build_no_outcome_projection(
+                results,
+                draw_profile_plan=plan,
+                execution_receipt=execution,
+                resource_receipt=resource,
+            )
 
     def test_projection_exposes_only_allowlisted_stability_deltas(
         self,
@@ -455,16 +497,17 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                 profile._canonical_json_bytes(tampered)
             )
         )
-        with self.assertRaisesRegex(
-            stability.Gate12C2DrawStabilityError,
-            "resource evidence chain failed",
-        ):
-            stability.build_no_outcome_projection(
-                results,
-                draw_profile_plan=plan,
-                execution_receipt=execution,
-                resource_receipt=tampered,
-            )
+        with self._control_context(resource):
+            with self.assertRaisesRegex(
+                stability.Gate12C2DrawStabilityError,
+                "resource evidence chain failed",
+            ):
+                stability.build_no_outcome_projection(
+                    results,
+                    draw_profile_plan=plan,
+                    execution_receipt=execution,
+                    resource_receipt=tampered,
+                )
 
     def test_analysis_manifest_rejects_rehashed_permissions(self) -> None:
         roots = {
@@ -479,27 +522,66 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
             root = Path(temporary)
             paths = {
                 "plan": root / "plan.json",
+                "preflight": root / "preflight.json",
+                "authorization": root / "authorization.json",
+                "consumption": root / "consumption.json",
+                "evidence": root / "execution-evidence.json",
                 "execution": root / "execution.json",
                 "resource": root / "resource.json",
             }
             for key, payload in (
                 ("plan", plan),
+                (
+                    "preflight",
+                    resource["control_lineage"]["preflight_receipt"],
+                ),
+                (
+                    "authorization",
+                    resource["control_lineage"]["authorization_receipt"],
+                ),
+                (
+                    "consumption",
+                    resource["control_lineage"]["consumption_receipt"],
+                ),
+                ("evidence", resource["execution_evidence"]),
                 ("execution", execution),
                 ("resource", resource),
             ):
                 paths[key].write_bytes(
                     profile._canonical_json_bytes(payload)
                 )
-            manifest = stability.build_analysis_manifest(
-                roots,
-                draw_profile_plan_path=paths["plan"],
-                execution_receipt_path=paths["execution"],
-                resource_receipt_path=paths["resource"],
-            )
-            self.assertEqual(
-                stability.verify_analysis_manifest(manifest),
-                manifest,
-            )
+            root_evidence = {
+                regime_id: {
+                    str(count): {
+                        "configuration_id": f"{regime_id}__d{count}",
+                        "plan_payload_sha256": "a" * 64,
+                        "index_payload_sha256": "b" * 64,
+                        "scientific_projection_sha256": "c" * 64,
+                        "outer_experiment_count": 1,
+                    }
+                    for count in stability.PREFIX_COUNTS
+                }
+                for regime_id in stability.REGIMES
+            }
+            with self._control_context(resource), mock.patch.object(
+                stability,
+                "verify_result_root_evidence",
+                return_value=root_evidence,
+            ):
+                manifest = stability.build_analysis_manifest(
+                    roots,
+                    draw_profile_plan_path=paths["plan"],
+                    preflight_receipt_path=paths["preflight"],
+                    authorization_receipt_path=paths["authorization"],
+                    consumption_receipt_path=paths["consumption"],
+                    execution_evidence_path=paths["evidence"],
+                    execution_receipt_path=paths["execution"],
+                    resource_receipt_path=paths["resource"],
+                )
+                self.assertEqual(
+                    stability.verify_analysis_manifest(manifest),
+                    manifest,
+                )
             for key in (
                 "development_execution_authorized",
                 "locked_execution_authorized",
@@ -518,10 +600,17 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                     )
                 )
                 with self.subTest(key=key):
-                    with self.assertRaises(
-                        stability.Gate12C2DrawStabilityError
+                    with self._control_context(
+                        resource
+                    ), mock.patch.object(
+                        stability,
+                        "verify_result_root_evidence",
+                        return_value=root_evidence,
                     ):
-                        stability.verify_analysis_manifest(tampered)
+                        with self.assertRaises(
+                            stability.Gate12C2DrawStabilityError
+                        ):
+                            stability.verify_analysis_manifest(tampered)
 
 
 if __name__ == "__main__":

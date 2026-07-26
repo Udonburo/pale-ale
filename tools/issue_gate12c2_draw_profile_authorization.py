@@ -24,6 +24,11 @@ def main() -> int:
     parser.add_argument("--authorization-id", required=True)
     parser.add_argument("--purpose", required=True)
     parser.add_argument("--expires-at-utc", required=True)
+    parser.add_argument(
+        "--restore-scratch-root",
+        type=Path,
+        required=True,
+    )
     parser.add_argument("--receipt-output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -37,6 +42,7 @@ def main() -> int:
         authorization_id=args.authorization_id,
         purpose=args.purpose,
         expires_at_utc=args.expires_at_utc,
+        restore_scratch_root=args.restore_scratch_root,
     )
     shards._atomic_write(
         args.receipt_output.resolve(),

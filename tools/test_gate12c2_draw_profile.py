@@ -6,6 +6,8 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack, contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -41,11 +43,97 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         )
 
     @staticmethod
-    def _mechanical_checks() -> dict[str, dict[str, object]]:
-        return {
-            key: {"status": "pass", "evidence": key}
-            for key in profile.REQUIRED_PREFLIGHT_CHECKS
+    @contextmanager
+    def _mechanical_evidence_context(
+        plan: dict[str, object],
+        preflight: dict[str, object],
+    ):
+        resource = preflight["resource_projection"]
+        worker_profile = {
+            "path": resource["worker_profile_receipt_path"],
+            "file_sha256": resource[
+                "worker_profile_receipt_file_sha256"
+            ],
+            "payload_sha256": resource[
+                "worker_profile_receipt_payload_sha256"
+            ],
+            "payload": {"source_commit": "prior-test-commit"},
+            "worker_4_rows": {},
         }
+        recovery = preflight["recovery_evidence"]
+        carry = preflight["worker_carry_forward_evidence"]
+        with ExitStack() as stack:
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_verify_recovery_bundle_file",
+                    return_value={
+                        "bundle_path": recovery["bundle_path"],
+                        "bundle_file_sha256": recovery[
+                            "bundle_file_sha256"
+                        ],
+                        "bundle_bytes": recovery["bundle_bytes"],
+                        "git_bundle_verify": "pass",
+                        "advertised_source_commit": plan["source_commit"],
+                    },
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_verify_recovery_bundle",
+                    return_value=recovery,
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_verify_prior_worker_profile",
+                    return_value=worker_profile,
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_verify_worker_carry_forward",
+                    return_value=carry,
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_project_output_bytes",
+                    return_value=resource["projected_output_bytes"],
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_project_peak_process_tree_rss_bytes",
+                    return_value=resource[
+                        "projected_peak_process_tree_rss_bytes_at_draw_1023"
+                    ],
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_physical_ram_bytes",
+                    return_value=resource[
+                        "physical_ram_bytes_at_preflight"
+                    ],
+                )
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    profile,
+                    "_available_physical_memory_bytes",
+                    return_value=resource[
+                        "available_physical_memory_bytes_at_preflight"
+                    ],
+                )
+            )
+            yield
 
     def receipts(
         self,
@@ -60,12 +148,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         bundle_path.write_bytes(b"test-recovery-bundle")
         carry_path.write_bytes(b"test-carry-forward")
         worker_profile_path.write_bytes(b"test-worker-profile")
-        preflight = profile._serialize_mechanical_preflight(
-            plan,
-            output_root=output_root,
-            preflight_id="draw-profile-test-preflight",
-            checks=self._mechanical_checks(),
-            recovery={
+        recovery = {
                 "bundle_path": bundle_path.as_posix(),
                 "bundle_file_sha256": profile._sha256_file(bundle_path),
                 "bundle_bytes": bundle_path.stat().st_size,
@@ -76,13 +159,13 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 "git_fsck_full": "pass",
                 "restored_worktree_clean": True,
                 "implementation_blob_identity": "pass",
-            },
-            worker_carry_forward={
+            }
+        carry = {
                 "path": carry_path.as_posix(),
                 "file_sha256": profile._sha256_file(carry_path),
                 "payload_sha256": "c" * 64,
-            },
-            resource_projection={
+            }
+        resource_projection = {
                 "worker_profile_receipt_path": (
                     worker_profile_path.as_posix()
                 ),
@@ -101,20 +184,46 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 "projected_peak_process_tree_rss_bytes_at_draw_1023": 402,
                 "memory_projection_safety_factor": 1.3,
                 "projected_peak_process_tree_rss_bytes_with_safety": 523,
-                "physical_ram_bytes_at_preflight": 10000,
-                "available_physical_memory_bytes_at_preflight": 9000,
-                "maximum_admitted_peak_process_tree_rss_bytes": 7500,
+                "physical_ram_bytes_at_preflight": 16 * 1024**3,
+                "available_physical_memory_bytes_at_preflight": 15 * 1024**3,
+                "maximum_admitted_peak_process_tree_rss_bytes": (
+                    int(16 * 1024**3 * 0.75)
+                ),
                 "memory_headroom_gate_pass": True,
-            },
-        )
-        authorization = profile.build_execution_authorization(
+            }
+        checks = profile._build_preflight_check_rows(
             plan,
-            preflight,
-            output_root=output_root,
-            authorization_id="draw-profile-test-authorization",
-            purpose="draw-profile-unit-test",
-            expires_at_utc="2100-01-01T00:00:00+00:00",
+            output_root_evidence_sha256=profile._sha256_bytes(
+                profile._canonical_json_bytes(
+                    profile._verify_fresh_output_root(output_root)
+                )
+            ),
+            recovery=recovery,
+            worker_carry_forward=carry,
+            resource_projection=resource_projection,
         )
+        preflight = profile._serialize_mechanical_preflight(
+            plan,
+            output_root=output_root,
+            preflight_id="draw-profile-test-preflight",
+            checks=checks,
+            recovery=recovery,
+            worker_carry_forward=carry,
+            resource_projection=resource_projection,
+        )
+        expiration = (
+            datetime.now(timezone.utc) + timedelta(minutes=10)
+        ).isoformat()
+        with self._mechanical_evidence_context(plan, preflight):
+            authorization = profile.build_execution_authorization(
+                plan,
+                preflight,
+                output_root=output_root,
+                authorization_id="draw-profile-test-authorization",
+                purpose="draw-profile-unit-test",
+                expires_at_utc=expiration,
+                restore_scratch_root=output_root.parent,
+            )
         return preflight, authorization
 
     @staticmethod
@@ -148,11 +257,31 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         **_: object,
     ) -> dict[str, object]:
         return {
+            "plan_payload_sha256": subplan["plan_payload_sha256"],
+            "outer_experiment_count": len(
+                subplan["outer_experiment_indices"]
+            ),
             "scientific_projection_sha256": (
                 subplan["plan_payload_sha256"]
             ),
             "index_payload_sha256": "f" * 64,
         }
+
+    @staticmethod
+    def _verify_resource_chain(
+        plan: dict[str, object],
+        receipt: dict[str, object],
+        resource: dict[str, object],
+    ) -> dict[str, object]:
+        control = resource["control_lineage"]
+        return profile.verify_resource_evidence_chain(
+            plan,
+            receipt,
+            resource,
+            preflight_receipt=control["preflight_receipt"],
+            authorization_receipt=control["authorization_receipt"],
+            consumption_receipt=control["consumption_receipt"],
+        )
 
     def _execute_mocked(
         self,
@@ -160,7 +289,10 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         output_root: Path,
     ) -> dict[str, object]:
         preflight, authorization = self.receipts(plan, output_root)
-        with mock.patch.object(
+        with self._mechanical_evidence_context(
+            plan,
+            preflight,
+        ), mock.patch.object(
             profile.shards,
             "execute_development_shard_plan",
             side_effect=self._fake_execute,
@@ -182,6 +314,33 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                 output_root=output_root,
                 preflight_receipt=preflight,
                 authorization_receipt=authorization,
+                restore_scratch_root=output_root.parent,
+            )
+
+    def _verify_completed_mocked(
+        self,
+        plan: dict[str, object],
+        output_root: Path,
+        preflight: dict[str, object],
+        authorization: dict[str, object],
+        *,
+        verification_side_effect=None,
+    ) -> dict[str, object]:
+        verifier = verification_side_effect or self._fake_verify
+        with self._mechanical_evidence_context(
+            plan,
+            preflight,
+        ), mock.patch.object(
+            profile.shards,
+            "verify_development_shard_index",
+            side_effect=verifier,
+        ):
+            return profile.execute_draw_profile(
+                plan,
+                output_root=output_root,
+                preflight_receipt=preflight,
+                authorization_receipt=authorization,
+                restore_scratch_root=output_root.parent,
             )
 
     def test_plan_exactly_fixes_nine_configurations(self) -> None:
@@ -387,15 +546,20 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     profile._canonical_json_bytes(changed)
                 )
             )
-            with self.assertRaises(
-                profile.Gate12C2DrawProfileError
+            with self._mechanical_evidence_context(
+                plan,
+                preflight,
             ):
-                profile.execute_draw_profile(
-                    plan,
-                    output_root=output_root,
-                    preflight_receipt=preflight,
-                    authorization_receipt=changed,
-                )
+                with self.assertRaises(
+                    profile.Gate12C2DrawProfileError
+                ):
+                    profile.execute_draw_profile(
+                        plan,
+                        output_root=output_root,
+                        preflight_receipt=preflight,
+                        authorization_receipt=changed,
+                        restore_scratch_root=output_root.parent,
+                    )
 
     def test_mocked_coordinator_emits_exact_resource_chain(self) -> None:
         plan = self.build_plan()
@@ -407,11 +571,15 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            gate = profile.verify_resource_evidence_chain(
+            with self._mechanical_evidence_context(
                 plan,
-                receipt,
-                resource,
-            )
+                resource["control_lineage"]["preflight_receipt"],
+            ):
+                gate = self._verify_resource_chain(
+                    plan,
+                    receipt,
+                    resource,
+                )
             self.assertEqual(gate["eligible_draw_counts"], [255, 511, 1023])
             self.assertFalse(
                 (output_root / profile.COORDINATOR_LOCK_NAME).exists()
@@ -436,14 +604,291 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, encoded)
 
+    def test_rehashed_attestational_preflight_cannot_authorize(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            preflight, _ = self.receipts(plan, output_root)
+            with self.assertRaisesRegex(
+                profile.Gate12C2DrawProfileError,
+                "git bundle verify failed",
+            ):
+                profile._verify_preflight(
+                    plan,
+                    preflight,
+                    output_root=output_root,
+                    restore_scratch_root=output_root.parent,
+                )
+
+            extra = json.loads(json.dumps(preflight))
+            extra["checks"]["complete_plan_rebuilt"][
+                "scientific_direction"
+            ] = "favorable"
+            extra.pop("preflight_receipt_payload_sha256")
+            extra["preflight_receipt_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(extra)
+                )
+            )
+            with self._mechanical_evidence_context(plan, extra):
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "unexpected=.*scientific_direction",
+                ):
+                    profile._verify_preflight(
+                        plan,
+                        extra,
+                        output_root=output_root,
+                        restore_scratch_root=output_root.parent,
+                    )
+
+    def test_preflight_and_authorization_freshness_are_bounded(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            preflight, _ = self.receipts(plan, output_root)
+            expired = json.loads(json.dumps(preflight))
+            issued = datetime.now(timezone.utc) - timedelta(hours=2)
+            expired["issued_at_utc"] = issued.isoformat()
+            expired["expires_at_utc"] = (
+                issued + timedelta(minutes=30)
+            ).isoformat()
+            expired.pop("preflight_receipt_payload_sha256")
+            expired["preflight_receipt_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(expired)
+                )
+            )
+            with self._mechanical_evidence_context(plan, expired):
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "not currently valid",
+                ):
+                    profile._verify_preflight(
+                        plan,
+                        expired,
+                        output_root=output_root,
+                        restore_scratch_root=output_root.parent,
+                    )
+            with self._mechanical_evidence_context(plan, preflight):
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "freshness window",
+                ):
+                    profile.build_execution_authorization(
+                        plan,
+                        preflight,
+                        output_root=output_root,
+                        authorization_id="too-long",
+                        purpose="adversarial freshness test",
+                        expires_at_utc=(
+                            datetime.now(timezone.utc)
+                            + timedelta(hours=2)
+                        ).isoformat(),
+                        restore_scratch_root=output_root.parent,
+                    )
+
+    def test_rehashed_preflight_cannot_bypass_fresh_output_root(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            preflight, _ = self.receipts(plan, output_root)
+            (output_root / "runs").mkdir(parents=True)
+            (output_root / "runs" / "foreign.txt").write_text(
+                "same-plan foreign surface",
+                encoding="utf-8",
+            )
+            with self._mechanical_evidence_context(plan, preflight):
+                with self.assertRaisesRegex(
+                    profile.Gate12C2DrawProfileError,
+                    "nonexistent or empty output root",
+                ):
+                    profile._verify_preflight(
+                        plan,
+                        preflight,
+                        output_root=output_root,
+                        restore_scratch_root=output_root.parent,
+                    )
+
+    def test_execution_evidence_rejects_duplicate_configuration(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            self._execute_mocked(plan, output_root)
+            evidence = json.loads(
+                (output_root / profile.EXECUTION_EVIDENCE_NAME).read_text(
+                    encoding="utf-8"
+                )
+            )
+            rows = list(evidence["configuration_results"])
+            rows.append(dict(rows[0]))
+            measurements = evidence["resource_measurements"]
+            with self.assertRaisesRegex(
+                profile.Gate12C2DrawProfileError,
+                "duplicated",
+            ):
+                profile._build_execution_evidence(
+                    plan,
+                    configuration_rows=rows,
+                    wall_seconds=measurements["wall_seconds"],
+                    process_cpu_seconds=measurements[
+                        "process_cpu_seconds"
+                    ],
+                    process_tree_memory=measurements[
+                        "process_tree_memory"
+                    ],
+                    physical_ram_bytes=measurements[
+                        "physical_ram_bytes"
+                    ],
+                    disk_free_bytes_before=measurements[
+                        "disk_free_bytes_before"
+                    ],
+                    disk_free_bytes_after=measurements[
+                        "disk_free_bytes_after"
+                    ],
+                    output_bytes=measurements[
+                        "output_bytes_before_resource_receipts"
+                    ],
+                )
+
+    def test_completed_fast_path_revalidates_every_lineage_file(self) -> None:
+        mutations = (
+            "plan",
+            "preflight",
+            "missing_execution_evidence",
+            "different_authorization",
+            "current_index",
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                plan = self.build_plan()
+                with tempfile.TemporaryDirectory() as temporary:
+                    output_root = Path(temporary) / "profile"
+                    self._execute_mocked(plan, output_root)
+                    preflight = json.loads(
+                        (
+                            output_root / "control" / "preflight.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                    authorization = json.loads(
+                        (
+                            output_root / "control" / "authorization.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                    verifier = None
+                    supplied_authorization = authorization
+                    if mutation == "plan":
+                        (output_root / "plan.json").write_text(
+                            "{}",
+                            encoding="utf-8",
+                        )
+                    elif mutation == "preflight":
+                        (
+                            output_root / "control" / "preflight.json"
+                        ).write_text("{}", encoding="utf-8")
+                    elif mutation == "missing_execution_evidence":
+                        (
+                            output_root / profile.EXECUTION_EVIDENCE_NAME
+                        ).unlink()
+                    elif mutation == "different_authorization":
+                        supplied_authorization = json.loads(
+                            json.dumps(authorization)
+                        )
+                        supplied_authorization["purpose"] = "other lineage"
+                        supplied_authorization.pop(
+                            "authorization_receipt_payload_sha256"
+                        )
+                        supplied_authorization[
+                            "authorization_receipt_payload_sha256"
+                        ] = profile._sha256_bytes(
+                            profile._canonical_json_bytes(
+                                supplied_authorization
+                            )
+                        )
+                    else:
+                        def mismatched_index(
+                            subplan: dict[str, object],
+                            **kwargs: object,
+                        ) -> dict[str, object]:
+                            row = self._fake_verify(subplan, **kwargs)
+                            row["index_payload_sha256"] = "0" * 64
+                            return row
+
+                        verifier = mismatched_index
+                    with self.assertRaises(
+                        profile.Gate12C2DrawProfileError
+                    ):
+                        self._verify_completed_mocked(
+                            plan,
+                            output_root,
+                            preflight,
+                            supplied_authorization,
+                            verification_side_effect=verifier,
+                        )
+
+    def test_resource_lineage_binds_available_memory_evidence(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            receipt = self._execute_mocked(plan, output_root)
+            resource = json.loads(
+                (output_root / profile.RESOURCE_RECEIPT_NAME).read_text(
+                    encoding="utf-8"
+                )
+            )
+            actual_control = resource["control_lineage"]
+            tampered = json.loads(json.dumps(resource))
+            forged_preflight = tampered["control_lineage"][
+                "preflight_receipt"
+            ]
+            forged_preflight["resource_projection"][
+                "available_physical_memory_bytes_at_preflight"
+            ] += 1
+            forged_preflight.pop("preflight_receipt_payload_sha256")
+            forged_preflight["preflight_receipt_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(forged_preflight)
+                )
+            )
+            tampered["control_lineage"][
+                "preflight_receipt_payload_sha256"
+            ] = forged_preflight["preflight_receipt_payload_sha256"]
+            tampered.pop("resource_receipt_payload_sha256")
+            tampered["resource_receipt_payload_sha256"] = (
+                profile._sha256_bytes(
+                    profile._canonical_json_bytes(tampered)
+                )
+            )
+            with self._mechanical_evidence_context(
+                plan,
+                actual_control["preflight_receipt"],
+            ):
+                with self.assertRaises(
+                    profile.Gate12C2DrawProfileError
+                ):
+                    profile.verify_resource_evidence_chain(
+                        plan,
+                        receipt,
+                        tampered,
+                        preflight_receipt=actual_control[
+                            "preflight_receipt"
+                        ],
+                        authorization_receipt=actual_control[
+                            "authorization_receipt"
+                        ],
+                        consumption_receipt=actual_control[
+                            "consumption_receipt"
+                        ],
+                    )
+
     def test_root_stale_partial_fails_before_coordinator_write(self) -> None:
         plan = self.build_plan()
         with tempfile.TemporaryDirectory() as temporary:
             output_root = Path(temporary) / "profile"
+            preflight, authorization = self.receipts(plan, output_root)
             output_root.mkdir()
             stale = output_root / ".plan.json.999999.tmp"
             stale.write_text("stale", encoding="utf-8")
-            preflight, authorization = self.receipts(plan, output_root)
             with self.assertRaisesRegex(
                 profile.Gate12C2DrawProfileError,
                 "stale transaction artifacts",
@@ -453,6 +898,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     output_root=output_root,
                     preflight_receipt=preflight,
                     authorization_receipt=authorization,
+                    restore_scratch_root=output_root.parent,
                 )
             self.assertTrue(stale.exists())
             self.assertFalse((output_root / "plan.json").exists())
@@ -461,10 +907,10 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
         plan = self.build_plan()
         with tempfile.TemporaryDirectory() as temporary:
             output_root = Path(temporary) / "profile"
+            preflight, authorization = self.receipts(plan, output_root)
             nested = output_root / "runs" / "x"
             nested.mkdir(parents=True)
             (nested / "shard.partial").write_text("x", encoding="utf-8")
-            preflight, authorization = self.receipts(plan, output_root)
             with self.assertRaises(
                 profile.Gate12C2DrawProfileError
             ):
@@ -473,6 +919,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     output_root=output_root,
                     preflight_receipt=preflight,
                     authorization_receipt=authorization,
+                    restore_scratch_root=output_root.parent,
                 )
 
     def test_stale_lock_recovery_is_explicit_and_refuses_partials(self) -> None:
@@ -530,12 +977,12 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
             )
         with tempfile.TemporaryDirectory() as temporary:
             output_root = Path(temporary) / "profile"
+            preflight, authorization = self.receipts(plan, output_root)
             output_root.mkdir()
             (output_root / profile.COORDINATOR_LOCK_NAME).write_text(
                 "{}",
                 encoding="utf-8",
             )
-            preflight, authorization = self.receipts(plan, output_root)
             with self.assertRaisesRegex(
                 profile.Gate12C2DrawProfileError,
                 "coordinator lock",
@@ -545,6 +992,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     output_root=output_root,
                     preflight_receipt=preflight,
                     authorization_receipt=authorization,
+                    restore_scratch_root=output_root.parent,
                 )
 
     def test_interrupted_final_receipt_boundary_keeps_lock_and_partial(
@@ -569,7 +1017,10 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     )
                 return self._fake_execute(subplan, **kwargs)
 
-            with mock.patch.object(
+            with self._mechanical_evidence_context(
+                plan,
+                preflight,
+            ), mock.patch.object(
                 profile.shards,
                 "execute_development_shard_plan",
                 side_effect=fake_execute_with_partial,
@@ -595,6 +1046,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                         output_root=output_root,
                         preflight_receipt=preflight,
                         authorization_receipt=authorization,
+                        restore_scratch_root=output_root.parent,
                     )
             self.assertTrue(
                 (output_root / profile.COORDINATOR_LOCK_NAME).is_file()
@@ -637,11 +1089,17 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     with self.assertRaises(
                         profile.Gate12C2DrawProfileError
                     ):
-                        profile.verify_resource_evidence_chain(
+                        with self._mechanical_evidence_context(
                             plan,
-                            receipt,
-                            tampered,
-                        )
+                            resource["control_lineage"][
+                                "preflight_receipt"
+                            ],
+                        ):
+                            self._verify_resource_chain(
+                                plan,
+                                receipt,
+                                tampered,
+                            )
 
     def test_resource_chain_rejects_surface_environment_and_policy_tampering(
         self,
@@ -713,11 +1171,17 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     with self.assertRaises(
                         profile.Gate12C2DrawProfileError
                     ):
-                        profile.verify_resource_evidence_chain(
+                        with self._mechanical_evidence_context(
                             plan,
-                            receipt,
-                            tampered,
-                        )
+                            resource["control_lineage"][
+                                "preflight_receipt"
+                            ],
+                        ):
+                            self._verify_resource_chain(
+                                plan,
+                                receipt,
+                                tampered,
+                            )
 
     def test_canonical_json_rejects_nonfinite_values(self) -> None:
         for value in (float("nan"), float("inf"), float("-inf")):

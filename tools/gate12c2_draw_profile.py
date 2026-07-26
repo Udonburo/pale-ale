@@ -26,7 +26,7 @@ import socket
 import subprocess
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -36,16 +36,16 @@ import gate12c2_throughput_profile as throughput
 
 
 PLAN_SCHEMA_VERSION = "gate12c2_draw_profile_plan_v0.2"
-PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.3"
+PREFLIGHT_SCHEMA_VERSION = "gate12c2_draw_profile_preflight_v0.4"
 AUTHORIZATION_SCHEMA_VERSION = (
-    "gate12c2_draw_profile_execution_authorization_v0.2"
+    "gate12c2_draw_profile_execution_authorization_v0.3"
 )
-RECEIPT_SCHEMA_VERSION = "gate12c2_draw_profile_execution_receipt_v0.2"
+RECEIPT_SCHEMA_VERSION = "gate12c2_draw_profile_execution_receipt_v0.3"
 EXECUTION_EVIDENCE_SCHEMA_VERSION = (
-    "gate12c2_draw_profile_execution_evidence_v0.1"
+    "gate12c2_draw_profile_execution_evidence_v0.2"
 )
 RESOURCE_RECEIPT_SCHEMA_VERSION = (
-    "gate12c2_draw_profile_resource_receipt_v0.1"
+    "gate12c2_draw_profile_resource_receipt_v0.2"
 )
 RESOURCE_POLICY_SCHEMA_VERSION = (
     "gate12c2_draw_profile_resource_policy_v0.2"
@@ -72,6 +72,8 @@ RESOURCE_DISK_SAFETY_FACTOR = 1.3
 RESOURCE_MEMORY_PROJECTION_SAFETY_FACTOR = 1.3
 RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK = 0.5
 RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM = 0.75
+PREFLIGHT_MAX_AGE_SECONDS = 30 * 60
+AUTHORIZATION_MAX_AGE_SECONDS = 30 * 60
 S2_AMENDMENT_PAYLOAD_SHA256 = (
     "9e101e668804854f410149927f3fc5271bde6932a89fed2c37a56f417cbf2383"
 )
@@ -122,6 +124,90 @@ REQUIRED_PREFLIGHT_CHECKS = (
     "no_scientific_outcomes_inspected",
     "locked_and_held_out_boundaries_verified",
 )
+PREFLIGHT_CHECK_KEYS = {
+    "complete_plan_rebuilt": {"status", "evidence_sha256"},
+    "implementation_hashes_verified": {"status", "evidence_sha256"},
+    "numerical_environment_verified": {"status", "evidence_sha256"},
+    "all_nine_subplans_verified": {"status", "configuration_count"},
+    "outer_id_surfaces_verified": {"status", "evidence_sha256"},
+    "accepted_prefix_namespaces_verified": {"status", "draw_counts"},
+    "S2_amendment_verified": {"status", "evidence_sha256"},
+    "strict_no_outcome_analyzer_verified": {
+        "status",
+        "evidence_sha256",
+    },
+    "output_root_verified": {"status", "evidence_sha256"},
+    "disk_gate_verified": {"status", "evidence_sha256"},
+    "memory_headroom_verified": {"status", "evidence_sha256"},
+    "standalone_recovery_bundle_verified": {
+        "status",
+        "evidence_sha256",
+    },
+    "short_path_restore_rehearsal_verified": {
+        "status",
+        "restored_head",
+    },
+    "worker_profile_carry_forward_verified": {
+        "status",
+        "evidence_sha256",
+    },
+    "profile_root_transaction_boundary_verified": {
+        "status",
+        "partial_artifact_count",
+    },
+    "no_active_competing_execution_verified": {
+        "status",
+        "coordinator_lock_present",
+    },
+    "no_scientific_outcomes_inspected": {
+        "status",
+        "scientific_outcomes_inspected",
+    },
+    "locked_and_held_out_boundaries_verified": {
+        "status",
+        "locked_execution_authorized",
+        "real_held_out_execution_authorized",
+        "N2_open",
+        "N3_open",
+    },
+}
+RECOVERY_EVIDENCE_KEYS = {
+    "bundle_path",
+    "bundle_file_sha256",
+    "bundle_bytes",
+    "git_bundle_verify",
+    "standalone_clone",
+    "explicit_checkout",
+    "restored_head",
+    "git_fsck_full",
+    "restored_worktree_clean",
+    "implementation_blob_identity",
+}
+WORKER_CARRY_EVIDENCE_KEYS = {
+    "path",
+    "file_sha256",
+    "payload_sha256",
+}
+RESOURCE_PROJECTION_KEYS = {
+    "worker_profile_receipt_path",
+    "worker_profile_receipt_file_sha256",
+    "worker_profile_receipt_payload_sha256",
+    "projected_output_bytes",
+    "disk_projection_safety_factor",
+    "projected_output_bytes_with_safety",
+    "disk_free_bytes_at_preflight",
+    "projected_remaining_free_bytes",
+    "minimum_remaining_free_bytes",
+    "disk_gate_pass",
+    "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+    "projected_peak_process_tree_rss_bytes_at_draw_1023",
+    "memory_projection_safety_factor",
+    "projected_peak_process_tree_rss_bytes_with_safety",
+    "physical_ram_bytes_at_preflight",
+    "available_physical_memory_bytes_at_preflight",
+    "maximum_admitted_peak_process_tree_rss_bytes",
+    "memory_headroom_gate_pass",
+}
 
 
 class Gate12C2DrawProfileError(ValueError):
@@ -213,6 +299,51 @@ def _is_sha256(value: Any) -> bool:
     )
 
 
+def _parse_utc_timestamp(value: Any, *, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise Gate12C2DrawProfileError(
+            f"{label} must be ISO-8601"
+        ) from exc
+    if parsed.tzinfo is None:
+        raise Gate12C2DrawProfileError(
+            f"{label} must include a timezone"
+        )
+    return parsed.astimezone(timezone.utc)
+
+
+def _verify_freshness_window(
+    *,
+    issued_at_utc: Any,
+    expires_at_utc: Any,
+    maximum_age_seconds: int,
+    label: str,
+    require_current: bool,
+) -> tuple[datetime, datetime]:
+    issued = _parse_utc_timestamp(
+        issued_at_utc,
+        label=f"{label} issued_at_utc",
+    )
+    expiration = _parse_utc_timestamp(
+        expires_at_utc,
+        label=f"{label} expires_at_utc",
+    )
+    if (
+        expiration <= issued
+        or expiration - issued > timedelta(seconds=maximum_age_seconds)
+    ):
+        raise Gate12C2DrawProfileError(
+            f"{label} exceeds the frozen freshness window"
+        )
+    now = datetime.now(timezone.utc)
+    if require_current and (now < issued or now >= expiration):
+        raise Gate12C2DrawProfileError(
+            f"{label} is not currently valid"
+        )
+    return issued, expiration
+
+
 def _resource_policy() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": RESOURCE_POLICY_SCHEMA_VERSION,
@@ -239,6 +370,10 @@ def _resource_policy() -> dict[str, Any]:
         "require_zero_unaccounted_rejections": True,
         "require_zero_exhausted_incomplete_streams": True,
         "require_complete_outer_ID_surface": True,
+        "preflight_max_age_seconds": PREFLIGHT_MAX_AGE_SECONDS,
+        "authorization_max_age_seconds": AUTHORIZATION_MAX_AGE_SECONDS,
+        "require_available_physical_memory_at_preflight": True,
+        "require_exact_current_result_index_binding": True,
         "eligibility_derivation": (
             "a draw count is eligible only when the global memory and disk "
             "gates pass and every regime configuration at that draw count "
@@ -872,6 +1007,186 @@ def _verify_recovery_bundle(
     }
 
 
+def _verify_recovery_bundle_file(
+    bundle_path: Path,
+    *,
+    expected_commit: str,
+) -> dict[str, Any]:
+    """Verify the live bundle file without performing a second restore."""
+
+    bundle = Path(bundle_path).resolve()
+    if not bundle.is_file():
+        raise Gate12C2DrawProfileError(
+            f"recovery bundle does not exist: {bundle}"
+        )
+    repository_root = Path(__file__).resolve().parents[1]
+    verify = subprocess.run(
+        ["git", "bundle", "verify", str(bundle)],
+        cwd=str(repository_root),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if verify.returncode != 0:
+        raise Gate12C2DrawProfileError(
+            f"git bundle verify failed: {verify.stderr[-2000:]}"
+        )
+    heads = subprocess.run(
+        ["git", "bundle", "list-heads", str(bundle)],
+        cwd=str(repository_root),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if heads.returncode != 0:
+        raise Gate12C2DrawProfileError(
+            f"git bundle list-heads failed: {heads.stderr[-2000:]}"
+        )
+    advertised = {
+        line.split(maxsplit=1)[0]
+        for line in heads.stdout.splitlines()
+        if line.strip()
+    }
+    if expected_commit not in advertised:
+        raise Gate12C2DrawProfileError(
+            "recovery bundle does not advertise the exact source commit"
+        )
+    return {
+        "bundle_path": bundle.as_posix(),
+        "bundle_file_sha256": _sha256_file(bundle),
+        "bundle_bytes": bundle.stat().st_size,
+        "git_bundle_verify": "pass",
+        "advertised_source_commit": expected_commit,
+    }
+
+
+def _build_preflight_check_rows(
+    plan: Mapping[str, Any],
+    *,
+    output_root_evidence_sha256: str,
+    recovery: Mapping[str, Any],
+    worker_carry_forward: Mapping[str, Any],
+    resource_projection: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    verified = verify_draw_profile_plan(plan)
+    if not _is_sha256(output_root_evidence_sha256):
+        raise Gate12C2DrawProfileError(
+            "output-root evidence must be a verified SHA-256"
+        )
+    return {
+        "complete_plan_rebuilt": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "draw_profile_plan_payload_sha256"
+            ],
+        },
+        "implementation_hashes_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(verified["implementation_sha256"])
+            ),
+        },
+        "numerical_environment_verified": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "numerical_environment_sha256"
+            ],
+        },
+        "all_nine_subplans_verified": {
+            "status": "pass",
+            "configuration_count": len(verified["configurations"]),
+        },
+        "outer_id_surfaces_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(
+                    [
+                        row["subplan"]["outer_experiment_indices"]
+                        for row in verified["configurations"]
+                    ]
+                )
+            ),
+        },
+        "accepted_prefix_namespaces_verified": {
+            "status": "pass",
+            "draw_counts": list(PREFIX_COUNTS),
+        },
+        "S2_amendment_verified": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "S2_amendment_payload_sha256"
+            ],
+        },
+        "strict_no_outcome_analyzer_verified": {
+            "status": "pass",
+            "evidence_sha256": verified["implementation_sha256"][
+                "gate12c2_draw_stability.py"
+            ],
+        },
+        "output_root_verified": {
+            "status": "pass",
+            "evidence_sha256": output_root_evidence_sha256,
+        },
+        "disk_gate_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(resource_projection)
+            ),
+        },
+        "memory_headroom_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(
+                    {
+                        key: resource_projection[key]
+                        for key in (
+                            "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+                            "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                            "memory_projection_safety_factor",
+                            "projected_peak_process_tree_rss_bytes_with_safety",
+                            "physical_ram_bytes_at_preflight",
+                            "available_physical_memory_bytes_at_preflight",
+                            "maximum_admitted_peak_process_tree_rss_bytes",
+                            "memory_headroom_gate_pass",
+                        )
+                    }
+                )
+            ),
+        },
+        "standalone_recovery_bundle_verified": {
+            "status": "pass",
+            "evidence_sha256": recovery["bundle_file_sha256"],
+        },
+        "short_path_restore_rehearsal_verified": {
+            "status": "pass",
+            "restored_head": recovery["restored_head"],
+        },
+        "worker_profile_carry_forward_verified": {
+            "status": "pass",
+            "evidence_sha256": worker_carry_forward["payload_sha256"],
+        },
+        "profile_root_transaction_boundary_verified": {
+            "status": "pass",
+            "partial_artifact_count": 0,
+        },
+        "no_active_competing_execution_verified": {
+            "status": "pass",
+            "coordinator_lock_present": False,
+        },
+        "no_scientific_outcomes_inspected": {
+            "status": "pass",
+            "scientific_outcomes_inspected": False,
+        },
+        "locked_and_held_out_boundaries_verified": {
+            "status": "pass",
+            "locked_execution_authorized": False,
+            "real_held_out_execution_authorized": False,
+            "N2_open": False,
+            "N3_open": False,
+        },
+    }
+
+
 def _serialize_mechanical_preflight(
     plan: Mapping[str, Any],
     *,
@@ -881,6 +1196,7 @@ def _serialize_mechanical_preflight(
     recovery: Mapping[str, Any],
     worker_carry_forward: Mapping[str, Any],
     resource_projection: Mapping[str, Any],
+    issued_at: datetime | None = None,
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     if not str(preflight_id).strip():
@@ -893,6 +1209,20 @@ def _serialize_mechanical_preflight(
         raise Gate12C2DrawProfileError(
             "every mechanically derived preflight check must pass"
         )
+    for check_name, row in checks.items():
+        if not isinstance(row, Mapping):
+            raise Gate12C2DrawProfileError(
+                f"mechanical preflight check is not a mapping: {check_name}"
+            )
+        _require_exact_keys(
+            row,
+            PREFLIGHT_CHECK_KEYS[check_name],
+            context=f"mechanical preflight check {check_name!r}",
+        )
+    issued = (issued_at or datetime.now(timezone.utc)).astimezone(
+        timezone.utc
+    )
+    expiration = issued + timedelta(seconds=PREFLIGHT_MAX_AGE_SECONDS)
     payload: dict[str, Any] = {
         "schema_version": PREFLIGHT_SCHEMA_VERSION,
         "preflight_id": str(preflight_id),
@@ -900,6 +1230,9 @@ def _serialize_mechanical_preflight(
         "surface_id": "development",
         "preflight_status": "pass",
         "preflight_issuer": "mechanical",
+        "issued_at_utc": issued.isoformat(),
+        "expires_at_utc": expiration.isoformat(),
+        "maximum_age_seconds": PREFLIGHT_MAX_AGE_SECONDS,
         "development_execution_authorized": False,
         "locked_execution_authorized": False,
         "real_held_out_execution_authorized": False,
@@ -1072,118 +1405,15 @@ def issue_mechanical_preflight(
         ),
         "memory_headroom_gate_pass": memory_pass,
     }
-    evidence_rows = {
-        "complete_plan_rebuilt": {
-            "status": "pass",
-            "evidence_sha256": verified[
-                "draw_profile_plan_payload_sha256"
-            ],
-        },
-        "implementation_hashes_verified": {
-            "status": "pass",
-            "evidence_sha256": _sha256_bytes(
-                _canonical_json_bytes(verified["implementation_sha256"])
-            ),
-        },
-        "numerical_environment_verified": {
-            "status": "pass",
-            "evidence_sha256": current_environment_hash,
-        },
-        "all_nine_subplans_verified": {
-            "status": "pass",
-            "configuration_count": len(verified["configurations"]),
-        },
-        "outer_id_surfaces_verified": {
-            "status": "pass",
-            "evidence_sha256": _sha256_bytes(
-                _canonical_json_bytes(
-                    [
-                        row["subplan"]["outer_experiment_indices"]
-                        for row in verified["configurations"]
-                    ]
-                )
-            ),
-        },
-        "accepted_prefix_namespaces_verified": {
-            "status": "pass",
-            "draw_counts": list(PREFIX_COUNTS),
-        },
-        "S2_amendment_verified": {
-            "status": "pass",
-            "evidence_sha256": verified[
-                "S2_amendment_payload_sha256"
-            ],
-        },
-        "strict_no_outcome_analyzer_verified": {
-            "status": "pass",
-            "evidence_sha256": verified["implementation_sha256"][
-                "gate12c2_draw_stability.py"
-            ],
-        },
-        "output_root_verified": {
-            "status": "pass",
-            "evidence_sha256": _sha256_bytes(
-                _canonical_json_bytes(root_evidence)
-            ),
-        },
-        "disk_gate_verified": {
-            "status": "pass",
-            "evidence_sha256": _sha256_bytes(
-                _canonical_json_bytes(resource_projection)
-            ),
-        },
-        "memory_headroom_verified": {
-            "status": "pass",
-            "evidence_sha256": _sha256_bytes(
-                _canonical_json_bytes(
-                    {
-                        key: resource_projection[key]
-                        for key in (
-                            "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
-                            "projected_peak_process_tree_rss_bytes_at_draw_1023",
-                            "memory_projection_safety_factor",
-                            "projected_peak_process_tree_rss_bytes_with_safety",
-                            "physical_ram_bytes_at_preflight",
-                            "available_physical_memory_bytes_at_preflight",
-                            "maximum_admitted_peak_process_tree_rss_bytes",
-                            "memory_headroom_gate_pass",
-                        )
-                    }
-                )
-            ),
-        },
-        "standalone_recovery_bundle_verified": {
-            "status": "pass",
-            "evidence_sha256": recovery["bundle_file_sha256"],
-        },
-        "short_path_restore_rehearsal_verified": {
-            "status": "pass",
-            "restored_head": recovery["restored_head"],
-        },
-        "worker_profile_carry_forward_verified": {
-            "status": "pass",
-            "evidence_sha256": carry_forward["payload_sha256"],
-        },
-        "profile_root_transaction_boundary_verified": {
-            "status": "pass",
-            "partial_artifact_count": 0,
-        },
-        "no_active_competing_execution_verified": {
-            "status": "pass",
-            "coordinator_lock_present": False,
-        },
-        "no_scientific_outcomes_inspected": {
-            "status": "pass",
-            "scientific_outcomes_inspected": False,
-        },
-        "locked_and_held_out_boundaries_verified": {
-            "status": "pass",
-            "locked_execution_authorized": False,
-            "real_held_out_execution_authorized": False,
-            "N2_open": False,
-            "N3_open": False,
-        },
-    }
+    evidence_rows = _build_preflight_check_rows(
+        verified,
+        output_root_evidence_sha256=_sha256_bytes(
+            _canonical_json_bytes(root_evidence)
+        ),
+        recovery=recovery,
+        worker_carry_forward=carry_forward,
+        resource_projection=resource_projection,
+    )
     return _serialize_mechanical_preflight(
         verified,
         output_root=output_root,
@@ -1200,6 +1430,9 @@ def _verify_preflight(
     receipt: Mapping[str, Any],
     *,
     output_root: Path,
+    restore_scratch_root: Path | None = None,
+    require_current_freshness: bool = True,
+    verify_current_resources: bool = True,
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     if not isinstance(receipt, Mapping):
@@ -1216,6 +1449,9 @@ def _verify_preflight(
             "surface_id",
             "preflight_status",
             "preflight_issuer",
+            "issued_at_utc",
+            "expires_at_utc",
+            "maximum_age_seconds",
             "development_execution_authorized",
             "locked_execution_authorized",
             "real_held_out_execution_authorized",
@@ -1250,6 +1486,7 @@ def _verify_preflight(
         "surface_id": "development",
         "preflight_status": "pass",
         "preflight_issuer": "mechanical",
+        "maximum_age_seconds": PREFLIGHT_MAX_AGE_SECONDS,
         "development_execution_authorized": False,
         "locked_execution_authorized": False,
         "real_held_out_execution_authorized": False,
@@ -1277,35 +1514,75 @@ def _verify_preflight(
             )
     if not str(supplied["preflight_id"]).strip():
         raise Gate12C2DrawProfileError("preflight_id must be nonempty")
+    _verify_freshness_window(
+        issued_at_utc=supplied["issued_at_utc"],
+        expires_at_utc=supplied["expires_at_utc"],
+        maximum_age_seconds=PREFLIGHT_MAX_AGE_SECONDS,
+        label="draw profile preflight",
+        require_current=require_current_freshness,
+    )
     recovery = supplied["recovery_evidence"]
+    if not isinstance(recovery, Mapping):
+        raise Gate12C2DrawProfileError(
+            "draw profile preflight has invalid recovery evidence"
+        )
+    _require_exact_keys(
+        recovery,
+        RECOVERY_EVIDENCE_KEYS,
+        context="draw profile preflight recovery evidence",
+    )
     if (
-        not isinstance(recovery, Mapping)
-        or not _is_sha256(recovery.get("bundle_file_sha256"))
-        or recovery.get("restored_head") != verified["source_commit"]
-        or recovery.get("git_bundle_verify") != "pass"
-        or recovery.get("standalone_clone") != "pass"
-        or recovery.get("explicit_checkout") != "pass"
-        or recovery.get("git_fsck_full") != "pass"
-        or recovery.get("restored_worktree_clean") is not True
-        or recovery.get("implementation_blob_identity") != "pass"
+        not _is_sha256(recovery["bundle_file_sha256"])
+        or int(recovery["bundle_bytes"]) <= 0
+        or recovery["restored_head"] != verified["source_commit"]
+        or recovery["git_bundle_verify"] != "pass"
+        or recovery["standalone_clone"] != "pass"
+        or recovery["explicit_checkout"] != "pass"
+        or recovery["git_fsck_full"] != "pass"
+        or recovery["restored_worktree_clean"] is not True
+        or recovery["implementation_blob_identity"] != "pass"
     ):
         raise Gate12C2DrawProfileError(
             "draw profile preflight has invalid recovery evidence"
         )
     bundle_path = Path(str(recovery["bundle_path"]))
+    live_bundle = _verify_recovery_bundle_file(
+        bundle_path,
+        expected_commit=str(verified["source_commit"]),
+    )
     if (
-        not bundle_path.is_file()
-        or _sha256_file(bundle_path)
+        live_bundle["bundle_file_sha256"]
         != recovery["bundle_file_sha256"]
+        or int(live_bundle["bundle_bytes"]) != int(recovery["bundle_bytes"])
     ):
         raise Gate12C2DrawProfileError(
             "draw profile preflight recovery bundle changed or disappeared"
         )
+    if restore_scratch_root is not None:
+        restored = _verify_recovery_bundle(
+            bundle_path,
+            expected_commit=str(verified["source_commit"]),
+            implementation_sha256=verified["implementation_sha256"],
+            scratch_root=restore_scratch_root,
+        )
+        if restored != dict(recovery):
+            raise Gate12C2DrawProfileError(
+                "draw profile preflight recovery evidence was not "
+                "mechanically reconstructed"
+            )
     carry = supplied["worker_carry_forward_evidence"]
+    if not isinstance(carry, Mapping):
+        raise Gate12C2DrawProfileError(
+            "draw profile preflight has invalid worker carry-forward evidence"
+        )
+    _require_exact_keys(
+        carry,
+        WORKER_CARRY_EVIDENCE_KEYS,
+        context="draw profile preflight worker carry evidence",
+    )
     if (
-        not isinstance(carry, Mapping)
-        or not _is_sha256(carry.get("file_sha256"))
-        or not _is_sha256(carry.get("payload_sha256"))
+        not _is_sha256(carry["file_sha256"])
+        or not _is_sha256(carry["payload_sha256"])
     ):
         raise Gate12C2DrawProfileError(
             "draw profile preflight has invalid worker carry-forward evidence"
@@ -1319,9 +1596,17 @@ def _verify_preflight(
             "draw profile worker carry-forward evidence changed or disappeared"
         )
     resource_projection = supplied["resource_projection"]
+    if not isinstance(resource_projection, Mapping):
+        raise Gate12C2DrawProfileError(
+            "draw profile preflight has invalid resource projection"
+        )
+    _require_exact_keys(
+        resource_projection,
+        RESOURCE_PROJECTION_KEYS,
+        context="draw profile preflight resource projection",
+    )
     if (
-        not isinstance(resource_projection, Mapping)
-        or resource_projection.get("disk_gate_pass") is not True
+        resource_projection["disk_gate_pass"] is not True
         or resource_projection.get("memory_headroom_gate_pass") is not True
         or int(resource_projection.get("projected_output_bytes", 0)) <= 0
         or float(
@@ -1454,16 +1739,75 @@ def _verify_preflight(
     worker_profile_path = Path(
         str(resource_projection["worker_profile_receipt_path"])
     )
+    worker_profile = _verify_prior_worker_profile(worker_profile_path)
     if (
-        not worker_profile_path.is_file()
-        or _sha256_file(worker_profile_path)
-        != resource_projection[
-            "worker_profile_receipt_file_sha256"
-        ]
+        worker_profile["file_sha256"]
+        != resource_projection["worker_profile_receipt_file_sha256"]
+        or worker_profile["payload_sha256"]
+        != resource_projection["worker_profile_receipt_payload_sha256"]
+        or _project_output_bytes(verified, worker_profile)
+        != int(resource_projection["projected_output_bytes"])
+        or _project_peak_process_tree_rss_bytes(worker_profile)
+        != int(
+            resource_projection[
+                "projected_peak_process_tree_rss_bytes_at_draw_1023"
+            ]
+        )
     ):
         raise Gate12C2DrawProfileError(
             "draw profile worker profile evidence changed or disappeared"
         )
+    reconstructed_carry = _verify_worker_carry_forward(
+        carry_path,
+        plan=verified,
+        worker_profile=worker_profile,
+    )
+    if reconstructed_carry != dict(carry):
+        raise Gate12C2DrawProfileError(
+            "draw profile worker carry-forward evidence was not "
+            "mechanically reconstructed"
+        )
+    if verify_current_resources:
+        physical_ram = _physical_ram_bytes()
+        available_memory = _available_physical_memory_bytes()
+        projected_peak_with_safety = int(
+            resource_projection[
+                "projected_peak_process_tree_rss_bytes_with_safety"
+            ]
+        )
+        maximum_peak = int(
+            physical_ram * RESOURCE_MAXIMUM_RSS_FRACTION_OF_PHYSICAL_RAM
+        )
+        if (
+            physical_ram
+            != int(resource_projection["physical_ram_bytes_at_preflight"])
+            or projected_peak_with_safety > available_memory
+            or int(
+                resource_projection[
+                    "projected_peak_process_tree_rss_bytes_at_draw_1023"
+                ]
+            )
+            > maximum_peak
+        ):
+            raise Gate12C2DrawProfileError(
+                "current physical-memory headroom does not satisfy the "
+                "frozen preflight gate"
+            )
+        disk = shutil.disk_usage(Path(output_root).resolve().parent)
+        projected_with_safety = int(
+            resource_projection["projected_output_bytes_with_safety"]
+        )
+        if (
+            int(disk.free) - projected_with_safety
+            < int(
+                int(disk.free)
+                * RESOURCE_MINIMUM_REMAINING_FRACTION_OF_PRERUN_FREE_DISK
+            )
+        ):
+            raise Gate12C2DrawProfileError(
+                "current disk headroom does not satisfy the frozen "
+                "preflight gate"
+            )
     checks = supplied["checks"]
     if not isinstance(checks, Mapping):
         raise Gate12C2DrawProfileError(
@@ -1475,11 +1819,154 @@ def _verify_preflight(
         context="draw profile preflight checks",
     )
     for check_name, check in checks.items():
-        if not isinstance(check, Mapping) or check.get("status") != "pass":
+        if not isinstance(check, Mapping):
+            raise Gate12C2DrawProfileError(
+                "draw profile preflight check is not a mapping: "
+                f"{check_name}"
+            )
+        _require_exact_keys(
+            check,
+            PREFLIGHT_CHECK_KEYS[check_name],
+            context=f"draw profile preflight check {check_name!r}",
+        )
+        if check["status"] != "pass":
             raise Gate12C2DrawProfileError(
                 "draw profile preflight contains a failed mechanical check: "
                 f"{check_name}"
             )
+    expected_check_values = {
+        "complete_plan_rebuilt": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "draw_profile_plan_payload_sha256"
+            ],
+        },
+        "implementation_hashes_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(verified["implementation_sha256"])
+            ),
+        },
+        "numerical_environment_verified": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "numerical_environment_sha256"
+            ],
+        },
+        "all_nine_subplans_verified": {
+            "status": "pass",
+            "configuration_count": len(verified["configurations"]),
+        },
+        "outer_id_surfaces_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(
+                    [
+                        row["subplan"]["outer_experiment_indices"]
+                        for row in verified["configurations"]
+                    ]
+                )
+            ),
+        },
+        "accepted_prefix_namespaces_verified": {
+            "status": "pass",
+            "draw_counts": list(PREFIX_COUNTS),
+        },
+        "S2_amendment_verified": {
+            "status": "pass",
+            "evidence_sha256": verified[
+                "S2_amendment_payload_sha256"
+            ],
+        },
+        "strict_no_outcome_analyzer_verified": {
+            "status": "pass",
+            "evidence_sha256": verified["implementation_sha256"][
+                "gate12c2_draw_stability.py"
+            ],
+        },
+        "disk_gate_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(resource_projection)
+            ),
+        },
+        "memory_headroom_verified": {
+            "status": "pass",
+            "evidence_sha256": _sha256_bytes(
+                _canonical_json_bytes(
+                    {
+                        key: resource_projection[key]
+                        for key in (
+                            "worker_profile_peak_process_tree_rss_bytes_at_draw_255",
+                            "projected_peak_process_tree_rss_bytes_at_draw_1023",
+                            "memory_projection_safety_factor",
+                            "projected_peak_process_tree_rss_bytes_with_safety",
+                            "physical_ram_bytes_at_preflight",
+                            "available_physical_memory_bytes_at_preflight",
+                            "maximum_admitted_peak_process_tree_rss_bytes",
+                            "memory_headroom_gate_pass",
+                        )
+                    }
+                )
+            ),
+        },
+        "standalone_recovery_bundle_verified": {
+            "status": "pass",
+            "evidence_sha256": recovery["bundle_file_sha256"],
+        },
+        "short_path_restore_rehearsal_verified": {
+            "status": "pass",
+            "restored_head": recovery["restored_head"],
+        },
+        "worker_profile_carry_forward_verified": {
+            "status": "pass",
+            "evidence_sha256": carry["payload_sha256"],
+        },
+        "profile_root_transaction_boundary_verified": {
+            "status": "pass",
+            "partial_artifact_count": 0,
+        },
+        "no_active_competing_execution_verified": {
+            "status": "pass",
+            "coordinator_lock_present": False,
+        },
+        "no_scientific_outcomes_inspected": {
+            "status": "pass",
+            "scientific_outcomes_inspected": False,
+        },
+        "locked_and_held_out_boundaries_verified": {
+            "status": "pass",
+            "locked_execution_authorized": False,
+            "real_held_out_execution_authorized": False,
+            "N2_open": False,
+            "N3_open": False,
+        },
+    }
+    for check_name, expected in expected_check_values.items():
+        if checks[check_name] != expected:
+            raise Gate12C2DrawProfileError(
+                "draw profile preflight check was not mechanically "
+                f"reconstructed: {check_name}"
+            )
+    if require_current_freshness:
+        current_root_evidence_sha256 = _sha256_bytes(
+            _canonical_json_bytes(
+                _verify_fresh_output_root(output_root)
+            )
+        )
+    else:
+        current_root_evidence_sha256 = checks[
+            "output_root_verified"
+        ]["evidence_sha256"]
+    if (
+        checks["output_root_verified"]["status"] != "pass"
+        or not _is_sha256(current_root_evidence_sha256)
+        or checks["output_root_verified"]["evidence_sha256"]
+        != current_root_evidence_sha256
+    ):
+        raise Gate12C2DrawProfileError(
+            "draw profile output-root evidence is invalid"
+        )
     return supplied
 
 
@@ -1491,6 +1978,7 @@ def build_execution_authorization(
     authorization_id: str,
     purpose: str,
     expires_at_utc: str,
+    restore_scratch_root: Path,
 ) -> dict[str, Any]:
     """Explicitly authorize exactly one plan and output root."""
 
@@ -1499,25 +1987,31 @@ def build_execution_authorization(
         verified,
         preflight_receipt,
         output_root=output_root,
+        restore_scratch_root=restore_scratch_root,
+        require_current_freshness=True,
+        verify_current_resources=True,
     )
     if not str(authorization_id).strip() or not str(purpose).strip():
         raise Gate12C2DrawProfileError(
             "authorization_id and purpose must be nonempty"
         )
-    try:
-        expiration = datetime.fromisoformat(
-            str(expires_at_utc).replace("Z", "+00:00")
-        )
-    except ValueError as exc:
-        raise Gate12C2DrawProfileError(
-            "authorization expiration must be ISO-8601"
-        ) from exc
+    issued = datetime.now(timezone.utc)
+    expiration = _parse_utc_timestamp(
+        expires_at_utc,
+        label="authorization expiration",
+    )
+    preflight_expiration = _parse_utc_timestamp(
+        preflight["expires_at_utc"],
+        label="preflight expiration",
+    )
     if (
-        expiration.tzinfo is None
-        or expiration <= datetime.now(timezone.utc)
+        expiration <= issued
+        or expiration - issued
+        > timedelta(seconds=AUTHORIZATION_MAX_AGE_SECONDS)
+        or expiration > preflight_expiration
     ):
         raise Gate12C2DrawProfileError(
-            "authorization expiration must be in the future"
+            "authorization expiration exceeds the frozen freshness window"
         )
     payload: dict[str, Any] = {
         "schema_version": AUTHORIZATION_SCHEMA_VERSION,
@@ -1553,6 +2047,8 @@ def build_execution_authorization(
         "purpose": str(purpose),
         "single_use": True,
         "authorization_status": "unconsumed",
+        "issued_at_utc": issued.isoformat(),
+        "maximum_age_seconds": AUTHORIZATION_MAX_AGE_SECONDS,
         "expires_at_utc": expiration.astimezone(timezone.utc).isoformat(),
     }
     payload["authorization_receipt_payload_sha256"] = _sha256_bytes(
@@ -1567,12 +2063,18 @@ def _verify_authorization(
     authorization_receipt: Mapping[str, Any],
     *,
     output_root: Path,
+    restore_scratch_root: Path | None = None,
+    require_current_freshness: bool = True,
+    verify_current_resources: bool = True,
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     preflight = _verify_preflight(
         verified,
         preflight_receipt,
         output_root=output_root,
+        restore_scratch_root=restore_scratch_root,
+        require_current_freshness=require_current_freshness,
+        verify_current_resources=verify_current_resources,
     )
     if not isinstance(authorization_receipt, Mapping):
         raise Gate12C2DrawProfileError(
@@ -1603,6 +2105,8 @@ def _verify_authorization(
             "purpose",
             "single_use",
             "authorization_status",
+            "issued_at_utc",
+            "maximum_age_seconds",
             "expires_at_utc",
             "authorization_receipt_payload_sha256",
         },
@@ -1645,6 +2149,7 @@ def _verify_authorization(
         "worker_count": WORKER_COUNT,
         "single_use": True,
         "authorization_status": "unconsumed",
+        "maximum_age_seconds": AUTHORIZATION_MAX_AGE_SECONDS,
     }
     for key, expected in expected_values.items():
         if supplied[key] != expected:
@@ -1659,20 +2164,27 @@ def _verify_authorization(
         raise Gate12C2DrawProfileError(
             "authorization purpose must be nonempty"
         )
-    try:
-        expiration = datetime.fromisoformat(
-            str(supplied["expires_at_utc"]).replace("Z", "+00:00")
-        )
-    except ValueError as exc:
-        raise Gate12C2DrawProfileError(
-            "authorization expiration must be ISO-8601"
-        ) from exc
+    issued, expiration = _verify_freshness_window(
+        issued_at_utc=supplied["issued_at_utc"],
+        expires_at_utc=supplied["expires_at_utc"],
+        maximum_age_seconds=AUTHORIZATION_MAX_AGE_SECONDS,
+        label="draw profile authorization",
+        require_current=require_current_freshness,
+    )
+    preflight_issued, preflight_expiration = _verify_freshness_window(
+        issued_at_utc=preflight["issued_at_utc"],
+        expires_at_utc=preflight["expires_at_utc"],
+        maximum_age_seconds=PREFLIGHT_MAX_AGE_SECONDS,
+        label="draw profile preflight",
+        require_current=require_current_freshness,
+    )
     if (
-        expiration.tzinfo is None
-        or expiration <= datetime.now(timezone.utc)
+        issued < preflight_issued
+        or issued >= preflight_expiration
+        or expiration > preflight_expiration
     ):
         raise Gate12C2DrawProfileError(
-            "draw profile authorization has expired"
+            "authorization is outside the preflight validity window"
         )
     return supplied
 
@@ -1947,6 +2459,84 @@ def _authorization_consumption_receipt(
     return payload
 
 
+def _verify_authorization_consumption(
+    plan: Mapping[str, Any],
+    authorization: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not isinstance(receipt, Mapping):
+        raise Gate12C2DrawProfileError(
+            "authorization consumption receipt must be a mapping"
+        )
+    supplied = dict(receipt)
+    _require_exact_keys(
+        supplied,
+        {
+            "schema_version",
+            "authorization_receipt_payload_sha256",
+            "draw_profile_plan_payload_sha256",
+            "output_root",
+            "single_use",
+            "authorization_status",
+            "consumption_receipt_payload_sha256",
+        },
+        context="authorization consumption receipt",
+    )
+    _verify_self_hash(
+        supplied,
+        hash_field="consumption_receipt_payload_sha256",
+        label="authorization consumption receipt",
+    )
+    expected = _authorization_consumption_receipt(plan, authorization)
+    if supplied != expected:
+        raise Gate12C2DrawProfileError(
+            "authorization consumption receipt changed the exact lineage"
+        )
+    return expected
+
+
+def _verify_control_lineage(
+    plan: Mapping[str, Any],
+    *,
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+    consumption_receipt: Mapping[str, Any],
+    output_root: Path,
+    restore_scratch_root: Path | None = None,
+    require_current_freshness: bool,
+    verify_current_resources: bool,
+) -> dict[str, Any]:
+    verified = verify_draw_profile_plan(plan)
+    authorization = _verify_authorization(
+        verified,
+        preflight_receipt,
+        authorization_receipt,
+        output_root=output_root,
+        restore_scratch_root=restore_scratch_root,
+        require_current_freshness=require_current_freshness,
+        verify_current_resources=verify_current_resources,
+    )
+    consumption = _verify_authorization_consumption(
+        verified,
+        authorization,
+        consumption_receipt,
+    )
+    return {
+        "preflight_receipt": dict(preflight_receipt),
+        "authorization_receipt": authorization,
+        "consumption_receipt": consumption,
+        "preflight_receipt_payload_sha256": preflight_receipt[
+            "preflight_receipt_payload_sha256"
+        ],
+        "authorization_receipt_payload_sha256": authorization[
+            "authorization_receipt_payload_sha256"
+        ],
+        "consumption_receipt_payload_sha256": consumption[
+            "consumption_receipt_payload_sha256"
+        ],
+    }
+
+
 def _physical_ram_bytes() -> int:
     hardware = throughput._hardware_receipt()
     windows = hardware.get("windows_cim")
@@ -2050,11 +2640,15 @@ def _build_execution_evidence(
         for row in verified["configurations"]
     }
     rows = [dict(row) for row in configuration_rows]
-    if {str(row.get("configuration_id")) for row in rows} != set(
-        expected_configurations
+    row_ids = [str(row.get("configuration_id")) for row in rows]
+    if (
+        len(rows) != len(expected_configurations)
+        or len(set(row_ids)) != len(row_ids)
+        or set(row_ids) != set(expected_configurations)
     ):
         raise Gate12C2DrawProfileError(
-            "execution evidence changed the exact configuration surface"
+            "execution evidence changed or duplicated the exact "
+            "configuration surface"
         )
     expected_row_keys = {
         "configuration_id",
@@ -2192,11 +2786,25 @@ def _verify_execution_evidence(
 def _build_resource_receipt(
     plan: Mapping[str, Any],
     execution_evidence: Mapping[str, Any],
+    *,
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+    consumption_receipt: Mapping[str, Any],
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     evidence = _verify_execution_evidence(
         verified,
         execution_evidence,
+    )
+    output_root = Path(str(authorization_receipt.get("output_root", "")))
+    control = _verify_control_lineage(
+        verified,
+        preflight_receipt=preflight_receipt,
+        authorization_receipt=authorization_receipt,
+        consumption_receipt=consumption_receipt,
+        output_root=output_root,
+        require_current_freshness=False,
+        verify_current_resources=False,
     )
     measurements = evidence["resource_measurements"]
     memory = measurements["process_tree_memory"]
@@ -2290,6 +2898,7 @@ def _build_resource_receipt(
         ],
         "resource_policy": verified["resource_policy"],
         "worker_count": WORKER_COUNT,
+        "control_lineage": control,
         "memory_gate": {
             "peak_process_tree_rss_bytes": int(
                 memory.get("peak_process_tree_rss_bytes", 0)
@@ -2336,8 +2945,21 @@ def verify_resource_evidence_chain(
     plan: Mapping[str, Any],
     execution_receipt: Mapping[str, Any],
     resource_receipt: Mapping[str, Any],
+    *,
+    preflight_receipt: Mapping[str, Any],
+    authorization_receipt: Mapping[str, Any],
+    consumption_receipt: Mapping[str, Any],
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
+    control = _verify_control_lineage(
+        verified,
+        preflight_receipt=preflight_receipt,
+        authorization_receipt=authorization_receipt,
+        consumption_receipt=consumption_receipt,
+        output_root=Path(str(authorization_receipt.get("output_root", ""))),
+        require_current_freshness=False,
+        verify_current_resources=False,
+    )
     supplied_resource = dict(resource_receipt)
     _verify_self_hash(
         supplied_resource,
@@ -2347,6 +2969,9 @@ def verify_resource_evidence_chain(
     expected_resource = _build_resource_receipt(
         verified,
         supplied_resource.get("execution_evidence", {}),
+        preflight_receipt=preflight_receipt,
+        authorization_receipt=authorization_receipt,
+        consumption_receipt=consumption_receipt,
     )
     if supplied_resource != expected_resource:
         raise Gate12C2DrawProfileError(
@@ -2407,26 +3032,41 @@ def verify_resource_evidence_chain(
             "resource_receipt_payload_sha256"
         ],
         "configuration_count": len(verified["configurations"]),
+        "preflight_receipt_payload_sha256": control[
+            "preflight_receipt_payload_sha256"
+        ],
+        "authorization_receipt_payload_sha256": control[
+            "authorization_receipt_payload_sha256"
+        ],
+        "authorization_consumption_receipt_payload_sha256": control[
+            "consumption_receipt_payload_sha256"
+        ],
     }
     for key, value in expected_links.items():
         if supplied_execution[key] != value:
             raise Gate12C2DrawProfileError(
                 f"execution/resource chain changed frozen field {key!r}"
             )
-    for key in (
-        "preflight_receipt_payload_sha256",
-        "authorization_receipt_payload_sha256",
-        "authorization_consumption_receipt_payload_sha256",
-    ):
-        if not _is_sha256(supplied_execution[key]):
-            raise Gate12C2DrawProfileError(
-                f"execution receipt has an invalid evidence digest: {key}"
-            )
+    if supplied_resource["control_lineage"] != control:
+        raise Gate12C2DrawProfileError(
+            "resource receipt control lineage differs from the exact "
+            "preflight, authorization, or consumption evidence"
+        )
     if supplied_execution["configuration_results"] != supplied_resource[
         "execution_evidence"
     ]["configuration_results"]:
         raise Gate12C2DrawProfileError(
             "execution receipt and resource evidence configuration rows differ"
+        )
+    if (
+        int(supplied_execution["configuration_count"])
+        != len(supplied_execution["configuration_results"])
+        or len(supplied_execution["configuration_results"])
+        != len(verified["configurations"])
+    ):
+        raise Gate12C2DrawProfileError(
+            "execution/resource chain does not contain exactly nine "
+            "configuration rows"
         )
     return {
         "status": supplied_resource["status"],
@@ -2454,12 +3094,194 @@ def verify_resource_evidence_chain(
     }
 
 
+def verify_current_result_roots(
+    plan: Mapping[str, Any],
+    *,
+    output_root: Path,
+    configuration_rows: list[Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Cross-bind every current shard/index tree to execution evidence."""
+
+    verified = verify_draw_profile_plan(plan)
+    destination = Path(output_root).resolve()
+    rows = [dict(row) for row in configuration_rows]
+    row_ids = [str(row.get("configuration_id")) for row in rows]
+    expected = {
+        str(row["configuration_id"]): row
+        for row in verified["configurations"]
+    }
+    if (
+        len(rows) != len(expected)
+        or len(set(row_ids)) != len(row_ids)
+        or set(row_ids) != set(expected)
+    ):
+        raise Gate12C2DrawProfileError(
+            "current result-root evidence is not the exact nine-"
+            "configuration surface"
+        )
+    by_id = {
+        str(row["configuration_id"]): row
+        for row in rows
+    }
+    result = {}
+    for configuration_id, configuration in expected.items():
+        evidence = by_id[configuration_id]
+        run_root = (
+            destination / str(configuration["output_relative_path"])
+        ).resolve()
+        if not run_root.is_relative_to(destination):
+            raise Gate12C2DrawProfileError(
+                "configuration output escaped the profile root"
+            )
+        verification = shards.verify_development_shard_index(
+            configuration["subplan"],
+            output_dir=run_root,
+        )
+        if (
+            evidence["plan_payload_sha256"]
+            != verification["plan_payload_sha256"]
+            or evidence["index_payload_sha256"]
+            != verification["index_payload_sha256"]
+            or evidence["scientific_projection_sha256"]
+            != verification["scientific_projection_sha256"]
+            or int(evidence["outer_experiment_count"])
+            != int(verification["outer_experiment_count"])
+            or evidence["outer_id_surface_sha256"]
+            != _outer_id_surface_sha256(configuration["subplan"])
+            or evidence["all_outer_indices_present"] is not True
+        ):
+            raise Gate12C2DrawProfileError(
+                "current result root differs from execution evidence: "
+                f"{configuration_id}"
+            )
+        result[configuration_id] = {
+            "plan_payload_sha256": verification[
+                "plan_payload_sha256"
+            ],
+            "index_payload_sha256": verification[
+                "index_payload_sha256"
+            ],
+            "scientific_projection_sha256": verification[
+                "scientific_projection_sha256"
+            ],
+            "outer_experiment_count": verification[
+                "outer_experiment_count"
+            ],
+        }
+    return dict(sorted(result.items()))
+
+
+def _verify_completed_profile_lineage(
+    plan: Mapping[str, Any],
+    *,
+    output_root: Path,
+    supplied_preflight_receipt: Mapping[str, Any],
+    supplied_authorization_receipt: Mapping[str, Any],
+    restore_scratch_root: Path | None,
+) -> dict[str, Any]:
+    verified = verify_draw_profile_plan(plan)
+    destination = Path(output_root).resolve()
+    stored_plan = _read_json_mapping(
+        destination / "plan.json",
+        label="completed draw-profile plan",
+    )
+    if (
+        (destination / "plan.json").read_bytes()
+        != _canonical_json_bytes(stored_plan)
+        or stored_plan != verified
+    ):
+        raise Gate12C2DrawProfileError(
+            "completed profile plan differs from the exact supplied plan"
+        )
+    control_root = destination / "control"
+    stored_preflight = _read_json_mapping(
+        control_root / "preflight.json",
+        label="completed preflight receipt",
+    )
+    stored_authorization = _read_json_mapping(
+        control_root / "authorization.json",
+        label="completed authorization receipt",
+    )
+    stored_consumption = _read_json_mapping(
+        control_root / AUTHORIZATION_CONSUMED_NAME,
+        label="completed authorization consumption receipt",
+    )
+    if (
+        stored_preflight != dict(supplied_preflight_receipt)
+        or stored_authorization != dict(supplied_authorization_receipt)
+    ):
+        raise Gate12C2DrawProfileError(
+            "supplied control receipts differ from the completed lineage"
+        )
+    control = _verify_control_lineage(
+        verified,
+        preflight_receipt=stored_preflight,
+        authorization_receipt=stored_authorization,
+        consumption_receipt=stored_consumption,
+        output_root=destination,
+        restore_scratch_root=restore_scratch_root,
+        require_current_freshness=False,
+        verify_current_resources=False,
+    )
+    execution_evidence = _read_json_mapping(
+        destination / EXECUTION_EVIDENCE_NAME,
+        label="completed execution evidence",
+    )
+    verified_evidence = _verify_execution_evidence(
+        verified,
+        execution_evidence,
+    )
+    resource_receipt = _read_json_mapping(
+        destination / RESOURCE_RECEIPT_NAME,
+        label="completed resource receipt",
+    )
+    execution_receipt = _read_json_mapping(
+        destination / EXECUTION_RECEIPT_NAME,
+        label="completed execution receipt",
+    )
+    resources = verify_resource_evidence_chain(
+        verified,
+        execution_receipt,
+        resource_receipt,
+        preflight_receipt=stored_preflight,
+        authorization_receipt=stored_authorization,
+        consumption_receipt=stored_consumption,
+    )
+    if (
+        resource_receipt["execution_evidence"] != verified_evidence
+        or execution_receipt["execution_evidence_payload_sha256"]
+        != verified_evidence["execution_evidence_payload_sha256"]
+        or execution_receipt["preflight_receipt_payload_sha256"]
+        != control["preflight_receipt_payload_sha256"]
+        or execution_receipt["authorization_receipt_payload_sha256"]
+        != control["authorization_receipt_payload_sha256"]
+        or execution_receipt[
+            "authorization_consumption_receipt_payload_sha256"
+        ]
+        != control["consumption_receipt_payload_sha256"]
+    ):
+        raise Gate12C2DrawProfileError(
+            "completed profile evidence files are not one exact lineage"
+        )
+    verify_current_result_roots(
+        verified,
+        output_root=destination,
+        configuration_rows=verified_evidence["configuration_results"],
+    )
+    if resources["status"] != resource_receipt["status"]:
+        raise Gate12C2DrawProfileError(
+            "completed resource status changed during verification"
+        )
+    return execution_receipt
+
+
 def execute_draw_profile(
     plan: Mapping[str, Any],
     *,
     output_root: Path,
     preflight_receipt: Mapping[str, Any] | None = None,
     authorization_receipt: Mapping[str, Any] | None = None,
+    restore_scratch_root: Path | None = None,
 ) -> dict[str, Any]:
     """Execute or resume the exact plan without exposing raw outcomes."""
 
@@ -2470,29 +3292,65 @@ def execute_draw_profile(
             "draw profile execution requires exact preflight and "
             "authorization receipts"
         )
-    authorization = _verify_authorization(
-        verified,
-        preflight_receipt,
-        authorization_receipt,
-        output_root=destination,
-    )
+    if restore_scratch_root is None:
+        raise Gate12C2DrawProfileError(
+            "draw profile execution requires a restore scratch root for "
+            "mechanical evidence reconstruction"
+        )
     _scan_profile_root(destination, active_lock=None)
     completed_receipt = destination / EXECUTION_RECEIPT_NAME
     if completed_receipt.is_file():
-        existing_execution = _read_json_mapping(
-            completed_receipt,
-            label="completed execution receipt",
-        )
-        existing_resource = _read_json_mapping(
-            destination / RESOURCE_RECEIPT_NAME,
-            label="completed resource receipt",
-        )
-        verify_resource_evidence_chain(
+        return _verify_completed_profile_lineage(
             verified,
-            existing_execution,
-            existing_resource,
+            output_root=destination,
+            supplied_preflight_receipt=preflight_receipt,
+            supplied_authorization_receipt=authorization_receipt,
+            restore_scratch_root=restore_scratch_root,
         )
-        return existing_execution
+    stored_consumption_path = (
+        destination / "control" / AUTHORIZATION_CONSUMED_NAME
+    )
+    if stored_consumption_path.is_file():
+        stored_preflight = _read_json_mapping(
+            destination / "control" / "preflight.json",
+            label="resumed preflight receipt",
+        )
+        stored_authorization = _read_json_mapping(
+            destination / "control" / "authorization.json",
+            label="resumed authorization receipt",
+        )
+        stored_consumption = _read_json_mapping(
+            stored_consumption_path,
+            label="resumed authorization consumption receipt",
+        )
+        if (
+            stored_preflight != dict(preflight_receipt)
+            or stored_authorization != dict(authorization_receipt)
+        ):
+            raise Gate12C2DrawProfileError(
+                "supplied receipts differ from the interrupted lineage"
+            )
+        lineage = _verify_control_lineage(
+            verified,
+            preflight_receipt=stored_preflight,
+            authorization_receipt=stored_authorization,
+            consumption_receipt=stored_consumption,
+            output_root=destination,
+            restore_scratch_root=restore_scratch_root,
+            require_current_freshness=False,
+            verify_current_resources=True,
+        )
+        authorization = lineage["authorization_receipt"]
+    else:
+        authorization = _verify_authorization(
+            verified,
+            preflight_receipt,
+            authorization_receipt,
+            output_root=destination,
+            restore_scratch_root=restore_scratch_root,
+            require_current_freshness=True,
+            verify_current_resources=True,
+        )
 
     active_lock = _acquire_coordinator_lock(
         destination,
@@ -2693,6 +3551,9 @@ def execute_draw_profile(
         resource_receipt = _build_resource_receipt(
             verified,
             execution_evidence,
+            preflight_receipt=preflight_receipt,
+            authorization_receipt=authorization,
+            consumption_receipt=consumption,
         )
         _write_or_verify(
             destination / EXECUTION_EVIDENCE_NAME,
@@ -2754,6 +3615,16 @@ def execute_draw_profile(
             verified,
             receipt,
             resource_receipt,
+            preflight_receipt=preflight_receipt,
+            authorization_receipt=authorization,
+            consumption_receipt=consumption,
+        )
+        verify_current_result_roots(
+            verified,
+            output_root=destination,
+            configuration_rows=execution_evidence[
+                "configuration_results"
+            ],
         )
         _release_coordinator_lock(
             destination,

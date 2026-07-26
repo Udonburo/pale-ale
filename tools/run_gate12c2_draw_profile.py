@@ -35,6 +35,11 @@ def main() -> int:
         required=True,
     )
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument(
+        "--restore-scratch-root",
+        type=Path,
+        required=True,
+    )
     args = parser.parse_args()
 
     receipt = profile.execute_draw_profile(
@@ -48,6 +53,7 @@ def main() -> int:
             args.authorization_receipt,
             label="execution authorization",
         ),
+        restore_scratch_root=args.restore_scratch_root,
     )
     print(
         json.dumps(

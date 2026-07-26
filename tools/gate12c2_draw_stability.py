@@ -690,12 +690,16 @@ def build_no_outcome_projection(
 
     normalized = _validate_result_surface(result_sets)
     try:
+        control = resource_receipt["control_lineage"]
         resources = profile.verify_resource_evidence_chain(
             draw_profile_plan,
             execution_receipt,
             resource_receipt,
+            preflight_receipt=control["preflight_receipt"],
+            authorization_receipt=control["authorization_receipt"],
+            consumption_receipt=control["consumption_receipt"],
         )
-    except profile.Gate12C2DrawProfileError as exc:
+    except (KeyError, TypeError, profile.Gate12C2DrawProfileError) as exc:
         raise Gate12C2DrawStabilityError(
             f"resource evidence chain failed: {exc}"
         ) from exc
@@ -1185,6 +1189,7 @@ def load_verified_result_sets(
 ) -> tuple[
     dict[str, dict[int, list[Mapping[str, Any]]]],
     dict[str, dict[int, str]],
+    dict[str, dict[int, dict[str, Any]]],
 ]:
     """Load exact verified development shard sets without returning outcomes."""
 
@@ -1196,6 +1201,7 @@ def load_verified_result_sets(
         str, dict[int, list[Mapping[str, Any]]]
     ] = {}
     plan_hashes: dict[str, dict[int, str]] = {}
+    root_evidence: dict[str, dict[int, dict[str, Any]]] = {}
     for regime_id in REGIMES:
         by_count = output_roots[regime_id]
         if set(by_count) != set(PREFIX_COUNTS):
@@ -1204,6 +1210,7 @@ def load_verified_result_sets(
             )
         result_sets[regime_id] = {}
         plan_hashes[regime_id] = {}
+        root_evidence[regime_id] = {}
         reference_contract: dict[str, Any] | None = None
         for draw_count in PREFIX_COUNTS:
             root = Path(by_count[draw_count]).resolve()
@@ -1229,7 +1236,7 @@ def load_verified_result_sets(
                 raise Gate12C2DrawStabilityError(
                     "development plan occupies the wrong draw-count slot"
                 )
-            shards.verify_development_shard_index(
+            verification = shards.verify_development_shard_index(
                 verified_plan,
                 output_dir=root,
             )
@@ -1258,13 +1265,137 @@ def load_verified_result_sets(
             plan_hashes[regime_id][draw_count] = verified_plan[
                 "plan_payload_sha256"
             ]
-    return result_sets, plan_hashes
+            root_evidence[regime_id][draw_count] = {
+                "configuration_id": f"{regime_id}__d{draw_count}",
+                "plan_payload_sha256": verification[
+                    "plan_payload_sha256"
+                ],
+                "index_payload_sha256": verification[
+                    "index_payload_sha256"
+                ],
+                "scientific_projection_sha256": verification[
+                    "scientific_projection_sha256"
+                ],
+                "outer_experiment_count": verification[
+                    "outer_experiment_count"
+                ],
+            }
+    return result_sets, plan_hashes, root_evidence
+
+
+def verify_result_root_evidence(
+    output_roots: Mapping[str, Mapping[int, Path]],
+    *,
+    resource_receipt: Mapping[str, Any],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Verify nine current indexes and bind them to resource evidence."""
+
+    if set(output_roots) != set(REGIMES):
+        raise Gate12C2DrawStabilityError(
+            "result-root evidence changed the frozen regime surface"
+        )
+    try:
+        rows = resource_receipt["execution_evidence"][
+            "configuration_results"
+        ]
+    except (KeyError, TypeError) as exc:
+        raise Gate12C2DrawStabilityError(
+            "resource receipt lacks configuration evidence"
+        ) from exc
+    if not isinstance(rows, list):
+        raise Gate12C2DrawStabilityError(
+            "resource configuration evidence must be a list"
+        )
+    row_ids = [str(row.get("configuration_id")) for row in rows]
+    expected_ids = {
+        f"{regime_id}__d{draw_count}"
+        for regime_id in REGIMES
+        for draw_count in PREFIX_COUNTS
+    }
+    if (
+        len(rows) != len(expected_ids)
+        or len(set(row_ids)) != len(row_ids)
+        or set(row_ids) != expected_ids
+    ):
+        raise Gate12C2DrawStabilityError(
+            "resource evidence is not the exact nine-configuration surface"
+        )
+    by_id = {str(row["configuration_id"]): row for row in rows}
+    result: dict[str, dict[str, dict[str, Any]]] = {}
+    for regime_id in REGIMES:
+        by_count = output_roots[regime_id]
+        if set(by_count) != set(PREFIX_COUNTS):
+            raise Gate12C2DrawStabilityError(
+                "result-root evidence changed the draw-count surface"
+            )
+        result[regime_id] = {}
+        for draw_count in PREFIX_COUNTS:
+            root = Path(by_count[draw_count]).resolve()
+            plan_path = root / "plan.json"
+            try:
+                import json
+
+                subplan = shards._verified_plan(
+                    json.loads(plan_path.read_text(encoding="utf-8"))
+                )
+            except Exception as exc:
+                raise Gate12C2DrawStabilityError(
+                    f"could not verify result-root plan {plan_path}: {exc}"
+                ) from exc
+            if (
+                subplan["regime_id"] != regime_id
+                or int(subplan["inner_valid_draw_count"]) != draw_count
+            ):
+                raise Gate12C2DrawStabilityError(
+                    "result-root plan occupies the wrong configuration slot"
+                )
+            verification = shards.verify_development_shard_index(
+                subplan,
+                output_dir=root,
+            )
+            configuration_id = f"{regime_id}__d{draw_count}"
+            evidence = by_id[configuration_id]
+            current = {
+                "configuration_id": configuration_id,
+                "plan_payload_sha256": verification[
+                    "plan_payload_sha256"
+                ],
+                "index_payload_sha256": verification[
+                    "index_payload_sha256"
+                ],
+                "scientific_projection_sha256": verification[
+                    "scientific_projection_sha256"
+                ],
+                "outer_experiment_count": verification[
+                    "outer_experiment_count"
+                ],
+            }
+            if any(
+                current[key] != evidence[key]
+                for key in (
+                    "configuration_id",
+                    "plan_payload_sha256",
+                    "index_payload_sha256",
+                    "scientific_projection_sha256",
+                    "outer_experiment_count",
+                )
+            ):
+                raise Gate12C2DrawStabilityError(
+                    "current result root differs from resource evidence: "
+                    f"{configuration_id}"
+                )
+            result[regime_id][str(draw_count)] = current
+    return result
 
 
 def build_analysis_manifest(
     output_roots: Mapping[str, Mapping[int, Path]],
     *,
     draw_profile_plan_path: Path,
+    preflight_receipt_path: Path,
+    authorization_receipt_path: Path,
+    consumption_receipt_path: Path,
+    execution_evidence_path: Path,
     execution_receipt_path: Path,
     resource_receipt_path: Path,
 ) -> dict[str, Any]:
@@ -1287,6 +1418,14 @@ def build_analysis_manifest(
         }
     evidence_paths = {
         "draw_profile_plan": Path(draw_profile_plan_path).resolve(),
+        "preflight_receipt": Path(preflight_receipt_path).resolve(),
+        "authorization_receipt": Path(
+            authorization_receipt_path
+        ).resolve(),
+        "consumption_receipt": Path(
+            consumption_receipt_path
+        ).resolve(),
+        "execution_evidence": Path(execution_evidence_path).resolve(),
         "execution_receipt": Path(execution_receipt_path).resolve(),
         "resource_receipt": Path(resource_receipt_path).resolve(),
     }
@@ -1295,6 +1434,26 @@ def build_analysis_manifest(
 
         draw_profile_plan = json.loads(
             evidence_paths["draw_profile_plan"].read_text(
+                encoding="utf-8"
+            )
+        )
+        preflight_receipt = json.loads(
+            evidence_paths["preflight_receipt"].read_text(
+                encoding="utf-8"
+            )
+        )
+        authorization_receipt = json.loads(
+            evidence_paths["authorization_receipt"].read_text(
+                encoding="utf-8"
+            )
+        )
+        consumption_receipt = json.loads(
+            evidence_paths["consumption_receipt"].read_text(
+                encoding="utf-8"
+            )
+        )
+        execution_evidence = json.loads(
+            evidence_paths["execution_evidence"].read_text(
                 encoding="utf-8"
             )
         )
@@ -1312,6 +1471,23 @@ def build_analysis_manifest(
             draw_profile_plan,
             execution_receipt,
             resource_receipt,
+            preflight_receipt=preflight_receipt,
+            authorization_receipt=authorization_receipt,
+            consumption_receipt=consumption_receipt,
+        )
+        if (
+            execution_evidence
+            != resource_receipt["execution_evidence"]
+            or execution_evidence["execution_evidence_payload_sha256"]
+            != resources["execution_evidence_payload_sha256"]
+        ):
+            raise Gate12C2DrawStabilityError(
+                "standalone execution evidence differs from the resource "
+                "receipt"
+            )
+        root_evidence = verify_result_root_evidence(
+            output_roots,
+            resource_receipt=resource_receipt,
         )
     except Exception as exc:
         raise Gate12C2DrawStabilityError(
@@ -1326,6 +1502,42 @@ def build_analysis_manifest(
         ),
         "draw_profile_plan_payload_sha256": draw_profile_plan[
             "draw_profile_plan_payload_sha256"
+        ],
+        "preflight_receipt_path": evidence_paths[
+            "preflight_receipt"
+        ].as_posix(),
+        "preflight_receipt_file_sha256": _sha256_file(
+            evidence_paths["preflight_receipt"]
+        ),
+        "preflight_receipt_payload_sha256": preflight_receipt[
+            "preflight_receipt_payload_sha256"
+        ],
+        "authorization_receipt_path": evidence_paths[
+            "authorization_receipt"
+        ].as_posix(),
+        "authorization_receipt_file_sha256": _sha256_file(
+            evidence_paths["authorization_receipt"]
+        ),
+        "authorization_receipt_payload_sha256": authorization_receipt[
+            "authorization_receipt_payload_sha256"
+        ],
+        "consumption_receipt_path": evidence_paths[
+            "consumption_receipt"
+        ].as_posix(),
+        "consumption_receipt_file_sha256": _sha256_file(
+            evidence_paths["consumption_receipt"]
+        ),
+        "consumption_receipt_payload_sha256": consumption_receipt[
+            "consumption_receipt_payload_sha256"
+        ],
+        "execution_evidence_path": evidence_paths[
+            "execution_evidence"
+        ].as_posix(),
+        "execution_evidence_file_sha256": _sha256_file(
+            evidence_paths["execution_evidence"]
+        ),
+        "execution_evidence_payload_sha256": execution_evidence[
+            "execution_evidence_payload_sha256"
         ],
         "execution_receipt_path": evidence_paths[
             "execution_receipt"
@@ -1345,6 +1557,7 @@ def build_analysis_manifest(
         "resource_receipt_payload_sha256": resources[
             "resource_receipt_payload_sha256"
         ],
+        "result_root_evidence": root_evidence,
     }
     payload: dict[str, Any] = {
         "schema_version": ANALYSIS_MANIFEST_SCHEMA_VERSION,
@@ -1424,18 +1637,39 @@ def verify_analysis_manifest(
             "draw_profile_plan_path",
             "draw_profile_plan_file_sha256",
             "draw_profile_plan_payload_sha256",
+            "preflight_receipt_path",
+            "preflight_receipt_file_sha256",
+            "preflight_receipt_payload_sha256",
+            "authorization_receipt_path",
+            "authorization_receipt_file_sha256",
+            "authorization_receipt_payload_sha256",
+            "consumption_receipt_path",
+            "consumption_receipt_file_sha256",
+            "consumption_receipt_payload_sha256",
+            "execution_evidence_path",
+            "execution_evidence_file_sha256",
+            "execution_evidence_payload_sha256",
             "execution_receipt_path",
             "execution_receipt_file_sha256",
             "execution_receipt_payload_sha256",
             "resource_receipt_path",
             "resource_receipt_file_sha256",
             "resource_receipt_payload_sha256",
+            "result_root_evidence",
         },
         context="analysis manifest resource evidence",
     )
     for key in (
         "draw_profile_plan_file_sha256",
         "draw_profile_plan_payload_sha256",
+        "preflight_receipt_file_sha256",
+        "preflight_receipt_payload_sha256",
+        "authorization_receipt_file_sha256",
+        "authorization_receipt_payload_sha256",
+        "consumption_receipt_file_sha256",
+        "consumption_receipt_payload_sha256",
+        "execution_evidence_file_sha256",
+        "execution_evidence_payload_sha256",
         "execution_receipt_file_sha256",
         "execution_receipt_payload_sha256",
         "resource_receipt_file_sha256",
@@ -1471,6 +1705,18 @@ def verify_analysis_manifest(
         draw_profile_plan_path=Path(
             supplied["resource_evidence"]["draw_profile_plan_path"]
         ),
+        preflight_receipt_path=Path(
+            supplied["resource_evidence"]["preflight_receipt_path"]
+        ),
+        authorization_receipt_path=Path(
+            supplied["resource_evidence"]["authorization_receipt_path"]
+        ),
+        consumption_receipt_path=Path(
+            supplied["resource_evidence"]["consumption_receipt_path"]
+        ),
+        execution_evidence_path=Path(
+            supplied["resource_evidence"]["execution_evidence_path"]
+        ),
         execution_receipt_path=Path(
             supplied["resource_evidence"]["execution_receipt_path"]
         ),
@@ -1500,13 +1746,35 @@ def analyze_verified_directories(
         }
         for regime_id in REGIMES
     }
-    results, plan_hashes = load_verified_result_sets(roots)
+    results, plan_hashes, current_root_evidence = load_verified_result_sets(
+        roots
+    )
     evidence = verified["resource_evidence"]
     try:
         import json
 
         draw_profile_plan = json.loads(
             Path(evidence["draw_profile_plan_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        preflight_receipt = json.loads(
+            Path(evidence["preflight_receipt_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        authorization_receipt = json.loads(
+            Path(evidence["authorization_receipt_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        consumption_receipt = json.loads(
+            Path(evidence["consumption_receipt_path"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        execution_evidence = json.loads(
+            Path(evidence["execution_evidence_path"]).read_text(
                 encoding="utf-8"
             )
         )
@@ -1524,6 +1792,9 @@ def analyze_verified_directories(
             draw_profile_plan,
             execution_receipt,
             resource_receipt,
+            preflight_receipt=preflight_receipt,
+            authorization_receipt=authorization_receipt,
+            consumption_receipt=consumption_receipt,
         )
     except Exception as exc:
         raise Gate12C2DrawStabilityError(
@@ -1541,6 +1812,14 @@ def analyze_verified_directories(
     if plan_hashes != expected_plan_hashes:
         raise Gate12C2DrawStabilityError(
             "verified result roots do not match the resource evidence chain"
+        )
+    if (
+        current_root_evidence != evidence["result_root_evidence"]
+        or execution_evidence != resource_receipt["execution_evidence"]
+    ):
+        raise Gate12C2DrawStabilityError(
+            "current result roots or execution evidence changed after "
+            "manifest verification"
         )
     projection = build_no_outcome_projection(
         results,
