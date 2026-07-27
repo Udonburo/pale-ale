@@ -1,133 +1,196 @@
 # pale-ale
 
-[![Gate12A DOI](https://img.shields.io/badge/Gate12A%20DOI-10.5281%2Fzenodo.19483162-blue)](https://doi.org/10.5281/zenodo.19483162)
-[![Telemetry note DOI](https://img.shields.io/badge/Telemetry%20note%20DOI-10.5281%2Fzenodo.19569052-blue)](https://doi.org/10.5281/zenodo.19569052)
-[![Gate12B DOI](https://img.shields.io/badge/Gate12B%20DOI-10.5281%2Fzenodo.20080003-blue)](https://doi.org/10.5281/zenodo.20080003)
-[![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1%20DOI-10.5281%2Fzenodo.21355572-blue)](https://doi.org/10.5281/zenodo.21355572)
+**A public research repository for structural approaches to local observation,
+consistency, and learned-system artifacts.**
 
-**pale-ale is a public-facing research sandbox for structural approaches to local observation, consistency, and learned systems.**
+[![Gate12A DOI](https://img.shields.io/badge/Gate12A-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.19483162)
+[![Telemetry DOI](https://img.shields.io/badge/Telemetry-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.19569052)
+[![Gate12B DOI](https://img.shields.io/badge/Gate12B-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.20080003)
+[![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21355572)
 
-Its current public checkpoints are LLM-centered. The Gate12A line is a frozen
-FP32 dense-transformer replay regime used to test one narrow part of a broader
-structural research program through structural replay evidence and boundary
-cases. The Gate12B line adds a bounded source-facing audit over existing replay
-artifact surfaces. Gate12C-1 is a separate companion paper testing
-compression-interleaved parenthesization defects under a predeclared null.
+[![Amber](https://img.shields.io/badge/Amber-live-D99716?style=flat-square)](https://amber-oversight.vercel.app/)
+[![CI](https://img.shields.io/github/actions/workflow/status/Udonburo/pale-ale/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Udonburo/pale-ale/actions/workflows/ci.yml)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg?style=flat-square)](LICENSE)
 
-## First-Contact Demo
+[Research focus](#research-focus) |
+[Citable releases](#citable-releases) |
+[Explore Amber](#amber-interactive-companion) |
+[Reproduce Gate12A](docs/reproduce_gate12a.md)
 
-If you are evaluating whether pale-ale could be useful for LLM, agent,
-red-team, or evaluation-trace workflows, start here:
+`pale-ale` develops structural ways to study local observation, replay,
+transport, closure, and boundary behavior under declared evidence surfaces.
+Its public checkpoints currently use LLM artifacts as the main empirical
+sandbox, while keeping the broader research program distinct from any single
+model family, demo, or score.
 
-- [Open the live Trace Triage demo](https://pale-ale-trace-triage.vercel.app/)
-  ([source](apps/trace-triage-demo/README.md))
+The repository is both an evidence surface and a tracked research memory. It
+keeps frozen reports, implementation snapshots, manifests, checksums,
+exclusions, negative results, and the workstream that explains how each public
+checkpoint was reached.
 
-  Static one-glance Trace Triage demo. It shows a synthetic policy/RAG/evaluation
-  trace where scalar-only checks pass while pale-ale-style triage shortlists the
-  trace rows a human should inspect first.
+> **The research is the evidence surface. Amber is a bounded interface companion.**
 
-  <a href="https://pale-ale-trace-triage.vercel.app/">
-    <img src="apps/trace-triage-demo/screenshots/trace-triage-demo-hero-chrome.png" width="520" alt="Trace Triage demo first screen">
-  </a>
+| Research evidence | Interactive companion |
+| --- | --- |
+| **Gate12A / Gate12B / Gate12C-1.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
 
-The demo is intentionally bounded. It is not a benchmark, correctness
-classifier, model-quality score, deception detector, or claim about model
-internals. It is a first-contact demo, not a replacement for the bounded
-Gate12A/Gate12B reports or the Gate12C-1 companion paper.
+## Research Focus
 
-## Current Citable Releases
+The current research asks which relations between local artifacts remain
+consistent under a frozen observation and replay surface, and where those
+relations fail to close cleanly.
 
-| Surface | DOI | Role | When to cite |
-| --- | --- | --- | --- |
-| Gate12A frozen technical report | [10.5281/zenodo.19483162](https://doi.org/10.5281/zenodo.19483162) | Main April 2026 frozen FP32 dense-transformer technical report and release bundle. | Cite for the current frozen Gate12A paper/release surface and its selected manifest/checksum bundle. |
-| Transport-first telemetry note | [10.5281/zenodo.19569052](https://doi.org/10.5281/zenodo.19569052) | Mathematical telemetry note associated with the Gate12A line; not a revision of the empirical report. | Cite for the transport-first closure-defect formulation. |
-| Gate12B observer-relative closure signatures | [10.5281/zenodo.20080003](https://doi.org/10.5281/zenodo.20080003) | Bounded source-facing audit of existing Gate12A/Gate12B replay artifacts and manifest-level Gate12B evidence package. | Cite for the Gate12B archive-family closure-signature report and its compact evidence manifest. |
-| Gate12C-1 compression-interleaved parenthesization defects | [10.5281/zenodo.21355572](https://doi.org/10.5281/zenodo.21355572) | Predeclared null test and reproducibility capsule for 24 replay-artifact-graph endpoints. | Cite for the Gate12C-1 confirmatory result, descriptive direction pattern, and frozen protocol boundary. |
-| Earlier checkpoint / prior release surface | [10.5281/zenodo.19340221](https://doi.org/10.5281/zenodo.19340221) | Earlier replication checkpoint / prior release surface. | Cite only when referring to that earlier checkpoint record or comparing release surfaces. |
+```text
+local observations
+    -> declared transport
+    -> closure and boundary evidence
+    -> frozen checkpoint
+```
 
-## About
+Three commitments organize the work:
 
-This repo is organized around a staged research line.
+1. **Keep the observation surface explicit.** Results are interpreted only
+   inside the precision, model, replay, and artifact boundaries that produced
+   them.
+2. **Keep evidence inspectable.** Protocols, provenance, manifests, hashes,
+   boundary cases, and failures stay attached to the result.
+3. **Keep claims checkpointed.** Exploratory directions do not silently become
+   established findings or rewrite earlier releases.
 
-- **Gate** means a named checkpoint in the line: what is established, what is open, and what is still denied
-- **Workstream** means the numbered tracked memory that records how the line moved from one checkpoint to the next
-- release surfaces remain checkpoint-specific: Gate12A is the frozen base report, Gate12B is a bounded audit, and Gate12C-1 is a separate companion paper
+A **Gate** records what has been established, what remains open, and what is
+still denied. A **Workstream** is the numbered research memory showing how the
+project reached that checkpoint. See
+[Workstreams and Gates](ABOUT/WORKSTREAM_AND_GATES.md) for the full convention.
 
-This repo is a public-facing experimental surface for a broader structural research program. Its public scope is intentionally narrower than that broader canvas: the checkpoints tracked here are currently framed around LLMs and related learned-system artifacts unless they are explicitly widened. Public claims are intentionally checkpointed narrowly.
+## Citable Releases
 
-If you want the plain-language orientation first, go to [`ABOUT/`](ABOUT/README.md).
+Use the DOI associated with the specific evidence surface you are discussing.
+The releases are related, but they are not interchangeable.
 
-## If You Are Here For...
+### Gate12A: Frozen FP32 dense-transformer report
 
-### The current report and artifacts
+Structural replay evidence and boundary results under one declared FP32
+dense-transformer regime.
 
-- [`zenodo/README.md`](zenodo/README.md)
-- [`zenodo/gate12c1-parenthesization-defects/README.txt`](zenodo/gate12c1-parenthesization-defects/README.txt)
-- [`zenodo-release/README.txt`](zenodo-release/README.txt)
-- [`zenodo-release/CHECKSUMS-SHA256.txt`](zenodo-release/CHECKSUMS-SHA256.txt)
-- [`zenodo-release-transport-first-defect-telemetry/README.txt`](zenodo-release-transport-first-defect-telemetry/README.txt)
-- [`zenodo-release-gate12b-observer-relative-closure-signatures/README.txt`](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt)
-- [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
-- [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
-- [`docs/eval_factory_operator_guide.md`](docs/eval_factory_operator_guide.md)
-- [`docs/l4_smoke_runbook.md`](docs/l4_smoke_runbook.md)
-- [`workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
-- [`workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
-- [`tools/`](tools/)
+[Report DOI](https://doi.org/10.5281/zenodo.19483162) |
+[release bundle](zenodo-release/README.txt) |
+[reproduction guide](docs/reproduce_gate12a.md) |
+[evidence atlas](docs/gate12a_evidence_atlas.md)
 
-### A human-readable explanation of the repo
+### Transport-first defect telemetry
 
-- [`ABOUT/README.md`](ABOUT/README.md)
-- [`ABOUT/WHAT_THIS_REPO_IS.md`](ABOUT/WHAT_THIS_REPO_IS.md)
-- [`ABOUT/WORKSTREAM_AND_GATES.md`](ABOUT/WORKSTREAM_AND_GATES.md)
-- [`ABOUT/RELEASES_AND_ARTIFACTS.md`](ABOUT/RELEASES_AND_ARTIFACTS.md)
-- [`ABOUT/FORWARD_DIRECTIONS.md`](ABOUT/FORWARD_DIRECTIONS.md)
+A mathematical formulation of transport-first closure-defect telemetry. This
+note is related to Gate12A but is not a revision of its empirical report.
 
-### The full tracked research memory
+[Note DOI](https://doi.org/10.5281/zenodo.19569052) |
+[release bundle](zenodo-release-transport-first-defect-telemetry/README.txt)
 
-- [`workstream/README.md`](workstream/README.md)
+### Gate12B: Observer-relative closure signatures
 
-### The first-contact trace triage demo
+A bounded source-facing audit over existing replay artifacts, with a compact
+manifest-level evidence package.
 
-- [Live Trace Triage demo](https://pale-ale-trace-triage.vercel.app/)
-- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md)
-- [`docs/demo/trace-triage/`](docs/demo/trace-triage/README.md)
+[Report DOI](https://doi.org/10.5281/zenodo.20080003) |
+[release bundle](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt)
 
-## Current Release Shape
+### Gate12C-1: Compression-interleaved parenthesization defects
 
-The intended frozen release surface for the Gate12A report is:
+A predeclared null test and reproducibility capsule across 24
+replay-artifact-graph endpoints.
 
-- `paper.pdf`
-- paper source (`main.tex`, bibliography, figure source)
-- manifest and checksum material
-- a frozen implementation snapshot
-- artifact bundles or stable links to those bundles
+[Report DOI](https://doi.org/10.5281/zenodo.21355572) |
+[release bundle](zenodo/gate12c1-parenthesization-defects/README.txt)
 
-The repo is being shaped so that this release surface is easy to find and does not require reconstructing the entire workstream history first.
+The earlier replication checkpoint remains available as a
+[historical release surface](https://doi.org/10.5281/zenodo.19340221).
+Repository-level citation metadata is in [`CITATION.cff`](CITATION.cff).
 
-## Repo Map
+## Amber: Interactive Companion
 
-- [`ABOUT/`](ABOUT/README.md): human-facing explanation and release guidance
-- [`workstream/`](workstream/README.md): numbered tracked research memory
-- [`zenodo/`](zenodo/README.md): index and home for new DOI-bound archival release capsules
-- [`zenodo-release/`](zenodo-release/README.txt): frozen Gate12A paper release bundle and checksum surface
-- [`zenodo-release-transport-first-defect-telemetry/`](zenodo-release-transport-first-defect-telemetry/README.txt): formal telemetry-note release bundle
-- [`zenodo-release-gate12b-observer-relative-closure-signatures/`](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt): Gate12B bounded technical report release package
-- `runs/`: local/generated working outputs; not the tracked public evidence surface
-- [`apps/trace-triage-demo/`](apps/trace-triage-demo/README.md): static first-contact Trace Triage demo
-- [`tools/`](tools/): current narrow Python-side runner and audit surface
-- [`src/`](src/) and [`crates/`](crates/): retained implementation and infrastructure
-- [`docs/`](docs/) and [`specs/`](specs/): longer-form design and specification material
+**[Amber](https://amber-oversight.vercel.app/)** is an interactive companion to
+the research program, not its primary evidence surface. It translates part of
+the structural-review motivation into a local-first workbench for typed agent
+traces and bundled synthetic cases.
 
-## Scope
+- imported traces are processed locally in the browser
+- review targets retain the declared relation and comparison evidence
+- human reviewers make the disposition; Amber does not issue verdicts
+- there are no uploads, analytics, or model calls
 
-The current public claim surface is intentionally narrow relative to the broader research canvas:
+| Amber overview | Evidence review |
+| --- | --- |
+| [![Amber landing page with its local-first review framing and claim boundaries](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/) | [![Amber Studio showing an evidence-linked review queue for a bundled synthetic trace](docs/assets/amber-studio.png)](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
+| **Start with the boundaries.** The landing page states the prototype's scope and non-claims. | **Inspect the evidence.** Studio keeps declared relations, source constraints, and human disposition visible together. |
 
-- study local observation, replay, transport, closure, and boundary behavior under declared surfaces
-- use LLMs as the current public sandbox rather than as the final scientific boundary
-- keep current empirical claims narrower than the surrounding mathematical ambition
-- use current checkpoints as testbeds rather than as a final ontology
-- separate frozen report surfaces from broader exploratory directions
-- avoid letting future extensions silently rewrite current evidence
+**[Open Amber](https://amber-oversight.vercel.app/)**
 
-Future mathematical and empirical directions are visible in [`ABOUT/FORWARD_DIRECTIONS.md`](ABOUT/FORWARD_DIRECTIONS.md), but they are not treated as already-earned results.
+Amber is a technical prototype, not an empirically validated triage system,
+benchmark result, or substitute for the frozen Gate12A, Gate12B, or Gate12C-1
+releases.
+
+## Start Here
+
+- **Understand the research program:** [`ABOUT/`](ABOUT/README.md)
+- **Read the principal frozen report:**
+  [Gate12A DOI](https://doi.org/10.5281/zenodo.19483162)
+- **Verify or reproduce Gate12A:**
+  [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
+- **Inspect the evidence surface:**
+  [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
+- **Follow the tracked research history:**
+  [`workstream/`](workstream/README.md)
+- **Browse implementation and public specifications:** [`tools/`](tools/) and
+  [`specs/public/`](specs/public/SPEC.public.md)
+- **Explore the interface companion:**
+  [Amber](https://amber-oversight.vercel.app/)
+
+This is a research-first repository, not one monolithic application. Commands
+and artifacts are checkpoint-specific; start from the relevant runbook or
+release README.
+
+<details>
+<summary><strong>Repository map</strong></summary>
+
+```text
+ABOUT/        Human-readable orientation and release guidance
+apps/         Bounded interactive prototypes and supporting applications
+crates/       Rust implementation and infrastructure
+docs/         Reproduction guides, evidence maps, and operator notes
+specs/        Public and retained internal specification surfaces
+src/          Python-facing package source
+tools/        Research runners, validators, and audit utilities
+workstream/   Numbered research memory and checkpoint history
+zenodo*/      Frozen release packages, manifests, and checksums
+```
+
+Generated local runs are not automatically part of the public evidence
+surface. A result becomes citable only through its declared Gate, frozen
+release, and associated provenance.
+
+</details>
+
+## Claim Boundaries
+
+`pale-ale` does **not** currently claim:
+
+- a universal detector for hallucination, deception, correctness, or safety
+- a model-quality score or an automated replacement for human judgment
+- a completed mechanistic account of LLM behavior
+- architectural universality across learned systems
+- that Amber or another interactive prototype is benchmark evidence
+- that exploratory work retroactively changes a frozen release
+
+Public claims attach to named checkpoints, not to the repository as a whole.
+Negative results, exclusions, and unopened evaluation surfaces remain part of
+the record.
+
+## Reproducibility and License
+
+A frozen release keeps the paper or note, source snapshot, manifests, SHA-256
+checksums, artifact availability, and regeneration boundary distinct. Start
+with [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md) before attempting
+a Gate12A replay.
+
+Software in this repository is available under the
+[Mozilla Public License 2.0](LICENSE). Papers, release records, datasets, and
+third-party artifacts may carry their own accompanying terms.
