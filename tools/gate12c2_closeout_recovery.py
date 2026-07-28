@@ -36,11 +36,12 @@ FREEZE_DISCREPANCY_SCHEMA = (
     "gate12c2_incident_freeze_discrepancy_v0.1"
 )
 AMENDMENT_SCHEMA = "gate12c2_closeout_recovery_amendment_v0.1"
-AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.2"
+AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.3"
 ATTEMPT_SCHEMA = "gate12c2_closeout_recovery_attempt_v0.1"
 CONSUMPTION_SCHEMA = "gate12c2_closeout_recovery_consumption_v0.2"
-PAYLOAD_SEAL_SCHEMA = "gate12c2_payload_completion_seal_v0.2"
-RECOVERY_FAILURE_SCHEMA = "gate12c2_closeout_recovery_failure_v0.2"
+TERMINAL_CLAIM_SCHEMA = "gate12c2_closeout_recovery_terminal_claim_v0.1"
+PAYLOAD_SEAL_SCHEMA = "gate12c2_payload_completion_seal_v0.3"
+RECOVERY_FAILURE_SCHEMA = "gate12c2_closeout_recovery_failure_v0.3"
 AUTHORIZATION_MAX_AGE_SECONDS = 30 * 60
 ORIGINAL_SOURCE_COMMIT = "f9bd14d91082b01d6faa628d41e094d78c1337fe"
 ORIGINAL_PLAN_PAYLOAD_SHA256 = (
@@ -56,6 +57,9 @@ REGIME_OUTER_COUNTS = {
 }
 DRAW_COUNTS = (255, 511, 1023)
 PARTIAL_SUFFIXES = (".tmp", ".partial", ".incomplete")
+PROCESS_ACTIVE = "ACTIVE"
+PROCESS_DEAD = "DEAD"
+PROCESS_UNKNOWN = "UNKNOWN"
 
 
 class Gate12C2CloseoutRecoveryError(ValueError):
@@ -179,13 +183,16 @@ def _strict_int(value: object, *, label: str) -> int:
     return int(value)
 
 
-def process_identity(pid: int) -> dict[str, Any] | None:
-    """Return a PID-reuse-resistant process identity without command lines."""
+def _query_process_identity(
+    pid: int,
+) -> tuple[str, dict[str, Any] | None]:
+    """Return liveness plus a PID-reuse-resistant identity, without command lines."""
 
     if type(pid) is not int or pid <= 0:
-        return None
+        return PROCESS_UNKNOWN, None
     if os.name == "nt":
         process_query_limited_information = 0x1000
+        error_invalid_parameter = 87
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
         kernel32.OpenProcess.argtypes = [
             ctypes.wintypes.DWORD,
@@ -207,7 +214,10 @@ def process_identity(pid: int) -> dict[str, Any] | None:
             process_query_limited_information, False, pid
         )
         if not handle:
-            return None
+            error = ctypes.get_last_error()
+            if error == error_invalid_parameter:
+                return PROCESS_DEAD, None
+            return PROCESS_UNKNOWN, None
         creation = ctypes.wintypes.FILETIME()
         exit_time = ctypes.wintypes.FILETIME()
         kernel = ctypes.wintypes.FILETIME()
@@ -220,39 +230,72 @@ def process_identity(pid: int) -> dict[str, Any] | None:
                 ctypes.byref(kernel),
                 ctypes.byref(user),
             ):
-                return None
+                return PROCESS_UNKNOWN, None
         finally:
             kernel32.CloseHandle(handle)
+        exit_marker = (int(exit_time.dwHighDateTime) << 32) | int(
+            exit_time.dwLowDateTime
+        )
+        if exit_marker != 0:
+            return PROCESS_DEAD, None
         marker = (int(creation.dwHighDateTime) << 32) | int(
             creation.dwLowDateTime
         )
-        return {
-            "pid": pid,
-            "identity_kind": "windows_creation_filetime",
-            "start_marker": str(marker),
-        }
+        return (
+            PROCESS_ACTIVE,
+            {
+                "pid": pid,
+                "identity_kind": "windows_creation_filetime",
+                "start_marker": str(marker),
+            },
+        )
     proc_stat = Path(f"/proc/{pid}/stat")
+    try:
+        proc_stat.stat()
+    except FileNotFoundError:
+        return PROCESS_DEAD, None
+    except OSError:
+        return PROCESS_UNKNOWN, None
     try:
         raw = proc_stat.read_text(encoding="utf-8")
         close = raw.rfind(")")
         fields = raw[close + 2 :].split()
         marker = fields[19]
     except (OSError, IndexError, ValueError):
-        return None
-    return {
-        "pid": pid,
-        "identity_kind": "proc_start_ticks",
-        "start_marker": marker,
-    }
+        return PROCESS_UNKNOWN, None
+    return (
+        PROCESS_ACTIVE,
+        {
+            "pid": pid,
+            "identity_kind": "proc_start_ticks",
+            "start_marker": marker,
+        },
+    )
 
 
-def _process_identity_matches(identity: Mapping[str, Any]) -> bool:
+def process_identity(pid: int) -> dict[str, Any] | None:
+    """Return a live PID-reuse-resistant process identity, if established."""
+
+    state, identity = _query_process_identity(pid)
+    return identity if state == PROCESS_ACTIVE else None
+
+
+def process_identity_state(identity: Mapping[str, Any]) -> str:
+    """Classify the recorded process identity as ACTIVE, DEAD, or UNKNOWN."""
+
     try:
         pid = _strict_int(identity.get("pid"), label="process PID")
     except Gate12C2CloseoutRecoveryError:
-        return False
-    current = process_identity(pid)
-    return current is not None and dict(identity) == current
+        return PROCESS_UNKNOWN
+    state, current = _query_process_identity(pid)
+    if state != PROCESS_ACTIVE:
+        return state
+    if current is None:
+        return PROCESS_UNKNOWN
+    return PROCESS_ACTIVE if dict(identity) == current else PROCESS_DEAD
+
+
+
 
 def expected_root_files() -> dict[str, tuple[str, str]]:
     """Return exact relative paths mapped to (plane, file class)."""
@@ -559,6 +602,7 @@ def build_failure_receipt(
     stderr_log_path: Path,
     runner_pid: int,
     observed_at_utc: str,
+    runner_process_present_observed: bool | None = None,
 ) -> dict[str, Any]:
     manifest = read_mapping(incident_manifest_path, label="incident manifest")
     verify_incident_manifest(
@@ -581,6 +625,15 @@ def build_failure_receipt(
                 "content_inspected": False,
             }
         )
+    verified_runner_pid = _strict_int(runner_pid, label="runner PID")
+    if runner_process_present_observed is None:
+        runner_process_present = process_identity(verified_runner_pid) is not None
+    elif type(runner_process_present_observed) is bool:
+        runner_process_present = runner_process_present_observed
+    else:
+        raise Gate12C2CloseoutRecoveryError(
+            "runner process observation must be boolean"
+        )
     payload: dict[str, Any] = {
         "schema_version": FAILURE_RECEIPT_SCHEMA,
         "incident_id": manifest["incident_id"],
@@ -590,10 +643,8 @@ def build_failure_receipt(
         ).isoformat(),
         "failure_code": INCIDENT_FAILURE_CODE,
         "failure_class": "execution_closeout_lineage_defect",
-        "runner_pid": _strict_int(runner_pid, label="runner PID"),
-        "runner_process_present": process_identity(
-            _strict_int(runner_pid, label="runner PID")
-        ) is not None,
+        "runner_pid": verified_runner_pid,
+        "runner_process_present": runner_process_present,
         "incident_manifest_path": Path(incident_manifest_path).resolve().as_posix(),
         "incident_manifest_file_sha256": sha256_file(incident_manifest_path),
         "incident_manifest_payload_sha256": manifest[
@@ -617,7 +668,6 @@ def build_failure_receipt(
         canonical_json_bytes(payload)
     )
     return payload
-
 
 def build_exposure_ledger(
     *, incident_id: str, reviewer_context_id: str, recorded_at_utc: str
@@ -979,15 +1029,17 @@ def verify_failure_receipt(receipt: Mapping[str, Any]) -> dict[str, Any]:
         incident_manifest_path=Path(supplied["incident_manifest_path"]),
         stdout_log_path=Path(by_stream["stdout"]["path"]),
         stderr_log_path=Path(by_stream["stderr"]["path"]),
-        runner_pid=int(supplied["runner_pid"]),
+        runner_pid=_strict_int(supplied["runner_pid"], label="runner PID"),
         observed_at_utc=str(supplied["observed_at_utc"]),
+        runner_process_present_observed=supplied.get(
+            "runner_process_present"
+        ),
     )
     if supplied != expected:
         raise Gate12C2CloseoutRecoveryError(
             "failure receipt differs from its exact builder"
         )
     return expected
-
 
 def verify_exposure_ledger(ledger: Mapping[str, Any]) -> dict[str, Any]:
     supplied = dict(ledger)
@@ -1062,6 +1114,7 @@ def build_recovery_amendment(
             "RECOVERY_CODE_REVIEWED",
             "RECOVERY_AUTHORIZED",
             "PAYLOAD_VERIFIED",
+            "TERMINAL_OUTCOME_CLAIMED",
             "PAYLOAD_COMPLETION_SEALED",
             "LOCK_RETIRED",
             "RESOURCE_GATE_INDETERMINATE",
@@ -1082,6 +1135,9 @@ def build_recovery_amendment(
         },
         "control_plane_contract": {
             "payload_seal_written_outside_output_root": True,
+            "terminal_claim_written_outside_output_root": True,
+            "terminal_claim_is_exclusive": True,
+            "unknown_liveness_may_finalize": False,
             "lock_retirement_requires_separate_authorization": True,
             "lock_retirement_authorized_by_this_amendment": False,
             "stale_lock_removed_during_payload_seal": False,
@@ -1257,6 +1313,7 @@ def build_recovery_authorization(
     authorization_output: Path,
     attempt_output: Path,
     consumption_output: Path,
+    terminal_output: Path,
     seal_output: Path,
     failure_output: Path,
 ) -> dict[str, Any]:
@@ -1273,6 +1330,9 @@ def build_recovery_authorization(
         "consumption_output": _validate_external_output_path(
             consumption_output, root=root, require_fresh=True
         ),
+        "terminal_output": _validate_external_output_path(
+            terminal_output, root=root, require_fresh=True
+        ),
         "seal_output": _validate_external_output_path(
             seal_output, root=root, require_fresh=True
         ),
@@ -1280,7 +1340,7 @@ def build_recovery_authorization(
             failure_output, root=root, require_fresh=True
         ),
     }
-    if len(set(outputs.values())) != 5:
+    if len(set(outputs.values())) != 6:
         raise Gate12C2CloseoutRecoveryError(
             "recovery evidence outputs are not fresh and distinct"
         )
@@ -1353,6 +1413,7 @@ def build_recovery_authorization(
         "authorization_output": outputs["authorization_output"].as_posix(),
         "attempt_output": outputs["attempt_output"].as_posix(),
         "consumption_output": outputs["consumption_output"].as_posix(),
+        "terminal_output": outputs["terminal_output"].as_posix(),
         "seal_output": outputs["seal_output"].as_posix(),
         "failure_output": outputs["failure_output"].as_posix(),
         "protected_payload_mutation_authorized": False,
@@ -1395,7 +1456,8 @@ def verify_recovery_authorization(
         "amendment_file_sha256", "amendment_payload_sha256",
         "review_receipt_path", "review_receipt_file_sha256",
         "review_receipt_payload_sha256", "authorization_output",
-        "attempt_output", "consumption_output", "seal_output", "failure_output",
+        "attempt_output", "consumption_output", "terminal_output",
+        "seal_output", "failure_output",
         "protected_payload_mutation_authorized",
         "index_rewrite_authorized", "stale_lock_retirement_authorized",
         "original_resource_evidence_status", "resource_gate_status",
@@ -1505,11 +1567,12 @@ def verify_recovery_authorization(
             "authorization_output",
             "attempt_output",
             "consumption_output",
+            "terminal_output",
             "seal_output",
             "failure_output",
         )
     ]
-    if len(set(output_paths)) != 5:
+    if len(set(output_paths)) != 6:
         raise Gate12C2CloseoutRecoveryError(
             "recovery evidence outputs are not distinct"
         )
@@ -1535,7 +1598,15 @@ def build_attempt_receipt(
     verified = verify_recovery_authorization(
         authorization, require_current_freshness=False
     )
-    parse_utc(claimed_at_utc, label="recovery attempt claim time")
+    claimed = parse_utc(claimed_at_utc, label="recovery attempt claim time")
+    issued = parse_utc(verified["issued_at_utc"], label="authorization issue time")
+    expiration = parse_utc(
+        verified["expires_at_utc"], label="authorization expiration"
+    )
+    if not (issued <= claimed < expiration):
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery attempt time is outside the authorization interval"
+        )
     identity = (
         dict(process_identity_value)
         if process_identity_value is not None
@@ -1624,11 +1695,16 @@ def verify_attempt_receipt(
     return expected
 
 
-def attempt_process_is_active(attempt: Mapping[str, Any]) -> bool:
+def attempt_process_state(attempt: Mapping[str, Any]) -> str:
     if attempt.get("hostname") != socket.gethostname():
-        return False
+        return PROCESS_UNKNOWN
     identity = attempt.get("process_identity")
-    return isinstance(identity, Mapping) and _process_identity_matches(identity)
+    if not isinstance(identity, Mapping):
+        return PROCESS_UNKNOWN
+    return process_identity_state(identity)
+
+
+
 
 def _protected_rows(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [
@@ -1772,7 +1848,18 @@ def build_consumption_receipt(
     verified_attempt = verify_attempt_receipt(
         attempt, authorization=verified
     )
-    parse_utc(consumed_at_utc, label="recovery consumption time")
+    consumed = parse_utc(consumed_at_utc, label="recovery consumption time")
+    issued = parse_utc(verified["issued_at_utc"], label="authorization issue time")
+    expiration = parse_utc(
+        verified["expires_at_utc"], label="authorization expiration"
+    )
+    claimed = parse_utc(
+        verified_attempt["claimed_at_utc"], label="recovery attempt claim time"
+    )
+    if not (issued <= claimed <= consumed < expiration):
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery consumption time is outside the frozen sequence"
+        )
     payload: dict[str, Any] = {
         "schema_version": CONSUMPTION_SCHEMA,
         "authorization_payload_sha256": verified[
@@ -1954,7 +2041,15 @@ def build_payload_seal(
         authorization=verified_auth,
         attempt=verified_attempt,
     )
-    parse_utc(sealed_at_utc, label="payload seal time")
+    sealed = parse_utc(sealed_at_utc, label="payload seal time")
+    consumed = parse_utc(
+        verified_consumption["consumed_at_utc"],
+        label="recovery consumption time",
+    )
+    if sealed < consumed:
+        raise Gate12C2CloseoutRecoveryError(
+            "payload seal time precedes recovery consumption"
+        )
     semantic_verification = verify_semantic_verification_summary(
         verify_payload_semantics(
             output_root=Path(verified_auth["output_root"]),
@@ -2059,7 +2154,19 @@ def build_recovery_failure(
             authorization=verified_auth,
             attempt=verified_attempt,
         )
-    parse_utc(recorded_at_utc, label="recovery failure time")
+    recorded = parse_utc(recorded_at_utc, label="recovery failure time")
+    earliest = parse_utc(
+        (
+            verified_consumption["consumed_at_utc"]
+            if verified_consumption is not None
+            else verified_attempt["claimed_at_utc"]
+        ),
+        label="recovery failure predecessor time",
+    )
+    if recorded < earliest:
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery failure time precedes its predecessor"
+        )
     reason_codes = {
         "RECOVERY_REJECTED": "GATE12C2_CLOSEOUT_RECOVERY_REJECTED",
         "RECOVERY_INTERRUPTED": "GATE12C2_CLOSEOUT_RECOVERY_INTERRUPTED",
@@ -2101,6 +2208,182 @@ def build_recovery_failure(
     return payload
 
 
+def build_terminal_claim(
+    *,
+    authorization: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    consumption: Mapping[str, Any] | None,
+    outcome: Mapping[str, Any],
+    terminal_claimed_at_utc: str,
+) -> dict[str, Any]:
+    verified_auth = verify_recovery_authorization(
+        authorization, require_current_freshness=False
+    )
+    verified_attempt = verify_attempt_receipt(
+        attempt, authorization=verified_auth
+    )
+    verified_consumption = None
+    if consumption is not None:
+        verified_consumption = verify_consumption_receipt(
+            consumption,
+            authorization=verified_auth,
+            attempt=verified_attempt,
+        )
+    supplied_outcome = dict(outcome)
+    if (
+        supplied_outcome.get("schema_version") == PAYLOAD_SEAL_SCHEMA
+        and supplied_outcome.get("state") == "PAYLOAD_COMPLETION_SEALED"
+    ):
+        if verified_consumption is None:
+            raise Gate12C2CloseoutRecoveryError(
+                "payload seal terminal claim requires consumption"
+            )
+        verify_self_hash(
+            supplied_outcome,
+            hash_field="payload_seal_sha256",
+            label="payload completion seal",
+        )
+        terminal_kind = "payload_seal"
+        outcome_payload_sha256 = supplied_outcome["payload_seal_sha256"]
+        outcome_time = parse_utc(
+            supplied_outcome.get("sealed_at_utc"), label="payload seal time"
+        )
+        outcome_output = Path(verified_auth["seal_output"]).resolve()
+        opposite_output = Path(verified_auth["failure_output"]).resolve()
+    elif (
+        supplied_outcome.get("schema_version") == RECOVERY_FAILURE_SCHEMA
+        and supplied_outcome.get("state")
+        in {"RECOVERY_REJECTED", "RECOVERY_INTERRUPTED", "PAYLOAD_MISMATCH"}
+    ):
+        verify_self_hash(
+            supplied_outcome,
+            hash_field="recovery_failure_payload_sha256",
+            label="closeout recovery failure",
+        )
+        terminal_kind = "recovery_failure"
+        outcome_payload_sha256 = supplied_outcome[
+            "recovery_failure_payload_sha256"
+        ]
+        outcome_time = parse_utc(
+            supplied_outcome.get("recorded_at_utc"), label="recovery failure time"
+        )
+        outcome_output = Path(verified_auth["failure_output"]).resolve()
+        opposite_output = Path(verified_auth["seal_output"]).resolve()
+    else:
+        raise Gate12C2CloseoutRecoveryError(
+            "terminal claim outcome is invalid"
+        )
+    terminal_time = parse_utc(
+        terminal_claimed_at_utc, label="terminal claim time"
+    )
+    if terminal_time < outcome_time:
+        raise Gate12C2CloseoutRecoveryError(
+            "terminal claim time precedes its outcome"
+        )
+    payload: dict[str, Any] = {
+        "schema_version": TERMINAL_CLAIM_SCHEMA,
+        "terminal_kind": terminal_kind,
+        "terminal_state": supplied_outcome["state"],
+        "terminal_claimed_at_utc": terminal_claimed_at_utc,
+        "terminal_output": Path(verified_auth["terminal_output"])
+        .resolve()
+        .as_posix(),
+        "authorization_payload_sha256": verified_auth[
+            "authorization_payload_sha256"
+        ],
+        "attempt_id": verified_attempt["attempt_id"],
+        "attempt_payload_sha256": verified_attempt["attempt_payload_sha256"],
+        "consumption_status": (
+            "present_verified"
+            if verified_consumption is not None
+            else "not_created"
+        ),
+        "consumption_payload_sha256": (
+            verified_consumption["consumption_payload_sha256"]
+            if verified_consumption is not None
+            else None
+        ),
+        "outcome_output": outcome_output.as_posix(),
+        "opposite_output": opposite_output.as_posix(),
+        "outcome_payload_sha256": outcome_payload_sha256,
+        "single_terminal_state": True,
+        "original_resource_evidence_status": "missing",
+        "resource_gate_status": "indeterminate",
+        "scientific_values_emitted": False,
+        "stability_analysis_authorized": False,
+    }
+    payload["terminal_claim_payload_sha256"] = sha256_bytes(
+        canonical_json_bytes(payload)
+    )
+    return payload
+
+
+def verify_terminal_claim(
+    claim: Mapping[str, Any],
+    *,
+    authorization: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    consumption: Mapping[str, Any] | None,
+    outcome: Mapping[str, Any],
+) -> dict[str, Any]:
+    supplied = dict(claim)
+    verify_self_hash(
+        supplied,
+        hash_field="terminal_claim_payload_sha256",
+        label="closeout recovery terminal claim",
+    )
+    expected = build_terminal_claim(
+        authorization=authorization,
+        attempt=attempt,
+        consumption=consumption,
+        outcome=outcome,
+        terminal_claimed_at_utc=str(
+            supplied.get("terminal_claimed_at_utc", "")
+        ),
+    )
+    if supplied != expected:
+        raise Gate12C2CloseoutRecoveryError(
+            "closeout recovery terminal claim differs"
+        )
+    return expected
+
+
+def _publish_terminal_outcome(
+    *,
+    authorization: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    consumption: Mapping[str, Any] | None,
+    outcome: Mapping[str, Any],
+) -> dict[str, Any]:
+    terminal_path = Path(authorization["terminal_output"])
+    seal_path = Path(authorization["seal_output"])
+    failure_path = Path(authorization["failure_output"])
+    if terminal_path.exists() or seal_path.exists() or failure_path.exists():
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery authorization already has a terminal state"
+        )
+    claim = build_terminal_claim(
+        authorization=authorization,
+        attempt=attempt,
+        consumption=consumption,
+        outcome=outcome,
+        terminal_claimed_at_utc=utc_now().isoformat(),
+    )
+    write_exclusive_atomic(terminal_path, claim)
+    if claim["terminal_kind"] == "payload_seal":
+        if failure_path.exists():
+            raise Gate12C2CloseoutRecoveryError(
+                "opposite recovery outcome exists"
+            )
+        write_exclusive_atomic(seal_path, outcome)
+    else:
+        if seal_path.exists():
+            raise Gate12C2CloseoutRecoveryError(
+                "opposite recovery outcome exists"
+            )
+        write_exclusive_atomic(failure_path, outcome)
+    return claim
+
 def verify_recovery_failure(
     failure: Mapping[str, Any],
     *,
@@ -2125,6 +2408,37 @@ def verify_recovery_failure(
     if supplied != expected:
         raise Gate12C2CloseoutRecoveryError(
             "closeout recovery failure differs"
+        )
+    verified_auth = verify_recovery_authorization(
+        authorization, require_current_freshness=False
+    )
+    seal_path = Path(verified_auth["seal_output"])
+    failure_path = Path(verified_auth["failure_output"])
+    terminal_path = Path(verified_auth["terminal_output"])
+    if seal_path.exists():
+        raise Gate12C2CloseoutRecoveryError(
+            "payload seal and recovery failure cannot coexist"
+        )
+    if (
+        not failure_path.is_file()
+        or failure_path.read_bytes() != canonical_json_bytes(supplied)
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery failure output differs"
+        )
+    claim = _verify_canonical_mapping_file(
+        terminal_path, label="closeout recovery terminal claim"
+    )
+    verified_claim = verify_terminal_claim(
+        claim,
+        authorization=verified_auth,
+        attempt=attempt,
+        consumption=consumption,
+        outcome=expected,
+    )
+    if verified_claim["terminal_kind"] != "recovery_failure":
+        raise Gate12C2CloseoutRecoveryError(
+            "terminal claim is not a recovery failure"
         )
     return expected
 
@@ -2161,11 +2475,12 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
     )
     attempt_path = Path(authorization["attempt_output"])
     consumption_path = Path(authorization["consumption_output"])
+    terminal_path = Path(authorization["terminal_output"])
     seal_path = Path(authorization["seal_output"])
     failure_path = Path(authorization["failure_output"])
-    if seal_path.exists() or failure_path.exists():
+    if terminal_path.exists() or seal_path.exists() or failure_path.exists():
         raise Gate12C2CloseoutRecoveryError(
-            "recovery authorization has already been finalized"
+            "recovery authorization has already been terminally claimed"
         )
     existing_attempt = _canonical_mapping_if_present(
         attempt_path, label="closeout recovery attempt"
@@ -2177,9 +2492,14 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
         attempt = verify_attempt_receipt(
             existing_attempt, authorization=authorization
         )
-        if attempt_process_is_active(attempt):
+        liveness = attempt_process_state(attempt)
+        if liveness == PROCESS_ACTIVE:
             raise Gate12C2CloseoutRecoveryError(
                 "recovery attempt is already active"
+            )
+        if liveness == PROCESS_UNKNOWN:
+            raise Gate12C2CloseoutRecoveryError(
+                "recovery attempt liveness is indeterminate"
             )
         consumption = None
         if existing_consumption is not None:
@@ -2200,7 +2520,12 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             ),
             recorded_at_utc=utc_now().isoformat(),
         )
-        write_exclusive_atomic(failure_path, failure)
+        _publish_terminal_outcome(
+            authorization=authorization,
+            attempt=attempt,
+            consumption=consumption,
+            outcome=failure,
+        )
         raise Gate12C2CloseoutRecoveryError(
             "interrupted recovery attempt was sealed as failed"
         )
@@ -2217,6 +2542,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
     )
     write_exclusive_atomic(attempt_path, attempt)
     consumption: dict[str, Any] | None = None
+    published_consumption: dict[str, Any] | None = None
     phase = "consumption_publication"
     try:
         consumption = build_consumption_receipt(
@@ -2225,6 +2551,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             consumed_at_utc=utc_now().isoformat(),
         )
         write_exclusive_atomic(consumption_path, consumption)
+        published_consumption = consumption
         phase = "payload_verification"
         seal = build_payload_seal(
             authorization=authorization,
@@ -2233,29 +2560,42 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             sealed_at_utc=utc_now().isoformat(),
         )
         phase = "seal_publication"
-        write_exclusive_atomic(seal_path, seal)
+        _publish_terminal_outcome(
+            authorization=authorization,
+            attempt=attempt,
+            consumption=consumption,
+            outcome=seal,
+        )
         return seal
     except Exception as error:
+        if terminal_path.exists():
+            raise Gate12C2CloseoutRecoveryError(
+                "payload closeout recovery terminal state was claimed"
+            ) from None
         failure_state = (
             "PAYLOAD_MISMATCH"
             if phase == "payload_verification"
             and isinstance(error, Gate12C2CloseoutRecoveryError)
             else "RECOVERY_INTERRUPTED"
         )
-        if not failure_path.exists() and not seal_path.exists():
+        if not seal_path.exists() and not failure_path.exists():
             failure = build_recovery_failure(
                 authorization=authorization,
                 attempt=attempt,
-                consumption=consumption,
+                consumption=published_consumption,
                 failure_state=failure_state,
                 failure_phase=phase,
                 recorded_at_utc=utc_now().isoformat(),
             )
-            write_exclusive_atomic(failure_path, failure)
+            _publish_terminal_outcome(
+                authorization=authorization,
+                attempt=attempt,
+                consumption=published_consumption,
+                outcome=failure,
+            )
         raise Gate12C2CloseoutRecoveryError(
             "payload closeout recovery was rejected"
         ) from None
-
 
 def verify_payload_seal(
     *, authorization_path: Path, seal_path: Path
@@ -2265,6 +2605,10 @@ def verify_payload_seal(
     )
     if Path(seal_path).resolve() != Path(authorization["seal_output"]).resolve():
         raise Gate12C2CloseoutRecoveryError("payload seal path differs")
+    if Path(authorization["failure_output"]).exists():
+        raise Gate12C2CloseoutRecoveryError(
+            "payload seal and recovery failure cannot coexist"
+        )
     attempt = _verify_canonical_mapping_file(
         Path(authorization["attempt_output"]),
         label="closeout recovery attempt",
@@ -2294,6 +2638,21 @@ def verify_payload_seal(
     if supplied != expected:
         raise Gate12C2CloseoutRecoveryError(
             "payload completion seal differs from current evidence"
+        )
+    claim = _verify_canonical_mapping_file(
+        Path(authorization["terminal_output"]),
+        label="closeout recovery terminal claim",
+    )
+    verified_claim = verify_terminal_claim(
+        claim,
+        authorization=authorization,
+        attempt=attempt,
+        consumption=consumption,
+        outcome=expected,
+    )
+    if verified_claim["terminal_kind"] != "payload_seal":
+        raise Gate12C2CloseoutRecoveryError(
+            "terminal claim is not a payload seal"
         )
     if not (Path(authorization["output_root"]) / LOCK_NAME).is_file():
         raise Gate12C2CloseoutRecoveryError(

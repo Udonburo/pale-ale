@@ -18,6 +18,7 @@ def main() -> int:
     parser.add_argument("--expires-at-utc", required=True)
     parser.add_argument("--attempt-output", type=Path, required=True)
     parser.add_argument("--consumption-output", type=Path, required=True)
+    parser.add_argument("--terminal-output", type=Path, required=True)
     parser.add_argument("--seal-output", type=Path, required=True)
     parser.add_argument("--failure-output", type=Path, required=True)
     parser.add_argument("--authorization-output", type=Path, required=True)
@@ -33,6 +34,7 @@ def main() -> int:
         authorization_output=args.authorization_output,
         attempt_output=args.attempt_output,
         consumption_output=args.consumption_output,
+        terminal_output=args.terminal_output,
         seal_output=args.seal_output,
         failure_output=args.failure_output,
     )

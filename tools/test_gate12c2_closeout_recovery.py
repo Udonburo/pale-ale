@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -395,12 +396,15 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         authorization_path = self.base / "recovery-auth.json"
         attempt = self.base / "external/attempt.json"
         consumption = self.base / "external/consumption.json"
+        terminal = self.base / "external/terminal.json"
         seal = self.base / "external/seal.json"
         failure = self.base / "external/failure.json"
         authorization = {
             "authorization_id": "test-auth",
             "authorization_scope": "payload_verification_and_external_seal_only",
             "authorization_payload_sha256": "a" * 64,
+            "issued_at_utc": "2026-07-27T00:00:00+00:00",
+            "expires_at_utc": "2026-07-29T00:00:00+00:00",
             "output_root": self.root.resolve().as_posix(),
             "incident_manifest_path": (self.base / "incident.json").as_posix(),
             "archived_plan_path": (self.base / "archived.json").as_posix(),
@@ -409,6 +413,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             "authorization_output": authorization_path.as_posix(),
             "attempt_output": attempt.as_posix(),
             "consumption_output": consumption.as_posix(),
+            "terminal_output": terminal.as_posix(),
             "seal_output": seal.as_posix(),
             "failure_output": failure.as_posix(),
         }
@@ -497,7 +502,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             self.assertNotIn("sentinel", json.dumps(failure))
             with self.assertRaisesRegex(
                 recovery.Gate12C2CloseoutRecoveryError,
-                "already been finalized",
+                "already been terminally claimed",
             ):
                 recovery.execute_payload_seal(auth_path)
 
@@ -535,6 +540,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         *,
         authorization_output: Path | None = None,
         attempt_output: Path | None = None,
+        terminal_output: Path | None = None,
     ) -> tuple[dict[str, object], dict[str, object]]:
         packet = self._incident_packet()
         amendment = recovery.build_recovery_amendment(
@@ -594,6 +600,9 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                     attempt_output or self.base / "auth-output/attempt.json"
                 ),
                 consumption_output=self.base / "auth-output/consumption.json",
+                terminal_output=(
+                    terminal_output or self.base / "auth-output/terminal.json"
+                ),
                 seal_output=self.base / "auth-output/seal.json",
                 failure_output=self.base / "auth-output/failure.json",
             )
@@ -630,6 +639,14 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 self.root / "seal.json", root=self.root
             )
 
+    def test_terminal_claim_cannot_be_inside_profile_root(self) -> None:
+        with self.assertRaisesRegex(
+            recovery.Gate12C2CloseoutRecoveryError,
+            "outside the profile root",
+        ):
+            self._authorization_packet(
+                terminal_output=self.root / "terminal.json"
+            )
     def test_exclusive_writer_never_overwrites_competing_destination(self) -> None:
         destination = self.base / "exclusive/receipt.json"
         competitor = b"competitor-won"
@@ -773,7 +790,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 Path(authorization["consumption_output"]), consumption
             )
             with mock.patch.object(
-                recovery, "attempt_process_is_active", return_value=False
+                recovery, "attempt_process_state", return_value=recovery.PROCESS_DEAD
             ):
                 with self.assertRaisesRegex(
                     recovery.Gate12C2CloseoutRecoveryError,
@@ -810,7 +827,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 Path(authorization["attempt_output"]), attempt
             )
             with mock.patch.object(
-                recovery, "attempt_process_is_active", return_value=True
+                recovery, "attempt_process_state", return_value=recovery.PROCESS_ACTIVE
             ):
                 with self.assertRaisesRegex(
                     recovery.Gate12C2CloseoutRecoveryError,
@@ -820,6 +837,286 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         self.assertFalse(Path(authorization["failure_output"]).exists())
         self.assertFalse(Path(authorization["consumption_output"]).exists())
 
+    def test_unknown_competing_liveness_publishes_no_failure(self) -> None:
+        auth_path, authorization = self._mock_authorization()
+        semantic_started = threading.Event()
+        release_semantic = threading.Event()
+        outcomes: dict[str, object] = {}
+
+        def slow_semantics(**_: object) -> dict[str, object]:
+            semantic_started.set()
+            if not release_semantic.wait(timeout=30):
+                raise AssertionError("semantic fixture timed out")
+            return self._semantic_stub()
+
+        def run_primary() -> None:
+            try:
+                outcomes["primary"] = recovery.execute_payload_seal(auth_path)
+            except Exception as error:  # pragma: no cover - asserted below
+                outcomes["primary_error"] = type(error).__name__
+
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ), mock.patch.object(
+            recovery, "verify_payload_semantics", side_effect=slow_semantics
+        ):
+            primary = threading.Thread(target=run_primary)
+            primary.start()
+            self.assertTrue(semantic_started.wait(timeout=30))
+            with mock.patch.object(
+                recovery,
+                "attempt_process_state",
+                return_value=recovery.PROCESS_UNKNOWN,
+            ):
+                with self.assertRaisesRegex(
+                    recovery.Gate12C2CloseoutRecoveryError,
+                    "liveness is indeterminate",
+                ):
+                    recovery.execute_payload_seal(auth_path)
+            self.assertFalse(Path(authorization["terminal_output"]).exists())
+            self.assertFalse(Path(authorization["failure_output"]).exists())
+            release_semantic.set()
+            primary.join(timeout=30)
+            self.assertFalse(primary.is_alive())
+
+        self.assertIn("primary", outcomes)
+        self.assertNotIn("primary_error", outcomes)
+        self.assertTrue(Path(authorization["terminal_output"]).is_file())
+        self.assertTrue(Path(authorization["seal_output"]).is_file())
+        self.assertFalse(Path(authorization["failure_output"]).exists())
+        Path(authorization["failure_output"]).write_bytes(b"{}")
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "cannot coexist",
+            ):
+                recovery.verify_payload_seal(
+                    authorization_path=auth_path,
+                    seal_path=Path(authorization["seal_output"]),
+                )
+
+    def test_terminal_claim_allows_only_one_competing_outcome(self) -> None:
+        auth_path, authorization = self._mock_authorization()
+        semantic_started = threading.Event()
+        release_semantic = threading.Event()
+        outcomes: dict[str, object] = {}
+
+        def slow_semantics(**_: object) -> dict[str, object]:
+            semantic_started.set()
+            if not release_semantic.wait(timeout=30):
+                raise AssertionError("semantic fixture timed out")
+            return self._semantic_stub()
+
+        def run_primary() -> None:
+            try:
+                outcomes["primary"] = recovery.execute_payload_seal(auth_path)
+            except Exception as error:
+                outcomes["primary_error"] = str(error)
+
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ), mock.patch.object(
+            recovery, "verify_payload_semantics", side_effect=slow_semantics
+        ):
+            primary = threading.Thread(target=run_primary)
+            primary.start()
+            self.assertTrue(semantic_started.wait(timeout=30))
+            with mock.patch.object(
+                recovery,
+                "attempt_process_state",
+                return_value=recovery.PROCESS_DEAD,
+            ):
+                with self.assertRaisesRegex(
+                    recovery.Gate12C2CloseoutRecoveryError,
+                    "sealed as failed",
+                ):
+                    recovery.execute_payload_seal(auth_path)
+            release_semantic.set()
+            primary.join(timeout=30)
+            self.assertFalse(primary.is_alive())
+
+        self.assertIn("primary_error", outcomes)
+        self.assertTrue(Path(authorization["terminal_output"]).is_file())
+        self.assertTrue(Path(authorization["failure_output"]).is_file())
+        self.assertFalse(Path(authorization["seal_output"]).exists())
+        attempt = recovery.read_mapping(
+            Path(authorization["attempt_output"]), label="attempt"
+        )
+        consumption = recovery.read_mapping(
+            Path(authorization["consumption_output"]), label="consumption"
+        )
+        failure = recovery.read_mapping(
+            Path(authorization["failure_output"]), label="failure"
+        )
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            self.assertEqual(
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=consumption,
+                ),
+                failure,
+            )
+            Path(authorization["seal_output"]).write_bytes(b"{}")
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "cannot coexist",
+            ):
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=consumption,
+                )
+
+    def test_process_liveness_is_tristate(self) -> None:
+        recorded = {
+            "pid": 123,
+            "identity_kind": "fixture",
+            "start_marker": "one",
+        }
+        with mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_ACTIVE, dict(recorded)),
+        ):
+            self.assertEqual(
+                recovery.process_identity_state(recorded), recovery.PROCESS_ACTIVE
+            )
+        replacement = dict(recorded)
+        replacement["start_marker"] = "two"
+        with mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_ACTIVE, replacement),
+        ):
+            self.assertEqual(
+                recovery.process_identity_state(recorded), recovery.PROCESS_DEAD
+            )
+        with mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_UNKNOWN, None),
+        ):
+            self.assertEqual(
+                recovery.process_identity_state(recorded), recovery.PROCESS_UNKNOWN
+            )
+
+    def test_historical_failure_verification_does_not_remeasure_runner(self) -> None:
+        manifest = self._manifest()
+        manifest_path = self._write_mapping("stable-runner-manifest.json", manifest)
+        stdout_path = self.base / "stable-runner-stdout.log"
+        stderr_path = self.base / "stable-runner-stderr.log"
+        stdout_path.write_bytes(b"")
+        stderr_path.write_bytes(b"")
+        with mock.patch.object(
+            recovery,
+            "process_identity",
+            return_value={
+                "pid": 123,
+                "identity_kind": "fixture",
+                "start_marker": "observed",
+            },
+        ):
+            failure = recovery.build_failure_receipt(
+                incident_manifest_path=manifest_path,
+                stdout_log_path=stdout_path,
+                stderr_log_path=stderr_path,
+                runner_pid=123,
+                observed_at_utc=self.NOW,
+            )
+        with mock.patch.object(
+            recovery,
+            "process_identity",
+            side_effect=AssertionError("historical liveness was remeasured"),
+        ):
+            self.assertEqual(recovery.verify_failure_receipt(failure), failure)
+
+    def test_receipt_timestamps_must_be_monotone(self) -> None:
+        _, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "outside the authorization interval",
+            ):
+                recovery.build_attempt_receipt(
+                    authorization,
+                    claimed_at_utc="2026-07-26T00:00:00+00:00",
+                    process_identity_value={
+                        "pid": 1,
+                        "identity_kind": "fixture",
+                        "start_marker": "one",
+                    },
+                )
+            attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=self.NOW,
+                process_identity_value={
+                    "pid": 1,
+                    "identity_kind": "fixture",
+                    "start_marker": "one",
+                },
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "outside the frozen sequence",
+            ):
+                recovery.build_consumption_receipt(
+                    authorization,
+                    attempt,
+                    consumed_at_utc="2026-07-27T23:59:59+00:00",
+                    require_current_freshness=False,
+                )
+            consumption = recovery.build_consumption_receipt(
+                authorization,
+                attempt,
+                consumed_at_utc=self.NOW,
+                require_current_freshness=False,
+            )
+            with mock.patch.object(
+                recovery,
+                "verify_payload_semantics",
+                return_value=self._semantic_stub(),
+            ):
+                with self.assertRaisesRegex(
+                    recovery.Gate12C2CloseoutRecoveryError,
+                    "precedes recovery consumption",
+                ):
+                    recovery.build_payload_seal(
+                        authorization=authorization,
+                        attempt=attempt,
+                        consumption=consumption,
+                        sealed_at_utc="2026-07-27T23:59:59+00:00",
+                    )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "precedes its predecessor",
+            ):
+                recovery.build_recovery_failure(
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=consumption,
+                    failure_state="RECOVERY_INTERRUPTED",
+                    failure_phase="payload_verification",
+                    recorded_at_utc="2026-07-27T23:59:59+00:00",
+                )
     def test_legacy_lineage_rejects_changed_synthetic_lab_dependency(self) -> None:
         archived, source_commit, plan_hash = self._legacy_fixture()
         original_sha256_file = recovery.sha256_file
