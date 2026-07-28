@@ -36,10 +36,10 @@ FREEZE_DISCREPANCY_SCHEMA = (
     "gate12c2_incident_freeze_discrepancy_v0.1"
 )
 AMENDMENT_SCHEMA = "gate12c2_closeout_recovery_amendment_v0.1"
-AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.4"
+AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.5"
 ATTEMPT_SCHEMA = "gate12c2_closeout_recovery_attempt_v0.1"
 CONSUMPTION_SCHEMA = "gate12c2_closeout_recovery_consumption_v0.2"
-TERMINAL_CLAIM_SCHEMA = "gate12c2_closeout_recovery_terminal_claim_v0.1"
+TERMINAL_CLAIM_SCHEMA = "gate12c2_closeout_recovery_terminal_claim_v0.2"
 PAYLOAD_SEAL_SCHEMA = "gate12c2_payload_completion_seal_v0.3"
 RECOVERY_FAILURE_SCHEMA = "gate12c2_closeout_recovery_failure_v0.3"
 AUTHORIZATION_MAX_AGE_SECONDS = 30 * 60
@@ -944,6 +944,8 @@ def _verify_legacy_lineage_static(
         lock.get("plan_payload_sha256") != expected_plan_payload_sha256
         or lock.get("implementation_sha256") != implementation
         or type(lock.get("pid")) is not int
+        or not isinstance(lock.get("hostname"), str)
+        or not lock.get("hostname")
     ):
         raise Gate12C2CloseoutRecoveryError("stale lock provenance is invalid")
     return {
@@ -954,6 +956,7 @@ def _verify_legacy_lineage_static(
         "control_lineage": control,
         "stale_lock_payload_sha256": lock["lock_payload_sha256"],
         "stale_lock_pid": int(lock["pid"]),
+        "stale_lock_hostname": str(lock["hostname"]),
     }
 
 
@@ -967,6 +970,7 @@ def _compose_legacy_lineage_evidence(
     frozen = dict(observation)
     if set(frozen) != {
         "pid",
+        "hostname",
         "state",
         "observed_at_utc",
         "stale_lock_payload_sha256",
@@ -981,6 +985,7 @@ def _compose_legacy_lineage_evidence(
     if (
         _strict_int(frozen.get("pid"), label="legacy stale-lock PID")
         != _strict_int(static.get("stale_lock_pid"), label="static stale-lock PID")
+        or frozen.get("hostname") != static.get("stale_lock_hostname")
         or frozen.get("state") != PROCESS_DEAD
         or frozen.get("stale_lock_payload_sha256")
         != static.get("stale_lock_payload_sha256")
@@ -1002,12 +1007,22 @@ def _observe_legacy_lock_dead(
         observed_at_utc, label="legacy stale-lock liveness observation time"
     )
     pid = _strict_int(static.get("stale_lock_pid"), label="static stale-lock PID")
+    lock_hostname = static.get("stale_lock_hostname")
+    if (
+        not isinstance(lock_hostname, str)
+        or not lock_hostname
+        or lock_hostname != socket.gethostname()
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "stale lock host differs from authorization host"
+        )
     if process_pid_state(pid) != PROCESS_DEAD:
         raise Gate12C2CloseoutRecoveryError(
             "stale lock owner liveness is not definitively dead"
         )
     return {
         "pid": pid,
+        "hostname": lock_hostname,
         "state": PROCESS_DEAD,
         "observed_at_utc": observed_at_utc,
         "stale_lock_payload_sha256": static["stale_lock_payload_sha256"],
@@ -1673,6 +1688,10 @@ def verify_recovery_authorization(
             supplied["original_plan_payload_sha256"]
         ),
     )
+    if hostname != static_lineage.get("stale_lock_hostname"):
+        raise Gate12C2CloseoutRecoveryError(
+            "closeout recovery authorization host differs from stale lock host"
+        )
     observation = supplied.get("stale_lock_liveness_observation")
     if not isinstance(observation, Mapping):
         raise Gate12C2CloseoutRecoveryError(
@@ -1769,6 +1788,13 @@ def _require_current_recovery_execution_context(
             "legacy stale-lock liveness observation schema mismatch"
         )
     pid = _strict_int(observation.get("pid"), label="legacy stale-lock PID")
+    if (
+        observation.get("hostname") != authorization.get("hostname")
+        or authorization.get("hostname") != socket.gethostname()
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "closeout recovery execution host differs from stale lock host"
+        )
     if process_pid_state(pid) != PROCESS_DEAD:
         raise Gate12C2CloseoutRecoveryError(
             "stale lock owner liveness is not definitively dead"
@@ -1826,7 +1852,7 @@ def build_attempt_receipt(
         "authorization_payload_sha256": verified[
             "authorization_payload_sha256"
         ],
-        "hostname": socket.gethostname(),
+        "hostname": verified["hostname"],
         "process_identity": identity,
         "output_root": verified["output_root"],
         "single_use": True,
@@ -2459,6 +2485,17 @@ def build_terminal_claim(
             hash_field="payload_seal_sha256",
             label="payload completion seal",
         )
+        expected_seal = build_payload_seal(
+            authorization=verified_auth,
+            attempt=verified_attempt,
+            consumption=verified_consumption,
+            sealed_at_utc=str(supplied_outcome.get("sealed_at_utc", "")),
+        )
+        if supplied_outcome != expected_seal:
+            raise Gate12C2CloseoutRecoveryError(
+                "terminal payload seal differs from exact evidence"
+            )
+        supplied_outcome = expected_seal
         terminal_kind = "payload_seal"
         outcome_payload_sha256 = supplied_outcome["payload_seal_sha256"]
         outcome_time = parse_utc(
@@ -2535,6 +2572,7 @@ def build_terminal_claim(
         "outcome_output": outcome_output.as_posix(),
         "opposite_output": opposite_output.as_posix(),
         "outcome_payload_sha256": outcome_payload_sha256,
+        "outcome": supplied_outcome,
         "single_terminal_state": True,
         "original_resource_evidence_status": "missing",
         "resource_gate_status": "indeterminate",
@@ -2665,13 +2703,14 @@ def _publish_terminal_outcome(
     _publish_exact_or_recover(
         terminal_path, claim, label="closeout recovery terminal claim"
     )
+    canonical_outcome = claim["outcome"]
     if claim["terminal_kind"] == "payload_seal":
         if failure_path.exists():
             raise Gate12C2CloseoutRecoveryError(
                 "opposite recovery outcome exists"
             )
         _publish_exact_or_recover(
-            seal_path, outcome, label="payload completion seal"
+            seal_path, canonical_outcome, label="payload completion seal"
         )
     else:
         if seal_path.exists():
@@ -2679,9 +2718,76 @@ def _publish_terminal_outcome(
                 "opposite recovery outcome exists"
             )
         _publish_exact_or_recover(
-            failure_path, outcome, label="closeout recovery failure"
+            failure_path, canonical_outcome, label="closeout recovery failure"
         )
     return claim
+
+
+def _complete_claimed_terminal_leaf(
+    *, authorization: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Idempotently materialize the exact leaf bound by a terminal claim."""
+
+    verified_auth = verify_recovery_authorization(
+        authorization, require_current_freshness=False
+    )
+    terminal_path = Path(verified_auth["terminal_output"])
+    seal_path = Path(verified_auth["seal_output"])
+    failure_path = Path(verified_auth["failure_output"])
+    attempt = _verify_canonical_mapping_file(
+        Path(verified_auth["attempt_output"]),
+        label="closeout recovery attempt",
+    )
+    consumption = _canonical_mapping_if_present(
+        Path(verified_auth["consumption_output"]),
+        label="closeout recovery consumption",
+    )
+    verified_auth, verified_attempt, verified_consumption = (
+        _verify_published_attempt_and_consumption(
+            authorization=verified_auth,
+            attempt=attempt,
+            consumption=consumption,
+        )
+    )
+    claim = _verify_canonical_mapping_file(
+        terminal_path, label="closeout recovery terminal claim"
+    )
+    embedded_outcome = claim.get("outcome")
+    if not isinstance(embedded_outcome, Mapping):
+        raise Gate12C2CloseoutRecoveryError(
+            "terminal claim does not contain a reconstructable outcome"
+        )
+    verified_claim = verify_terminal_claim(
+        claim,
+        authorization=verified_auth,
+        attempt=verified_attempt,
+        consumption=verified_consumption,
+        outcome=embedded_outcome,
+    )
+    canonical_outcome = dict(verified_claim["outcome"])
+    if verified_claim["terminal_kind"] == "payload_seal":
+        if failure_path.exists():
+            raise Gate12C2CloseoutRecoveryError(
+                "opposite recovery outcome exists"
+            )
+        _publish_exact_or_recover(
+            seal_path, canonical_outcome, label="payload completion seal"
+        )
+    else:
+        if seal_path.exists():
+            raise Gate12C2CloseoutRecoveryError(
+                "opposite recovery outcome exists"
+            )
+        _publish_exact_or_recover(
+            failure_path, canonical_outcome, label="closeout recovery failure"
+        )
+    return {
+        "terminal_kind": verified_claim["terminal_kind"],
+        "outcome": canonical_outcome,
+        "terminal_claim_payload_sha256": verified_claim[
+            "terminal_claim_payload_sha256"
+        ],
+    }
 
 
 def verify_recovery_failure(
@@ -2801,9 +2907,18 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
     terminal_path = Path(authorization["terminal_output"])
     seal_path = Path(authorization["seal_output"])
     failure_path = Path(authorization["failure_output"])
-    if terminal_path.exists() or seal_path.exists() or failure_path.exists():
+    if terminal_path.exists():
+        completed = _complete_claimed_terminal_leaf(
+            authorization=authorization
+        )
+        if completed["terminal_kind"] == "payload_seal":
+            return dict(completed["outcome"])
         raise Gate12C2CloseoutRecoveryError(
-            "recovery authorization has already been terminally claimed"
+            "previous recovery failure terminal was completed"
+        )
+    if seal_path.exists() or failure_path.exists():
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery outcome exists without its terminal claim"
         )
     existing_attempt = _canonical_mapping_if_present(
         attempt_path, label="closeout recovery attempt"
