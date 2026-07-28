@@ -289,7 +289,15 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
 
         with mock.patch.object(
             recovery, "git_blob_sha256", side_effect=legacy_blob
-        ), mock.patch.object(profile, "_pid_is_running", return_value=False):
+        ), mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_DEAD, None),
+        ), mock.patch.object(
+            profile,
+            "_pid_is_running",
+            side_effect=AssertionError("legacy boolean liveness was used"),
+        ):
             evidence = recovery.verify_legacy_lineage(
                 output_root=self.root,
                 archived_plan_path=archived,
@@ -298,6 +306,70 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             )
         self.assertEqual(evidence["original_source_commit"], source_commit)
         self.assertTrue(evidence["stale_lock_owner_not_running"])
+
+    def test_legacy_lineage_rejects_indeterminate_lock_owner(self) -> None:
+        archived, source_commit, plan_hash = self._legacy_fixture()
+
+        def legacy_blob(_: str, relative: str) -> str:
+            return recovery.sha256_file(TOOLS_DIR / Path(relative).name)
+
+        with mock.patch.object(
+            recovery, "git_blob_sha256", side_effect=legacy_blob
+        ), mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_UNKNOWN, None),
+        ) as tristate_probe, mock.patch.object(
+            profile,
+            "_pid_is_running",
+            side_effect=AssertionError("legacy boolean liveness was used"),
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "not definitively dead",
+            ):
+                recovery.verify_legacy_lineage(
+                    output_root=self.root,
+                    archived_plan_path=archived,
+                    expected_source_commit=source_commit,
+                    expected_plan_payload_sha256=plan_hash,
+                )
+        tristate_probe.assert_called_once_with(2147483647)
+
+    def test_legacy_lineage_rejects_active_lock_owner(self) -> None:
+        archived, source_commit, plan_hash = self._legacy_fixture()
+
+        def legacy_blob(_: str, relative: str) -> str:
+            return recovery.sha256_file(TOOLS_DIR / Path(relative).name)
+
+        with mock.patch.object(
+            recovery, "git_blob_sha256", side_effect=legacy_blob
+        ), mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(
+                recovery.PROCESS_ACTIVE,
+                {
+                    "pid": 2147483647,
+                    "identity_kind": "fixture",
+                    "start_marker": "active",
+                },
+            ),
+        ), mock.patch.object(
+            profile,
+            "_pid_is_running",
+            side_effect=AssertionError("legacy boolean liveness was used"),
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "not definitively dead",
+            ):
+                recovery.verify_legacy_lineage(
+                    output_root=self.root,
+                    archived_plan_path=archived,
+                    expected_source_commit=source_commit,
+                    expected_plan_payload_sha256=plan_hash,
+                )
 
     def test_legacy_lineage_rejects_changed_shard_verifier(self) -> None:
         archived, source_commit, plan_hash = self._legacy_fixture()
@@ -323,7 +395,11 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             recovery, "git_blob_sha256", side_effect=legacy_blob
         ), mock.patch.object(
             recovery, "sha256_file", side_effect=changed_current_verifier
-        ), mock.patch.object(profile, "_pid_is_running", return_value=False):
+        ), mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_DEAD, None),
+        ):
             with self.assertRaisesRegex(
                 recovery.Gate12C2CloseoutRecoveryError,
                 "current semantic verifier dependency",
@@ -506,6 +582,100 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             ):
                 recovery.execute_payload_seal(auth_path)
 
+    def test_published_consumption_is_recovered_after_writer_error(self) -> None:
+        auth_path, authorization = self._mock_authorization()
+        real_writer = recovery.write_exclusive_atomic
+        consumption_path = Path(authorization["consumption_output"]).resolve()
+
+        def publish_then_raise(path: Path, payload: dict[str, object]) -> None:
+            real_writer(path, payload)
+            if Path(path).resolve() == consumption_path:
+                raise PermissionError("post-publication cleanup sentinel")
+
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ), mock.patch.object(
+            recovery,
+            "write_exclusive_atomic",
+            side_effect=publish_then_raise,
+        ), mock.patch.object(
+            recovery,
+            "verify_payload_semantics",
+            side_effect=recovery.Gate12C2CloseoutRecoveryError("sentinel"),
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError, "was rejected"
+            ):
+                recovery.execute_payload_seal(auth_path)
+        attempt = recovery.read_mapping(
+            Path(authorization["attempt_output"]), label="attempt"
+        )
+        consumption = recovery.read_mapping(
+            consumption_path, label="consumption"
+        )
+        failure = recovery.read_mapping(
+            Path(authorization["failure_output"]), label="failure"
+        )
+        self.assertEqual(failure["consumption_status"], "present_verified")
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            self.assertEqual(
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=consumption,
+                ),
+                failure,
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "omits published consumption",
+            ):
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=None,
+                )
+            other_attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=attempt["claimed_at_utc"],
+                attempt_id="different-attempt",
+                process_identity_value=attempt["process_identity"],
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "attempt evidence differs",
+            ):
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=other_attempt,
+                    consumption=consumption,
+                )
+            other_consumption = recovery.build_consumption_receipt(
+                authorization,
+                attempt,
+                consumed_at_utc=attempt["claimed_at_utc"],
+                require_current_freshness=False,
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "consumption evidence differs",
+            ):
+                recovery.verify_recovery_failure(
+                    failure,
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=other_consumption,
+                )
+
     def test_lock_retirement_is_unavailable(self) -> None:
         with self.assertRaisesRegex(
             recovery.Gate12C2CloseoutRecoveryError, "remains HOLD"
@@ -665,6 +835,27 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         self.assertEqual(destination.read_bytes(), competitor)
         self.assertEqual(list(destination.parent.glob("*.tmp")), [])
         self.assertEqual(list(destination.parent.glob(".*.tmp")), [])
+
+    def test_exact_publisher_recovers_after_temp_cleanup_failure(self) -> None:
+        destination = self.base / "cleanup-failure/receipt.json"
+        payload = {"publication": "canonical"}
+        real_unlink = Path.unlink
+
+        def fail_temp_cleanup(path: Path, *args: object, **kwargs: object) -> None:
+            if Path(path).suffix == ".tmp":
+                raise PermissionError("cleanup sentinel")
+            real_unlink(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "unlink", new=fail_temp_cleanup):
+            recovered = recovery._publish_exact_or_recover(
+                destination, payload, label="cleanup failure receipt"
+            )
+        self.assertEqual(recovered, payload)
+        self.assertEqual(
+            destination.read_bytes(), recovery.canonical_json_bytes(payload)
+        )
+        for temporary in destination.parent.glob(".*.tmp"):
+            real_unlink(temporary)
 
     def test_exclusive_writer_has_one_cross_process_winner(self) -> None:
         destination = self.base / "exclusive-process/receipt.json"
@@ -1024,12 +1215,15 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         stderr_path.write_bytes(b"")
         with mock.patch.object(
             recovery,
-            "process_identity",
-            return_value={
-                "pid": 123,
-                "identity_kind": "fixture",
-                "start_marker": "observed",
-            },
+            "_query_process_identity",
+            return_value=(
+                recovery.PROCESS_ACTIVE,
+                {
+                    "pid": 123,
+                    "identity_kind": "fixture",
+                    "start_marker": "observed",
+                },
+            ),
         ):
             failure = recovery.build_failure_receipt(
                 incident_manifest_path=manifest_path,
@@ -1040,7 +1234,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             )
         with mock.patch.object(
             recovery,
-            "process_identity",
+            "_query_process_identity",
             side_effect=AssertionError("historical liveness was remeasured"),
         ):
             self.assertEqual(recovery.verify_failure_receipt(failure), failure)
@@ -1141,7 +1335,11 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             recovery, "git_blob_sha256", side_effect=legacy_blob
         ), mock.patch.object(
             recovery, "sha256_file", side_effect=changed_dependency
-        ), mock.patch.object(profile, "_pid_is_running", return_value=False):
+        ), mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_DEAD, None),
+        ):
             with self.assertRaisesRegex(
                 recovery.Gate12C2CloseoutRecoveryError,
                 "current semantic verifier dependency",
@@ -1162,12 +1360,15 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         stderr_path.write_bytes(b"")
         with mock.patch.object(
             recovery,
-            "process_identity",
-            return_value={
-                "pid": 123,
-                "identity_kind": "fixture",
-                "start_marker": "present",
-            },
+            "_query_process_identity",
+            return_value=(
+                recovery.PROCESS_ACTIVE,
+                {
+                    "pid": 123,
+                    "identity_kind": "fixture",
+                    "start_marker": "present",
+                },
+            ),
         ):
             failure = recovery.build_failure_receipt(
                 incident_manifest_path=manifest_path,
@@ -1177,6 +1378,30 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 observed_at_utc=self.NOW,
             )
         self.assertTrue(failure["runner_process_present"])
+
+    def test_failure_receipt_rejects_indeterminate_runner_liveness(self) -> None:
+        manifest = self._manifest()
+        manifest_path = self._write_mapping("unknown-runner-manifest.json", manifest)
+        stdout_path = self.base / "unknown-runner-stdout.log"
+        stderr_path = self.base / "unknown-runner-stderr.log"
+        stdout_path.write_bytes(b"")
+        stderr_path.write_bytes(b"")
+        with mock.patch.object(
+            recovery,
+            "_query_process_identity",
+            return_value=(recovery.PROCESS_UNKNOWN, None),
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "liveness is indeterminate",
+            ):
+                recovery.build_failure_receipt(
+                    incident_manifest_path=manifest_path,
+                    stdout_log_path=stdout_path,
+                    stderr_log_path=stderr_path,
+                    runner_pid=123,
+                    observed_at_utc=self.NOW,
+                )
 
     def test_semantic_summary_is_closed_and_strictly_typed(self) -> None:
         valid = self._semantic_stub()
