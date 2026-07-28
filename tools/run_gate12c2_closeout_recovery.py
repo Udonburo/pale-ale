@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Execute an authorized read-only payload verification and external seal."""
 from __future__ import annotations
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -9,7 +8,7 @@ import gate12c2_closeout_recovery as recovery
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = recovery.SanitizedArgumentParser(description=__doc__)
     parser.add_argument("--authorization", type=Path, required=True)
     args = parser.parse_args()
     seal = recovery.execute_payload_seal(args.authorization)

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Issue one exact payload-seal recovery authorization."""
 from __future__ import annotations
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -9,7 +8,7 @@ import gate12c2_closeout_recovery as recovery
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = recovery.SanitizedArgumentParser(description=__doc__)
     parser.add_argument("--amendment", type=Path, required=True)
     parser.add_argument("--review-receipt", type=Path, required=True)
     parser.add_argument("--incident-manifest", type=Path, required=True)
@@ -17,6 +16,7 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--authorization-id", required=True)
     parser.add_argument("--expires-at-utc", required=True)
+    parser.add_argument("--attempt-output", type=Path, required=True)
     parser.add_argument("--consumption-output", type=Path, required=True)
     parser.add_argument("--seal-output", type=Path, required=True)
     parser.add_argument("--failure-output", type=Path, required=True)
@@ -30,6 +30,8 @@ def main() -> int:
         output_root=args.output_root,
         authorization_id=args.authorization_id,
         expires_at_utc=args.expires_at_utc,
+        authorization_output=args.authorization_output,
+        attempt_output=args.attempt_output,
         consumption_output=args.consumption_output,
         seal_output=args.seal_output,
         failure_output=args.failure_output,

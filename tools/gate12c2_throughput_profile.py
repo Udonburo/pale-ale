@@ -1163,7 +1163,7 @@ def summarize_profile_results(
                 and physical_ram_bytes > 0
                 else None
             )
-            row_memory_pass = fraction is None or fraction <= 0.75
+            row_memory_pass = fraction is not None and fraction <= 0.75
             memory_pass &= row_memory_pass
             scaling.append(
                 {

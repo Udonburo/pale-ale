@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Freeze byte-only Gate12C-2 closeout incident evidence."""
 from __future__ import annotations
-import argparse
 import json
 import sys
 from datetime import datetime, timezone
@@ -10,7 +9,7 @@ import gate12c2_closeout_recovery as recovery
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = recovery.SanitizedArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--incident-id", required=True)
     parser.add_argument("--runner-pid", type=int, required=True)

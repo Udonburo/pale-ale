@@ -188,6 +188,30 @@ class Gate12C2ThroughputProfileTest(unittest.TestCase):
             2.0,
         )
 
+    def test_missing_physical_ram_fails_memory_gate_closed(self) -> None:
+        rows = [
+            {
+                "workload_id": "S0",
+                "regime_id": "S0_true_null",
+                "configuration_id": "w1",
+                "worker_count": 1,
+                "wall_seconds": 1.0,
+                "effective_accepted_draws_per_wall_second": 1.0,
+                "process_tree_memory": {
+                    "peak_process_tree_rss_bytes": 100,
+                },
+                "scientific_projection_sha256": "a" * 64,
+                "output_bytes": 10,
+            }
+        ]
+        summary = profile.summarize_profile_results(
+            rows,
+            physical_ram_bytes=None,
+        )
+        self.assertFalse(summary["memory_gate_pass"])
+        scaling = summary["workloads"][0]["scaling"][0]
+        self.assertIsNone(scaling["peak_rss_fraction_of_physical_ram"])
+        self.assertFalse(scaling["memory_gate_pass"])
     def test_tiny_profile_executes_without_scientific_interpretation(
         self,
     ) -> None:
