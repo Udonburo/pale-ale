@@ -709,6 +709,7 @@ def build_no_outcome_projection(
     draw_profile_plan: Mapping[str, Any],
     execution_receipt: Mapping[str, Any],
     resource_receipt: Mapping[str, Any],
+    restore_scratch_root: Path,
 ) -> dict[str, Any]:
     """Build a strict projection containing stability deltas only."""
 
@@ -722,6 +723,7 @@ def build_no_outcome_projection(
             preflight_receipt=control["preflight_receipt"],
             authorization_receipt=control["authorization_receipt"],
             consumption_receipt=control["consumption_receipt"],
+            restore_scratch_root=restore_scratch_root,
         )
     except (KeyError, TypeError, profile.Gate12C2DrawProfileError) as exc:
         raise Gate12C2DrawStabilityError(
@@ -1543,6 +1545,7 @@ def build_analysis_manifest(
     execution_evidence_path: Path,
     execution_receipt_path: Path,
     resource_receipt_path: Path,
+    restore_scratch_root: Path,
 ) -> dict[str, Any]:
     """Build a read-only, path-bound analysis manifest."""
 
@@ -1619,6 +1622,7 @@ def build_analysis_manifest(
             preflight_receipt=preflight_receipt,
             authorization_receipt=authorization_receipt,
             consumption_receipt=consumption_receipt,
+            restore_scratch_root=restore_scratch_root,
         )
         if (
             execution_evidence
@@ -1702,6 +1706,7 @@ def build_analysis_manifest(
         "resource_receipt_payload_sha256": resources[
             "resource_receipt_payload_sha256"
         ],
+        "restore_scratch_root": Path(restore_scratch_root).resolve().as_posix(),
         "result_root_evidence": root_evidence,
     }
     payload: dict[str, Any] = {
@@ -1800,6 +1805,7 @@ def verify_analysis_manifest(
             "resource_receipt_path",
             "resource_receipt_file_sha256",
             "resource_receipt_payload_sha256",
+            "restore_scratch_root",
             "result_root_evidence",
         },
         context="analysis manifest resource evidence",
@@ -1867,6 +1873,9 @@ def verify_analysis_manifest(
         ),
         resource_receipt_path=Path(
             supplied["resource_evidence"]["resource_receipt_path"]
+        ),
+        restore_scratch_root=Path(
+            supplied["resource_evidence"]["restore_scratch_root"]
         ),
     )
     if supplied != expected:
@@ -1940,6 +1949,7 @@ def analyze_verified_directories(
             preflight_receipt=preflight_receipt,
             authorization_receipt=authorization_receipt,
             consumption_receipt=consumption_receipt,
+            restore_scratch_root=Path(evidence["restore_scratch_root"]),
         )
     except Exception as exc:
         raise Gate12C2DrawStabilityError(
@@ -1971,6 +1981,7 @@ def analyze_verified_directories(
         draw_profile_plan=draw_profile_plan,
         execution_receipt=execution_receipt,
         resource_receipt=resource_receipt,
+        restore_scratch_root=Path(evidence["restore_scratch_root"]),
     )
     projection["analysis_manifest_payload_sha256"] = verified[
         "analysis_manifest_payload_sha256"

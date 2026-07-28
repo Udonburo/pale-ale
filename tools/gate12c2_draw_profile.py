@@ -2828,6 +2828,13 @@ def recover_stale_coordinator_lock(
             "coordinator recovery cannot remove a lock while partial "
             f"artifacts remain: {partials}"
         )
+    runs_root = destination / "runs"
+    if runs_root.exists():
+        raise Gate12C2DrawProfileError(
+            "payload-bearing profile roots require the separately reviewed "
+            "closeout-only recovery path; ordinary stale-lock recovery is "
+            "prohibited"
+        )
     lock_path = destination / COORDINATOR_LOCK_NAME
     lock = _read_json_mapping(
         lock_path,
@@ -3242,6 +3249,7 @@ def _build_resource_receipt(
     preflight_receipt: Mapping[str, Any],
     authorization_receipt: Mapping[str, Any],
     consumption_receipt: Mapping[str, Any],
+    restore_scratch_root: Path,
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     evidence = _verify_execution_evidence(
@@ -3255,6 +3263,7 @@ def _build_resource_receipt(
         authorization_receipt=authorization_receipt,
         consumption_receipt=consumption_receipt,
         output_root=output_root,
+        restore_scratch_root=restore_scratch_root,
         require_current_freshness=False,
         verify_current_resources=False,
     )
@@ -3401,6 +3410,7 @@ def verify_resource_evidence_chain(
     preflight_receipt: Mapping[str, Any],
     authorization_receipt: Mapping[str, Any],
     consumption_receipt: Mapping[str, Any],
+    restore_scratch_root: Path,
 ) -> dict[str, Any]:
     verified = verify_draw_profile_plan(plan)
     control = _verify_control_lineage(
@@ -3409,6 +3419,7 @@ def verify_resource_evidence_chain(
         authorization_receipt=authorization_receipt,
         consumption_receipt=consumption_receipt,
         output_root=Path(str(authorization_receipt.get("output_root", ""))),
+        restore_scratch_root=restore_scratch_root,
         require_current_freshness=False,
         verify_current_resources=False,
     )
@@ -3424,6 +3435,7 @@ def verify_resource_evidence_chain(
         preflight_receipt=preflight_receipt,
         authorization_receipt=authorization_receipt,
         consumption_receipt=consumption_receipt,
+        restore_scratch_root=restore_scratch_root,
     )
     if supplied_resource != expected_resource:
         raise Gate12C2DrawProfileError(
@@ -3698,6 +3710,7 @@ def _verify_completed_profile_lineage(
         preflight_receipt=stored_preflight,
         authorization_receipt=stored_authorization,
         consumption_receipt=stored_consumption,
+        restore_scratch_root=restore_scratch_root,
     )
     if (
         resource_receipt["execution_evidence"] != verified_evidence
@@ -4006,6 +4019,7 @@ def execute_draw_profile(
             preflight_receipt=preflight_receipt,
             authorization_receipt=authorization,
             consumption_receipt=consumption,
+            restore_scratch_root=restore_scratch_root,
         )
         _write_or_verify(
             destination / EXECUTION_EVIDENCE_NAME,
@@ -4070,6 +4084,7 @@ def execute_draw_profile(
             preflight_receipt=preflight_receipt,
             authorization_receipt=authorization,
             consumption_receipt=consumption,
+            restore_scratch_root=restore_scratch_root,
         )
         verify_current_result_roots(
             verified,

@@ -267,6 +267,9 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                 preflight_receipt=preflight,
                 authorization_receipt=authorization,
                 consumption_receipt=consumption,
+                restore_scratch_root=Path(
+                    "test-restore-scratch"
+                ).resolve(),
             )
         execution: dict[str, object] = {
             "schema_version": profile.RECEIPT_SCHEMA_VERSION,
@@ -314,6 +317,9 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                 draw_profile_plan=plan,
                 execution_receipt=execution,
                 resource_receipt=resource,
+                restore_scratch_root=Path(
+                    "test-restore-scratch"
+                ).resolve(),
             )
 
     def test_projection_exposes_only_allowlisted_stability_deltas(
@@ -577,6 +583,9 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                     draw_profile_plan=plan,
                     execution_receipt=execution,
                     resource_receipt=tampered,
+                    restore_scratch_root=Path(
+                        "test-restore-scratch"
+                    ).resolve(),
                 )
 
     def test_analysis_manifest_rejects_rehashed_permissions(self) -> None:
@@ -647,6 +656,7 @@ class Gate12C2DrawStabilityTest(unittest.TestCase):
                     execution_evidence_path=paths["evidence"],
                     execution_receipt_path=paths["execution"],
                     resource_receipt_path=paths["resource"],
+                    restore_scratch_root=root / "restore-scratch",
                 )
                 self.assertEqual(
                     stability.verify_analysis_manifest(manifest),

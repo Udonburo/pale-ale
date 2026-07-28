@@ -1243,7 +1243,14 @@ def execute_profile_plan(
     physical_ram = None
     windows_cim = hardware.get("windows_cim")
     if isinstance(windows_cim, Mapping):
-        physical_ram = int(windows_cim["RAMBytes"])
+        raw_ram = windows_cim.get("RAMBytes")
+        if isinstance(raw_ram, (int, str)) and not isinstance(raw_ram, bool):
+            try:
+                candidate_ram = int(raw_ram)
+            except ValueError:
+                candidate_ram = 0
+            if candidate_ram > 0:
+                physical_ram = candidate_ram
     started = time.perf_counter()
     results = [
         run_profile_configuration(

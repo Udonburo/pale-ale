@@ -424,6 +424,9 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
             preflight_receipt=control["preflight_receipt"],
             authorization_receipt=control["authorization_receipt"],
             consumption_receipt=control["consumption_receipt"],
+            restore_scratch_root=Path(
+                control["authorization_receipt"]["output_root"]
+            ).parent,
         )
 
     def _execute_mocked(
@@ -1025,6 +1028,7 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                         consumption_receipt=actual_control[
                             "consumption_receipt"
                         ],
+                        restore_scratch_root=output_root.parent,
                     )
 
     def test_root_stale_partial_fails_before_coordinator_write(self) -> None:
@@ -1141,6 +1145,24 @@ class Gate12C2DrawProfileTest(unittest.TestCase):
                     restore_scratch_root=output_root.parent,
                 )
 
+    def test_ordinary_stale_lock_recovery_rejects_payload_root(self) -> None:
+        plan = self.build_plan()
+        with tempfile.TemporaryDirectory() as temporary:
+            output_root = Path(temporary) / "profile"
+            (output_root / "runs").mkdir(parents=True)
+            lock_path = output_root / profile.COORDINATOR_LOCK_NAME
+            lock_path.write_text("{}", encoding="utf-8")
+            with self.assertRaisesRegex(
+                profile.Gate12C2DrawProfileError,
+                "closeout-only recovery",
+            ):
+                profile.recover_stale_coordinator_lock(
+                    plan,
+                    output_root=output_root,
+                    recovery_id="payload-root",
+                    reason="must not mutate payload-bearing roots",
+                )
+            self.assertTrue(lock_path.exists())
     def test_interrupted_final_receipt_boundary_keeps_lock_and_partial(
         self,
     ) -> None:
