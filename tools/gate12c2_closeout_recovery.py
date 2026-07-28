@@ -36,7 +36,7 @@ FREEZE_DISCREPANCY_SCHEMA = (
     "gate12c2_incident_freeze_discrepancy_v0.1"
 )
 AMENDMENT_SCHEMA = "gate12c2_closeout_recovery_amendment_v0.1"
-AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.3"
+AUTHORIZATION_SCHEMA = "gate12c2_closeout_recovery_authorization_v0.4"
 ATTEMPT_SCHEMA = "gate12c2_closeout_recovery_attempt_v0.1"
 CONSUMPTION_SCHEMA = "gate12c2_closeout_recovery_consumption_v0.2"
 TERMINAL_CLAIM_SCHEMA = "gate12c2_closeout_recovery_terminal_claim_v0.1"
@@ -60,6 +60,26 @@ PARTIAL_SUFFIXES = (".tmp", ".partial", ".incomplete")
 PROCESS_ACTIVE = "ACTIVE"
 PROCESS_DEAD = "DEAD"
 PROCESS_UNKNOWN = "UNKNOWN"
+FAILURE_PHASES_BY_STATE = {
+    "RECOVERY_REJECTED": frozenset({"payload_verification"}),
+    "RECOVERY_INTERRUPTED": frozenset(
+        {
+            "attempt_claimed",
+            "consumption_publication",
+            "post_consumption_restart",
+            "payload_verification",
+            "seal_publication",
+        }
+    ),
+    "PAYLOAD_MISMATCH": frozenset({"payload_verification"}),
+}
+FAILURE_PHASE_CONSUMPTION = {
+    "attempt_claimed": "absent",
+    "consumption_publication": "either",
+    "post_consumption_restart": "present",
+    "payload_verification": "present",
+    "seal_publication": "present",
+}
 
 
 class Gate12C2CloseoutRecoveryError(ValueError):
@@ -847,14 +867,14 @@ def _verify_original_control_lineage(
     }
 
 
-def verify_legacy_lineage(
+def _verify_legacy_lineage_static(
     *,
     output_root: Path,
     archived_plan_path: Path,
     expected_source_commit: str = ORIGINAL_SOURCE_COMMIT,
     expected_plan_payload_sha256: str = ORIGINAL_PLAN_PAYLOAD_SHA256,
 ) -> dict[str, Any]:
-    """Verify old execution evidence against old git blobs, not new builders."""
+    """Verify immutable legacy evidence without consulting current PID state."""
 
     archived = _verify_canonical_mapping_file(
         archived_plan_path, label="archived exact plan"
@@ -926,11 +946,6 @@ def verify_legacy_lineage(
         or type(lock.get("pid")) is not int
     ):
         raise Gate12C2CloseoutRecoveryError("stale lock provenance is invalid")
-    lock_owner_state = process_pid_state(int(lock["pid"]))
-    if lock_owner_state != PROCESS_DEAD:
-        raise Gate12C2CloseoutRecoveryError(
-            "stale lock owner liveness is not definitively dead"
-        )
     return {
         "original_source_commit": expected_source_commit,
         "original_plan_payload_sha256": expected_plan_payload_sha256,
@@ -938,9 +953,88 @@ def verify_legacy_lineage(
         "current_semantic_verifier_sha256": current_semantic_hashes,
         "control_lineage": control,
         "stale_lock_payload_sha256": lock["lock_payload_sha256"],
+        "stale_lock_pid": int(lock["pid"]),
+    }
+
+
+def _compose_legacy_lineage_evidence(
+    static: Mapping[str, Any], observation: Mapping[str, Any]
+) -> dict[str, Any]:
+    if not isinstance(static, Mapping) or not isinstance(observation, Mapping):
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation schema mismatch"
+        )
+    frozen = dict(observation)
+    if set(frozen) != {
+        "pid",
+        "state",
+        "observed_at_utc",
+        "stale_lock_payload_sha256",
+    }:
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation schema mismatch"
+        )
+    parse_utc(
+        frozen.get("observed_at_utc"),
+        label="legacy stale-lock liveness observation time",
+    )
+    if (
+        _strict_int(frozen.get("pid"), label="legacy stale-lock PID")
+        != _strict_int(static.get("stale_lock_pid"), label="static stale-lock PID")
+        or frozen.get("state") != PROCESS_DEAD
+        or frozen.get("stale_lock_payload_sha256")
+        != static.get("stale_lock_payload_sha256")
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation is invalid"
+        )
+    return {
+        **dict(static),
+        "stale_lock_liveness_observation": frozen,
         "stale_lock_owner_not_running": True,
     }
 
+
+def _observe_legacy_lock_dead(
+    static: Mapping[str, Any], *, observed_at_utc: str
+) -> dict[str, Any]:
+    parse_utc(
+        observed_at_utc, label="legacy stale-lock liveness observation time"
+    )
+    pid = _strict_int(static.get("stale_lock_pid"), label="static stale-lock PID")
+    if process_pid_state(pid) != PROCESS_DEAD:
+        raise Gate12C2CloseoutRecoveryError(
+            "stale lock owner liveness is not definitively dead"
+        )
+    return {
+        "pid": pid,
+        "state": PROCESS_DEAD,
+        "observed_at_utc": observed_at_utc,
+        "stale_lock_payload_sha256": static["stale_lock_payload_sha256"],
+    }
+
+
+def verify_legacy_lineage(
+    *,
+    output_root: Path,
+    archived_plan_path: Path,
+    expected_source_commit: str = ORIGINAL_SOURCE_COMMIT,
+    expected_plan_payload_sha256: str = ORIGINAL_PLAN_PAYLOAD_SHA256,
+    observed_at_utc: str | None = None,
+) -> dict[str, Any]:
+    """Verify immutable legacy evidence and establish current DEAD liveness."""
+
+    static = _verify_legacy_lineage_static(
+        output_root=output_root,
+        archived_plan_path=archived_plan_path,
+        expected_source_commit=expected_source_commit,
+        expected_plan_payload_sha256=expected_plan_payload_sha256,
+    )
+    observation = _observe_legacy_lock_dead(
+        static,
+        observed_at_utc=observed_at_utc or utc_now().isoformat(),
+    )
+    return _compose_legacy_lineage_evidence(static, observation)
 
 
 def build_freeze_discrepancy_receipt(
@@ -1394,13 +1488,14 @@ def build_recovery_authorization(
         != amendment["incident_manifest_payload_sha256"]
     ):
         raise Gate12C2CloseoutRecoveryError("amendment and incident differ")
+    issued = utc_now()
     lineage = verify_legacy_lineage(
         output_root=root,
         archived_plan_path=archived_plan_path,
         expected_source_commit=str(manifest["original_source_commit"]),
         expected_plan_payload_sha256=str(manifest["original_plan_payload_sha256"]),
+        observed_at_utc=issued.isoformat(),
     )
-    issued = utc_now()
     expiration = parse_utc(expires_at_utc, label="recovery authorization expiration")
     if expiration <= issued or expiration - issued > timedelta(
         seconds=AUTHORIZATION_MAX_AGE_SECONDS
@@ -1427,6 +1522,9 @@ def build_recovery_authorization(
         "legacy_lineage_evidence_sha256": sha256_bytes(
             canonical_json_bytes(lineage)
         ),
+        "stale_lock_liveness_observation": lineage[
+            "stale_lock_liveness_observation"
+        ],
         "output_root": root.as_posix(),
         "archived_plan_path": Path(archived_plan_path).resolve().as_posix(),
         "archived_plan_file_sha256": sha256_file(archived_plan_path),
@@ -1482,7 +1580,8 @@ def verify_recovery_authorization(
         "expires_at_utc", "maximum_age_seconds", "hostname",
         "current_source_commit", "recovery_implementation_sha256",
         "original_source_commit", "original_plan_payload_sha256",
-        "legacy_lineage_evidence_sha256", "output_root",
+        "legacy_lineage_evidence_sha256", "stale_lock_liveness_observation",
+        "output_root",
         "archived_plan_path", "archived_plan_file_sha256",
         "incident_manifest_path", "incident_manifest_file_sha256",
         "incident_manifest_payload_sha256", "amendment_path",
@@ -1517,7 +1616,7 @@ def verify_recovery_authorization(
         or supplied.get("maximum_age_seconds") != AUTHORIZATION_MAX_AGE_SECONDS
         or expiration <= issued
         or expiration - issued > timedelta(seconds=AUTHORIZATION_MAX_AGE_SECONDS)
-        or supplied.get("hostname") != socket.gethostname()
+
         or supplied.get("current_source_commit") != git_head()
         or supplied.get("recovery_implementation_sha256")
         != recovery_implementation_hashes()
@@ -1536,7 +1635,15 @@ def verify_recovery_authorization(
         raise Gate12C2CloseoutRecoveryError(
             "closeout recovery authorization changed a frozen field"
         )
-    if require_current_freshness and not (issued <= utc_now() < expiration):
+    hostname = supplied.get("hostname")
+    if not isinstance(hostname, str) or not hostname:
+        raise Gate12C2CloseoutRecoveryError(
+            "closeout recovery authorization hostname is invalid"
+        )
+    if require_current_freshness and (
+        not (issued <= utc_now() < expiration)
+        or hostname != socket.gethostname()
+    ):
         raise Gate12C2CloseoutRecoveryError(
             "closeout recovery authorization is not currently valid"
         )
@@ -1558,7 +1665,7 @@ def verify_recovery_authorization(
         root=root,
         require_exact=True,
     )
-    lineage = verify_legacy_lineage(
+    static_lineage = _verify_legacy_lineage_static(
         output_root=root,
         archived_plan_path=Path(supplied["archived_plan_path"]),
         expected_source_commit=str(supplied["original_source_commit"]),
@@ -1566,6 +1673,32 @@ def verify_recovery_authorization(
             supplied["original_plan_payload_sha256"]
         ),
     )
+    observation = supplied.get("stale_lock_liveness_observation")
+    if not isinstance(observation, Mapping):
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation schema mismatch"
+        )
+    lineage = _compose_legacy_lineage_evidence(static_lineage, observation)
+    if parse_utc(
+        observation.get("observed_at_utc"),
+        label="legacy stale-lock liveness observation time",
+    ) != issued:
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation is not bound to issuance"
+        )
+    if (
+        require_current_freshness
+        and process_pid_state(
+            _strict_int(
+                static_lineage.get("stale_lock_pid"),
+                label="static stale-lock PID",
+            )
+        )
+        != PROCESS_DEAD
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "stale lock owner liveness is not definitively dead"
+        )
     checks = {
         "archived_plan_file_sha256": sha256_file(
             Path(supplied["archived_plan_path"])
@@ -1619,6 +1752,27 @@ def verify_recovery_authorization(
         )
     return supplied
 
+
+
+def _require_current_recovery_execution_context(
+    authorization: Mapping[str, Any]
+) -> None:
+    """Require current host identity and definitive DEAD stale-lock liveness."""
+
+    if authorization.get("hostname") != socket.gethostname():
+        raise Gate12C2CloseoutRecoveryError(
+            "closeout recovery execution host differs from authorization"
+        )
+    observation = authorization.get("stale_lock_liveness_observation")
+    if not isinstance(observation, Mapping):
+        raise Gate12C2CloseoutRecoveryError(
+            "legacy stale-lock liveness observation schema mismatch"
+        )
+    pid = _strict_int(observation.get("pid"), label="legacy stale-lock PID")
+    if process_pid_state(pid) != PROCESS_DEAD:
+        raise Gate12C2CloseoutRecoveryError(
+            "stale lock owner liveness is not definitively dead"
+        )
 
 
 def build_attempt_receipt(
@@ -1748,7 +1902,11 @@ def _protected_rows(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def verify_payload_semantics(
-    *, output_root: Path, archived_plan_path: Path, incident_manifest: Mapping[str, Any]
+    *,
+    output_root: Path,
+    archived_plan_path: Path,
+    incident_manifest: Mapping[str, Any],
+    legacy_liveness_observation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Machine-verify payloads while exposing only allowlisted hashes/counts."""
 
@@ -1756,14 +1914,27 @@ def verify_payload_semantics(
     before = verify_incident_manifest(
         incident_manifest, root=root, require_exact=True
     )
-    lineage = verify_legacy_lineage(
-        output_root=root,
-        archived_plan_path=archived_plan_path,
-        expected_source_commit=str(before["original_source_commit"]),
-        expected_plan_payload_sha256=str(
-            before["original_plan_payload_sha256"]
-        ),
-    )
+    if legacy_liveness_observation is None:
+        lineage = verify_legacy_lineage(
+            output_root=root,
+            archived_plan_path=archived_plan_path,
+            expected_source_commit=str(before["original_source_commit"]),
+            expected_plan_payload_sha256=str(
+                before["original_plan_payload_sha256"]
+            ),
+        )
+    else:
+        static_lineage = _verify_legacy_lineage_static(
+            output_root=root,
+            archived_plan_path=archived_plan_path,
+            expected_source_commit=str(before["original_source_commit"]),
+            expected_plan_payload_sha256=str(
+                before["original_plan_payload_sha256"]
+            ),
+        )
+        lineage = _compose_legacy_lineage_evidence(
+            static_lineage, legacy_liveness_observation
+        )
     plan = _verify_canonical_mapping_file(
         archived_plan_path, label="archived exact plan"
     )
@@ -2091,8 +2262,18 @@ def build_payload_seal(
                 Path(verified_auth["incident_manifest_path"]),
                 label="incident manifest",
             ),
+            legacy_liveness_observation=verified_auth[
+                "stale_lock_liveness_observation"
+            ],
         )
     )
+    if (
+        semantic_verification["legacy_lineage_evidence_sha256"]
+        != verified_auth["legacy_lineage_evidence_sha256"]
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "payload semantic lineage differs from frozen authorization evidence"
+        )
     payload: dict[str, Any] = {
         "schema_version": PAYLOAD_SEAL_SCHEMA,
         "state": "PAYLOAD_COMPLETION_SEALED",
@@ -2159,21 +2340,14 @@ def build_recovery_failure(
     failure_phase: str,
     recorded_at_utc: str,
 ) -> dict[str, Any]:
-    if failure_state not in {
-        "RECOVERY_REJECTED",
-        "RECOVERY_INTERRUPTED",
-        "PAYLOAD_MISMATCH",
-    }:
+    if failure_state not in FAILURE_PHASES_BY_STATE:
         raise Gate12C2CloseoutRecoveryError("recovery failure state is invalid")
-    allowed_phases = {
-        "attempt_claimed",
-        "consumption_publication",
-        "post_consumption_restart",
-        "payload_verification",
-        "seal_publication",
-    }
-    if failure_phase not in allowed_phases:
+    if failure_phase not in FAILURE_PHASE_CONSUMPTION:
         raise Gate12C2CloseoutRecoveryError("recovery failure phase is invalid")
+    if failure_phase not in FAILURE_PHASES_BY_STATE[failure_state]:
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery failure state and phase are inconsistent"
+        )
     verified_auth = verify_recovery_authorization(
         authorization, require_current_freshness=False
     )
@@ -2186,6 +2360,15 @@ def build_recovery_failure(
             consumption,
             authorization=verified_auth,
             attempt=verified_attempt,
+        )
+    consumption_requirement = FAILURE_PHASE_CONSUMPTION[failure_phase]
+    consumption_present = verified_consumption is not None
+    if (
+        (consumption_requirement == "absent" and consumption_present)
+        or (consumption_requirement == "present" and not consumption_present)
+    ):
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery failure phase and consumption status are inconsistent"
         )
     recorded = parse_utc(recorded_at_utc, label="recovery failure time")
     earliest = parse_utc(
@@ -2293,6 +2476,19 @@ def build_terminal_claim(
             hash_field="recovery_failure_payload_sha256",
             label="closeout recovery failure",
         )
+        expected_failure = build_recovery_failure(
+            authorization=verified_auth,
+            attempt=verified_attempt,
+            consumption=verified_consumption,
+            failure_state=str(supplied_outcome.get("state", "")),
+            failure_phase=str(supplied_outcome.get("failure_phase", "")),
+            recorded_at_utc=str(supplied_outcome.get("recorded_at_utc", "")),
+        )
+        if supplied_outcome != expected_failure:
+            raise Gate12C2CloseoutRecoveryError(
+                "terminal recovery failure differs from exact evidence"
+            )
+        supplied_outcome = expected_failure
         terminal_kind = "recovery_failure"
         outcome_payload_sha256 = supplied_outcome[
             "recovery_failure_payload_sha256"
@@ -2381,6 +2577,63 @@ def verify_terminal_claim(
     return expected
 
 
+def _verify_published_attempt_and_consumption(
+    *,
+    authorization: Mapping[str, Any],
+    attempt: Mapping[str, Any],
+    consumption: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None]:
+    """Bind terminal publication to canonical physical execution evidence."""
+
+    verified_auth = verify_recovery_authorization(
+        authorization, require_current_freshness=False
+    )
+    actual_attempt = _verify_canonical_mapping_file(
+        Path(verified_auth["attempt_output"]),
+        label="closeout recovery attempt",
+    )
+    verified_attempt = verify_attempt_receipt(
+        actual_attempt, authorization=verified_auth
+    )
+    supplied_attempt = verify_attempt_receipt(
+        attempt, authorization=verified_auth
+    )
+    if actual_attempt != supplied_attempt:
+        raise Gate12C2CloseoutRecoveryError(
+            "recovery terminal attempt evidence differs"
+        )
+    actual_consumption = _canonical_mapping_if_present(
+        Path(verified_auth["consumption_output"]),
+        label="closeout recovery consumption",
+    )
+    if consumption is None:
+        if actual_consumption is not None:
+            raise Gate12C2CloseoutRecoveryError(
+                "recovery terminal omits published consumption evidence"
+            )
+        verified_consumption = None
+    else:
+        if actual_consumption is None:
+            raise Gate12C2CloseoutRecoveryError(
+                "recovery terminal consumption evidence is missing"
+            )
+        supplied_consumption = verify_consumption_receipt(
+            consumption,
+            authorization=verified_auth,
+            attempt=verified_attempt,
+        )
+        verified_consumption = verify_consumption_receipt(
+            actual_consumption,
+            authorization=verified_auth,
+            attempt=verified_attempt,
+        )
+        if actual_consumption != supplied_consumption:
+            raise Gate12C2CloseoutRecoveryError(
+                "recovery terminal consumption evidence differs"
+            )
+    return verified_auth, verified_attempt, verified_consumption
+
+
 def _publish_terminal_outcome(
     *,
     authorization: Mapping[str, Any],
@@ -2388,17 +2641,24 @@ def _publish_terminal_outcome(
     consumption: Mapping[str, Any] | None,
     outcome: Mapping[str, Any],
 ) -> dict[str, Any]:
-    terminal_path = Path(authorization["terminal_output"])
-    seal_path = Path(authorization["seal_output"])
-    failure_path = Path(authorization["failure_output"])
+    verified_auth, verified_attempt, verified_consumption = (
+        _verify_published_attempt_and_consumption(
+            authorization=authorization,
+            attempt=attempt,
+            consumption=consumption,
+        )
+    )
+    terminal_path = Path(verified_auth["terminal_output"])
+    seal_path = Path(verified_auth["seal_output"])
+    failure_path = Path(verified_auth["failure_output"])
     if terminal_path.exists() or seal_path.exists() or failure_path.exists():
         raise Gate12C2CloseoutRecoveryError(
             "recovery authorization already has a terminal state"
         )
     claim = build_terminal_claim(
-        authorization=authorization,
-        attempt=attempt,
-        consumption=consumption,
+        authorization=verified_auth,
+        attempt=verified_attempt,
+        consumption=verified_consumption,
         outcome=outcome,
         terminal_claimed_at_utc=utc_now().isoformat(),
     )
@@ -2423,6 +2683,7 @@ def _publish_terminal_outcome(
         )
     return claim
 
+
 def verify_recovery_failure(
     failure: Mapping[str, Any],
     *,
@@ -2436,52 +2697,13 @@ def verify_recovery_failure(
         hash_field="recovery_failure_payload_sha256",
         label="closeout recovery failure",
     )
-    verified_auth = verify_recovery_authorization(
-        authorization, require_current_freshness=False
-    )
-    actual_attempt = _verify_canonical_mapping_file(
-        Path(verified_auth["attempt_output"]),
-        label="closeout recovery attempt",
-    )
-    verified_attempt = verify_attempt_receipt(
-        actual_attempt, authorization=verified_auth
-    )
-    supplied_attempt = verify_attempt_receipt(
-        attempt, authorization=verified_auth
-    )
-    if actual_attempt != supplied_attempt:
-        raise Gate12C2CloseoutRecoveryError(
-            "recovery failure attempt evidence differs"
+    verified_auth, verified_attempt, verified_consumption = (
+        _verify_published_attempt_and_consumption(
+            authorization=authorization,
+            attempt=attempt,
+            consumption=consumption,
         )
-    actual_consumption = _canonical_mapping_if_present(
-        Path(verified_auth["consumption_output"]),
-        label="closeout recovery consumption",
     )
-    verified_consumption = None
-    if consumption is None:
-        if actual_consumption is not None:
-            raise Gate12C2CloseoutRecoveryError(
-                "recovery failure omits published consumption evidence"
-            )
-    else:
-        if actual_consumption is None:
-            raise Gate12C2CloseoutRecoveryError(
-                "recovery failure consumption evidence is missing"
-            )
-        supplied_consumption = verify_consumption_receipt(
-            consumption,
-            authorization=verified_auth,
-            attempt=verified_attempt,
-        )
-        verified_consumption = verify_consumption_receipt(
-            actual_consumption,
-            authorization=verified_auth,
-            attempt=verified_attempt,
-        )
-        if actual_consumption != supplied_consumption:
-            raise Gate12C2CloseoutRecoveryError(
-                "recovery failure consumption evidence differs"
-            )
     expected = build_recovery_failure(
         authorization=verified_auth,
         attempt=verified_attempt,
@@ -2523,6 +2745,7 @@ def verify_recovery_failure(
             "terminal claim is not a recovery failure"
         )
     return expected
+
 
 def _canonical_mapping_if_present(path: Path, *, label: str) -> dict[str, Any] | None:
     if not Path(path).exists():
@@ -2572,6 +2795,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
     authorization = _load_authorization_for_execution(
         authorization_path, require_current_freshness=False
     )
+    _require_current_recovery_execution_context(authorization)
     attempt_path = Path(authorization["attempt_output"])
     consumption_path = Path(authorization["consumption_output"])
     terminal_path = Path(authorization["terminal_output"])
@@ -2643,7 +2867,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
         attempt_path, attempt, label="closeout recovery attempt"
     )
     consumption: dict[str, Any] | None = None
-    published_consumption: dict[str, Any] | None = None
+
     phase = "consumption_publication"
     try:
         consumption = build_consumption_receipt(
@@ -2656,7 +2880,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             consumption,
             label="closeout recovery consumption",
         )
-        published_consumption = verify_consumption_receipt(
+        consumption = verify_consumption_receipt(
             consumption,
             authorization=authorization,
             attempt=attempt,
@@ -2687,11 +2911,27 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             and isinstance(error, Gate12C2CloseoutRecoveryError)
             else "RECOVERY_INTERRUPTED"
         )
+        try:
+            physical_consumption = _canonical_mapping_if_present(
+                consumption_path,
+                label="closeout recovery consumption",
+            )
+            verified_physical_consumption = None
+            if physical_consumption is not None:
+                verified_physical_consumption = verify_consumption_receipt(
+                    physical_consumption,
+                    authorization=authorization,
+                    attempt=attempt,
+                )
+        except Exception:
+            raise Gate12C2CloseoutRecoveryError(
+                "published recovery consumption could not be verified"
+            ) from None
         if not seal_path.exists() and not failure_path.exists():
             failure = build_recovery_failure(
                 authorization=authorization,
                 attempt=attempt,
-                consumption=published_consumption,
+                consumption=verified_physical_consumption,
                 failure_state=failure_state,
                 failure_phase=phase,
                 recorded_at_utc=utc_now().isoformat(),
@@ -2699,7 +2939,7 @@ def execute_payload_seal(authorization_path: Path) -> dict[str, Any]:
             _publish_terminal_outcome(
                 authorization=authorization,
                 attempt=attempt,
-                consumption=published_consumption,
+                consumption=verified_physical_consumption,
                 outcome=failure,
             )
         raise Gate12C2CloseoutRecoveryError(

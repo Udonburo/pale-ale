@@ -481,11 +481,19 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             "authorization_payload_sha256": "a" * 64,
             "issued_at_utc": "2026-07-27T00:00:00+00:00",
             "expires_at_utc": "2026-07-29T00:00:00+00:00",
+            "hostname": recovery.socket.gethostname(),
             "output_root": self.root.resolve().as_posix(),
             "incident_manifest_path": (self.base / "incident.json").as_posix(),
             "archived_plan_path": (self.base / "archived.json").as_posix(),
             "incident_manifest_payload_sha256": "b" * 64,
             "amendment_payload_sha256": "c" * 64,
+            "legacy_lineage_evidence_sha256": "f" * 64,
+            "stale_lock_liveness_observation": {
+                "pid": 2147483647,
+                "state": recovery.PROCESS_DEAD,
+                "observed_at_utc": "2026-07-27T00:00:00+00:00",
+                "stale_lock_payload_sha256": "d" * 64,
+            },
             "authorization_output": authorization_path.as_posix(),
             "attempt_output": attempt.as_posix(),
             "consumption_output": consumption.as_posix(),
@@ -676,6 +684,131 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                     consumption=other_consumption,
                 )
 
+    def test_unverifiable_published_consumption_emits_no_terminal(self) -> None:
+        auth_path, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ), mock.patch.object(
+            recovery,
+            "verify_consumption_receipt",
+            side_effect=recovery.Gate12C2CloseoutRecoveryError(
+                "transient verification sentinel"
+            ),
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "published recovery consumption could not be verified",
+            ):
+                recovery.execute_payload_seal(auth_path)
+        self.assertTrue(Path(authorization["attempt_output"]).is_file())
+        self.assertTrue(Path(authorization["consumption_output"]).is_file())
+        self.assertFalse(Path(authorization["terminal_output"]).exists())
+        self.assertFalse(Path(authorization["failure_output"]).exists())
+        self.assertFalse(Path(authorization["seal_output"]).exists())
+
+    def test_terminal_publisher_rejects_omitted_physical_consumption(self) -> None:
+        _, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=self.NOW,
+                process_identity_value={
+                    "pid": 1,
+                    "identity_kind": "fixture",
+                    "start_marker": "one",
+                },
+            )
+            recovery.write_exclusive_atomic(
+                Path(authorization["attempt_output"]), attempt
+            )
+            consumption = recovery.build_consumption_receipt(
+                authorization,
+                attempt,
+                consumed_at_utc=self.NOW,
+                require_current_freshness=False,
+            )
+            recovery.write_exclusive_atomic(
+                Path(authorization["consumption_output"]), consumption
+            )
+            failure = recovery.build_recovery_failure(
+                authorization=authorization,
+                attempt=attempt,
+                consumption=None,
+                failure_state="RECOVERY_INTERRUPTED",
+                failure_phase="consumption_publication",
+                recorded_at_utc=self.NOW,
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "omits published consumption",
+            ):
+                recovery._publish_terminal_outcome(
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=None,
+                    outcome=failure,
+                )
+        self.assertFalse(Path(authorization["terminal_output"]).exists())
+        self.assertFalse(Path(authorization["failure_output"]).exists())
+    def test_terminal_publisher_rejects_rehashed_invalid_failure_matrix(self) -> None:
+        _, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=self.NOW,
+                process_identity_value={
+                    "pid": 1,
+                    "identity_kind": "fixture",
+                    "start_marker": "one",
+                },
+            )
+            recovery.write_exclusive_atomic(
+                Path(authorization["attempt_output"]), attempt
+            )
+            consumption = recovery.build_consumption_receipt(
+                authorization,
+                attempt,
+                consumed_at_utc=self.NOW,
+                require_current_freshness=False,
+            )
+            recovery.write_exclusive_atomic(
+                Path(authorization["consumption_output"]), consumption
+            )
+            failure = recovery.build_recovery_failure(
+                authorization=authorization,
+                attempt=attempt,
+                consumption=consumption,
+                failure_state="RECOVERY_INTERRUPTED",
+                failure_phase="payload_verification",
+                recorded_at_utc=self.NOW,
+            )
+            failure["failure_phase"] = "attempt_claimed"
+            failure.pop("recovery_failure_payload_sha256")
+            failure["recovery_failure_payload_sha256"] = recovery.sha256_bytes(
+                recovery.canonical_json_bytes(failure)
+            )
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "inconsistent",
+            ):
+                recovery._publish_terminal_outcome(
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=consumption,
+                    outcome=failure,
+                )
+        self.assertFalse(Path(authorization["terminal_output"]).exists())
+        self.assertFalse(Path(authorization["failure_output"]).exists())
     def test_lock_retirement_is_unavailable(self) -> None:
         with self.assertRaisesRegex(
             recovery.Gate12C2CloseoutRecoveryError, "remains HOLD"
@@ -749,8 +882,25 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         review_path = self._write_mapping("review.json", review)
         archived = self.base / "archived-for-auth.json"
         archived.write_bytes(b"archived-plan-placeholder")
+        lineage_static = {
+            "legacy": "ok",
+            "stale_lock_payload_sha256": "d" * 64,
+            "stale_lock_pid": 2147483647,
+        }
+
+        def frozen_lineage(**kwargs: object) -> dict[str, object]:
+            observation = {
+                "pid": 2147483647,
+                "state": recovery.PROCESS_DEAD,
+                "observed_at_utc": kwargs["observed_at_utc"],
+                "stale_lock_payload_sha256": "d" * 64,
+            }
+            return recovery._compose_legacy_lineage_evidence(
+                lineage_static, observation
+            )
+
         with mock.patch.object(
-            recovery, "verify_legacy_lineage", return_value={"legacy": "ok"}
+            recovery, "verify_legacy_lineage", side_effect=frozen_lineage
         ):
             authorization = recovery.build_recovery_authorization(
                 amendment_path=amendment_path,
@@ -776,12 +926,14 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 seal_output=self.base / "auth-output/seal.json",
                 failure_output=self.base / "auth-output/failure.json",
             )
-        return authorization, {"legacy": "ok"}
+        return authorization, lineage_static
 
     def test_authorization_is_closed_schema_and_no_lock_retirement(self) -> None:
         authorization, lineage = self._authorization_packet()
         with mock.patch.object(
-            recovery, "verify_legacy_lineage", return_value=lineage
+            recovery, "_verify_legacy_lineage_static", return_value=lineage
+        ), mock.patch.object(
+            recovery, "process_pid_state", return_value=recovery.PROCESS_DEAD
         ):
             verified = recovery.verify_recovery_authorization(
                 authorization, require_current_freshness=True
@@ -801,6 +953,32 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 tampered, require_current_freshness=True
             )
 
+    def test_authorization_rejects_rehashed_liveness_observation_changes(self) -> None:
+        authorization, lineage_static = self._authorization_packet()
+        attacks = (
+            ("state", recovery.PROCESS_ACTIVE),
+            ("observed_at_utc", "2026-07-28T00:00:01+00:00"),
+            ("unexpected", "sentinel"),
+        )
+        for field, value in attacks:
+            with self.subTest(field=field):
+                tampered = copy.deepcopy(authorization)
+                tampered["stale_lock_liveness_observation"][field] = value
+                tampered.pop("authorization_payload_sha256")
+                tampered["authorization_payload_sha256"] = recovery.sha256_bytes(
+                    recovery.canonical_json_bytes(tampered)
+                )
+                with mock.patch.object(
+                    recovery,
+                    "_verify_legacy_lineage_static",
+                    return_value=lineage_static,
+                ):
+                    with self.assertRaises(
+                        recovery.Gate12C2CloseoutRecoveryError
+                    ):
+                        recovery.verify_recovery_authorization(
+                            tampered, require_current_freshness=False
+                        )
     def test_authorization_outputs_cannot_be_inside_profile_root(self) -> None:
         with self.assertRaisesRegex(
             recovery.Gate12C2CloseoutRecoveryError, "outside the profile root"
@@ -940,7 +1118,9 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             recovery.canonical_json_bytes(tampered)
         )
         with mock.patch.object(
-            recovery, "verify_legacy_lineage", return_value=lineage
+            recovery, "_verify_legacy_lineage_static", return_value=lineage
+        ), mock.patch.object(
+            recovery, "process_pid_state", return_value=recovery.PROCESS_DEAD
         ):
             with self.assertRaisesRegex(
                 recovery.Gate12C2CloseoutRecoveryError,
@@ -950,6 +1130,41 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                     tampered, require_current_freshness=True
                 )
 
+    def test_execution_restart_rechecks_current_stale_lock(self) -> None:
+        auth_path, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=self.NOW,
+                process_identity_value={
+                    "pid": 2147483647,
+                    "identity_kind": "fixture",
+                    "start_marker": "one",
+                },
+            )
+            recovery.write_exclusive_atomic(
+                Path(authorization["attempt_output"]), attempt
+            )
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ), mock.patch.object(
+            recovery,
+            "process_pid_state",
+            return_value=recovery.PROCESS_UNKNOWN,
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "not definitively dead",
+            ):
+                recovery.execute_payload_seal(auth_path)
+        self.assertFalse(Path(authorization["terminal_output"]).exists())
+        self.assertFalse(Path(authorization["failure_output"]).exists())
     def test_post_consumption_restart_seals_interrupted_attempt(self) -> None:
         auth_path, authorization = self._mock_authorization()
         dead_identity = {
@@ -1239,6 +1454,111 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         ):
             self.assertEqual(recovery.verify_failure_receipt(failure), failure)
 
+    def test_historical_authorization_does_not_remeasure_stale_lock(self) -> None:
+        authorization, lineage_static = self._authorization_packet()
+        with mock.patch.object(
+            recovery,
+            "_verify_legacy_lineage_static",
+            return_value=lineage_static,
+        ), mock.patch.object(
+            recovery,
+            "process_pid_state",
+            side_effect=AssertionError("historical PID state was remeasured"),
+        ), mock.patch.object(
+            recovery.socket,
+            "gethostname",
+            return_value="different-future-audit-host",
+        ):
+            verified = recovery.verify_recovery_authorization(
+                authorization, require_current_freshness=False
+            )
+        self.assertEqual(verified, authorization)
+
+    def test_current_authorization_requires_dead_stale_lock(self) -> None:
+        authorization, lineage_static = self._authorization_packet()
+        with mock.patch.object(
+            recovery,
+            "_verify_legacy_lineage_static",
+            return_value=lineage_static,
+        ), mock.patch.object(
+            recovery,
+            "process_pid_state",
+            return_value=recovery.PROCESS_ACTIVE,
+        ):
+            with self.assertRaisesRegex(
+                recovery.Gate12C2CloseoutRecoveryError,
+                "not definitively dead",
+            ):
+                recovery.verify_recovery_authorization(
+                    authorization, require_current_freshness=True
+                )
+
+    def test_failure_state_phase_consumption_matrix_is_closed(self) -> None:
+        _, authorization = self._mock_authorization()
+        with mock.patch.object(
+            recovery,
+            "verify_recovery_authorization",
+            return_value=authorization,
+        ):
+            attempt = recovery.build_attempt_receipt(
+                authorization,
+                claimed_at_utc=self.NOW,
+                process_identity_value={
+                    "pid": 1,
+                    "identity_kind": "fixture",
+                    "start_marker": "one",
+                },
+            )
+            consumption = recovery.build_consumption_receipt(
+                authorization,
+                attempt,
+                consumed_at_utc=self.NOW,
+                require_current_freshness=False,
+            )
+            invalid = (
+                ("RECOVERY_INTERRUPTED", "attempt_claimed", consumption),
+                ("RECOVERY_INTERRUPTED", "post_consumption_restart", None),
+                ("RECOVERY_INTERRUPTED", "payload_verification", None),
+                ("RECOVERY_INTERRUPTED", "seal_publication", None),
+                ("PAYLOAD_MISMATCH", "seal_publication", consumption),
+                ("RECOVERY_REJECTED", "attempt_claimed", None),
+            )
+            for state, phase, evidence in invalid:
+                with self.subTest(state=state, phase=phase):
+                    with self.assertRaisesRegex(
+                        recovery.Gate12C2CloseoutRecoveryError,
+                        "inconsistent",
+                    ):
+                        recovery.build_recovery_failure(
+                            authorization=authorization,
+                            attempt=attempt,
+                            consumption=evidence,
+                            failure_state=state,
+                            failure_phase=phase,
+                            recorded_at_utc=self.NOW,
+                        )
+            for evidence in (None, consumption):
+                valid = recovery.build_recovery_failure(
+                    authorization=authorization,
+                    attempt=attempt,
+                    consumption=evidence,
+                    failure_state="RECOVERY_INTERRUPTED",
+                    failure_phase="consumption_publication",
+                    recorded_at_utc=self.NOW,
+                )
+                self.assertEqual(
+                    valid["consumption_status"],
+                    "present_verified" if evidence is not None else "not_created",
+                )
+            mismatch = recovery.build_recovery_failure(
+                authorization=authorization,
+                attempt=attempt,
+                consumption=consumption,
+                failure_state="PAYLOAD_MISMATCH",
+                failure_phase="payload_verification",
+                recorded_at_utc=self.NOW,
+            )
+            self.assertEqual(mismatch["state"], "PAYLOAD_MISMATCH")
     def test_receipt_timestamps_must_be_monotone(self) -> None:
         _, authorization = self._mock_authorization()
         with mock.patch.object(
