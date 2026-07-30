@@ -1381,6 +1381,8 @@ class LaunchDeadlineWatchdog:
             raise Gate12C2ResourceQualificationError(
                 "watchdog-local launch state type is invalid"
             )
+        self._state_lock = threading.RLock()
+        self._ack_ownership_lock = threading.Lock()
         try:
             local_launch.reverify_for_watchdog()
         except Exception:
@@ -1399,6 +1401,7 @@ class LaunchDeadlineWatchdog:
         self.ack_monotonic_ns: int | None = None
         self.verified = False
         self.terminated = False
+        self._ack_claim_active = False
         self.job_handle_close_verified = False
         self.close_attempt_count = 0
 
@@ -1412,23 +1415,27 @@ class LaunchDeadlineWatchdog:
         return int(value)
 
     def _terminate(self, reason: str) -> None:
-        self.terminated = True
-        last_error = False
-        if not self.job_handle_close_verified:
-            for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
-                self.close_attempt_count += 1
-                try:
-                    self._local_launch.close_for_kill()
-                except Exception:
-                    last_error = True
-                    continue
-                self.job_handle_close_verified = True
-                last_error = False
-                break
-        if not self.job_handle_close_verified or last_error:
-            raise Gate12C2ResourceQualificationError(
-                f"{reason}; Job handle close failed"
-            ) from None
+        with self._state_lock:
+            self.terminated = True
+            self.verified = False
+            self.ack_monotonic_ns = None
+            self._ack_claim_active = False
+            last_error = False
+            if not self.job_handle_close_verified:
+                for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
+                    self.close_attempt_count += 1
+                    try:
+                        self._local_launch.close_for_kill()
+                    except Exception:
+                        last_error = True
+                        continue
+                    self.job_handle_close_verified = True
+                    last_error = False
+                    break
+            if not self.job_handle_close_verified or last_error:
+                raise Gate12C2ResourceQualificationError(
+                    f"{reason}; Job handle close failed"
+                ) from None
         raise Gate12C2ResourceQualificationError(reason) from None
 
     @property
@@ -1459,6 +1466,25 @@ class LaunchDeadlineWatchdog:
         if not self.verified and self._clock() >= self.deadline_monotonic_ns:
             self._terminate("launch acknowledgement is missing at deadline")
 
+    def _validated_poll_seconds(self, poll_seconds: float) -> float:
+        if (
+            not isinstance(poll_seconds, (int, float))
+            or isinstance(poll_seconds, bool)
+            or not math.isfinite(float(poll_seconds))
+            or poll_seconds <= 0
+            or poll_seconds > 0.1
+        ):
+            self._terminate("watchdog polling interval is invalid")
+        return float(poll_seconds)
+
+    def _remaining_deadline_seconds(self, *, reason: str) -> float:
+        if self.resume_success_monotonic_ns is None:
+            self._terminate("launch deadline is not armed")
+        remaining_ns = self.deadline_monotonic_ns - self._clock()
+        if remaining_ns <= 0:
+            self._terminate(reason)
+        return remaining_ns / 1_000_000_000
+
     def _call_until_deadline(
         self,
         callback: Callable[[], object],
@@ -1466,6 +1492,7 @@ class LaunchDeadlineWatchdog:
         failure_reason: str,
         poll_seconds: float,
     ) -> object:
+        poll = self._validated_poll_seconds(poll_seconds)
         result_queue: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=1)
 
         def invoke() -> None:
@@ -1486,8 +1513,14 @@ class LaunchDeadlineWatchdog:
         except Exception:
             self._terminate(f"{failure_reason} thread failed")
         while True:
+            wait_seconds = min(
+                poll,
+                self._remaining_deadline_seconds(
+                    reason="launch acknowledgement missed the deadline"
+                ),
+            )
             try:
-                status, value = result_queue.get(timeout=poll_seconds)
+                status, value = result_queue.get(timeout=wait_seconds)
             except queue.Empty:
                 self.enforce_deadline()
                 continue
@@ -1506,25 +1539,66 @@ class LaunchDeadlineWatchdog:
         *,
         poll_seconds: float = 0.01,
     ) -> int:
+        poll = self._validated_poll_seconds(poll_seconds)
         if self.resume_success_monotonic_ns is None:
             self._terminate("acknowledgement preceded scientific resume")
-        if self.verified:
-            self._terminate("launch acknowledgement is duplicated")
-        if acknowledgement is None:
-            self._terminate("launch acknowledgement is missing")
-        verified = self._call_until_deadline(
-            lambda: verifier(acknowledgement),
-            failure_reason="launch acknowledgement verifier failed",
-            poll_seconds=poll_seconds,
+        with self._state_lock:
+            if self.terminated:
+                raise Gate12C2ResourceQualificationError(
+                    "launch acknowledgement arrived after termination"
+                )
+            if self.verified or self._ack_claim_active:
+                self._terminate("launch acknowledgement is duplicated")
+            self._ack_claim_active = True
+        ownership_wait = self._remaining_deadline_seconds(
+            reason="launch acknowledgement ownership missed the deadline"
         )
-        if verified is not True:
-            self._terminate("launch acknowledgement is invalid")
-        acknowledgement_time = self._clock()
-        if acknowledgement_time >= self.deadline_monotonic_ns:
-            self._terminate("launch acknowledgement missed the deadline")
-        self.ack_monotonic_ns = acknowledgement_time
-        self.verified = True
-        return acknowledgement_time
+        try:
+            ownership_acquired = self._ack_ownership_lock.acquire(
+                timeout=ownership_wait
+            )
+        except Exception:
+            self._terminate("launch acknowledgement ownership failed")
+        if not ownership_acquired:
+            self._terminate(
+                "launch acknowledgement ownership missed the deadline"
+            )
+        try:
+            if self._clock() >= self.deadline_monotonic_ns:
+                self._terminate(
+                    "launch acknowledgement ownership missed the deadline"
+                )
+            with self._state_lock:
+                if self.terminated:
+                    raise Gate12C2ResourceQualificationError(
+                        "launch acknowledgement arrived after termination"
+                    )
+                if self.verified:
+                    self._terminate("launch acknowledgement is duplicated")
+            if acknowledgement is None:
+                self._terminate("launch acknowledgement is missing")
+            verified = self._call_until_deadline(
+                lambda: verifier(acknowledgement),
+                failure_reason="launch acknowledgement verifier failed",
+                poll_seconds=poll,
+            )
+            if verified is not True:
+                self._terminate("launch acknowledgement is invalid")
+            acknowledgement_time = self._clock()
+            if acknowledgement_time >= self.deadline_monotonic_ns:
+                self._terminate("launch acknowledgement missed the deadline")
+            with self._state_lock:
+                if self.terminated:
+                    raise Gate12C2ResourceQualificationError(
+                        "launch acknowledgement arrived after termination"
+                    )
+                self.ack_monotonic_ns = acknowledgement_time
+                self.verified = True
+            return acknowledgement_time
+        finally:
+            self._ack_ownership_lock.release()
+            with self._state_lock:
+                self._ack_claim_active = False
 
     def run_until_verified(
         self,
@@ -1535,26 +1609,19 @@ class LaunchDeadlineWatchdog:
     ) -> int:
         if self.resume_success_monotonic_ns is None:
             self._terminate("launch deadline is not armed")
-        if (
-            not isinstance(poll_seconds, (int, float))
-            or isinstance(poll_seconds, bool)
-            or not math.isfinite(float(poll_seconds))
-            or poll_seconds <= 0
-            or poll_seconds > 0.1
-        ):
-            self._terminate("watchdog polling interval is invalid")
+        poll = self._validated_poll_seconds(poll_seconds)
         while not self.verified:
             self.enforce_deadline()
             acknowledgement = self._call_until_deadline(
                 acknowledgement_supplier,
                 failure_reason="launch acknowledgement supplier failed",
-                poll_seconds=float(poll_seconds),
+                poll_seconds=poll,
             )
             if acknowledgement is not None:
                 return self.verify_acknowledgement(
                     acknowledgement,
                     verifier,
-                    poll_seconds=float(poll_seconds),
+                    poll_seconds=poll,
                 )
         if self.ack_monotonic_ns is None:
             self._terminate("verified acknowledgement lacks watchdog time")
@@ -1822,7 +1889,7 @@ def verify_resource_envelope(
         raise Gate12C2ResourceQualificationError(
             "resource evidence P/S/M/J commitment mismatch"
         )
-    available_floor = geometry.physical_ram_bytes // 10
+    available_floor = (geometry.physical_ram_bytes + 9) // 10
     preflight_free = values["preflight_free_bytes"]
     if (
         preflight_free < MINIMUM_PREFLIGHT_FREE_BYTES
@@ -2418,26 +2485,29 @@ class WindowsJobApi:
         process_handle = _raw_handle_value(process_info.hProcess)
         thread_handle = _raw_handle_value(process_info.hThread)
         if creation_error:
-            self._close_residual_process_information(
-                process_handle, thread_handle
+            self._cleanup_failed_scientific_launch(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
             )
-            self.close_handle_verified(job_handle)
             raise Gate12C2ResourceQualificationError(
                 "atomic scientific-child launch preparation failed"
             ) from None
         if not create_succeeded:
-            self._close_residual_process_information(
-                process_handle, thread_handle
+            self._cleanup_failed_scientific_launch(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
             )
-            self.close_handle_verified(job_handle)
             raise Gate12C2ResourceQualificationError(
                 "CreateProcessW failed for the scientific child"
             )
         if not delete_reached:
-            self._close_residual_process_information(
-                process_handle, thread_handle
+            self._cleanup_failed_scientific_launch(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
             )
-            self.close_handle_verified(job_handle)
             raise Gate12C2ResourceQualificationError(
                 "process-attribute deletion was not verified"
             )
@@ -2450,9 +2520,10 @@ class WindowsJobApi:
                 declared_thread_id=int(process_info.dwThreadId),
             )
         except Exception:
-            self.close_handle_verified(job_handle)
-            self._close_residual_process_information(
-                process_handle, thread_handle
+            self._cleanup_failed_scientific_launch(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
             )
             raise
         try:
@@ -2467,9 +2538,10 @@ class WindowsJobApi:
                 attribute_bytes=storage.attribute_bytes,
             )
         except Exception:
-            self.close_handle_verified(job_handle)
-            self._close_residual_process_information(
-                process_handle, thread_handle
+            self._cleanup_failed_scientific_launch(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
             )
             raise Gate12C2ResourceQualificationError(
                 "watchdog-local launch state verification failed"
@@ -2776,6 +2848,38 @@ class WindowsJobApi:
             raise Gate12C2ResourceQualificationError(
                 "process-information cleanup failed"
             )
+
+    def _cleanup_failed_scientific_launch(
+        self,
+        *,
+        job_handle: int,
+        process_handle: int,
+        thread_handle: int,
+    ) -> None:
+        outcomes: list[tuple[str, str]] = []
+        for role, handle in (
+            ("job", job_handle),
+            ("thread", thread_handle),
+            ("process", process_handle),
+        ):
+            if handle <= 0:
+                outcomes.append((role, "absent"))
+                continue
+            try:
+                verified = self.close_handle_verified(handle)
+            except Exception:
+                outcomes.append((role, "unverified"))
+            else:
+                outcomes.append(
+                    (role, "closed" if verified is True else "unverified")
+                )
+        if any(status == "unverified" for _, status in outcomes):
+            summary = ",".join(
+                f"{role}={status}" for role, status in outcomes
+            )
+            raise Gate12C2ResourceQualificationError(
+                f"scientific-launch cleanup incomplete ({summary})"
+            ) from None
 
 
 def create_watchdog_local_scientific_launch(

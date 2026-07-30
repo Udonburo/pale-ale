@@ -759,7 +759,7 @@ class ResourceEnvelopeTest(unittest.TestCase):
             "sampled_combined_rss_bytes": (
                 geometry_value.mathematical_memory_limit_bytes
             ),
-            "sampled_available_physical_memory_bytes": physical // 10,
+            "sampled_available_physical_memory_bytes": (physical + 9) // 10,
             "preflight_free_bytes": preflight,
             "minimum_observed_free_bytes": preflight // 2,
             "qualification_output_bytes": (
@@ -801,7 +801,7 @@ class ResourceEnvelopeTest(unittest.TestCase):
             ),
             (
                 "sampled_available_physical_memory_bytes",
-                base["physical_ram_bytes"] // 10 - 1,
+                (base["physical_ram_bytes"] + 9) // 10 - 1,
             ),
             (
                 "minimum_observed_free_bytes",

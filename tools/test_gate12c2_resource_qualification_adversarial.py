@@ -5,6 +5,7 @@ import ctypes
 import json
 import os
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -96,6 +97,54 @@ class AtomicLaunchAdversarialTest(unittest.TestCase):
         self.assertIn("CreateProcessW", kernel.calls)
         self.assertEqual(kernel.delete_calls, 1)
         self.assertEqual(kernel.open_handles, set())
+
+    def test_failed_launch_closes_job_first_and_attempts_every_handle(
+        self,
+    ) -> None:
+        cases = (
+            (
+                "job",
+                FakeKernel32(delete_raises=True, fail_close_handles={100}),
+                {100},
+                "job=unverified,thread=closed,process=closed",
+            ),
+            (
+                "process",
+                FakeKernel32(delete_raises=True, fail_close_handles={200}),
+                {200},
+                "job=closed,thread=closed,process=unverified",
+            ),
+        )
+        for label, kernel, expected_open, expected_summary in cases:
+            with self.subTest(label=label):
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "scientific-launch cleanup incomplete",
+                ) as raised:
+                    self._launch(kernel)
+                self.assertEqual(
+                    kernel.close_calls[-3:],
+                    [
+                        kernel.job_handle,
+                        kernel.thread_handle,
+                        kernel.process_handle,
+                    ],
+                )
+                self.assertEqual(kernel.open_handles, expected_open)
+                self.assertIn(expected_summary, str(raised.exception))
+                self.assertNotIn("RAW_", str(raised.exception))
+
+    def test_job_close_exception_does_not_skip_child_handle_cleanup(
+        self,
+    ) -> None:
+        kernel = FakeKernel32(delete_raises=True, fail_close_handles={100})
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            self._launch(kernel)
+        self.assertNotIn(kernel.thread_handle, kernel.open_handles)
+        self.assertNotIn(kernel.process_handle, kernel.open_handles)
+        self.assertEqual(set(kernel.close_calls[-3:]), {100, 200, 300})
 
     def test_createprocess_failure_never_accepts_residual_identity(
         self,
@@ -317,6 +366,129 @@ class DeadlineAdversarialTest(unittest.TestCase):
                 verifier=lambda _: True,
             )
         self.assertIn(kernel.job_handle, kernel.open_handles)
+
+    def test_queue_wait_is_clamped_to_remaining_deadline(self) -> None:
+        launch, _, kernel = make_launch()
+        observed_timeouts: list[float] = []
+
+        class NeverCompletesQueue:
+            def __init__(self, *args, **kwargs) -> None:
+                del args, kwargs
+
+            def put(self, *args, **kwargs) -> None:
+                del args, kwargs
+
+            def get(self, *, timeout: float):
+                observed_timeouts.append(timeout)
+                raise resource.queue.Empty
+
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch,
+            monotonic_ns=Clock(0, 1_000_000, 2_000_000, 10_000_000),
+        )
+        with (
+            mock.patch.object(
+                resource, "LAUNCH_EVIDENCE_DEADLINE_NS", 10_000_000
+            ),
+            mock.patch.object(resource.queue, "Queue", NeverCompletesQueue),
+        ):
+            watchdog.resume_and_arm()
+            with self.assertRaisesRegex(
+                resource.Gate12C2ResourceQualificationError,
+                "missing at deadline",
+            ):
+                watchdog.run_until_verified(
+                    acknowledgement_supplier=lambda: None,
+                    verifier=lambda _: True,
+                    poll_seconds=0.1,
+                )
+        self.assertEqual(len(observed_timeouts), 1)
+        self.assertAlmostEqual(observed_timeouts[0], 0.008, places=9)
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_ack_ownership_wait_is_clamped_to_remaining_deadline(self) -> None:
+        launch, _, kernel = make_launch()
+        observed_timeouts: list[float] = []
+
+        class ContendedLock:
+            def acquire(self, *, timeout: float) -> bool:
+                observed_timeouts.append(timeout)
+                return False
+
+            def release(self) -> None:
+                raise AssertionError("unacquired lock must not be released")
+
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch,
+            monotonic_ns=Clock(0, 2_000_000),
+        )
+        watchdog._ack_ownership_lock = ContendedLock()
+        with mock.patch.object(
+            resource, "LAUNCH_EVIDENCE_DEADLINE_NS", 10_000_000
+        ):
+            watchdog.resume_and_arm()
+            with self.assertRaisesRegex(
+                resource.Gate12C2ResourceQualificationError,
+                "ownership missed the deadline",
+            ):
+                watchdog.verify_acknowledgement(
+                    {"status": "present"},
+                    lambda _: True,
+                    poll_seconds=0.1,
+                )
+        self.assertEqual(len(observed_timeouts), 1)
+        self.assertAlmostEqual(observed_timeouts[0], 0.008, places=9)
+        self.assertTrue(watchdog.terminated)
+        self.assertFalse(watchdog.verified)
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_concurrent_duplicate_ack_has_one_owner_and_no_final_success(
+        self,
+    ) -> None:
+        launch, _, kernel = make_launch()
+        watchdog = resource.LaunchDeadlineWatchdog(launch)
+        watchdog.resume_and_arm()
+        verifier_entered = threading.Event()
+        verifier_release = threading.Event()
+        results: list[int] = []
+        errors: list[str] = []
+
+        def verifier(_: object) -> bool:
+            verifier_entered.set()
+            if not verifier_release.wait(timeout=2):
+                raise RuntimeError("RAW_ACK_WAIT_SENTINEL")
+            return True
+
+        def attempt() -> None:
+            try:
+                results.append(
+                    watchdog.verify_acknowledgement(
+                        {"status": "present"}, verifier
+                    )
+                )
+            except resource.Gate12C2ResourceQualificationError as error:
+                errors.append(str(error))
+
+        first = threading.Thread(target=attempt, daemon=True)
+        second = threading.Thread(target=attempt, daemon=True)
+        first.start()
+        self.assertTrue(verifier_entered.wait(timeout=2))
+        second.start()
+        second.join(timeout=2)
+        self.assertFalse(second.is_alive())
+        verifier_release.set()
+        first.join(timeout=2)
+        self.assertFalse(first.is_alive())
+        self.assertEqual(results, [])
+        self.assertEqual(len(errors), 2)
+        self.assertTrue(any("duplicated" in error for error in errors))
+        self.assertFalse(
+            any("RAW_ACK_WAIT_SENTINEL" in error for error in errors)
+        )
+        self.assertTrue(watchdog.terminated)
+        self.assertFalse(watchdog.verified)
+        self.assertIsNone(watchdog.ack_monotonic_ns)
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
 
 
 class TelemetryPublicationAdversarialTest(unittest.TestCase):
@@ -747,17 +919,48 @@ class ResourceAndLineageAdversarialTest(unittest.TestCase):
         ):
             resource.verify_resource_envelope(attacked)
 
-    def test_available_floor_is_exact_floor_P_over_ten(self) -> None:
-        evidence = ResourceEnvelopeTest.passing_evidence()
-        evidence["sampled_available_physical_memory_bytes"] = (
-            evidence["physical_ram_bytes"] // 10
-        )
-        resource.verify_resource_envelope(evidence)
-        evidence["sampled_available_physical_memory_bytes"] -= 1
-        with self.assertRaises(
-            resource.Gate12C2ResourceQualificationError
-        ):
-            resource.verify_resource_envelope(evidence)
+    def test_available_floor_is_exact_ceil_P_over_ten_for_all_remainders(
+        self,
+    ) -> None:
+        for remainder in range(10):
+            with self.subTest(remainder=remainder):
+                evidence = ResourceEnvelopeTest.passing_evidence()
+                physical = 16_000_000_000 + remainder
+                geometry_value = resource.derive_resource_memory_geometry(
+                    physical, evidence["native_page_size_bytes"]
+                )
+                expected_floor = (physical + 9) // 10
+                evidence.update(
+                    {
+                        "physical_ram_bytes": physical,
+                        "mathematical_memory_limit_bytes": (
+                            geometry_value.mathematical_memory_limit_bytes
+                        ),
+                        "effective_job_memory_limit_bytes": (
+                            geometry_value.effective_job_memory_limit_bytes
+                        ),
+                        "rounding_delta_bytes": (
+                            geometry_value.rounding_delta_bytes
+                        ),
+                        "peak_job_memory_bytes": (
+                            geometry_value.effective_job_memory_limit_bytes
+                        ),
+                        "sampled_combined_rss_bytes": (
+                            geometry_value.mathematical_memory_limit_bytes
+                        ),
+                        "sampled_available_physical_memory_bytes": expected_floor,
+                    }
+                )
+                verified = resource.verify_resource_envelope(evidence)
+                self.assertEqual(
+                    verified["sampled_available_memory_floor_bytes"],
+                    expected_floor,
+                )
+                evidence["sampled_available_physical_memory_bytes"] -= 1
+                with self.assertRaises(
+                    resource.Gate12C2ResourceQualificationError
+                ):
+                    resource.verify_resource_envelope(evidence)
 
     def test_legacy_stack_and_root_surface_are_closed(self) -> None:
         base = GuardianAndClassifierTest.legacy_evidence()
