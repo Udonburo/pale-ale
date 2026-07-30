@@ -14,10 +14,13 @@ import ctypes
 import ctypes.wintypes
 import hashlib
 import json
+import math
 import os
+import queue
 import re
+import threading
 import time
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
@@ -35,6 +38,8 @@ TOTAL_WORST_CASE_DISK_BYTES = 5_094_441_575
 MINIMUM_PREFLIGHT_FREE_BYTES = 10_188_883_150
 MAXIMUM_WALL_SECONDS = 129_600
 LAUNCH_EVIDENCE_DEADLINE_NS = 60_000_000_000
+MAXIMUM_LIVE_GAP_NS = 1_000_000_000
+JOB_HANDLE_CLOSE_ATTEMPTS = 3
 
 EXPECTED_LEGACY_FAILURE_CODE = (
     "GATE12C2_CLOSEOUT_RESTORE_SCRATCH_ROOT_NOT_PROPAGATED"
@@ -45,6 +50,10 @@ EXPECTED_LEGACY_EXCEPTION_MESSAGE = (
 )
 EXPECTED_LEGACY_STDERR_SHA256 = (
     "41092dc60e3873d551e7a7f7141bd79bb4b2e63fec826ac78adc014fb76037b0"
+)
+EXPECTED_STALE_LOCK_RELATIVE_PATH = ".draw-profile.lock.json"
+EXPECTED_STALE_LOCK_FILE_SHA256 = (
+    "bfc44653d072c4d02bc9044788581245aad5a5082e1fae2b2ce4a22e8df753f7"
 )
 EXPECTED_LEGACY_STACK = (
     ("tools/run_gate12c2_draw_profile.py", 80, "<module>"),
@@ -260,11 +269,87 @@ class Gate12C2ResourceQualificationError(ValueError):
     """Raised when a bounded resource-qualification invariant is violated."""
 
 
+@dataclass(frozen=True)
+class JobHandleOwnershipProof:
+    """Mechanically established source-close and watchdog-handle evidence."""
+
+    source_pid: int
+    source_creation_time_ns: int
+    watchdog_pid: int
+    watchdog_creation_time_ns: int
+    watchdog_raw_handle: int
+    source_handle_closed: bool
+    target_handle_noninheritable: bool
+    target_handle_valid_job: bool
+
+    def __post_init__(self) -> None:
+        integer_fields = (
+            self.source_pid,
+            self.source_creation_time_ns,
+            self.watchdog_pid,
+            self.watchdog_creation_time_ns,
+            self.watchdog_raw_handle,
+        )
+        if any(type(value) is not int or value <= 0 for value in integer_fields):
+            raise Gate12C2ResourceQualificationError(
+                "Job ownership proof contains an invalid identity or handle"
+            )
+        if (
+            self.source_handle_closed is not True
+            or self.target_handle_noninheritable is not True
+            or self.target_handle_valid_job is not True
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "Job ownership proof is incomplete"
+            )
+
+
+_JOB_TRANSFER_RECEIPT_TOKEN = object()
+
+
+@dataclass(frozen=True)
+class JobHandleTransferReceipt:
+    """Launcher evidence emitted only after duplicate-and-close succeeds."""
+
+    source_pid: int
+    source_creation_time_ns: int
+    watchdog_pid: int
+    watchdog_creation_time_ns: int
+    watchdog_raw_handle: int
+    source_handle_closed: bool
+    duplicate_requested_noninheritable: bool
+    _token: InitVar[object | None] = None
+
+    def __post_init__(self, _token: object | None) -> None:
+        if _token is not _JOB_TRANSFER_RECEIPT_TOKEN:
+            raise Gate12C2ResourceQualificationError(
+                "direct Job transfer-receipt construction is forbidden"
+            )
+        integer_fields = (
+            self.source_pid,
+            self.source_creation_time_ns,
+            self.watchdog_pid,
+            self.watchdog_creation_time_ns,
+            self.watchdog_raw_handle,
+        )
+        if any(type(value) is not int or value <= 0 for value in integer_fields):
+            raise Gate12C2ResourceQualificationError(
+                "Job transfer receipt contains an invalid identity or handle"
+            )
+        if (
+            self.source_handle_closed is not True
+            or self.duplicate_requested_noninheritable is not True
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "Job transfer receipt does not prove source closure"
+            )
+
+
 class JobKillHandle(Protocol):
     """The watchdog-owned, non-inheritable final Job handle."""
 
-    sole_owner_verified: bool
     inheritable: bool
+    ownership_proof: JobHandleOwnershipProof
 
     def close_for_kill(self) -> None:
         """Close the final Job handle, invoking KILL_ON_JOB_CLOSE."""
@@ -515,13 +600,15 @@ class _TelemetryState:
             raise Gate12C2ResourceQualificationError(
                 "telemetry hash chain is discontinuous"
             )
-        if (
-            self.previous_monotonic_ns is not None
-            and monotonic_ns < self.previous_monotonic_ns
-        ):
-            raise Gate12C2ResourceQualificationError(
-                "telemetry monotonic time moved backwards"
-            )
+        if self.previous_monotonic_ns is not None:
+            if monotonic_ns < self.previous_monotonic_ns:
+                raise Gate12C2ResourceQualificationError(
+                    "telemetry monotonic time moved backwards"
+                )
+            if monotonic_ns - self.previous_monotonic_ns > MAXIMUM_LIVE_GAP_NS:
+                raise Gate12C2ResourceQualificationError(
+                    "telemetry exceeds the frozen maximum live gap"
+                )
         target = TRANSITIONS.get((self.previous_state, event_code))
         if target is None or target != state:
             raise Gate12C2ResourceQualificationError(
@@ -576,6 +663,10 @@ def decode_and_verify_telemetry(
 ) -> dict[str, Any]:
     """Strictly verify a complete telemetry JSONL byte stream."""
 
+    if require_terminal is not True:
+        raise Gate12C2ResourceQualificationError(
+            "partial telemetry verification is forbidden"
+        )
     if not payload or not payload.endswith(b"\n"):
         raise Gate12C2ResourceQualificationError(
             "telemetry is empty or lacks the final LF"
@@ -630,7 +721,7 @@ def decode_and_verify_telemetry(
             monotonic_ns=int(validated["monotonic_ns"]),
             record_digest=str(digest),
         )
-    if require_terminal and not state.terminal:
+    if not state.terminal:
         raise Gate12C2ResourceQualificationError(
             "telemetry does not end in a frozen terminal state"
         )
@@ -654,14 +745,104 @@ def decode_and_verify_telemetry(
 
 
 class AppendOnlyTelemetryWriter:
-    """Exclusive, append-only writer using the same production verifier state."""
+    """OS-exclusive, sticky fail-closed append-only telemetry writer."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        fsync: Callable[[int], None] = os.fsync,
+    ) -> None:
         self.path = Path(path).resolve()
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._handle = self.path.open("xb")
+        self._handle = self._open_exclusive_handle(self.path)
+        self._fsync = fsync
         self._state = _TelemetryState()
         self._closed = False
+        self._failed = False
+        self._last_durable_offset = 0
+
+    @staticmethod
+    def _open_exclusive_handle(path: Path) -> Any:
+        if os.name != "nt":
+            descriptor = os.open(
+                path,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                0o600,
+            )
+            return os.fdopen(descriptor, "wb", buffering=0)
+        import msvcrt
+
+        generic_write = 0x40000000
+        create_new = 1
+        file_attribute_normal = 0x00000080
+        invalid_handle_value = ctypes.c_void_p(-1).value
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateFileW.argtypes = [
+            ctypes.c_wchar_p,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.DWORD,
+            ctypes.c_void_p,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.HANDLE,
+        ]
+        kernel32.CreateFileW.restype = ctypes.wintypes.HANDLE
+        raw = kernel32.CreateFileW(
+            str(path),
+            generic_write,
+            0,
+            None,
+            create_new,
+            file_attribute_normal,
+            None,
+        )
+        if not raw or int(raw) == invalid_handle_value:
+            error = ctypes.get_last_error()
+            if error in {80, 183}:
+                raise FileExistsError(str(path))
+            raise Gate12C2ResourceQualificationError(
+                "telemetry file could not be opened exclusively"
+            )
+        try:
+            descriptor = msvcrt.open_osfhandle(
+                int(raw), os.O_WRONLY | getattr(os, "O_BINARY", 0)
+            )
+        except Exception:
+            kernel32.CloseHandle(raw)
+            raise Gate12C2ResourceQualificationError(
+                "telemetry file-handle transfer failed"
+            ) from None
+        return os.fdopen(descriptor, "wb", buffering=0)
+
+    def _close_handle_only(self) -> bool:
+        if self._closed:
+            return True
+        for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
+            try:
+                self._handle.close()
+            except Exception:
+                continue
+            self._closed = True
+            return True
+        self._closed = bool(getattr(self._handle, "closed", False))
+        self._failed = True
+        return self._closed
+
+    def _poison(self, start_offset: int, reason: str) -> None:
+        self._failed = True
+        try:
+            self._handle.seek(start_offset)
+            self._handle.truncate()
+            self._handle.write(b"\x00")
+            self._handle.flush()
+            os.fsync(self._handle.fileno())
+        except Exception:
+            pass
+        close_verified = self._close_handle_only()
+        if not close_verified:
+            reason = f"{reason}; telemetry handle close failed"
+        raise Gate12C2ResourceQualificationError(reason) from None
 
     def append(
         self,
@@ -671,13 +852,15 @@ class AppendOnlyTelemetryWriter:
         monotonic_ns: int,
         metrics: Mapping[str, Any],
     ) -> str:
+        if self._failed:
+            raise Gate12C2ResourceQualificationError(
+                "telemetry writer is terminally failed"
+            )
         if self._closed:
             raise Gate12C2ResourceQualificationError(
                 "telemetry writer is closed"
             )
-        target = TRANSITIONS.get(
-            (self._state.previous_state, event_code)
-        )
+        target = TRANSITIONS.get((self._state.previous_state, event_code))
         if target is None:
             raise Gate12C2ResourceQualificationError(
                 "telemetry state-event transition is not frozen"
@@ -698,7 +881,8 @@ class AppendOnlyTelemetryWriter:
             )
         record = {**automatic, **dict(metrics)}
         encoded, digest = encode_telemetry_record(record)
-        self._state.accept(
+        candidate_state = replace(self._state)
+        candidate_state.accept(
             event_code=event_code,
             state=target,
             sequence=int(record["sequence"]),
@@ -706,40 +890,86 @@ class AppendOnlyTelemetryWriter:
             monotonic_ns=int(record["monotonic_ns"]),
             record_digest=digest,
         )
-        self._handle.write(encoded)
-        self._handle.flush()
-        if event_code != "PERIODIC_SAMPLE" or self._state.sequence % 10 == 0:
-            os.fsync(self._handle.fileno())
+        start_offset = self._handle.tell()
+        durable = (
+            event_code != "PERIODIC_SAMPLE"
+            or candidate_state.sequence % 10 == 0
+        )
+        try:
+            written = self._handle.write(encoded)
+            if written != len(encoded):
+                raise OSError("short telemetry write")
+            self._handle.flush()
+            if durable:
+                self._fsync(self._handle.fileno())
+        except Exception:
+            self._poison(start_offset, "telemetry append failed")
+        self._state = candidate_state
+        if durable:
+            self._last_durable_offset = self._handle.tell()
         return digest
 
     def close(self) -> None:
-        if not self._closed:
+        if self._failed:
+            self._close_handle_only()
+            raise Gate12C2ResourceQualificationError(
+                "telemetry writer is terminally failed"
+            )
+        if self._closed:
+            return
+        if not self._state.terminal:
+            self._poison(
+                self._last_durable_offset,
+                "telemetry writer closed before a terminal state",
+            )
+        try:
             self._handle.flush()
-            os.fsync(self._handle.fileno())
-            self._handle.close()
-            self._closed = True
+            self._fsync(self._handle.fileno())
+        except Exception:
+            self._poison(
+                self._last_durable_offset,
+                "telemetry close failed",
+            )
+        self._last_durable_offset = self._handle.tell()
+        if not self._close_handle_only():
+            raise Gate12C2ResourceQualificationError(
+                "telemetry handle close failed"
+            )
 
     def __enter__(self) -> "AppendOnlyTelemetryWriter":
         return self
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        del exc_type, exc, tb
+        del tb
+        if exc_type is not None or exc is not None:
+            self._failed = True
+            try:
+                if not self._closed:
+                    self._handle.seek(self._last_durable_offset)
+                    self._handle.truncate()
+                    self._handle.write(b"\x00")
+                    self._handle.flush()
+                    os.fsync(self._handle.fileno())
+            except Exception:
+                pass
+            self._close_handle_only()
+            return
         self.close()
 
 
 class LaunchDeadlineWatchdog:
-    """Sole monotonic deadline owner and Job-kill actuator."""
+    """Independent strict deadline owner and sole Job-kill actuator."""
 
     def __init__(
         self,
         job_handle: JobKillHandle,
         *,
         monotonic_ns: Callable[[], int] = time.monotonic_ns,
-        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        if not getattr(job_handle, "sole_owner_verified", False):
+        proof = getattr(job_handle, "ownership_proof", None)
+        if not isinstance(proof, JobHandleOwnershipProof):
             raise Gate12C2ResourceQualificationError(
-                "watchdog does not own the sole verified Job handle"
+                "watchdog Job ownership proof is absent"
             )
         if getattr(job_handle, "inheritable", True):
             raise Gate12C2ResourceQualificationError(
@@ -747,25 +977,40 @@ class LaunchDeadlineWatchdog:
             )
         self._job_handle = job_handle
         self._monotonic_ns = monotonic_ns
-        self._sleep = sleep
         self.resume_success_monotonic_ns: int | None = None
         self.ack_monotonic_ns: int | None = None
         self.verified = False
         self.terminated = False
+        self.job_handle_close_verified = False
+        self.close_attempt_count = 0
 
     def _clock(self) -> int:
-        value = self._monotonic_ns()
+        try:
+            value = self._monotonic_ns()
+        except Exception:
+            self._terminate("monotonic clock failed")
         if type(value) is not int or value < 0:
             self._terminate("monotonic clock is invalid")
         return int(value)
 
     def _terminate(self, reason: str) -> None:
-        if not self.terminated:
-            self.terminated = True
-            try:
-                self._job_handle.close_for_kill()
-            except Exception:
-                pass
+        self.terminated = True
+        last_error = False
+        if not self.job_handle_close_verified:
+            for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
+                self.close_attempt_count += 1
+                try:
+                    self._job_handle.close_for_kill()
+                except Exception:
+                    last_error = True
+                    continue
+                self.job_handle_close_verified = True
+                last_error = False
+                break
+        if not self.job_handle_close_verified or last_error:
+            raise Gate12C2ResourceQualificationError(
+                f"{reason}; Job handle close failed"
+            ) from None
         raise Gate12C2ResourceQualificationError(reason) from None
 
     @property
@@ -774,45 +1019,84 @@ class LaunchDeadlineWatchdog:
             raise Gate12C2ResourceQualificationError(
                 "launch deadline is not armed"
             )
-        return (
-            self.resume_success_monotonic_ns
-            + LAUNCH_EVIDENCE_DEADLINE_NS
-        )
+        return self.resume_success_monotonic_ns + LAUNCH_EVIDENCE_DEADLINE_NS
 
     def resume_and_arm(self, resume: Callable[[], int]) -> int:
-        """Resume once and sample the watchdog clock immediately on success."""
-
         if self.resume_success_monotonic_ns is not None:
             self._terminate("scientific child was resumed more than once")
         try:
             previous_suspend_count = resume()
         except Exception:
             self._terminate("scientific child resume failed")
-        if (
-            type(previous_suspend_count) is not int
-            or previous_suspend_count != 1
-        ):
+        if type(previous_suspend_count) is not int or previous_suspend_count != 1:
             self._terminate("scientific child resume result is invalid")
         self.resume_success_monotonic_ns = self._clock()
         return self.resume_success_monotonic_ns
+
+    def enforce_deadline(self) -> None:
+        if self.resume_success_monotonic_ns is None:
+            self._terminate("launch deadline is not armed")
+        if not self.verified and self._clock() >= self.deadline_monotonic_ns:
+            self._terminate("launch acknowledgement is missing at deadline")
+
+    def _call_until_deadline(
+        self,
+        callback: Callable[[], object],
+        *,
+        failure_reason: str,
+        poll_seconds: float,
+    ) -> object:
+        result_queue: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=1)
+
+        def invoke() -> None:
+            try:
+                value = callback()
+            except Exception:
+                result_queue.put(("error", None))
+            else:
+                result_queue.put(("ok", value))
+
+        try:
+            worker = threading.Thread(
+                target=invoke,
+                name="gate12c2-deadline-callback",
+                daemon=True,
+            )
+            worker.start()
+        except Exception:
+            self._terminate(f"{failure_reason} thread failed")
+        while True:
+            try:
+                status, value = result_queue.get(timeout=poll_seconds)
+            except queue.Empty:
+                self.enforce_deadline()
+                continue
+            except Exception:
+                self._terminate(f"{failure_reason} wait failed")
+            if status != "ok":
+                self._terminate(failure_reason)
+            if self._clock() >= self.deadline_monotonic_ns:
+                self._terminate("launch acknowledgement missed the deadline")
+            return value
 
     def verify_acknowledgement(
         self,
         acknowledgement: object,
         verifier: Callable[[object], bool],
+        *,
+        poll_seconds: float = 0.01,
     ) -> int:
-        """Verify acknowledgement and apply the strict `< deadline` boundary."""
-
         if self.resume_success_monotonic_ns is None:
             self._terminate("acknowledgement preceded scientific resume")
         if self.verified:
             self._terminate("launch acknowledgement is duplicated")
         if acknowledgement is None:
             self._terminate("launch acknowledgement is missing")
-        try:
-            verified = verifier(acknowledgement)
-        except Exception:
-            self._terminate("launch acknowledgement verifier failed")
+        verified = self._call_until_deadline(
+            lambda: verifier(acknowledgement),
+            failure_reason="launch acknowledgement verifier failed",
+            poll_seconds=poll_seconds,
+        )
         if verified is not True:
             self._terminate("launch acknowledgement is invalid")
         acknowledgement_time = self._clock()
@@ -822,12 +1106,6 @@ class LaunchDeadlineWatchdog:
         self.verified = True
         return acknowledgement_time
 
-    def enforce_deadline(self) -> None:
-        if self.resume_success_monotonic_ns is None:
-            self._terminate("launch deadline is not armed")
-        if not self.verified and self._clock() >= self.deadline_monotonic_ns:
-            self._terminate("launch acknowledgement is missing at deadline")
-
     def run_until_verified(
         self,
         *,
@@ -835,25 +1113,29 @@ class LaunchDeadlineWatchdog:
         verifier: Callable[[object], bool],
         poll_seconds: float = 0.01,
     ) -> int:
-        """Production watchdog loop; only this owner accepts or kills."""
-
         if self.resume_success_monotonic_ns is None:
             self._terminate("launch deadline is not armed")
-        if not isinstance(poll_seconds, (int, float)) or isinstance(
-            poll_seconds, bool
-        ) or poll_seconds <= 0:
+        if (
+            not isinstance(poll_seconds, (int, float))
+            or isinstance(poll_seconds, bool)
+            or not math.isfinite(float(poll_seconds))
+            or poll_seconds <= 0
+            or poll_seconds > 0.1
+        ):
             self._terminate("watchdog polling interval is invalid")
         while not self.verified:
             self.enforce_deadline()
-            try:
-                acknowledgement = acknowledgement_supplier()
-            except Exception:
-                self._terminate("launch acknowledgement supplier failed")
+            acknowledgement = self._call_until_deadline(
+                acknowledgement_supplier,
+                failure_reason="launch acknowledgement supplier failed",
+                poll_seconds=float(poll_seconds),
+            )
             if acknowledgement is not None:
                 return self.verify_acknowledgement(
-                    acknowledgement, verifier
+                    acknowledgement,
+                    verifier,
+                    poll_seconds=float(poll_seconds),
                 )
-            self._sleep(float(poll_seconds))
         if self.ack_monotonic_ns is None:
             self._terminate("verified acknowledgement lacks watchdog time")
         return self.ack_monotonic_ns
@@ -934,6 +1216,11 @@ def classify_expected_legacy_closeout(
         "shard_count",
         "partial_or_temp_count",
         "stale_lock_count",
+        "stale_lock_relative_path",
+        "stale_lock_file_sha256",
+        "stale_lock_manifest_match",
+        "unexpected_artifact_count",
+        "unexpected_artifact_relative_paths",
         "legacy_execution_evidence_present",
         "legacy_resource_receipt_present",
         "legacy_execution_receipt_present",
@@ -957,20 +1244,28 @@ def classify_expected_legacy_closeout(
             "legacy child terminal differs from the frozen failure"
         )
     stack = evidence["normalized_project_stack"]
-    if (
-        not isinstance(stack, list)
-        or tuple(
-            (
-                row.get("path"),
-                row.get("line"),
-                row.get("function"),
-            )
-            for row in stack
-            if isinstance(row, dict)
+    if type(stack) is not list or len(stack) != len(EXPECTED_LEGACY_STACK):
+        raise Gate12C2ResourceQualificationError(
+            "legacy closeout stack differs from the frozen failure"
         )
-        != EXPECTED_LEGACY_STACK
-        or len(stack) != len(EXPECTED_LEGACY_STACK)
-    ):
+    normalized_rows: list[tuple[object, object, object]] = []
+    for row in stack:
+        if type(row) is not dict or set(row) != {"path", "line", "function"}:
+            raise Gate12C2ResourceQualificationError(
+                "legacy closeout stack row schema is not exact"
+            )
+        if (
+            not isinstance(row["path"], str)
+            or type(row["line"]) is not int
+            or not isinstance(row["function"], str)
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "legacy closeout stack row types are invalid"
+            )
+        normalized_rows.append(
+            (row["path"], row["line"], row["function"])
+        )
+    if tuple(normalized_rows) != EXPECTED_LEGACY_STACK:
         raise Gate12C2ResourceQualificationError(
             "legacy closeout stack differs from the frozen failure"
         )
@@ -981,12 +1276,25 @@ def classify_expected_legacy_closeout(
         "shard_count": 768,
         "partial_or_temp_count": 0,
         "stale_lock_count": 1,
+        "unexpected_artifact_count": 0,
     }
     for field, expected in exact_counts.items():
         if type(evidence[field]) is not int or evidence[field] != expected:
             raise Gate12C2ResourceQualificationError(
                 "legacy payload surface is incomplete"
             )
+    if (
+        evidence["stale_lock_relative_path"]
+        != EXPECTED_STALE_LOCK_RELATIVE_PATH
+        or evidence["stale_lock_file_sha256"]
+        != EXPECTED_STALE_LOCK_FILE_SHA256
+        or evidence["stale_lock_manifest_match"] is not True
+        or type(evidence["unexpected_artifact_relative_paths"]) is not list
+        or evidence["unexpected_artifact_relative_paths"] != []
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "legacy root artifact surface is not exact"
+        )
     false_fields = (
         "legacy_execution_evidence_present",
         "legacy_resource_receipt_present",
@@ -1065,7 +1373,8 @@ def verify_resource_envelope(
         values["sampled_combined_rss_bytes"] <= memory_limit,
         values["sampled_available_physical_memory_bytes"]
         >= available_floor,
-        values["minimum_observed_free_bytes"] >= preflight_free // 2,
+        values["minimum_observed_free_bytes"]
+        >= (preflight_free + 1) // 2,
         values["qualification_output_bytes"]
         <= QUALIFICATION_OUTPUT_BUDGET_BYTES,
         values["telemetry_bytes"] <= TELEMETRY_WORST_CASE_BYTES,
@@ -1124,12 +1433,14 @@ class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
 
 
 class WindowsJobApi:
-    """Small reviewed Win32 adapter; it never launches the scientific child."""
+    """Reviewed Win32 adapter; it never launches the scientific child."""
 
     JOB_OBJECT_LIMIT_JOB_MEMORY = 0x00000200
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
     JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+    DUPLICATE_CLOSE_SOURCE = 0x00000001
     DUPLICATE_SAME_ACCESS = 0x00000002
+    HANDLE_FLAG_INHERIT = 0x00000001
 
     def __init__(self) -> None:
         if os.name != "nt":
@@ -1196,7 +1507,7 @@ class WindowsJobApi:
                 "could not assign process to Job Object"
             )
 
-    def duplicate_into_process(
+    def _duplicate_into_process(
         self,
         job_handle: int,
         target_process_handle: int,
@@ -1223,9 +1534,118 @@ class WindowsJobApi:
             self.DUPLICATE_SAME_ACCESS,
         ):
             raise Gate12C2ResourceQualificationError(
-                "could not transfer Job handle to watchdog"
+                "could not duplicate Job handle into watchdog"
             )
         return int(duplicate.value)
+
+    def _close_remote_handle(
+        self,
+        target_process_handle: int,
+        remote_handle: int,
+    ) -> None:
+        self.kernel32.GetCurrentProcess.restype = ctypes.wintypes.HANDLE
+        self.kernel32.DuplicateHandle.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.HANDLE),
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.BOOL,
+            ctypes.wintypes.DWORD,
+        ]
+        self.kernel32.DuplicateHandle.restype = ctypes.wintypes.BOOL
+        local = ctypes.wintypes.HANDLE()
+        if not self.kernel32.DuplicateHandle(
+            target_process_handle,
+            remote_handle,
+            self.kernel32.GetCurrentProcess(),
+            ctypes.byref(local),
+            0,
+            False,
+            self.DUPLICATE_CLOSE_SOURCE | self.DUPLICATE_SAME_ACCESS,
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "could not close failed watchdog duplicate"
+            )
+        self.close_handle(int(local.value))
+
+    def transfer_job_handle_to_watchdog(
+        self,
+        *,
+        source_job_handle: int,
+        target_process_handle: int,
+        source_identity: ProcessIdentity,
+        watchdog_identity: ProcessIdentity,
+    ) -> JobHandleTransferReceipt:
+        duplicate = self._duplicate_into_process(
+            source_job_handle, target_process_handle
+        )
+        try:
+            self.close_handle(source_job_handle)
+        except Exception:
+            try:
+                self._close_remote_handle(
+                    target_process_handle, duplicate
+                )
+            except Exception:
+                raise Gate12C2ResourceQualificationError(
+                    "source Job handle close and duplicate cleanup failed"
+                ) from None
+            raise Gate12C2ResourceQualificationError(
+                "source Job handle close failed"
+            ) from None
+        return JobHandleTransferReceipt(
+            source_pid=source_identity.pid,
+            source_creation_time_ns=source_identity.creation_time_ns,
+            watchdog_pid=watchdog_identity.pid,
+            watchdog_creation_time_ns=watchdog_identity.creation_time_ns,
+            watchdog_raw_handle=duplicate,
+            source_handle_closed=True,
+            duplicate_requested_noninheritable=True,
+            _token=_JOB_TRANSFER_RECEIPT_TOKEN,
+        )
+
+    def query_handle_inheritable(self, handle: int) -> bool:
+        flags = ctypes.wintypes.DWORD()
+        self.kernel32.GetHandleInformation.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.DWORD),
+        ]
+        self.kernel32.GetHandleInformation.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.GetHandleInformation(handle, ctypes.byref(flags)):
+            raise Gate12C2ResourceQualificationError(
+                "could not query watchdog Job handle flags"
+            )
+        return bool(flags.value & self.HANDLE_FLAG_INHERIT)
+
+    def verify_job_handle(self, handle: int) -> bool:
+        info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+        returned = ctypes.wintypes.DWORD()
+        self.kernel32.QueryInformationJobObject.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            ctypes.wintypes.DWORD,
+            ctypes.POINTER(ctypes.wintypes.DWORD),
+        ]
+        self.kernel32.QueryInformationJobObject.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.QueryInformationJobObject(
+            handle,
+            self.JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+            ctypes.byref(info),
+            ctypes.sizeof(info),
+            ctypes.byref(returned),
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "watchdog handle is not a verified Job Object"
+            )
+        required = (
+            self.JOB_OBJECT_LIMIT_JOB_MEMORY
+            | self.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        )
+        return (
+            info.BasicLimitInformation.LimitFlags & required
+        ) == required
 
     def close_handle(self, handle: int) -> None:
         self.kernel32.CloseHandle.argtypes = [ctypes.wintypes.HANDLE]
@@ -1236,20 +1656,91 @@ class WindowsJobApi:
             )
 
 
-class WatchdogOwnedWindowsJobHandle:
-    """The watchdog-side final Job handle; closing it is the kill actuator."""
+_WATCHDOG_HANDLE_CONSTRUCTOR_TOKEN = object()
 
-    sole_owner_verified = True
+
+class WatchdogOwnedWindowsJobHandle:
+    """Final watchdog handle established from a verified transfer receipt."""
+
     inheritable = False
 
-    def __init__(self, raw_handle: int, api: WindowsJobApi) -> None:
-        if type(raw_handle) is not int or raw_handle <= 0:
+    def __init__(
+        self,
+        raw_handle: int,
+        api: WindowsJobApi,
+        ownership_proof: JobHandleOwnershipProof,
+        *,
+        _token: object | None = None,
+    ) -> None:
+        if _token is not _WATCHDOG_HANDLE_CONSTRUCTOR_TOKEN:
+            raise Gate12C2ResourceQualificationError(
+                "direct watchdog Job-handle construction is forbidden"
+            )
+        if (
+            type(raw_handle) is not int
+            or raw_handle <= 0
+            or ownership_proof.watchdog_raw_handle != raw_handle
+        ):
             raise Gate12C2ResourceQualificationError(
                 "watchdog Job handle is invalid"
             )
         self._raw_handle = raw_handle
         self._api = api
+        self.ownership_proof = ownership_proof
         self._closed = False
+
+    @classmethod
+    def from_transfer_receipt(
+        cls,
+        receipt: JobHandleTransferReceipt,
+        *,
+        api: WindowsJobApi,
+        current_identity: ProcessIdentity,
+    ) -> "WatchdogOwnedWindowsJobHandle":
+        if type(receipt) is not JobHandleTransferReceipt:
+            raise Gate12C2ResourceQualificationError(
+                "watchdog Job transfer receipt type is invalid"
+            )
+        if (
+            receipt.watchdog_pid != current_identity.pid
+            or receipt.watchdog_creation_time_ns
+            != current_identity.creation_time_ns
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "Job transfer receipt targets another watchdog identity"
+            )
+        if api.query_handle_inheritable(receipt.watchdog_raw_handle):
+            raise Gate12C2ResourceQualificationError(
+                "watchdog Job handle remains inheritable"
+            )
+        if api.verify_job_handle(receipt.watchdog_raw_handle) is not True:
+            raise Gate12C2ResourceQualificationError(
+                "watchdog Job handle does not carry the frozen limits"
+            )
+        proof = JobHandleOwnershipProof(
+            source_pid=receipt.source_pid,
+            source_creation_time_ns=receipt.source_creation_time_ns,
+            watchdog_pid=receipt.watchdog_pid,
+            watchdog_creation_time_ns=receipt.watchdog_creation_time_ns,
+            watchdog_raw_handle=receipt.watchdog_raw_handle,
+            source_handle_closed=receipt.source_handle_closed,
+            target_handle_noninheritable=True,
+            target_handle_valid_job=True,
+        )
+        return cls(
+            receipt.watchdog_raw_handle,
+            api,
+            proof,
+            _token=_WATCHDOG_HANDLE_CONSTRUCTOR_TOKEN,
+        )
+
+    @property
+    def sole_owner_verified(self) -> bool:
+        return (
+            self.ownership_proof.source_handle_closed
+            and self.ownership_proof.target_handle_noninheritable
+            and self.ownership_proof.target_handle_valid_job
+        )
 
     def close_for_kill(self) -> None:
         if not self._closed:

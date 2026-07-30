@@ -10,18 +10,29 @@ import gate12c2_resource_qualification as resource
 
 
 class _FakeJobHandle:
-    sole_owner_verified = True
     inheritable = False
 
     def __init__(self) -> None:
         self.close_count = 0
+        self.ownership_proof = resource.JobHandleOwnershipProof(
+            source_pid=1,
+            source_creation_time_ns=1,
+            watchdog_pid=2,
+            watchdog_creation_time_ns=2,
+            watchdog_raw_handle=3,
+            source_handle_closed=True,
+            target_handle_noninheritable=True,
+            target_handle_valid_job=True,
+        )
 
     def close_for_kill(self) -> None:
         self.close_count += 1
 
 
 class _UnownedJobHandle(_FakeJobHandle):
-    sole_owner_verified = False
+    def __init__(self) -> None:
+        self.close_count = 0
+        self.ownership_proof = None
 
 
 class _InheritableJobHandle(_FakeJobHandle):
@@ -242,7 +253,7 @@ class TelemetryContractTest(unittest.TestCase):
             "duplicate JSON keys",
         ):
             resource.decode_and_verify_telemetry(
-                b'{"seq":0,"seq":0}\n', require_terminal=False
+                b'{"seq":0,"seq":0}\n'
             )
 
     def test_strict_encoder_rejects_bool_numeric_string_and_unknown_enum(
@@ -286,7 +297,6 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
         return resource.LaunchDeadlineWatchdog(
             handle,
             monotonic_ns=_Clock(*clock_values),
-            sleep=lambda _: None,
         )
 
     def test_deadline_minus_one_nanosecond_accepts_in_production_loop(
@@ -455,6 +465,15 @@ class GuardianAndClassifierTest(unittest.TestCase):
             "shard_count": 768,
             "partial_or_temp_count": 0,
             "stale_lock_count": 1,
+            "stale_lock_relative_path": (
+                resource.EXPECTED_STALE_LOCK_RELATIVE_PATH
+            ),
+            "stale_lock_file_sha256": (
+                resource.EXPECTED_STALE_LOCK_FILE_SHA256
+            ),
+            "stale_lock_manifest_match": True,
+            "unexpected_artifact_count": 0,
+            "unexpected_artifact_relative_paths": [],
             "legacy_execution_evidence_present": False,
             "legacy_resource_receipt_present": False,
             "legacy_execution_receipt_present": False,
@@ -569,11 +588,33 @@ class WindowsHandleAbstractionTest(unittest.TestCase):
             def __init__(self) -> None:
                 self.closed: list[int] = []
 
+            def query_handle_inheritable(self, handle: int) -> bool:
+                self.asserted_handle = handle
+                return False
+
+            def verify_job_handle(self, handle: int) -> bool:
+                self.asserted_job = handle
+                return True
+
             def close_handle(self, handle: int) -> None:
                 self.closed.append(handle)
 
         api = Api()
-        handle = resource.WatchdogOwnedWindowsJobHandle(123, api)  # type: ignore[arg-type]
+        receipt = resource.JobHandleTransferReceipt(
+            source_pid=10,
+            source_creation_time_ns=100,
+            watchdog_pid=20,
+            watchdog_creation_time_ns=200,
+            watchdog_raw_handle=123,
+            source_handle_closed=True,
+            duplicate_requested_noninheritable=True,
+            _token=resource._JOB_TRANSFER_RECEIPT_TOKEN,
+        )
+        handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
+            receipt,
+            api=api,  # type: ignore[arg-type]
+            current_identity=resource.ProcessIdentity(20, 200),
+        )
         handle.close_for_kill()
         handle.close_for_kill()
         self.assertEqual(api.closed, [123])
