@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import tempfile
@@ -13,31 +14,143 @@ from unittest import mock
 import gate12c2_resource_qualification as resource
 
 
-def _proof() -> resource.JobHandleOwnershipProof:
-    return resource.JobHandleOwnershipProof(
-        source_pid=10,
-        source_creation_time_ns=100,
-        watchdog_pid=20,
-        watchdog_creation_time_ns=200,
-        watchdog_raw_handle=123,
-        source_handle_closed=True,
-        target_handle_noninheritable=True,
-        target_handle_valid_job=True,
+class _KernelFunction:
+    def __init__(self, callback):
+        self.callback = callback
+        self.argtypes = None
+        self.restype = None
+
+    def __call__(self, *args):
+        return self.callback(*args)
+
+
+class _FakeKernel32:
+    REQUIRED_FLAGS = (
+        resource.WindowsJobApi.JOB_OBJECT_LIMIT_JOB_MEMORY
+        | resource.WindowsJobApi.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
     )
 
+    def __init__(
+        self,
+        *,
+        expected_limit: int = 12_000_000,
+        limit_flags: int | None = None,
+        reported_limit: int | None = None,
+        fail_watchdog_close_attempts: int = 0,
+        noop_watchdog_close: bool = False,
+        noop_source_close: bool = False,
+    ) -> None:
+        self.expected_limit = expected_limit
+        self.limit_flags = (
+            self.REQUIRED_FLAGS if limit_flags is None else limit_flags
+        )
+        self.reported_limit = (
+            expected_limit if reported_limit is None else reported_limit
+        )
+        self.fail_watchdog_close_attempts = fail_watchdog_close_attempts
+        self.noop_watchdog_close = noop_watchdog_close
+        self.noop_source_close = noop_source_close
+        self.open_handles = {11}
+        self.inheritable_handles: set[int] = set()
+        self.close_calls: list[int] = []
+        self.watchdog_close_calls = 0
+        self.GetCurrentProcess = _KernelFunction(lambda: 999)
+        self.DuplicateHandle = _KernelFunction(self._duplicate)
+        self.CloseHandle = _KernelFunction(self._close)
+        self.GetHandleInformation = _KernelFunction(self._handle_information)
+        self.QueryInformationJobObject = _KernelFunction(self._query_job)
 
-class _JobHandle:
-    inheritable = False
+    def _duplicate(self, *args):
+        source_handle = int(args[1])
+        duplicate = args[3]
+        options = int(args[6])
+        if options & resource.WindowsJobApi.DUPLICATE_CLOSE_SOURCE:
+            self.open_handles.discard(source_handle)
+            duplicate._obj.value = 124
+            self.open_handles.add(124)
+        else:
+            duplicate._obj.value = 123
+            self.open_handles.add(123)
+        return True
 
-    def __init__(self, *, fail_close_attempts: int = 0) -> None:
-        self.ownership_proof = _proof()
-        self.fail_close_attempts = fail_close_attempts
-        self.close_count = 0
+    def _close(self, handle):
+        raw = int(handle)
+        self.close_calls.append(raw)
+        if raw == 11 and self.noop_source_close:
+            return True
+        if raw == 123:
+            self.watchdog_close_calls += 1
+            if self.watchdog_close_calls <= self.fail_watchdog_close_attempts:
+                return False
+            if self.noop_watchdog_close:
+                return True
+        if raw not in self.open_handles:
+            if hasattr(ctypes, "set_last_error"):
+                ctypes.set_last_error(6)
+            return False
+        self.open_handles.remove(raw)
+        return True
 
-    def close_for_kill(self) -> None:
-        self.close_count += 1
-        if self.close_count <= self.fail_close_attempts:
-            raise OSError("RAW_CLOSE_SENTINEL")
+    def _handle_information(self, handle, flags):
+        raw = int(handle)
+        if raw not in self.open_handles:
+            if hasattr(ctypes, "set_last_error"):
+                ctypes.set_last_error(6)
+            return False
+        flags._obj.value = (
+            resource.WindowsJobApi.HANDLE_FLAG_INHERIT
+            if raw in self.inheritable_handles
+            else 0
+        )
+        return True
+
+    def _query_job(self, handle, info_class, info, size, returned):
+        del handle, info_class, size
+        info._obj.BasicLimitInformation.LimitFlags = self.limit_flags
+        info._obj.JobMemoryLimit = self.reported_limit
+        returned._obj.value = 1
+        return True
+
+
+def _job_api(kernel: _FakeKernel32) -> resource.WindowsJobApi:
+    api = object.__new__(resource.WindowsJobApi)
+    api.kernel32 = kernel
+    return api
+
+
+def _make_job_handle(
+    *,
+    fail_close_attempts: int = 0,
+    noop_close: bool = False,
+) -> resource.WatchdogOwnedWindowsJobHandle:
+    kernel = _FakeKernel32(
+        fail_watchdog_close_attempts=fail_close_attempts,
+        noop_watchdog_close=noop_close,
+    )
+    api = _job_api(kernel)
+    receipt = api.transfer_job_handle_to_watchdog(
+        source_job_handle=11,
+        target_process_handle=22,
+        source_identity=resource.ProcessIdentity(10, 100),
+        watchdog_identity=resource.ProcessIdentity(20, 200),
+        expected_job_memory_limit_bytes=kernel.expected_limit,
+    )
+    handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
+        receipt,
+        api=api,
+        current_identity=resource.ProcessIdentity(20, 200),
+    )
+    handle._test_kernel = kernel
+    return handle
+
+
+def _JobHandle(
+    *, fail_close_attempts: int = 0, noop_close: bool = False
+) -> resource.WatchdogOwnedWindowsJobHandle:
+    return _make_job_handle(
+        fail_close_attempts=fail_close_attempts,
+        noop_close=noop_close,
+    )
 
 
 def _metrics() -> dict[str, int]:
@@ -165,7 +278,7 @@ class WatchdogAdversarialTest(unittest.TestCase):
             elapsed = time.monotonic() - started
         release.set()
         self.assertLess(elapsed, 0.5)
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
         self.assertTrue(watchdog.job_handle_close_verified)
 
     def test_blocking_verifier_is_killed_at_deadline(self) -> None:
@@ -186,7 +299,7 @@ class WatchdogAdversarialTest(unittest.TestCase):
                     poll_seconds=0.001,
                 )
         release.set()
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_delayed_acknowledgement_is_killed(self) -> None:
         handle = _JobHandle()
@@ -206,7 +319,7 @@ class WatchdogAdversarialTest(unittest.TestCase):
                     verifier=lambda _: True,
                     poll_seconds=0.001,
                 )
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_clock_failure_closes_job(self) -> None:
         calls = 0
@@ -232,7 +345,7 @@ class WatchdogAdversarialTest(unittest.TestCase):
                 verifier=lambda _: True,
             )
         self.assertNotIn("RAW_CLOCK_SENTINEL", str(raised.exception))
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_close_failure_retries_and_never_claims_verified_close(self) -> None:
         recoverable = _JobHandle(fail_close_attempts=2)
@@ -246,7 +359,7 @@ class WatchdogAdversarialTest(unittest.TestCase):
                 acknowledgement_supplier=lambda: {"present": True},
                 verifier=lambda _: False,
             )
-        self.assertEqual(recoverable.close_count, 3)
+        self.assertEqual(recoverable._test_kernel.watchdog_close_calls, 3)
         self.assertTrue(watchdog.job_handle_close_verified)
 
         unrecoverable = _JobHandle(fail_close_attempts=99)
@@ -257,138 +370,118 @@ class WatchdogAdversarialTest(unittest.TestCase):
             "Job handle close failed",
         ):
             watchdog.verify_acknowledgement(None, lambda _: True)
-        self.assertEqual(unrecoverable.close_count, 3)
+        self.assertEqual(unrecoverable._test_kernel.watchdog_close_calls, 3)
         self.assertFalse(watchdog.job_handle_close_verified)
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
             "Job handle close failed",
         ):
             watchdog.verify_acknowledgement(None, lambda _: True)
-        self.assertEqual(unrecoverable.close_count, 6)
-
-
-class _TransferApi(resource.WindowsJobApi):
-    def __init__(
-        self,
-        *,
-        inheritable: bool = False,
-        valid_job: bool = True,
-        fail_source_close: bool = False,
-    ) -> None:
-        self.inheritable_result = inheritable
-        self.valid_job_result = valid_job
-        self.fail_source_close = fail_source_close
-        self.calls: list[tuple[str, int]] = []
-
-    def _duplicate_into_process(
-        self, job_handle: int, target_process_handle: int
-    ) -> int:
-        self.calls.append(("duplicate", job_handle))
-        self.target_process_handle = target_process_handle
-        return 123
-
-    def close_handle(self, handle: int) -> None:
-        self.calls.append(("close", handle))
-        if handle == 11 and self.fail_source_close:
-            raise resource.Gate12C2ResourceQualificationError(
-                "source close failed"
-            )
-
-    def _close_remote_handle(
-        self, target_process_handle: int, remote_handle: int
-    ) -> None:
-        self.calls.append(("close_remote", remote_handle))
-        self.target_process_handle = target_process_handle
-
-    def query_handle_inheritable(self, handle: int) -> bool:
-        self.calls.append(("query_inheritable", handle))
-        return self.inheritable_result
-
-    def verify_job_handle(self, handle: int) -> bool:
-        self.calls.append(("verify_job", handle))
-        return self.valid_job_result
+        self.assertEqual(unrecoverable._test_kernel.watchdog_close_calls, 6)
 
 
 class JobOwnershipAdversarialTest(unittest.TestCase):
+    @staticmethod
     def _receipt(
-        self, api: _TransferApi
-    ) -> resource.JobHandleTransferReceipt:
-        return api.transfer_job_handle_to_watchdog(
+        kernel: _FakeKernel32 | None = None,
+    ) -> tuple[object, resource.WindowsJobApi, _FakeKernel32]:
+        selected = kernel or _FakeKernel32()
+        api = _job_api(selected)
+        receipt = api.transfer_job_handle_to_watchdog(
             source_job_handle=11,
             target_process_handle=22,
             source_identity=resource.ProcessIdentity(10, 100),
             watchdog_identity=resource.ProcessIdentity(20, 200),
+            expected_job_memory_limit_bytes=selected.expected_limit,
         )
+        return receipt, api, selected
 
-    def test_transfer_closes_source_before_receipt_and_claim_queries_flags(
+    def test_transfer_closes_source_and_claim_reverifies_exact_os_handle(
         self,
     ) -> None:
-        api = _TransferApi()
-        receipt = self._receipt(api)
-        self.assertEqual(
-            api.calls[:2], [("duplicate", 11), ("close", 11)]
-        )
+        receipt, api, kernel = self._receipt()
+        self.assertNotIn(11, kernel.open_handles)
+        self.assertIn(123, kernel.open_handles)
         handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
             receipt,
             api=api,
             current_identity=resource.ProcessIdentity(20, 200),
         )
         self.assertTrue(handle.sole_owner_verified)
-        self.assertIn(("query_inheritable", 123), api.calls)
-        self.assertIn(("verify_job", 123), api.calls)
+        resource.LaunchDeadlineWatchdog(handle, monotonic_ns=lambda: 0)
 
-    def test_direct_construction_and_live_source_are_rejected(self) -> None:
-        api = _TransferApi()
+    def test_public_or_token_style_self_attestation_is_rejected(self) -> None:
+        self.assertFalse(
+            hasattr(resource, "JobHandleOwnershipProof")
+        )
+        self.assertFalse(
+            hasattr(resource, "_JOB_TRANSFER_RECEIPT_TOKEN")
+        )
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
             "direct Job transfer-receipt construction",
         ):
-            resource.JobHandleTransferReceipt(
-                source_pid=10,
-                source_creation_time_ns=100,
-                watchdog_pid=20,
-                watchdog_creation_time_ns=200,
-                watchdog_raw_handle=123,
-                source_handle_closed=True,
-                duplicate_requested_noninheritable=True,
-            )
+            resource._JobHandleTransferReceipt()
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
-            "direct",
+            "direct watchdog Job-handle construction",
         ):
-            resource.WatchdogOwnedWindowsJobHandle(
-                123,
-                api,
-                _proof(),
-            )
-        failed_api = _TransferApi(fail_source_close=True)
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "source Job handle close failed",
-        ):
-            self._receipt(failed_api)
-        self.assertIn(("close_remote", 123), failed_api.calls)
+            resource.WatchdogOwnedWindowsJobHandle()
 
-    def test_inheritable_invalid_or_wrong_target_handle_is_rejected(
+        self.assertFalse(
+            hasattr(
+                resource._JobHandleTransferReceipt,
+                "_issue_after_verified_os_transfer",
+            )
+        )
+
+    def test_subclassed_or_monkeypatched_job_api_is_rejected(self) -> None:
+        receipt, _, _ = self._receipt()
+
+        class Subclass(resource.WindowsJobApi):
+            def __init__(self) -> None:
+                self.kernel32 = _FakeKernel32()
+
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "reviewed Win32 adapter",
+        ):
+            resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
+                receipt,
+                api=Subclass(),
+                current_identity=resource.ProcessIdentity(20, 200),
+            )
+
+        exact = _job_api(_FakeKernel32())
+        exact.verify_job_handle = lambda handle, limit: True
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "method identity",
+        ):
+            resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
+                receipt,
+                api=exact,
+                current_identity=resource.ProcessIdentity(20, 200),
+            )
+
+    def test_rejected_target_identity_inheritance_or_limits_is_cleaned(
         self,
     ) -> None:
-        receipt = self._receipt(_TransferApi())
-        cases = (
-            (
-                _TransferApi(inheritable=True),
-                resource.ProcessIdentity(20, 200),
-            ),
-            (
-                _TransferApi(valid_job=False),
-                resource.ProcessIdentity(20, 200),
-            ),
-            (
-                _TransferApi(),
-                resource.ProcessIdentity(21, 200),
-            ),
-        )
-        for api, identity in cases:
-            with self.subTest(api=api, identity=identity):
+        def wrong_identity(kernel: _FakeKernel32) -> resource.ProcessIdentity:
+            return resource.ProcessIdentity(21, 200)
+
+        def inheritable(kernel: _FakeKernel32) -> resource.ProcessIdentity:
+            kernel.inheritable_handles.add(123)
+            return resource.ProcessIdentity(20, 200)
+
+        def wrong_limit(kernel: _FakeKernel32) -> resource.ProcessIdentity:
+            kernel.reported_limit -= 1
+            return resource.ProcessIdentity(20, 200)
+
+        for mutate in (wrong_identity, inheritable, wrong_limit):
+            receipt, api, kernel = self._receipt()
+            identity = mutate(kernel)
+            with self.subTest(mutate=mutate.__name__):
                 with self.assertRaises(
                     resource.Gate12C2ResourceQualificationError
                 ):
@@ -397,6 +490,66 @@ class JobOwnershipAdversarialTest(unittest.TestCase):
                         api=api,
                         current_identity=identity,
                     )
+                self.assertNotIn(123, kernel.open_handles)
+
+    def test_unverified_source_close_cleans_target_duplicate(self) -> None:
+        kernel = _FakeKernel32(noop_source_close=True)
+        api = _job_api(kernel)
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "source Job handle close failed",
+        ):
+            api.transfer_job_handle_to_watchdog(
+                source_job_handle=11,
+                target_process_handle=22,
+                source_identity=resource.ProcessIdentity(10, 100),
+                watchdog_identity=resource.ProcessIdentity(20, 200),
+                expected_job_memory_limit_bytes=kernel.expected_limit,
+            )
+        self.assertIn(11, kernel.open_handles)
+        self.assertNotIn(123, kernel.open_handles)
+        self.assertNotIn(124, kernel.open_handles)
+
+    def test_source_wrong_limits_reject_before_duplicate(self) -> None:
+        required = _FakeKernel32.REQUIRED_FLAGS
+        for kernel in (
+            _FakeKernel32(limit_flags=required | 1),
+            _FakeKernel32(reported_limit=1),
+        ):
+            api = _job_api(kernel)
+            with self.subTest(
+                flags=kernel.limit_flags, limit=kernel.reported_limit
+            ):
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "exact frozen limits",
+                ):
+                    api.transfer_job_handle_to_watchdog(
+                        source_job_handle=11,
+                        target_process_handle=22,
+                        source_identity=resource.ProcessIdentity(10, 100),
+                        watchdog_identity=resource.ProcessIdentity(20, 200),
+                        expected_job_memory_limit_bytes=kernel.expected_limit,
+                    )
+                self.assertNotIn(123, kernel.open_handles)
+
+    def test_noop_close_cannot_be_verified_as_job_kill(self) -> None:
+        handle = _JobHandle(noop_close=True)
+        watchdog = resource.LaunchDeadlineWatchdog(
+            handle,
+            monotonic_ns=lambda: 10,
+        )
+        watchdog.resume_and_arm(lambda: 1)
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "Job handle close failed",
+        ):
+            watchdog.verify_acknowledgement(None, lambda _: True)
+        self.assertIn(123, handle._test_kernel.open_handles)
+        self.assertEqual(
+            handle._test_kernel.watchdog_close_calls,
+            resource.JOB_HANDLE_CLOSE_ATTEMPTS,
+        )
 
 
 class TelemetryAdversarialTest(unittest.TestCase):
@@ -559,6 +712,52 @@ class TelemetryAdversarialTest(unittest.TestCase):
                 ):
                     writer.close()
             writer._handle.close()
+            payload = path.read_bytes()
+        self.assertIn(b"\x00", payload)
+        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
+            resource.decode_and_verify_telemetry(payload)
+
+    def test_close_exception_after_os_release_poisoned_artifact(self) -> None:
+        class RaisesAfterRelease:
+            def __init__(self, wrapped):
+                self.wrapped = wrapped
+
+            @property
+            def closed(self):
+                return self.wrapped.closed
+
+            def __getattr__(self, name):
+                return getattr(self.wrapped, name)
+
+            def close(self):
+                self.wrapped.close()
+                raise OSError("RAW_CLOSE_AFTER_RELEASE_SENTINEL")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "telemetry.jsonl"
+            writer = resource.AppendOnlyTelemetryWriter(path)
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=_utc(0),
+                monotonic_ns=0,
+                metrics=_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=_utc(1),
+                monotonic_ns=1,
+                metrics=_metrics(),
+            )
+            writer._handle = RaisesAfterRelease(writer._handle)
+            with self.assertRaisesRegex(
+                resource.Gate12C2ResourceQualificationError,
+                "telemetry handle close failed",
+            ):
+                writer.close()
+            payload = path.read_bytes()
+        self.assertIn(b"\x00", payload)
+        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
+            resource.decode_and_verify_telemetry(payload)
 
     def test_decoder_rejects_strict_type_key_and_nonfinite_attacks(
         self,
@@ -662,12 +861,12 @@ class ResourceEnvelopeBoundaryTest(unittest.TestCase):
         )
         self.assertEqual(result["status"], "pass")
 
-    def test_odd_disk_floor_uses_the_exact_half_ceiling(self) -> None:
+    def test_odd_disk_floor_uses_the_exact_frozen_floor(self) -> None:
         evidence = self._exact_boundary()
         evidence["preflight_free_bytes"] += 1
         evidence["minimum_observed_free_bytes"] = (
-            evidence["preflight_free_bytes"] + 1
-        ) // 2
+            evidence["preflight_free_bytes"] // 2
+        )
         resource.verify_resource_envelope(evidence)
         evidence["minimum_observed_free_bytes"] -= 1
         with self.assertRaises(

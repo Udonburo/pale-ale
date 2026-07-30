@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ctypes
 import json
 import tempfile
 import unittest
@@ -9,34 +10,137 @@ from pathlib import Path
 import gate12c2_resource_qualification as resource
 
 
-class _FakeJobHandle:
-    inheritable = False
+class _KernelFunction:
+    def __init__(self, callback):
+        self.callback = callback
+        self.argtypes = None
+        self.restype = None
 
-    def __init__(self) -> None:
-        self.close_count = 0
-        self.ownership_proof = resource.JobHandleOwnershipProof(
-            source_pid=1,
-            source_creation_time_ns=1,
-            watchdog_pid=2,
-            watchdog_creation_time_ns=2,
-            watchdog_raw_handle=3,
-            source_handle_closed=True,
-            target_handle_noninheritable=True,
-            target_handle_valid_job=True,
+    def __call__(self, *args):
+        return self.callback(*args)
+
+
+class _FakeKernel32:
+    REQUIRED_FLAGS = (
+        resource.WindowsJobApi.JOB_OBJECT_LIMIT_JOB_MEMORY
+        | resource.WindowsJobApi.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    )
+
+    def __init__(
+        self,
+        *,
+        expected_limit: int = 12_000_000,
+        limit_flags: int | None = None,
+        reported_limit: int | None = None,
+        fail_watchdog_close_attempts: int = 0,
+        noop_watchdog_close: bool = False,
+    ) -> None:
+        self.expected_limit = expected_limit
+        self.limit_flags = (
+            self.REQUIRED_FLAGS if limit_flags is None else limit_flags
         )
+        self.reported_limit = (
+            expected_limit if reported_limit is None else reported_limit
+        )
+        self.fail_watchdog_close_attempts = fail_watchdog_close_attempts
+        self.noop_watchdog_close = noop_watchdog_close
+        self.open_handles = {11}
+        self.inheritable_handles: set[int] = set()
+        self.close_calls: list[int] = []
+        self.watchdog_close_calls = 0
+        self.GetCurrentProcess = _KernelFunction(lambda: 999)
+        self.DuplicateHandle = _KernelFunction(self._duplicate)
+        self.CloseHandle = _KernelFunction(self._close)
+        self.GetHandleInformation = _KernelFunction(self._handle_information)
+        self.QueryInformationJobObject = _KernelFunction(self._query_job)
 
-    def close_for_kill(self) -> None:
-        self.close_count += 1
+    def _duplicate(self, *args):
+        duplicate = args[3]
+        duplicate._obj.value = 123
+        self.open_handles.add(123)
+        return True
+
+    def _close(self, handle):
+        raw = int(handle)
+        self.close_calls.append(raw)
+        if raw == 123:
+            self.watchdog_close_calls += 1
+            if self.watchdog_close_calls <= self.fail_watchdog_close_attempts:
+                return False
+            if self.noop_watchdog_close:
+                return True
+        if raw not in self.open_handles:
+            if hasattr(ctypes, "set_last_error"):
+                ctypes.set_last_error(6)
+            return False
+        self.open_handles.remove(raw)
+        return True
+
+    def _handle_information(self, handle, flags):
+        raw = int(handle)
+        if raw not in self.open_handles:
+            if hasattr(ctypes, "set_last_error"):
+                ctypes.set_last_error(6)
+            return False
+        flags._obj.value = (
+            resource.WindowsJobApi.HANDLE_FLAG_INHERIT
+            if raw in self.inheritable_handles
+            else 0
+        )
+        return True
+
+    def _query_job(self, handle, info_class, info, size, returned):
+        del handle, info_class, size
+        info._obj.BasicLimitInformation.LimitFlags = self.limit_flags
+        info._obj.JobMemoryLimit = self.reported_limit
+        returned._obj.value = 1
+        return True
 
 
-class _UnownedJobHandle(_FakeJobHandle):
-    def __init__(self) -> None:
-        self.close_count = 0
-        self.ownership_proof = None
+def _job_api(kernel: _FakeKernel32) -> resource.WindowsJobApi:
+    api = object.__new__(resource.WindowsJobApi)
+    api.kernel32 = kernel
+    return api
 
 
-class _InheritableJobHandle(_FakeJobHandle):
-    inheritable = True
+def _make_job_handle(
+    *,
+    fail_close_attempts: int = 0,
+    noop_close: bool = False,
+) -> resource.WatchdogOwnedWindowsJobHandle:
+    kernel = _FakeKernel32(
+        fail_watchdog_close_attempts=fail_close_attempts,
+        noop_watchdog_close=noop_close,
+    )
+    api = _job_api(kernel)
+    receipt = api.transfer_job_handle_to_watchdog(
+        source_job_handle=11,
+        target_process_handle=22,
+        source_identity=resource.ProcessIdentity(10, 100),
+        watchdog_identity=resource.ProcessIdentity(20, 200),
+        expected_job_memory_limit_bytes=kernel.expected_limit,
+    )
+    handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
+        receipt,
+        api=api,
+        current_identity=resource.ProcessIdentity(20, 200),
+    )
+    handle._test_kernel = kernel
+    return handle
+
+
+def _FakeJobHandle() -> resource.WatchdogOwnedWindowsJobHandle:
+    return _make_job_handle()
+
+
+class _UnownedJobHandle:
+    pass
+
+
+def _InheritableJobHandle() -> resource.WatchdogOwnedWindowsJobHandle:
+    handle = _make_job_handle()
+    handle._test_kernel.inheritable_handles.add(123)
+    return handle
 
 
 class _Clock:
@@ -292,7 +396,7 @@ class TelemetryContractTest(unittest.TestCase):
 
 class LaunchDeadlineWatchdogTest(unittest.TestCase):
     def _watchdog(
-        self, handle: _FakeJobHandle, *clock_values: int
+        self, handle: resource.WatchdogOwnedWindowsJobHandle, *clock_values: int
     ) -> resource.LaunchDeadlineWatchdog:
         return resource.LaunchDeadlineWatchdog(
             handle,
@@ -320,7 +424,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
             start + resource.LAUNCH_EVIDENCE_DEADLINE_NS - 1,
         )
         self.assertTrue(watchdog.verified)
-        self.assertEqual(handle.close_count, 0)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 0)
 
     def test_deadline_exact_rejects_and_closes_sole_job_handle(self) -> None:
         handle = _FakeJobHandle()
@@ -340,7 +444,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
                 acknowledgement_supplier=lambda: {"status": "present"},
                 verifier=lambda _: True,
             )
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_missing_ack_at_deadline_kills_job(self) -> None:
         handle = _FakeJobHandle()
@@ -359,7 +463,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
                 acknowledgement_supplier=lambda: None,
                 verifier=lambda _: True,
             )
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_invalid_ack_kills_job(self) -> None:
         handle = _FakeJobHandle()
@@ -373,7 +477,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
                 acknowledgement_supplier=lambda: {"bad": True},
                 verifier=lambda _: False,
             )
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_verifier_failure_kills_job_without_raw_exception(self) -> None:
         handle = _FakeJobHandle()
@@ -392,7 +496,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
                 verifier=fail,
             )
         self.assertNotIn("RAW_ACK_SENTINEL", str(raised.exception))
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
     def test_supplier_failure_and_resume_failure_kill_job(self) -> None:
         handle = _FakeJobHandle()
@@ -408,7 +512,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
                 ),
                 verifier=lambda _: True,
             )
-        self.assertEqual(handle.close_count, 1)
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
 
         second = _FakeJobHandle()
         watchdog = self._watchdog(second, 10)
@@ -417,7 +521,7 @@ class LaunchDeadlineWatchdogTest(unittest.TestCase):
             "resume result is invalid",
         ):
             watchdog.resume_and_arm(lambda: 0)
-        self.assertEqual(second.close_count, 1)
+        self.assertEqual(second._test_kernel.watchdog_close_calls, 1)
 
     def test_unowned_or_inheritable_handle_is_rejected(self) -> None:
         for handle in (_UnownedJobHandle(), _InheritableJobHandle()):
@@ -584,42 +688,37 @@ class ResourceEnvelopeTest(unittest.TestCase):
 
 class WindowsHandleAbstractionTest(unittest.TestCase):
     def test_watchdog_owned_handle_closes_backend_once(self) -> None:
-        class Api:
-            def __init__(self) -> None:
-                self.closed: list[int] = []
-
-            def query_handle_inheritable(self, handle: int) -> bool:
-                self.asserted_handle = handle
-                return False
-
-            def verify_job_handle(self, handle: int) -> bool:
-                self.asserted_job = handle
-                return True
-
-            def close_handle(self, handle: int) -> None:
-                self.closed.append(handle)
-
-        api = Api()
-        receipt = resource.JobHandleTransferReceipt(
-            source_pid=10,
-            source_creation_time_ns=100,
-            watchdog_pid=20,
-            watchdog_creation_time_ns=200,
-            watchdog_raw_handle=123,
-            source_handle_closed=True,
-            duplicate_requested_noninheritable=True,
-            _token=resource._JOB_TRANSFER_RECEIPT_TOKEN,
-        )
-        handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-            receipt,
-            api=api,  # type: ignore[arg-type]
-            current_identity=resource.ProcessIdentity(20, 200),
-        )
-        handle.close_for_kill()
-        handle.close_for_kill()
-        self.assertEqual(api.closed, [123])
+        handle = _make_job_handle()
         self.assertTrue(handle.sole_owner_verified)
         self.assertFalse(handle.inheritable)
+        handle.close_for_kill()
+        handle.close_for_kill()
+        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
+        self.assertFalse(handle.sole_owner_verified)
+
+    def test_exact_job_limits_reject_extra_flags_or_wrong_memory(self) -> None:
+        required = _FakeKernel32.REQUIRED_FLAGS
+        self.assertTrue(
+            resource.WindowsJobApi._job_limits_match(
+                limit_flags=required,
+                job_memory_limit_bytes=123,
+                expected_job_memory_limit_bytes=123,
+            )
+        )
+        self.assertFalse(
+            resource.WindowsJobApi._job_limits_match(
+                limit_flags=required | 1,
+                job_memory_limit_bytes=123,
+                expected_job_memory_limit_bytes=123,
+            )
+        )
+        self.assertFalse(
+            resource.WindowsJobApi._job_limits_match(
+                limit_flags=required,
+                job_memory_limit_bytes=1,
+                expected_job_memory_limit_bytes=123,
+            )
+        )
 
 
 if __name__ == "__main__":
