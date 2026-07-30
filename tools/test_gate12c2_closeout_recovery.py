@@ -21,7 +21,7 @@ import gate12c2_draw_profile as profile  # noqa: E402
 
 
 class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
-    NOW = "2026-07-28T00:00:00+00:00"
+    NOW = datetime.now(timezone.utc).isoformat()
 
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -469,6 +469,9 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
         self.assertFalse(verification["scientific_values_emitted"])
 
     def _mock_authorization(self) -> tuple[Path, dict[str, object]]:
+        current = recovery.utc_now()
+        issued_at = (current - timedelta(minutes=15)).isoformat()
+        expires_at = (current + timedelta(minutes=15)).isoformat()
         authorization_path = self.base / "recovery-auth.json"
         attempt = self.base / "external/attempt.json"
         consumption = self.base / "external/consumption.json"
@@ -479,8 +482,8 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
             "authorization_id": "test-auth",
             "authorization_scope": "payload_verification_and_external_seal_only",
             "authorization_payload_sha256": "a" * 64,
-            "issued_at_utc": "2026-07-27T00:00:00+00:00",
-            "expires_at_utc": "2026-07-29T00:00:00+00:00",
+            "issued_at_utc": issued_at,
+            "expires_at_utc": expires_at,
             "hostname": recovery.socket.gethostname(),
             "output_root": self.root.resolve().as_posix(),
             "incident_manifest_path": (self.base / "incident.json").as_posix(),
@@ -492,7 +495,7 @@ class Gate12C2CloseoutRecoveryTest(unittest.TestCase):
                 "pid": 2147483647,
                 "hostname": recovery.socket.gethostname(),
                 "state": recovery.PROCESS_DEAD,
-                "observed_at_utc": "2026-07-27T00:00:00+00:00",
+                "observed_at_utc": issued_at,
                 "stale_lock_payload_sha256": "d" * 64,
             },
             "authorization_output": authorization_path.as_posix(),
