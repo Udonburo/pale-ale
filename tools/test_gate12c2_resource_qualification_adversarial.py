@@ -5,637 +5,378 @@ import ctypes
 import json
 import os
 import tempfile
-import threading
-import time
 import unittest
 from pathlib import Path
 from unittest import mock
 
 import gate12c2_resource_qualification as resource
+from gate12c2_resource_test_support import (
+    Clock,
+    FakeKernel32,
+    TEST_ATTEMPT_ID,
+    geometry,
+    job_api,
+    make_launch,
+    telemetry_metrics,
+    telemetry_paths,
+    utc,
+    write_success_telemetry,
+)
+from test_gate12c2_resource_qualification import (
+    GuardianAndClassifierTest,
+    ResourceEnvelopeTest,
+)
 
 
-class _KernelFunction:
-    def __init__(self, callback):
-        self.callback = callback
-        self.argtypes = None
-        self.restype = None
-
-    def __call__(self, *args):
-        return self.callback(*args)
-
-
-class _FakeKernel32:
-    REQUIRED_FLAGS = (
-        resource.WindowsJobApi.JOB_OBJECT_LIMIT_JOB_MEMORY
-        | resource.WindowsJobApi.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    )
-
-    def __init__(
-        self,
-        *,
-        expected_limit: int = 12_000_000,
-        limit_flags: int | None = None,
-        reported_limit: int | None = None,
-        fail_watchdog_close_attempts: int = 0,
-        noop_watchdog_close: bool = False,
-        noop_source_close: bool = False,
-    ) -> None:
-        self.expected_limit = expected_limit
-        self.limit_flags = (
-            self.REQUIRED_FLAGS if limit_flags is None else limit_flags
+class AtomicLaunchAdversarialTest(unittest.TestCase):
+    def _launch(self, kernel: FakeKernel32) -> None:
+        job_api(kernel).launch_scientific_child_suspended(
+            preflight_geometry=geometry(kernel),
+            application_name="python.exe",
+            command_line="python.exe -B frozen.py",
+            current_directory=Path.cwd(),
         )
-        self.reported_limit = (
-            expected_limit if reported_limit is None else reported_limit
-        )
-        self.fail_watchdog_close_attempts = fail_watchdog_close_attempts
-        self.noop_watchdog_close = noop_watchdog_close
-        self.noop_source_close = noop_source_close
-        self.open_handles = {11}
-        self.inheritable_handles: set[int] = set()
-        self.close_calls: list[int] = []
-        self.watchdog_close_calls = 0
-        self.GetCurrentProcess = _KernelFunction(lambda: 999)
-        self.DuplicateHandle = _KernelFunction(self._duplicate)
-        self.CloseHandle = _KernelFunction(self._close)
-        self.GetHandleInformation = _KernelFunction(self._handle_information)
-        self.QueryInformationJobObject = _KernelFunction(self._query_job)
 
-    def _duplicate(self, *args):
-        source_handle = int(args[1])
-        duplicate = args[3]
-        options = int(args[6])
-        if options & resource.WindowsJobApi.DUPLICATE_CLOSE_SOURCE:
-            self.open_handles.discard(source_handle)
-            duplicate._obj.value = 124
-            self.open_handles.add(124)
-        else:
-            duplicate._obj.value = 123
-            self.open_handles.add(123)
-        return True
-
-    def _close(self, handle):
-        raw = int(handle)
-        self.close_calls.append(raw)
-        if raw == 11 and self.noop_source_close:
-            return True
-        if raw == 123:
-            self.watchdog_close_calls += 1
-            if self.watchdog_close_calls <= self.fail_watchdog_close_attempts:
-                return False
-            if self.noop_watchdog_close:
-                return True
-        if raw not in self.open_handles:
-            if hasattr(ctypes, "set_last_error"):
-                ctypes.set_last_error(6)
-            return False
-        self.open_handles.remove(raw)
-        return True
-
-    def _handle_information(self, handle, flags):
-        raw = int(handle)
-        if raw not in self.open_handles:
-            if hasattr(ctypes, "set_last_error"):
-                ctypes.set_last_error(6)
-            return False
-        flags._obj.value = (
-            resource.WindowsJobApi.HANDLE_FLAG_INHERIT
-            if raw in self.inheritable_handles
-            else 0
-        )
-        return True
-
-    def _query_job(self, handle, info_class, info, size, returned):
-        del handle, info_class, size
-        info._obj.BasicLimitInformation.LimitFlags = self.limit_flags
-        info._obj.JobMemoryLimit = self.reported_limit
-        returned._obj.value = 1
-        return True
-
-
-def _job_api(kernel: _FakeKernel32) -> resource.WindowsJobApi:
-    api = object.__new__(resource.WindowsJobApi)
-    api.kernel32 = kernel
-    return api
-
-
-def _make_job_handle(
-    *,
-    fail_close_attempts: int = 0,
-    noop_close: bool = False,
-) -> resource.WatchdogOwnedWindowsJobHandle:
-    kernel = _FakeKernel32(
-        fail_watchdog_close_attempts=fail_close_attempts,
-        noop_watchdog_close=noop_close,
-    )
-    api = _job_api(kernel)
-    receipt = api.transfer_job_handle_to_watchdog(
-        source_job_handle=11,
-        target_process_handle=22,
-        source_identity=resource.ProcessIdentity(10, 100),
-        watchdog_identity=resource.ProcessIdentity(20, 200),
-        expected_job_memory_limit_bytes=kernel.expected_limit,
-    )
-    handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-        receipt,
-        api=api,
-        current_identity=resource.ProcessIdentity(20, 200),
-    )
-    handle._test_kernel = kernel
-    return handle
-
-
-def _JobHandle(
-    *, fail_close_attempts: int = 0, noop_close: bool = False
-) -> resource.WatchdogOwnedWindowsJobHandle:
-    return _make_job_handle(
-        fail_close_attempts=fail_close_attempts,
-        noop_close=noop_close,
-    )
-
-
-def _metrics() -> dict[str, int]:
-    return {
-        "watchdog_pid": 101,
-        "watchdog_creation_time_ns": 1_000,
-        "guardian_pid": 102,
-        "guardian_creation_time_ns": 1_001,
-        "coordinator_pid": 103,
-        "coordinator_creation_time_ns": 1_002,
-        "replay_root_pid": 104,
-        "replay_root_creation_time_ns": 1_003,
-        "job_active_process_count": 4,
-        "job_total_process_count": 4,
-        "job_terminated_process_count": 0,
-        "job_current_memory_bytes": 1_000_000,
-        "job_peak_memory_bytes": 2_000_000,
-        "sampled_replay_job_rss_bytes": 1_500_000,
-        "sampled_control_plane_rss_bytes": 500_000,
-        "sampled_combined_rss_bytes": 2_000_000,
-        "available_physical_memory_bytes": 8_000_000_000,
-        "total_physical_memory_bytes": 16_000_000_000,
-        "qualification_volume_free_bytes": 20_000_000_000,
-        "scheduled_output_file_count": 1,
-        "scheduled_output_bytes": 1_000,
-        "partial_or_temp_count": 0,
-    }
-
-
-def _utc(index: int) -> str:
-    return f"2026-07-30T00:00:{index:02d}.000000Z"
-
-
-def _raw_success_stream(*, gap_after_first_ns: int = 1) -> bytes:
-    previous_state = "__START__"
-    previous_digest = resource.GENESIS_DIGEST
-    monotonic = 0
-    encoded_records: list[bytes] = []
-    for sequence, event_code in enumerate(resource.SUCCESS_MILESTONES):
-        state = resource.TRANSITIONS[(previous_state, event_code)]
-        record = {
-            "schema_version": resource.TELEMETRY_SCHEMA,
-            "sequence": sequence,
-            "utc_time": _utc(sequence),
-            "monotonic_ns": monotonic,
-            "previous_record_sha256": previous_digest,
-            "state": state,
-            "event_code": event_code,
-            **_metrics(),
-        }
-        encoded, digest = resource.encode_telemetry_record(record)
-        encoded_records.append(encoded)
-        previous_state = state
-        previous_digest = digest
-        monotonic += (
-            gap_after_first_ns
-            if sequence == 0
-            else 1
-        )
-    return b"".join(encoded_records)
-
-
-def _rehash_wire_record(record: dict[str, object]) -> bytes:
-    candidate = dict(record)
-    candidate.pop("sha", None)
-    candidate["sha"] = resource.sha256_bytes(
-        resource.canonical_json_bytes(candidate)
-    )
-    return resource.canonical_json_bytes(candidate) + b"\n"
-
-
-def _legacy_evidence() -> dict[str, object]:
-    return {
-        "child_exit_code": 1,
-        "stdout_bytes": 0,
-        "exception_type": resource.EXPECTED_LEGACY_EXCEPTION_TYPE,
-        "exception_message": resource.EXPECTED_LEGACY_EXCEPTION_MESSAGE,
-        "normalized_project_stack": [
-            {"path": path, "line": line, "function": function}
-            for path, line, function in resource.EXPECTED_LEGACY_STACK
-        ],
-        "stderr_sha256": resource.EXPECTED_LEGACY_STDERR_SHA256,
-        "configuration_count": 9,
-        "index_count": 9,
-        "outer_experiment_count": 768,
-        "shard_count": 768,
-        "partial_or_temp_count": 0,
-        "stale_lock_count": 1,
-        "stale_lock_relative_path": (
-            resource.EXPECTED_STALE_LOCK_RELATIVE_PATH
-        ),
-        "stale_lock_file_sha256": (
-            resource.EXPECTED_STALE_LOCK_FILE_SHA256
-        ),
-        "stale_lock_manifest_match": True,
-        "unexpected_artifact_count": 0,
-        "unexpected_artifact_relative_paths": [],
-        "legacy_execution_evidence_present": False,
-        "legacy_resource_receipt_present": False,
-        "legacy_execution_receipt_present": False,
-        "semantic_commitments_match": True,
-        "telemetry_tail_complete": True,
-    }
-
-
-class WatchdogAdversarialTest(unittest.TestCase):
-    def test_blocking_supplier_is_killed_at_deadline(self) -> None:
-        release = threading.Event()
-        handle = _JobHandle()
-        with mock.patch.object(
-            resource, "LAUNCH_EVIDENCE_DEADLINE_NS", 20_000_000
-        ):
-            watchdog = resource.LaunchDeadlineWatchdog(handle)
-            watchdog.resume_and_arm(lambda: 1)
-            started = time.monotonic()
-            with self.assertRaisesRegex(
-                resource.Gate12C2ResourceQualificationError,
-                "missing at deadline",
-            ):
-                watchdog.run_until_verified(
-                    acknowledgement_supplier=lambda: release.wait(5),
-                    verifier=lambda _: True,
-                    poll_seconds=0.001,
-                )
-            elapsed = time.monotonic() - started
-        release.set()
-        self.assertLess(elapsed, 0.5)
-        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
-        self.assertTrue(watchdog.job_handle_close_verified)
-
-    def test_blocking_verifier_is_killed_at_deadline(self) -> None:
-        release = threading.Event()
-        handle = _JobHandle()
-        with mock.patch.object(
-            resource, "LAUNCH_EVIDENCE_DEADLINE_NS", 20_000_000
-        ):
-            watchdog = resource.LaunchDeadlineWatchdog(handle)
-            watchdog.resume_and_arm(lambda: 1)
-            with self.assertRaisesRegex(
-                resource.Gate12C2ResourceQualificationError,
-                "missing at deadline",
-            ):
-                watchdog.run_until_verified(
-                    acknowledgement_supplier=lambda: {"present": True},
-                    verifier=lambda _: release.wait(5),
-                    poll_seconds=0.001,
-                )
-        release.set()
-        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
-
-    def test_delayed_acknowledgement_is_killed(self) -> None:
-        handle = _JobHandle()
-        with mock.patch.object(
-            resource, "LAUNCH_EVIDENCE_DEADLINE_NS", 10_000_000
-        ):
-            watchdog = resource.LaunchDeadlineWatchdog(handle)
-            watchdog.resume_and_arm(lambda: 1)
-            with self.assertRaises(
-                resource.Gate12C2ResourceQualificationError
-            ):
-                watchdog.run_until_verified(
-                    acknowledgement_supplier=lambda: (
-                        time.sleep(0.03),
-                        {"present": True},
-                    )[1],
-                    verifier=lambda _: True,
-                    poll_seconds=0.001,
-                )
-        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
-
-    def test_clock_failure_closes_job(self) -> None:
-        calls = 0
-
-        def clock() -> int:
-            nonlocal calls
-            calls += 1
-            if calls == 1:
-                return 1
-            raise RuntimeError("RAW_CLOCK_SENTINEL")
-
-        handle = _JobHandle()
-        watchdog = resource.LaunchDeadlineWatchdog(
-            handle, monotonic_ns=clock
-        )
-        watchdog.resume_and_arm(lambda: 1)
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "^monotonic clock failed$",
-        ) as raised:
-            watchdog.run_until_verified(
-                acknowledgement_supplier=lambda: None,
-                verifier=lambda _: True,
-            )
-        self.assertNotIn("RAW_CLOCK_SENTINEL", str(raised.exception))
-        self.assertEqual(handle._test_kernel.watchdog_close_calls, 1)
-
-    def test_close_failure_retries_and_never_claims_verified_close(self) -> None:
-        recoverable = _JobHandle(fail_close_attempts=2)
-        watchdog = resource.LaunchDeadlineWatchdog(recoverable)
-        watchdog.resume_and_arm(lambda: 1)
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "^launch acknowledgement is invalid$",
-        ):
-            watchdog.run_until_verified(
-                acknowledgement_supplier=lambda: {"present": True},
-                verifier=lambda _: False,
-            )
-        self.assertEqual(recoverable._test_kernel.watchdog_close_calls, 3)
-        self.assertTrue(watchdog.job_handle_close_verified)
-
-        unrecoverable = _JobHandle(fail_close_attempts=99)
-        watchdog = resource.LaunchDeadlineWatchdog(unrecoverable)
-        watchdog.resume_and_arm(lambda: 1)
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "Job handle close failed",
-        ):
-            watchdog.verify_acknowledgement(None, lambda _: True)
-        self.assertEqual(unrecoverable._test_kernel.watchdog_close_calls, 3)
-        self.assertFalse(watchdog.job_handle_close_verified)
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "Job handle close failed",
-        ):
-            watchdog.verify_acknowledgement(None, lambda _: True)
-        self.assertEqual(unrecoverable._test_kernel.watchdog_close_calls, 6)
-
-
-class JobOwnershipAdversarialTest(unittest.TestCase):
-    @staticmethod
-    def _receipt(
-        kernel: _FakeKernel32 | None = None,
-    ) -> tuple[object, resource.WindowsJobApi, _FakeKernel32]:
-        selected = kernel or _FakeKernel32()
-        api = _job_api(selected)
-        receipt = api.transfer_job_handle_to_watchdog(
-            source_job_handle=11,
-            target_process_handle=22,
-            source_identity=resource.ProcessIdentity(10, 100),
-            watchdog_identity=resource.ProcessIdentity(20, 200),
-            expected_job_memory_limit_bytes=selected.expected_limit,
-        )
-        return receipt, api, selected
-
-    def test_transfer_closes_source_and_claim_reverifies_exact_os_handle(
+    def test_first_attribute_call_must_fail_with_122_and_positive_size(
         self,
     ) -> None:
-        receipt, api, kernel = self._receipt()
-        self.assertNotIn(11, kernel.open_handles)
-        self.assertIn(123, kernel.open_handles)
-        handle = resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-            receipt,
-            api=api,
-            current_identity=resource.ProcessIdentity(20, 200),
+        cases = (
+            FakeKernel32(first_initialize_returns_true=True),
+            FakeKernel32(first_initialize_error=5),
+            FakeKernel32(first_attribute_bytes=0),
         )
-        self.assertTrue(handle.sole_owner_verified)
-        resource.LaunchDeadlineWatchdog(handle, monotonic_ns=lambda: 0)
-
-    def test_public_or_token_style_self_attestation_is_rejected(self) -> None:
-        self.assertFalse(
-            hasattr(resource, "JobHandleOwnershipProof")
-        )
-        self.assertFalse(
-            hasattr(resource, "_JOB_TRANSFER_RECEIPT_TOKEN")
-        )
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "direct Job transfer-receipt construction",
-        ):
-            resource._JobHandleTransferReceipt()
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "direct watchdog Job-handle construction",
-        ):
-            resource.WatchdogOwnedWindowsJobHandle()
-
-        self.assertFalse(
-            hasattr(
-                resource._JobHandleTransferReceipt,
-                "_issue_after_verified_os_transfer",
-            )
-        )
-
-    def test_subclassed_or_monkeypatched_job_api_is_rejected(self) -> None:
-        receipt, _, _ = self._receipt()
-
-        class Subclass(resource.WindowsJobApi):
-            def __init__(self) -> None:
-                self.kernel32 = _FakeKernel32()
-
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "reviewed Win32 adapter",
-        ):
-            resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-                receipt,
-                api=Subclass(),
-                current_identity=resource.ProcessIdentity(20, 200),
-            )
-
-        exact = _job_api(_FakeKernel32())
-        exact.verify_job_handle = lambda handle, limit: True
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "method identity",
-        ):
-            resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-                receipt,
-                api=exact,
-                current_identity=resource.ProcessIdentity(20, 200),
-            )
-
-    def test_rejected_target_identity_inheritance_or_limits_is_cleaned(
-        self,
-    ) -> None:
-        def wrong_identity(kernel: _FakeKernel32) -> resource.ProcessIdentity:
-            return resource.ProcessIdentity(21, 200)
-
-        def inheritable(kernel: _FakeKernel32) -> resource.ProcessIdentity:
-            kernel.inheritable_handles.add(123)
-            return resource.ProcessIdentity(20, 200)
-
-        def wrong_limit(kernel: _FakeKernel32) -> resource.ProcessIdentity:
-            kernel.reported_limit -= 1
-            return resource.ProcessIdentity(20, 200)
-
-        for mutate in (wrong_identity, inheritable, wrong_limit):
-            receipt, api, kernel = self._receipt()
-            identity = mutate(kernel)
-            with self.subTest(mutate=mutate.__name__):
-                with self.assertRaises(
-                    resource.Gate12C2ResourceQualificationError
+        for kernel in cases:
+            with self.subTest(
+                returns_true=kernel.first_initialize_returns_true,
+                error=kernel.first_initialize_error,
+                bytes=kernel.first_attribute_bytes,
+            ):
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "launch preparation failed",
                 ):
-                    resource.WatchdogOwnedWindowsJobHandle.from_transfer_receipt(
-                        receipt,
-                        api=api,
-                        current_identity=identity,
-                    )
-                self.assertNotIn(123, kernel.open_handles)
+                    self._launch(kernel)
+                self.assertNotIn("CreateProcessW", kernel.calls)
+                self.assertEqual(kernel.open_handles, set())
 
-    def test_unverified_source_close_cleans_target_duplicate(self) -> None:
-        kernel = _FakeKernel32(noop_source_close=True)
-        api = _job_api(kernel)
+    def test_second_attribute_initialization_failure_closes_job(
+        self,
+    ) -> None:
+        kernel = FakeKernel32(second_initialize_succeeds=False)
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
-            "source Job handle close failed",
+            "launch preparation failed",
         ):
-            api.transfer_job_handle_to_watchdog(
-                source_job_handle=11,
-                target_process_handle=22,
-                source_identity=resource.ProcessIdentity(10, 100),
-                watchdog_identity=resource.ProcessIdentity(20, 200),
-                expected_job_memory_limit_bytes=kernel.expected_limit,
-            )
-        self.assertIn(11, kernel.open_handles)
-        self.assertNotIn(123, kernel.open_handles)
-        self.assertNotIn(124, kernel.open_handles)
+            self._launch(kernel)
+        self.assertNotIn("UpdateProcThreadAttribute", kernel.calls)
+        self.assertNotIn("CreateProcessW", kernel.calls)
+        self.assertEqual(kernel.open_handles, set())
 
-    def test_source_wrong_limits_reject_before_duplicate(self) -> None:
-        required = _FakeKernel32.REQUIRED_FLAGS
-        for kernel in (
-            _FakeKernel32(limit_flags=required | 1),
-            _FakeKernel32(reported_limit=1),
+    def test_second_attribute_size_change_is_rejected_after_delete(
+        self,
+    ) -> None:
+        kernel = FakeKernel32(second_attribute_bytes=256)
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "launch preparation failed",
         ):
-            api = _job_api(kernel)
+            self._launch(kernel)
+        self.assertEqual(kernel.delete_calls, 1)
+        self.assertEqual(kernel.open_handles, set())
+
+    def test_attribute_delete_failure_after_create_kills_everything(
+        self,
+    ) -> None:
+        kernel = FakeKernel32(delete_raises=True)
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "deletion was not verified",
+        ):
+            self._launch(kernel)
+        self.assertIn("CreateProcessW", kernel.calls)
+        self.assertEqual(kernel.delete_calls, 1)
+        self.assertEqual(kernel.open_handles, set())
+
+    def test_createprocess_failure_never_accepts_residual_identity(
+        self,
+    ) -> None:
+        kernel = FakeKernel32(
+            create_process_succeeds=False,
+            residual_process_information_on_failure=True,
+        )
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "CreateProcessW failed",
+        ):
+            self._launch(kernel)
+        self.assertEqual(kernel.open_handles, set())
+        self.assertEqual(kernel.delete_calls, 1)
+
+    def test_extra_limit_flag_or_wrong_post_set_J_rejects(self) -> None:
+        for kernel in (
+            FakeKernel32(
+                limit_flags=FakeKernel32.REQUIRED_FLAGS | 1
+            ),
+            FakeKernel32(reported_limit=1),
+        ):
             with self.subTest(
                 flags=kernel.limit_flags, limit=kernel.reported_limit
             ):
                 with self.assertRaisesRegex(
                     resource.Gate12C2ResourceQualificationError,
-                    "exact frozen limits",
+                    "post-set Job limit",
                 ):
-                    api.transfer_job_handle_to_watchdog(
-                        source_job_handle=11,
-                        target_process_handle=22,
-                        source_identity=resource.ProcessIdentity(10, 100),
-                        watchdog_identity=resource.ProcessIdentity(20, 200),
-                        expected_job_memory_limit_bytes=kernel.expected_limit,
-                    )
-                self.assertNotIn(123, kernel.open_handles)
+                    self._launch(kernel)
+                self.assertNotIn("CreateProcessW", kernel.calls)
+                self.assertEqual(kernel.open_handles, set())
 
-    def test_noop_close_cannot_be_verified_as_job_kill(self) -> None:
-        handle = _JobHandle(noop_close=True)
-        watchdog = resource.LaunchDeadlineWatchdog(
-            handle,
-            monotonic_ns=lambda: 10,
+    def test_inheritable_local_job_is_rejected_before_child(self) -> None:
+        kernel = FakeKernel32()
+        original = kernel._create_job
+
+        def inheritable_job(security, name):
+            handle = original(security, name)
+            kernel.inheritable_handles.add(handle)
+            return handle
+
+        kernel.CreateJobObjectW.callback = inheritable_job
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "inheritable",
+        ):
+            self._launch(kernel)
+        self.assertNotIn("CreateProcessW", kernel.calls)
+        self.assertEqual(kernel.open_handles, set())
+
+    def test_each_child_identity_or_membership_deviation_rejects(self) -> None:
+        cases = (
+            ("membership", FakeKernel32(child_in_job=False)),
+            ("pid", FakeKernel32(process_id_matches=False)),
+            ("thread", FakeKernel32(thread_id_matches=False)),
+            ("suspend", FakeKernel32(initial_suspend_count=0)),
+            ("accounting", FakeKernel32(accounting=(2, 2, 0))),
         )
-        watchdog.resume_and_arm(lambda: 1)
+        for label, kernel in cases:
+            with self.subTest(label=label):
+                with self.assertRaises(
+                    resource.Gate12C2ResourceQualificationError
+                ):
+                    self._launch(kernel)
+                self.assertEqual(kernel.open_handles, set())
+
+    def test_invalid_command_or_cwd_rejects_before_job_creation(self) -> None:
+        cases = (
+            ("python\x00.exe", "python.exe -B x.py", Path.cwd()),
+            ("python.exe", "python.exe\x00 -B x.py", Path.cwd()),
+            ("python.exe", "", Path.cwd()),
+            ("python.exe", "python.exe -B x.py", Path.cwd() / "missing"),
+        )
+        for application, command, cwd in cases:
+            kernel = FakeKernel32()
+            api = job_api(kernel)
+            with self.subTest(application=application, command=command):
+                with self.assertRaises(
+                    resource.Gate12C2ResourceQualificationError
+                ):
+                    api.launch_scientific_child_suspended(
+                        preflight_geometry=geometry(kernel),
+                        application_name=application,
+                        command_line=command,
+                        current_directory=cwd,
+                    )
+                self.assertNotIn("CreateJobObjectW", kernel.calls)
+
+    def test_support_probe_cleanup_uncertainty_is_not_pass(self) -> None:
+        kernel = FakeKernel32(delete_raises=True)
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            job_api(kernel).probe_job_list_attribute_support()
+        self.assertEqual(kernel.delete_calls, 1)
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_attribute_value_array_and_list_survive_create_until_delete(
+        self,
+    ) -> None:
+        kernel = FakeKernel32()
+        launch, _, kernel = make_launch(kernel)
+        create_index = kernel.calls.index("CreateProcessW")
+        delete_index = kernel.calls.index("DeleteProcThreadAttributeList")
+        update_index = kernel.calls.index("UpdateProcThreadAttribute")
+        self.assertLess(update_index, create_index)
+        self.assertLess(create_index, delete_index)
+        self.assertGreater(launch.attribute_bytes, 0)
+
+    def test_direct_local_launch_construction_is_forbidden(self) -> None:
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            resource.WatchdogLocalWindowsJobLaunch()
+
+
+    def test_attribute_update_exception_still_deletes_and_closes_job(
+        self,
+    ) -> None:
+        kernel = FakeKernel32()
+
+        def raising_update(*args):
+            del args
+            raise OSError("RAW_UPDATE_SENTINEL")
+
+        kernel.UpdateProcThreadAttribute.callback = raising_update
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "launch preparation failed",
+        ) as raised:
+            self._launch(kernel)
+        self.assertNotIn("RAW_UPDATE_SENTINEL", str(raised.exception))
+        self.assertEqual(kernel.delete_calls, 1)
+        self.assertEqual(kernel.open_handles, set())
+        self.assertNotIn("CreateProcessW", kernel.calls)
+
+    def test_identity_change_before_deadline_owner_kills_suspended_job(
+        self,
+    ) -> None:
+        launch, _, kernel = make_launch()
+        kernel.process_id_matches = False
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "verification failed",
+        ):
+            resource.LaunchDeadlineWatchdog(
+                launch, monotonic_ns=lambda: 1
+            )
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+
+class DeadlineAdversarialTest(unittest.TestCase):
+    def test_clock_failure_closes_local_job(self) -> None:
+        launch, _, kernel = make_launch()
+
+        def broken_clock():
+            raise RuntimeError("RAW_CLOCK_SENTINEL")
+
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch, monotonic_ns=broken_clock
+        )
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "^monotonic clock failed$",
+        ) as raised:
+            watchdog.resume_and_arm()
+        self.assertNotIn("RAW_CLOCK_SENTINEL", str(raised.exception))
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_resume_failure_closes_local_job(self) -> None:
+        launch, _, kernel = make_launch()
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch, monotonic_ns=lambda: 1
+        )
+        kernel.suspend_count = 0
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "resume failed",
+        ):
+            watchdog.resume_and_arm()
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_supplier_exception_is_sanitized_and_kills_job(self) -> None:
+        launch, _, kernel = make_launch()
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch, monotonic_ns=Clock(1, 2, 3)
+        )
+        watchdog.resume_and_arm()
+
+        def broken_supplier():
+            raise RuntimeError("RAW_SUPPLIER_SENTINEL")
+
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "^launch acknowledgement supplier failed$",
+        ) as raised:
+            watchdog.run_until_verified(
+                acknowledgement_supplier=broken_supplier,
+                verifier=lambda _: True,
+            )
+        self.assertNotIn("RAW_SUPPLIER_SENTINEL", str(raised.exception))
+        self.assertNotIn(kernel.job_handle, kernel.open_handles)
+
+    def test_unverifiable_job_close_never_claims_kill(self) -> None:
+        kernel = FakeKernel32(noop_close_handles={100})
+        launch, _, kernel = make_launch(kernel)
+        watchdog = resource.LaunchDeadlineWatchdog(
+            launch, monotonic_ns=Clock(1, resource.LAUNCH_EVIDENCE_DEADLINE_NS + 1)
+        )
+        watchdog.resume_and_arm()
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
             "Job handle close failed",
         ):
-            watchdog.verify_acknowledgement(None, lambda _: True)
-        self.assertIn(123, handle._test_kernel.open_handles)
-        self.assertEqual(
-            handle._test_kernel.watchdog_close_calls,
-            resource.JOB_HANDLE_CLOSE_ATTEMPTS,
-        )
+            watchdog.run_until_verified(
+                acknowledgement_supplier=lambda: None,
+                verifier=lambda _: True,
+            )
+        self.assertIn(kernel.job_handle, kernel.open_handles)
 
 
-class TelemetryAdversarialTest(unittest.TestCase):
-    def test_decoder_and_writer_reject_live_gap_over_one_second(self) -> None:
-        payload = _raw_success_stream(
-            gap_after_first_ns=resource.MAXIMUM_LIVE_GAP_NS + 1
-        )
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "maximum live gap",
-        ):
-            resource.decode_and_verify_telemetry(payload)
-
+class TelemetryPublicationAdversarialTest(unittest.TestCase):
+    def test_schema_failure_terminally_quarantines_writer(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
-            writer = resource.AppendOnlyTelemetryWriter(path)
-            writer.append(
-                event_code=resource.SUCCESS_MILESTONES[0],
-                utc_time=_utc(0),
-                monotonic_ns=0,
-                metrics=_metrics(),
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
             )
             with self.assertRaisesRegex(
                 resource.Gate12C2ResourceQualificationError,
-                "maximum live gap",
+                "^telemetry append failed$",
             ):
                 writer.append(
-                    event_code=resource.SUCCESS_MILESTONES[1],
-                    utc_time=_utc(1),
-                    monotonic_ns=resource.MAXIMUM_LIVE_GAP_NS + 1,
-                    metrics=_metrics(),
+                    event_code="PERIODIC_SAMPLE",
+                    utc_time=utc(0),
+                    monotonic_ns=0,
+                    metrics=telemetry_metrics(),
                 )
-            writer.append(
-                event_code="FAILURE_DETECTED",
-                utc_time=_utc(2),
-                monotonic_ns=1,
-                metrics=_metrics(),
-            )
-            writer.close()
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
+            with self.assertRaisesRegex(
+                resource.Gate12C2ResourceQualificationError,
+                "terminally failed",
+            ):
+                writer.append(
+                    event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                    utc_time=utc(0),
+                    monotonic_ns=0,
+                    metrics=telemetry_metrics(),
+                )
 
-    def test_partial_verification_cannot_return_pass(self) -> None:
-        first = _raw_success_stream().splitlines(keepends=True)[0]
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "partial telemetry verification is forbidden",
-        ):
-            resource.decode_and_verify_telemetry(
-                first, require_terminal=False
-            )
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "terminal",
-        ):
-            resource.decode_and_verify_telemetry(first)
-
-    @unittest.skipUnless(os.name == "nt", "Windows share-mode assertion")
-    def test_live_file_denies_a_second_raw_writer(self) -> None:
+    def test_publication_receipt_is_bound_to_exact_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
-            writer = resource.AppendOnlyTelemetryWriter(path)
-            with self.assertRaises(OSError):
-                path.open("ab")
-            writer.append(
-                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                utc_time=_utc(0),
-                monotonic_ns=0,
-                metrics=_metrics(),
-            )
-            writer.append(
-                event_code="FAILURE_DETECTED",
-                utc_time=_utc(1),
-                monotonic_ns=1,
-                metrics=_metrics(),
-            )
-            writer.close()
+            directory = Path(temporary)
+            _, receipt = write_success_telemetry(directory)
+            pending, final = telemetry_paths(directory)
+            with self.assertRaises(
+                resource.Gate12C2ResourceQualificationError
+            ):
+                resource.verify_telemetry_publication(
+                    pending_path=pending,
+                    final_path=final,
+                    expected_attempt_identity_sha256="f" * 64,
+                    receipt=receipt,
+                )
 
-    def test_fsync_failure_is_sticky_and_poisoned_bytes_do_not_pass(
-        self,
-    ) -> None:
+    def test_fsync_failure_leaves_pending_and_never_final(self) -> None:
         def failing_fsync(_: int) -> None:
             raise OSError("RAW_FSYNC_SENTINEL")
 
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
+            pending, final = telemetry_paths(Path(temporary))
             writer = resource.AppendOnlyTelemetryWriter(
-                path, fsync=failing_fsync
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+                fsync=failing_fsync,
             )
             with self.assertRaisesRegex(
                 resource.Gate12C2ResourceQualificationError,
@@ -643,81 +384,20 @@ class TelemetryAdversarialTest(unittest.TestCase):
             ) as raised:
                 writer.append(
                     event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                    utc_time=_utc(0),
+                    utc_time=utc(0),
                     monotonic_ns=0,
-                    metrics=_metrics(),
+                    metrics=telemetry_metrics(),
                 )
             self.assertNotIn("RAW_FSYNC_SENTINEL", str(raised.exception))
-            with self.assertRaisesRegex(
-                resource.Gate12C2ResourceQualificationError,
-                "terminally failed",
-            ):
-                writer.append(
-                    event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                    utc_time=_utc(0),
-                    monotonic_ns=0,
-                    metrics=_metrics(),
-                )
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
             with self.assertRaisesRegex(
                 resource.Gate12C2ResourceQualificationError,
                 "terminally failed",
             ):
                 writer.close()
-            payload = path.read_bytes()
-        self.assertIn(b"\x00", payload)
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(payload)
 
-    def test_incomplete_close_is_poisoned(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
-            writer = resource.AppendOnlyTelemetryWriter(path)
-            writer.append(
-                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                utc_time=_utc(0),
-                monotonic_ns=0,
-                metrics=_metrics(),
-            )
-            with self.assertRaisesRegex(
-                resource.Gate12C2ResourceQualificationError,
-                "before a terminal",
-            ):
-                writer.close()
-            payload = path.read_bytes()
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(payload)
-
-    def test_terminal_close_failure_is_not_silently_accepted(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
-            writer = resource.AppendOnlyTelemetryWriter(path)
-            writer.append(
-                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                utc_time=_utc(0),
-                monotonic_ns=0,
-                metrics=_metrics(),
-            )
-            writer.append(
-                event_code="FAILURE_DETECTED",
-                utc_time=_utc(1),
-                monotonic_ns=1,
-                metrics=_metrics(),
-            )
-            with mock.patch.object(
-                writer, "_close_handle_only", return_value=False
-            ):
-                with self.assertRaisesRegex(
-                    resource.Gate12C2ResourceQualificationError,
-                    "telemetry handle close failed",
-                ):
-                    writer.close()
-            writer._handle.close()
-            payload = path.read_bytes()
-        self.assertIn(b"\x00", payload)
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(payload)
-
-    def test_close_exception_after_os_release_poisoned_artifact(self) -> None:
+    def test_close_exception_after_os_release_cannot_publish(self) -> None:
         class RaisesAfterRelease:
             def __init__(self, wrapped):
                 self.wrapped = wrapped
@@ -731,204 +411,406 @@ class TelemetryAdversarialTest(unittest.TestCase):
 
             def close(self):
                 self.wrapped.close()
-                raise OSError("RAW_CLOSE_AFTER_RELEASE_SENTINEL")
+                raise OSError("RAW_CLOSE_SENTINEL")
 
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "telemetry.jsonl"
-            writer = resource.AppendOnlyTelemetryWriter(path)
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
             writer.append(
                 event_code="WRAPPER_AUTHORIZATION_CONSUMED",
-                utc_time=_utc(0),
+                utc_time=utc(0),
                 monotonic_ns=0,
-                metrics=_metrics(),
+                metrics=telemetry_metrics(),
             )
             writer.append(
                 event_code="FAILURE_DETECTED",
-                utc_time=_utc(1),
+                utc_time=utc(1),
                 monotonic_ns=1,
-                metrics=_metrics(),
+                metrics=telemetry_metrics(),
             )
             writer._handle = RaisesAfterRelease(writer._handle)
             with self.assertRaisesRegex(
                 resource.Gate12C2ResourceQualificationError,
-                "telemetry handle close failed",
+                "handle close failed",
+            ) as raised:
+                writer.close()
+            self.assertNotIn("RAW_CLOSE_SENTINEL", str(raised.exception))
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
+
+    def test_move_failure_leaves_pending_and_no_final(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=utc(0),
+                monotonic_ns=0,
+                metrics=telemetry_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=utc(1),
+                monotonic_ns=1,
+                metrics=telemetry_metrics(),
+            )
+            with mock.patch.object(
+                resource.AppendOnlyTelemetryWriter,
+                "_publish_nonreplace",
+                side_effect=OSError("RAW_MOVE_SENTINEL"),
+            ):
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "^telemetry publication failed$",
+                ) as raised:
+                    writer.close()
+            self.assertNotIn("RAW_MOVE_SENTINEL", str(raised.exception))
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
+
+    def test_final_path_race_is_never_replaced(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=utc(0),
+                monotonic_ns=0,
+                metrics=telemetry_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=utc(1),
+                monotonic_ns=1,
+                metrics=telemetry_metrics(),
+            )
+            final.write_bytes(b"attacker")
+            with self.assertRaisesRegex(
+                resource.Gate12C2ResourceQualificationError,
+                "publication failed",
             ):
                 writer.close()
-            payload = path.read_bytes()
-        self.assertIn(b"\x00", payload)
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(payload)
+            self.assertEqual(final.read_bytes(), b"attacker")
+            self.assertTrue(pending.exists())
 
-    def test_decoder_rejects_strict_type_key_and_nonfinite_attacks(
-        self,
-    ) -> None:
-        payload = _raw_success_stream()
+    def test_pending_tamper_before_publication_is_quarantined(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=utc(0),
+                monotonic_ns=0,
+                metrics=telemetry_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=utc(1),
+                monotonic_ns=1,
+                metrics=telemetry_metrics(),
+            )
+            original_close = writer._close_pending_handle
+
+            def close_and_tamper():
+                result = original_close()
+                pending.write_bytes(pending.read_bytes() + b"x")
+                return result
+
+            with mock.patch.object(
+                writer, "_close_pending_handle", side_effect=close_and_tamper
+            ):
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "strict verification",
+                ):
+                    writer.close()
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
+
+    def test_receipt_from_another_final_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as first_temp:
+            first = Path(first_temp)
+            _, receipt = write_success_telemetry(first)
+            pending, final = telemetry_paths(first)
+            with tempfile.TemporaryDirectory() as second_temp:
+                _, second_final = telemetry_paths(Path(second_temp))
+                second_final.write_bytes(final.read_bytes())
+                with self.assertRaisesRegex(
+                    resource.Gate12C2ResourceQualificationError,
+                    "not frozen",
+                ):
+                    resource.verify_telemetry_publication(
+                        pending_path=Path(second_temp)
+                        / "telemetry.jsonl.pending",
+                        final_path=second_final,
+                        expected_attempt_identity_sha256=TEST_ATTEMPT_ID,
+                        receipt=receipt,
+                    )
+
+    def test_final_tamper_after_publish_is_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            _, receipt = write_success_telemetry(directory)
+            pending, final = telemetry_paths(directory)
+            final.write_bytes(final.read_bytes() + b"x")
+            with self.assertRaises(
+                resource.Gate12C2ResourceQualificationError
+            ):
+                resource.verify_telemetry_publication(
+                    pending_path=pending,
+                    final_path=final,
+                    expected_attempt_identity_sha256=TEST_ATTEMPT_ID,
+                    receipt=receipt,
+                )
+
+    def test_pending_artifact_alone_is_never_publication_eligible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            pending, final = telemetry_paths(directory)
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=utc(0),
+                monotonic_ns=0,
+                metrics=telemetry_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=utc(1),
+                monotonic_ns=1,
+                metrics=telemetry_metrics(),
+            )
+            writer._abort()
+            fake = {
+                "schema_version": resource.TELEMETRY_PUBLICATION_SCHEMA
+            }
+            with self.assertRaises(
+                resource.Gate12C2ResourceQualificationError
+            ):
+                resource.verify_telemetry_publication(
+                    pending_path=pending,
+                    final_path=final,
+                    expected_attempt_identity_sha256=TEST_ATTEMPT_ID,
+                    receipt=fake,
+                )
+            self.assertTrue(pending.exists())
+            self.assertFalse(final.exists())
+
+    def test_decoder_rejects_gap_unknown_keys_duplicate_and_bom(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            payload, _ = write_success_telemetry(Path(temporary))
         lines = payload.splitlines(keepends=True)
         first = json.loads(lines[0])
-        for field, value in (("seq", True), ("seq", "0")):
-            attacked = dict(first)
-            attacked[field] = value
-            candidate = _rehash_wire_record(attacked) + b"".join(lines[1:])
-            with self.subTest(field=field, value=value):
+        attacked = dict(first)
+        attacked["unknown"] = 1
+        without_sha = dict(attacked)
+        without_sha.pop("sha")
+        attacked["sha"] = resource.sha256_bytes(
+            resource.canonical_json_bytes(without_sha)
+        )
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "wire keys",
+        ):
+            resource.decode_and_verify_telemetry(
+                resource.canonical_json_bytes(attacked)
+                + b"\n"
+                + b"".join(lines[1:])
+            )
+        with self.assertRaisesRegex(
+            resource.Gate12C2ResourceQualificationError,
+            "duplicate JSON keys",
+        ):
+            resource.decode_and_verify_telemetry(b'{"seq":0,"seq":0}\n')
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            resource.decode_and_verify_telemetry(b"\xef\xbb\xbf" + payload)
+
+    @unittest.skipUnless(os.name == "nt", "Windows share-mode assertion")
+    def test_live_pending_denies_second_raw_writer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            pending, final = telemetry_paths(Path(temporary))
+            writer = resource.AppendOnlyTelemetryWriter(
+                pending,
+                final,
+                attempt_identity_sha256=TEST_ATTEMPT_ID,
+            )
+            with self.assertRaises(OSError):
+                pending.open("ab")
+            writer.append(
+                event_code="WRAPPER_AUTHORIZATION_CONSUMED",
+                utc_time=utc(0),
+                monotonic_ns=0,
+                metrics=telemetry_metrics(),
+            )
+            writer.append(
+                event_code="FAILURE_DETECTED",
+                utc_time=utc(1),
+                monotonic_ns=1,
+                metrics=telemetry_metrics(),
+            )
+            writer.close()
+
+
+class GeometryFailClosedAdversarialTest(unittest.TestCase):
+    def test_tampered_derived_geometry_rejects_bool_and_missing_values(
+        self,
+    ) -> None:
+        for field, value in (
+            ("rounding_delta_bytes", False),
+            ("mathematical_memory_limit_bytes", True),
+        ):
+            candidate = geometry(FakeKernel32())
+            object.__setattr__(candidate, field, value)
+            with self.subTest(field=field):
                 with self.assertRaises(
                     resource.Gate12C2ResourceQualificationError
                 ):
-                    resource.decode_and_verify_telemetry(candidate)
-        attacked = dict(first)
-        attacked["unknown"] = 1
-        candidate = _rehash_wire_record(attacked) + b"".join(lines[1:])
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "wire keys",
+                    candidate._validate()
+
+    def test_process_identity_requires_nonzero_creation_time(self) -> None:
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
         ):
-            resource.decode_and_verify_telemetry(candidate)
-        attacked = dict(first)
-        attacked.pop("seq")
-        candidate = _rehash_wire_record(attacked) + b"".join(lines[1:])
-        with self.assertRaisesRegex(
-            resource.Gate12C2ResourceQualificationError,
-            "wire keys",
-        ):
-            resource.decode_and_verify_telemetry(candidate)
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(
-                lines[0].replace(b'"seq":0', b'"seq":NaN')
-                + b"".join(lines[1:])
-            )
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(
-                b"\xef\xbb\xbf" + payload
-            )
-        with self.assertRaises(resource.Gate12C2ResourceQualificationError):
-            resource.decode_and_verify_telemetry(
-                b"{" + b"x" * resource.MAXIMUM_RECORD_BYTES + b"}\n"
-            )
+            resource.ProcessIdentity(100, 0)
 
 
-class LegacyClassifierAdversarialTest(unittest.TestCase):
-    def test_stack_rows_are_closed_and_exact(self) -> None:
-        evidence = _legacy_evidence()
-        evidence["normalized_project_stack"][0]["unknown"] = True  # type: ignore[index]
+class GuardianFailClosedAdversarialTest(unittest.TestCase):
+    def test_guardian_rejects_duplicate_or_untyped_identities(self) -> None:
+        identity = resource.ProcessIdentity(100, 1_000)
+        for identities in ((identity, identity), (object(),), ()):
+            with self.subTest(identities=identities):
+                with self.assertRaises(
+                    resource.Gate12C2ResourceQualificationError
+                ):
+                    resource.NoHandleGuardian(identities)
+
+    def test_guardian_sanitizes_probe_failure(self) -> None:
+        guardian = resource.NoHandleGuardian(
+            (resource.ProcessIdentity(100, 1_000),)
+        )
+
+        def fail(_: resource.ProcessIdentity) -> str:
+            raise RuntimeError("RAW_GUARDIAN_SENTINEL")
+
         with self.assertRaisesRegex(
             resource.Gate12C2ResourceQualificationError,
-            "row schema",
-        ):
-            resource.classify_expected_legacy_closeout(evidence)
+            "^guardian process probe failed$",
+        ) as raised:
+            guardian.record_watchdog_failure(fail)
+        self.assertNotIn("RAW_GUARDIAN_SENTINEL", str(raised.exception))
 
-    def test_stale_lock_and_unexpected_artifact_surface_is_exact(self) -> None:
+
+class ResourceAndLineageAdversarialTest(unittest.TestCase):
+    def test_job_peak_uses_J_but_sampled_combined_uses_M(self) -> None:
+        evidence = ResourceEnvelopeTest.passing_evidence()
+        self.assertLess(
+            evidence["effective_job_memory_limit_bytes"],
+            evidence["mathematical_memory_limit_bytes"],
+        )
+        resource.verify_resource_envelope(evidence)
+        attacked = dict(evidence)
+        attacked["peak_job_memory_bytes"] = (
+            attacked["effective_job_memory_limit_bytes"] + 1
+        )
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            resource.verify_resource_envelope(attacked)
+        attacked = dict(evidence)
+        attacked["sampled_combined_rss_bytes"] = (
+            attacked["mathematical_memory_limit_bytes"] + 1
+        )
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            resource.verify_resource_envelope(attacked)
+
+    def test_available_floor_is_exact_floor_P_over_ten(self) -> None:
+        evidence = ResourceEnvelopeTest.passing_evidence()
+        evidence["sampled_available_physical_memory_bytes"] = (
+            evidence["physical_ram_bytes"] // 10
+        )
+        resource.verify_resource_envelope(evidence)
+        evidence["sampled_available_physical_memory_bytes"] -= 1
+        with self.assertRaises(
+            resource.Gate12C2ResourceQualificationError
+        ):
+            resource.verify_resource_envelope(evidence)
+
+    def test_legacy_stack_and_root_surface_are_closed(self) -> None:
+        base = GuardianAndClassifierTest.legacy_evidence()
         mutations = (
+            (
+                "normalized_project_stack",
+                list(reversed(base["normalized_project_stack"])),
+            ),
             ("stale_lock_relative_path", "other.lock"),
             ("stale_lock_file_sha256", "0" * 64),
-            ("stale_lock_manifest_match", False),
-            ("unexpected_artifact_count", 1),
-            ("unexpected_artifact_relative_paths", ["unexpected.json"]),
+            ("unexpected_artifact_relative_paths", ["x"]),
         )
         for field, value in mutations:
-            evidence = _legacy_evidence()
+            evidence = dict(base)
             evidence[field] = value
+            if field == "unexpected_artifact_relative_paths":
+                evidence["unexpected_artifact_count"] = 1
             with self.subTest(field=field):
                 with self.assertRaises(
                     resource.Gate12C2ResourceQualificationError
                 ):
                     resource.classify_expected_legacy_closeout(evidence)
 
-
-class ResourceEnvelopeBoundaryTest(unittest.TestCase):
-    @staticmethod
-    def _exact_boundary() -> dict[str, int]:
-        physical = 16 * 1024**3
-        preflight = resource.MINIMUM_PREFLIGHT_FREE_BYTES
-        return {
-            "physical_ram_bytes": physical,
-            "peak_job_memory_bytes": (3 * physical) // 4,
-            "sampled_combined_rss_bytes": (3 * physical) // 4,
-            "sampled_available_physical_memory_bytes": (physical + 9) // 10,
-            "preflight_free_bytes": preflight,
-            "minimum_observed_free_bytes": preflight // 2,
-            "qualification_output_bytes": (
-                resource.QUALIFICATION_OUTPUT_BUDGET_BYTES
-            ),
-            "telemetry_bytes": resource.TELEMETRY_WORST_CASE_BYTES,
-            "wall_seconds": resource.MAXIMUM_WALL_SECONDS,
-            "job_memory_limit_event_count": 0,
-            "monitor_error_count": 0,
-            "partial_or_temp_count": 0,
-        }
-
-    def test_all_exact_resource_boundaries_pass(self) -> None:
-        result = resource.verify_resource_envelope(
-            self._exact_boundary()
+    def test_guardian_rejects_active_unknown_or_invalid_probe(self) -> None:
+        guardian = resource.NoHandleGuardian(
+            (resource.ProcessIdentity(1, 1),)
         )
-        self.assertEqual(result["status"], "pass")
-
-    def test_odd_disk_floor_uses_the_exact_frozen_floor(self) -> None:
-        evidence = self._exact_boundary()
-        evidence["preflight_free_bytes"] += 1
-        evidence["minimum_observed_free_bytes"] = (
-            evidence["preflight_free_bytes"] // 2
-        )
-        resource.verify_resource_envelope(evidence)
-        evidence["minimum_observed_free_bytes"] -= 1
-        with self.assertRaises(
-            resource.Gate12C2ResourceQualificationError
-        ):
-            resource.verify_resource_envelope(evidence)
-
-    def test_each_one_unit_resource_breach_rejects(self) -> None:
-        base = self._exact_boundary()
-        mutations = (
-            ("peak_job_memory_bytes", base["peak_job_memory_bytes"] + 1),
-            (
-                "sampled_combined_rss_bytes",
-                base["sampled_combined_rss_bytes"] + 1,
-            ),
-            (
-                "sampled_available_physical_memory_bytes",
-                base["sampled_available_physical_memory_bytes"] - 1,
-            ),
-            ("preflight_free_bytes", resource.MINIMUM_PREFLIGHT_FREE_BYTES - 1),
-            (
-                "minimum_observed_free_bytes",
-                base["minimum_observed_free_bytes"] - 1,
-            ),
-            (
-                "qualification_output_bytes",
-                resource.QUALIFICATION_OUTPUT_BUDGET_BYTES + 1,
-            ),
-            (
-                "telemetry_bytes",
-                resource.TELEMETRY_WORST_CASE_BYTES + 1,
-            ),
-            ("wall_seconds", resource.MAXIMUM_WALL_SECONDS + 1),
-            ("job_memory_limit_event_count", 1),
-            ("monitor_error_count", 1),
-            ("partial_or_temp_count", 1),
-        )
-        for field, value in mutations:
-            evidence = dict(base)
-            evidence[field] = value
-            with self.subTest(field=field):
+        for result in ("ACTIVE", "UNKNOWN", "INVALID", None):
+            with self.subTest(result=result):
                 with self.assertRaises(
                     resource.Gate12C2ResourceQualificationError
                 ):
-                    resource.verify_resource_envelope(evidence)
+                    guardian.record_watchdog_failure(lambda _: result)
 
-    def test_resource_schema_and_types_are_closed(self) -> None:
-        for mutation in ("bool", "string", "extra", "missing"):
-            evidence: dict[str, object] = dict(self._exact_boundary())
-            if mutation == "bool":
-                evidence["wall_seconds"] = True
-            elif mutation == "string":
-                evidence["wall_seconds"] = str(resource.MAXIMUM_WALL_SECONDS)
-            elif mutation == "extra":
-                evidence["unknown"] = 0
-            else:
-                evidence.pop("wall_seconds")
-            with self.subTest(mutation=mutation):
-                with self.assertRaises(
-                    resource.Gate12C2ResourceQualificationError
-                ):
-                    resource.verify_resource_envelope(evidence)
+
+class RealWindowsMeasurementSmokeTest(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows-only OS measurement")
+    def test_real_P_and_S_measurement_derives_valid_page_aligned_J(
+        self,
+    ) -> None:
+        measured = resource.WindowsJobApi().measure_resource_geometry()
+        measured._validate()
+        self.assertGreater(measured.physical_ram_bytes, 0)
+        self.assertGreater(measured.native_page_size_bytes, 0)
+        self.assertEqual(
+            measured.effective_job_memory_limit_bytes
+            % measured.native_page_size_bytes,
+            0,
+        )
+        self.assertLessEqual(
+            measured.effective_job_memory_limit_bytes,
+            measured.mathematical_memory_limit_bytes,
+        )
 
 
 if __name__ == "__main__":

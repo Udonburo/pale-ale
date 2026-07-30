@@ -2,10 +2,12 @@
 """Fail-closed primitives for Gate12C-2 replacement resource qualification.
 
 This module is implementation-only.  It cannot issue preflight or authorization
-receipts, launch the frozen scientific child, extract baseline commitments, or
-run the replacement replay.  The bounded surface implemented here is limited to
-the reviewed resource wrapper's telemetry, watchdog deadline, Job ownership,
-guardian, legacy-terminal classification, and resource-envelope verification.
+receipts, extract baseline commitments, or run the replacement replay.  It
+implements only the reviewed primitives: watchdog-local unnamed Job ownership,
+atomic-at-creation suspended-child containment, page-aligned P/S/M/J limits,
+pending-only telemetry publication, launch deadline enforcement, no-handle
+guardian behavior, legacy-terminal classification, and resource verification.
+No function in this module authorizes these primitives to run.
 """
 
 from __future__ import annotations
@@ -25,7 +27,10 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 
-TELEMETRY_SCHEMA = "gate12c2_resource_telemetry_record_v0.4"
+TELEMETRY_SCHEMA = "gate12c2_resource_telemetry_record_v0.5"
+TELEMETRY_PUBLICATION_SCHEMA = (
+    "gate12c2_resource_telemetry_publication_receipt_v0.7"
+)
 PUBLIC_ERROR_CODE = "GATE12C2_RESOURCE_QUALIFICATION_REJECTED"
 GENESIS_DIGEST = "0" * 64
 MAXIMUM_RECORD_BYTES = 1024
@@ -40,6 +45,7 @@ MAXIMUM_WALL_SECONDS = 129_600
 LAUNCH_EVIDENCE_DEADLINE_NS = 60_000_000_000
 MAXIMUM_LIVE_GAP_NS = 1_000_000_000
 JOB_HANDLE_CLOSE_ATTEMPTS = 3
+WINDOWS_TO_UNIX_EPOCH_100NS = 116_444_736_000_000_000
 
 EXPECTED_LEGACY_FAILURE_CODE = (
     "GATE12C2_CLOSEOUT_RESTORE_SCRATCH_ROOT_NOT_PROPAGATED"
@@ -84,9 +90,9 @@ TERMINAL_STATES = RUNTIME_STATES[-2:]
 EVENT_CODES = (
     "WRAPPER_AUTHORIZATION_CONSUMED",
     "JOINT_PRELAUNCH_CLAIM_SEALED",
+    "WATCHDOG_SOLE_HANDLE_CONFIRMED",
     "CHILD_CREATED_SUSPENDED",
     "JOB_ASSIGNED",
-    "WATCHDOG_SOLE_HANDLE_CONFIRMED",
     "JOINT_PRE_RESUME_RECEIPT_SEALED",
     "CHILD_RESUMED",
     "SCIENTIFIC_AUTHORIZATION_CONSUMPTION_OBSERVED",
@@ -103,9 +109,9 @@ EVENT_CODES = (
 SUCCESS_MILESTONES = (
     "WRAPPER_AUTHORIZATION_CONSUMED",
     "JOINT_PRELAUNCH_CLAIM_SEALED",
+    "WATCHDOG_SOLE_HANDLE_CONFIRMED",
     "CHILD_CREATED_SUSPENDED",
     "JOB_ASSIGNED",
-    "WATCHDOG_SOLE_HANDLE_CONFIRMED",
     "JOINT_PRE_RESUME_RECEIPT_SEALED",
     "CHILD_RESUMED",
     "SCIENTIFIC_AUTHORIZATION_CONSUMPTION_OBSERVED",
@@ -121,20 +127,20 @@ SUCCESS_MILESTONES = (
 _SUCCESS_TRANSITIONS = (
     ("__START__", "WRAPPER_AUTHORIZATION_CONSUMED", "PRELAUNCH"),
     ("PRELAUNCH", "JOINT_PRELAUNCH_CLAIM_SEALED", "PRELAUNCH"),
-    ("PRELAUNCH", "CHILD_CREATED_SUSPENDED", "CHILD_SUSPENDED"),
-    ("CHILD_SUSPENDED", "JOB_ASSIGNED", "JOB_ASSIGNED"),
     (
-        "JOB_ASSIGNED",
+        "PRELAUNCH",
         "WATCHDOG_SOLE_HANDLE_CONFIRMED",
         "WATCHDOG_READY",
     ),
+    ("WATCHDOG_READY", "CHILD_CREATED_SUSPENDED", "CHILD_SUSPENDED"),
+    ("CHILD_SUSPENDED", "JOB_ASSIGNED", "JOB_ASSIGNED"),
     (
-        "WATCHDOG_READY",
+        "JOB_ASSIGNED",
         "JOINT_PRE_RESUME_RECEIPT_SEALED",
-        "WATCHDOG_READY",
+        "JOB_ASSIGNED",
     ),
     (
-        "WATCHDOG_READY",
+        "JOB_ASSIGNED",
         "CHILD_RESUMED",
         "REPLAY_RUNNING_LAUNCH_PENDING",
     ),
@@ -270,44 +276,62 @@ class Gate12C2ResourceQualificationError(ValueError):
 
 
 @dataclass(frozen=True, init=False)
-class _JobHandleTransferReceipt:
-    """Opaque launcher evidence emitted only by the OS transfer path."""
+class ResourceMemoryGeometry:
+    """Page-aligned memory geometry measured independently by OS processes."""
 
-    source_pid: int
-    source_creation_time_ns: int
-    watchdog_pid: int
-    watchdog_creation_time_ns: int
-    watchdog_raw_handle: int
-    expected_job_memory_limit_bytes: int
-    source_handle_closed: bool
-    duplicate_requested_noninheritable: bool
+    physical_ram_bytes: int
+    native_page_size_bytes: int
+    mathematical_memory_limit_bytes: int
+    effective_job_memory_limit_bytes: int
+    rounding_delta_bytes: int
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
         raise Gate12C2ResourceQualificationError(
-            "direct Job transfer-receipt construction is forbidden"
+            "direct resource-memory geometry construction is forbidden"
         )
-
 
     def _validate(self) -> None:
-        integer_fields = (
-            self.source_pid,
-            self.source_creation_time_ns,
-            self.watchdog_pid,
-            self.watchdog_creation_time_ns,
-            self.watchdog_raw_handle,
-            self.expected_job_memory_limit_bytes,
+        physical = _strict_int(
+            getattr(self, "physical_ram_bytes", None),
+            label="physical RAM",
+            maximum=99_999_999_999_999,
         )
-        if any(type(value) is not int or value <= 0 for value in integer_fields):
+        page = _strict_int(
+            getattr(self, "native_page_size_bytes", None),
+            label="native page size",
+            maximum=16_777_216,
+        )
+        if physical <= 0 or page <= 0 or page & (page - 1):
             raise Gate12C2ResourceQualificationError(
-                "Job transfer receipt contains an invalid identity, handle, or limit"
+                "resource-memory geometry is invalid"
             )
+        declared_mathematical = _strict_int(
+            getattr(self, "mathematical_memory_limit_bytes", None),
+            label="mathematical memory limit",
+            maximum=99_999_999_999_999,
+        )
+        declared_effective = _strict_int(
+            getattr(self, "effective_job_memory_limit_bytes", None),
+            label="effective Job memory limit",
+            maximum=99_999_999_999_999,
+        )
+        declared_delta = _strict_int(
+            getattr(self, "rounding_delta_bytes", None),
+            label="Job memory rounding delta",
+            maximum=16_777_216,
+        )
+        mathematical = (3 * physical) // 4
+        effective = (mathematical // page) * page
         if (
-            self.source_handle_closed is not True
-            or self.duplicate_requested_noninheritable is not True
+            effective <= 0
+            or effective > mathematical
+            or declared_mathematical != mathematical
+            or declared_effective != effective
+            or declared_delta != mathematical - effective
         ):
             raise Gate12C2ResourceQualificationError(
-                "Job transfer receipt does not prove source closure"
+                "resource-memory geometry does not match P/S/M/J"
             )
 
 
@@ -339,6 +363,90 @@ def _strict_int(value: object, *, label: str, maximum: int) -> int:
         )
     return int(value)
 
+
+
+def derive_resource_memory_geometry(
+    physical_ram_bytes: int,
+    native_page_size_bytes: int,
+) -> ResourceMemoryGeometry:
+    """Derive the frozen P/S/M/J geometry without caller-selected limits."""
+
+    physical = _strict_int(
+        physical_ram_bytes,
+        label="physical RAM",
+        maximum=99_999_999_999_999,
+    )
+    page = _strict_int(
+        native_page_size_bytes,
+        label="native page size",
+        maximum=16_777_216,
+    )
+    if physical <= 0 or page <= 0 or page & (page - 1):
+        raise Gate12C2ResourceQualificationError(
+            "physical RAM and native page size are invalid"
+        )
+    mathematical = (3 * physical) // 4
+    effective = (mathematical // page) * page
+    if effective <= 0 or effective > mathematical:
+        raise Gate12C2ResourceQualificationError(
+            "page-aligned Job memory limit is invalid"
+        )
+    geometry = object.__new__(ResourceMemoryGeometry)
+    values = {
+        "physical_ram_bytes": physical,
+        "native_page_size_bytes": page,
+        "mathematical_memory_limit_bytes": mathematical,
+        "effective_job_memory_limit_bytes": effective,
+        "rounding_delta_bytes": mathematical - effective,
+    }
+    for field, value in values.items():
+        object.__setattr__(geometry, field, value)
+    geometry._validate()
+    return geometry
+
+
+def verify_resource_memory_geometry_match(
+    preflight: ResourceMemoryGeometry,
+    watchdog: ResourceMemoryGeometry,
+) -> dict[str, Any]:
+    """Require independently measured preflight and watchdog P/S/M/J equality."""
+
+    if (
+        type(preflight) is not ResourceMemoryGeometry
+        or type(watchdog) is not ResourceMemoryGeometry
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "resource-memory geometry type is invalid"
+        )
+    preflight._validate()
+    watchdog._validate()
+    fields = (
+        "physical_ram_bytes",
+        "native_page_size_bytes",
+        "mathematical_memory_limit_bytes",
+        "effective_job_memory_limit_bytes",
+        "rounding_delta_bytes",
+    )
+    if any(
+        getattr(preflight, field) != getattr(watchdog, field)
+        for field in fields
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "preflight and watchdog P/S/M/J differ"
+        )
+    return {
+        "status": "pass",
+        "physical_ram_bytes": watchdog.physical_ram_bytes,
+        "native_page_size_bytes": watchdog.native_page_size_bytes,
+        "mathematical_memory_limit_bytes": (
+            watchdog.mathematical_memory_limit_bytes
+        ),
+        "effective_job_memory_limit_bytes": (
+            watchdog.effective_job_memory_limit_bytes
+        ),
+        "rounding_delta_bytes": watchdog.rounding_delta_bytes,
+        "scientific_values_emitted": False,
+    }
 
 def _strict_ascii(
     value: object,
@@ -403,7 +511,13 @@ def _validate_long_record(
     *,
     semantic_enum_required: bool,
 ) -> dict[str, Any]:
-    if set(record) != set(LONG_FIELDS_WITHOUT_DIGEST):
+    try:
+        exact_fields = set(record)
+    except Exception:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry record mapping is invalid"
+        ) from None
+    if exact_fields != set(LONG_FIELDS_WITHOUT_DIGEST):
         raise Gate12C2ResourceQualificationError(
             "telemetry fields differ from the frozen closed schema"
         )
@@ -612,71 +726,66 @@ class _TelemetryState:
         self.terminal = state in TERMINAL_STATES
 
 
-def decode_and_verify_telemetry(
-    payload: bytes,
+def _accept_telemetry_line(
+    line: bytes,
     *,
-    require_terminal: bool = True,
-) -> dict[str, Any]:
-    """Strictly verify a complete telemetry JSONL byte stream."""
-
-    if require_terminal is not True:
+    state: _TelemetryState,
+    first_line: bool,
+) -> None:
+    if line == b"\n" or not line.endswith(b"\n"):
         raise Gate12C2ResourceQualificationError(
-            "partial telemetry verification is forbidden"
+            "telemetry contains a blank or incomplete record"
         )
-    if not payload or not payload.endswith(b"\n"):
+    if len(line) > MAXIMUM_RECORD_BYTES:
         raise Gate12C2ResourceQualificationError(
-            "telemetry is empty or lacks the final LF"
+            "telemetry record exceeds the frozen byte limit"
         )
-    if b"\r" in payload or payload.startswith(b"\xef\xbb\xbf"):
+    if b"\r" in line or (first_line and line.startswith(b"\xef\xbb\xbf")):
         raise Gate12C2ResourceQualificationError(
             "telemetry contains forbidden CR or BOM bytes"
         )
-    lines = payload.splitlines(keepends=True)
-    state = _TelemetryState()
-    for line in lines:
-        if line == b"\n" or not line.endswith(b"\n"):
-            raise Gate12C2ResourceQualificationError(
-                "telemetry contains a blank or incomplete record"
-            )
-        if len(line) > MAXIMUM_RECORD_BYTES:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry record exceeds the frozen byte limit"
-            )
-        stored = _strict_json_loads(line[:-1])
-        if set(stored) != WIRE_FIELDS:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry wire keys differ from the frozen schema"
-            )
-        if canonical_json_bytes(stored) + b"\n" != line:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry record is not canonical JSONL"
-            )
-        digest = stored.get(WIRE_KEY_MAP["record_sha256"])
-        if not is_sha256(digest):
-            raise Gate12C2ResourceQualificationError(
-                "telemetry record digest is invalid"
-            )
-        without_digest = dict(stored)
-        without_digest.pop(WIRE_KEY_MAP["record_sha256"])
-        if sha256_bytes(canonical_json_bytes(without_digest)) != digest:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry record digest mismatch"
-            )
-        long_record = {
-            WIRE_TO_LONG[key]: value
-            for key, value in without_digest.items()
-        }
-        validated = _validate_long_record(
-            long_record, semantic_enum_required=True
+    stored = _strict_json_loads(line[:-1])
+    if set(stored) != WIRE_FIELDS:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry wire keys differ from the frozen schema"
         )
-        state.accept(
-            event_code=str(validated["event_code"]),
-            state=str(validated["state"]),
-            sequence=int(validated["sequence"]),
-            previous_digest=str(validated["previous_record_sha256"]),
-            monotonic_ns=int(validated["monotonic_ns"]),
-            record_digest=str(digest),
+    if canonical_json_bytes(stored) + b"\n" != line:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry record is not canonical JSONL"
         )
+    digest = stored.get(WIRE_KEY_MAP["record_sha256"])
+    if not is_sha256(digest):
+        raise Gate12C2ResourceQualificationError(
+            "telemetry record digest is invalid"
+        )
+    without_digest = dict(stored)
+    without_digest.pop(WIRE_KEY_MAP["record_sha256"])
+    if sha256_bytes(canonical_json_bytes(without_digest)) != digest:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry record digest mismatch"
+        )
+    long_record = {
+        WIRE_TO_LONG[key]: value for key, value in without_digest.items()
+    }
+    validated = _validate_long_record(
+        long_record, semantic_enum_required=True
+    )
+    state.accept(
+        event_code=str(validated["event_code"]),
+        state=str(validated["state"]),
+        sequence=int(validated["sequence"]),
+        previous_digest=str(validated["previous_record_sha256"]),
+        monotonic_ns=int(validated["monotonic_ns"]),
+        record_digest=str(digest),
+    )
+
+
+def _finalize_telemetry_verification(
+    *,
+    state: _TelemetryState,
+    telemetry_file_sha256: str,
+    byte_count: int,
+) -> dict[str, Any]:
     if not state.terminal:
         raise Gate12C2ResourceQualificationError(
             "telemetry does not end in a frozen terminal state"
@@ -694,29 +803,277 @@ def decode_and_verify_telemetry(
         "periodic_record_count": state.periodic_count,
         "transition_and_tail_record_count": state.transition_and_tail_count,
         "terminal_state": state.previous_state,
-        "telemetry_file_sha256": sha256_bytes(payload),
+        "telemetry_file_sha256": telemetry_file_sha256,
         "final_record_sha256": state.previous_digest,
+        "byte_count": byte_count,
+        "scientific_values_emitted": False,
+    }
+
+
+def decode_and_verify_telemetry(
+    payload: bytes,
+    *,
+    require_terminal: bool = True,
+) -> dict[str, Any]:
+    """Strictly verify an in-memory telemetry JSONL byte stream."""
+
+    if require_terminal is not True:
+        raise Gate12C2ResourceQualificationError(
+            "partial telemetry verification is forbidden"
+        )
+    if not payload or not payload.endswith(b"\n"):
+        raise Gate12C2ResourceQualificationError(
+            "telemetry is empty or lacks the final LF"
+        )
+    state = _TelemetryState()
+    for index, line in enumerate(payload.splitlines(keepends=True)):
+        _accept_telemetry_line(
+            line, state=state, first_line=index == 0
+        )
+    return _finalize_telemetry_verification(
+        state=state,
+        telemetry_file_sha256=sha256_bytes(payload),
+        byte_count=len(payload),
+    )
+
+
+def verify_telemetry_file(path: Path) -> dict[str, Any]:
+    """Stream-verify telemetry without loading its bounded 1.33 GB surface."""
+
+    selected = Path(path).resolve()
+    if not selected.is_file():
+        raise Gate12C2ResourceQualificationError(
+            "telemetry file is absent"
+        )
+    state = _TelemetryState()
+    hasher = hashlib.sha256()
+    byte_count = 0
+    line_count = 0
+    try:
+        with selected.open("rb", buffering=1024 * 1024) as handle:
+            while True:
+                line = handle.readline(MAXIMUM_RECORD_BYTES + 2)
+                if not line:
+                    break
+                _accept_telemetry_line(
+                    line, state=state, first_line=line_count == 0
+                )
+                hasher.update(line)
+                byte_count += len(line)
+                line_count += 1
+    except Gate12C2ResourceQualificationError:
+        raise
+    except OSError:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry file could not be streamed"
+        ) from None
+    if line_count == 0:
+        raise Gate12C2ResourceQualificationError("telemetry is empty")
+    return _finalize_telemetry_verification(
+        state=state,
+        telemetry_file_sha256=hasher.hexdigest(),
+        byte_count=byte_count,
+    )
+
+
+def _telemetry_publication_payload(
+    *,
+    pending_path: Path,
+    final_path: Path,
+    attempt_identity_sha256: str,
+    verified: Mapping[str, Any],
+    byte_count: int,
+) -> dict[str, Any]:
+    terminal_events = {
+        "RESOURCE_MONITORING_COMPLETE": "MONITORING_COMPLETED",
+        "RESOURCE_MONITORING_FAILED": "FAILURE_DETECTED",
+    }
+    terminal_state = verified["terminal_state"]
+    terminal_event = terminal_events.get(terminal_state)
+    if not is_sha256(attempt_identity_sha256) or terminal_event is None:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry publication identity is invalid"
+        )
+    payload = {
+        "schema_version": TELEMETRY_PUBLICATION_SCHEMA,
+        "attempt_identity_sha256": attempt_identity_sha256,
+        "pending_path": str(pending_path),
+        "final_path": str(final_path),
+        "byte_count": byte_count,
+        "telemetry_file_sha256": verified["telemetry_file_sha256"],
+        "final_record_sha256": verified["final_record_sha256"],
+        "record_count": verified["record_count"],
+        "terminal_state": terminal_state,
+        "terminal_event_code": terminal_event,
+        "clean_close_verified": True,
+        "publish_api": (
+            "MoveFileExW" if os.name == "nt" else "link_then_unlink_test_fallback"
+        ),
+        "publish_flags": ["MOVEFILE_WRITE_THROUGH"],
+        "move_result": "success",
+        "replace_existing": False,
+        "pending_absent": True,
+        "final_present": True,
+        "scientific_values_emitted": False,
+    }
+    payload["payload_sha256"] = sha256_bytes(canonical_json_bytes(payload))
+    return payload
+
+
+def verify_telemetry_publication(
+    *,
+    pending_path: Path,
+    final_path: Path,
+    expected_attempt_identity_sha256: str,
+    receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Verify the final non-replacing publication and its closed receipt."""
+
+    pending = Path(pending_path).resolve()
+    final = Path(final_path).resolve()
+    required = {
+        "schema_version",
+        "attempt_identity_sha256",
+        "pending_path",
+        "final_path",
+        "byte_count",
+        "telemetry_file_sha256",
+        "final_record_sha256",
+        "record_count",
+        "terminal_state",
+        "terminal_event_code",
+        "clean_close_verified",
+        "publish_api",
+        "publish_flags",
+        "move_result",
+        "replace_existing",
+        "pending_absent",
+        "final_present",
+        "scientific_values_emitted",
+        "payload_sha256",
+    }
+    if type(receipt) is not dict or set(receipt) != required:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry publication receipt schema is invalid"
+        )
+    payload = dict(receipt)
+    declared_digest = payload.pop("payload_sha256")
+    if not is_sha256(declared_digest) or sha256_bytes(
+        canonical_json_bytes(payload)
+    ) != declared_digest:
+        raise Gate12C2ResourceQualificationError(
+            "telemetry publication receipt digest mismatch"
+        )
+    if (
+        not is_sha256(expected_attempt_identity_sha256)
+        or receipt["attempt_identity_sha256"]
+        != expected_attempt_identity_sha256
+        or type(receipt["byte_count"]) is not int
+        or receipt["byte_count"] <= 0
+        or type(receipt["record_count"]) is not int
+        or receipt["record_count"] <= 0
+        or not is_sha256(receipt["telemetry_file_sha256"])
+        or not is_sha256(receipt["final_record_sha256"])
+        or receipt["terminal_state"] not in TERMINAL_STATES
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "telemetry publication receipt values are invalid"
+        )
+    expected_api = (
+        "MoveFileExW" if os.name == "nt" else "link_then_unlink_test_fallback"
+    )
+    expected_terminal_event = {
+        "RESOURCE_MONITORING_COMPLETE": "MONITORING_COMPLETED",
+        "RESOURCE_MONITORING_FAILED": "FAILURE_DETECTED",
+    }[receipt["terminal_state"]]
+    if (
+        receipt["schema_version"] != TELEMETRY_PUBLICATION_SCHEMA
+        or receipt["pending_path"] != str(pending)
+        or receipt["final_path"] != str(final)
+        or receipt["terminal_event_code"] != expected_terminal_event
+        or receipt["clean_close_verified"] is not True
+        or receipt["publish_api"] != expected_api
+        or receipt["publish_flags"] != ["MOVEFILE_WRITE_THROUGH"]
+        or receipt["move_result"] != "success"
+        or receipt["replace_existing"] is not False
+        or receipt["pending_absent"] is not True
+        or receipt["final_present"] is not True
+        or receipt["scientific_values_emitted"] is not False
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "telemetry publication receipt is not frozen"
+        )
+    if pending.exists() or not final.is_file():
+        raise Gate12C2ResourceQualificationError(
+            "published telemetry path surface is invalid"
+        )
+    verified = verify_telemetry_file(final)
+    if (
+        type(receipt["byte_count"]) is not int
+        or type(receipt["record_count"]) is not int
+        or receipt["byte_count"] != verified["byte_count"]
+        or receipt["telemetry_file_sha256"]
+        != verified["telemetry_file_sha256"]
+        or receipt["final_record_sha256"]
+        != verified["final_record_sha256"]
+        or receipt["record_count"] != verified["record_count"]
+        or receipt["terminal_state"] != verified["terminal_state"]
+    ):
+        raise Gate12C2ResourceQualificationError(
+            "published telemetry differs from its receipt"
+        )
+    return {
+        "status": "pass",
+        "payload_sha256": str(declared_digest),
+        "attempt_identity_sha256": expected_attempt_identity_sha256,
+        "telemetry_file_sha256": verified["telemetry_file_sha256"],
+        "record_count": verified["record_count"],
+        "terminal_state": verified["terminal_state"],
+        "terminal_event_code": expected_terminal_event,
+        "clean_close_verified": True,
+        "move_result": "success",
         "scientific_values_emitted": False,
     }
 
 
 class AppendOnlyTelemetryWriter:
-    """OS-exclusive, sticky fail-closed append-only telemetry writer."""
+    """Write only pending telemetry, then publish it without replacement."""
 
     def __init__(
         self,
-        path: Path,
+        pending_path: Path,
+        final_path: Path,
         *,
+        attempt_identity_sha256: str,
         fsync: Callable[[int], None] = os.fsync,
     ) -> None:
-        self.path = Path(path).resolve()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._handle = self._open_exclusive_handle(self.path)
+        self.pending_path = Path(pending_path).resolve()
+        self.final_path = Path(final_path).resolve()
+        if not is_sha256(attempt_identity_sha256):
+            raise Gate12C2ResourceQualificationError(
+                "telemetry attempt identity is invalid"
+            )
+        self.attempt_identity_sha256 = attempt_identity_sha256
+        if (
+            self.pending_path.name != "telemetry.jsonl.pending"
+            or self.final_path.name != "telemetry.jsonl"
+            or self.pending_path.parent != self.final_path.parent
+            or self.pending_path == self.final_path
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "telemetry pending/final paths are not the frozen pair"
+            )
+        self.pending_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.pending_path.exists() or self.final_path.exists():
+            raise FileExistsError("telemetry pending/final path already exists")
+        self.path = self.pending_path
+        self._handle = self._open_exclusive_handle(self.pending_path)
         self._fsync = fsync
         self._state = _TelemetryState()
         self._closed = False
         self._failed = False
-        self._last_durable_offset = 0
+        self._published = False
+        self._publication_receipt: dict[str, Any] | None = None
 
     @staticmethod
     def _open_exclusive_handle(path: Path) -> Any:
@@ -758,7 +1115,7 @@ class AppendOnlyTelemetryWriter:
             if error in {80, 183}:
                 raise FileExistsError(str(path))
             raise Gate12C2ResourceQualificationError(
-                "telemetry file could not be opened exclusively"
+                "telemetry pending file could not be opened exclusively"
             )
         try:
             descriptor = msvcrt.open_osfhandle(
@@ -767,134 +1124,86 @@ class AppendOnlyTelemetryWriter:
         except Exception:
             kernel32.CloseHandle(raw)
             raise Gate12C2ResourceQualificationError(
-                "telemetry file-handle transfer failed"
+                "telemetry pending file-handle transfer failed"
             ) from None
         return os.fdopen(descriptor, "wb", buffering=0)
 
     @staticmethod
-    def _open_existing_exclusive_handle(path: Path) -> Any:
+    def _publish_nonreplace(pending: Path, final: Path) -> None:
+        if final.exists():
+            raise Gate12C2ResourceQualificationError(
+                "telemetry final path already exists"
+            )
         if os.name != "nt":
-            descriptor = os.open(path, os.O_WRONLY | os.O_APPEND)
             try:
-                import fcntl
-
-                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                os.link(pending, final)
+                pending.unlink()
             except Exception:
-                os.close(descriptor)
+                if final.exists() and pending.exists():
+                    try:
+                        final.unlink()
+                    except Exception:
+                        pass
                 raise Gate12C2ResourceQualificationError(
-                    "telemetry artifact could not be reopened exclusively"
+                    "telemetry non-replacing publication failed"
                 ) from None
-            return os.fdopen(descriptor, "ab", buffering=0)
-        import msvcrt
-
-        generic_write = 0x40000000
-        open_existing = 3
-        file_attribute_normal = 0x00000080
-        invalid_handle_value = ctypes.c_void_p(-1).value
+            return
+        movefile_write_through = 0x00000008
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.CreateFileW.argtypes = [
+        kernel32.MoveFileExW.argtypes = [
+            ctypes.c_wchar_p,
             ctypes.c_wchar_p,
             ctypes.wintypes.DWORD,
-            ctypes.wintypes.DWORD,
-            ctypes.c_void_p,
-            ctypes.wintypes.DWORD,
-            ctypes.wintypes.DWORD,
-            ctypes.wintypes.HANDLE,
         ]
-        kernel32.CreateFileW.restype = ctypes.wintypes.HANDLE
-        raw = kernel32.CreateFileW(
-            str(path),
-            generic_write,
-            0,
-            None,
-            open_existing,
-            file_attribute_normal,
-            None,
-        )
-        if not raw or int(raw) == invalid_handle_value:
+        kernel32.MoveFileExW.restype = ctypes.wintypes.BOOL
+        if not kernel32.MoveFileExW(
+            str(pending), str(final), movefile_write_through
+        ):
             raise Gate12C2ResourceQualificationError(
-                "telemetry artifact could not be reopened exclusively"
+                "telemetry non-replacing publication failed"
             )
-        try:
-            descriptor = msvcrt.open_osfhandle(
-                int(raw),
-                os.O_WRONLY | getattr(os, "O_BINARY", 0) | os.O_APPEND,
-            )
-        except Exception:
-            kernel32.CloseHandle(raw)
-            raise Gate12C2ResourceQualificationError(
-                "telemetry artifact reopen transfer failed"
-            ) from None
-        return os.fdopen(descriptor, "ab", buffering=0)
 
     @staticmethod
-    def _write_poison(handle: Any) -> None:
-        handle.seek(0, os.SEEK_END)
-        handle.write(b"\x00")
-        handle.flush()
-        os.fsync(handle.fileno())
-
-    def _invalidate_after_close_failure(self) -> None:
-        self._failed = True
-        if not self._closed:
-            try:
-                self._write_poison(self._handle)
-                return
-            except Exception:
-                pass
-        reopened = None
+    def _quarantine_final_as_pending(pending: Path, final: Path) -> None:
+        if pending.exists() or not final.exists():
+            return
         try:
-            reopened = self._open_existing_exclusive_handle(self.path)
-            self._write_poison(reopened)
+            if os.name != "nt":
+                os.link(final, pending)
+                final.unlink()
+                return
+            movefile_write_through = 0x00000008
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.MoveFileExW.argtypes = [
+                ctypes.c_wchar_p,
+                ctypes.c_wchar_p,
+                ctypes.wintypes.DWORD,
+            ]
+            kernel32.MoveFileExW.restype = ctypes.wintypes.BOOL
+            kernel32.MoveFileExW(
+                str(final), str(pending), movefile_write_through
+            )
         except Exception:
-            invalid = self.path.with_name(self.path.name + ".invalid")
-            try:
-                os.replace(self.path, invalid)
-            except Exception:
-                pass
-        finally:
-            if reopened is not None:
-                try:
-                    reopened.close()
-                except Exception:
-                    pass
+            pass
 
-    def _close_handle_only(self) -> bool:
+    def _close_pending_handle(self) -> bool:
         if self._closed:
-            return not self._failed
-        saw_failure = False
-        for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
-            try:
-                self._handle.close()
-            except Exception:
-                saw_failure = True
-                if bool(getattr(self._handle, "closed", False)):
-                    self._closed = True
-                    break
-                continue
-            if bool(getattr(self._handle, "closed", False)):
-                self._closed = True
-                break
-            saw_failure = True
-        if saw_failure or not self._closed:
+            return True
+        try:
+            self._handle.close()
+        except Exception:
+            self._closed = bool(getattr(self._handle, "closed", False))
+            self._failed = True
+            return False
+        self._closed = bool(getattr(self._handle, "closed", False))
+        if not self._closed:
             self._failed = True
             return False
         return True
 
-    def _poison(self, start_offset: int, reason: str) -> None:
+    def _abort(self) -> None:
         self._failed = True
-        try:
-            self._handle.seek(start_offset)
-            self._handle.truncate()
-            self._handle.write(b"\x00")
-            self._handle.flush()
-            os.fsync(self._handle.fileno())
-        except Exception:
-            pass
-        close_verified = self._close_handle_only()
-        if not close_verified:
-            reason = f"{reason}; telemetry handle close failed"
-        raise Gate12C2ResourceQualificationError(reason) from None
+        self._close_pending_handle()
 
     def append(
         self,
@@ -912,42 +1221,41 @@ class AppendOnlyTelemetryWriter:
             raise Gate12C2ResourceQualificationError(
                 "telemetry writer is closed"
             )
-        target = TRANSITIONS.get((self._state.previous_state, event_code))
-        if target is None:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry state-event transition is not frozen"
-            )
-        automatic = {
-            "schema_version": TELEMETRY_SCHEMA,
-            "sequence": self._state.sequence,
-            "utc_time": utc_time,
-            "monotonic_ns": monotonic_ns,
-            "previous_record_sha256": self._state.previous_digest,
-            "state": target,
-            "event_code": event_code,
-        }
-        overlap = set(automatic) & set(metrics)
-        if overlap:
-            raise Gate12C2ResourceQualificationError(
-                "telemetry metrics overlap state-machine fields"
-            )
-        record = {**automatic, **dict(metrics)}
-        encoded, digest = encode_telemetry_record(record)
-        candidate_state = replace(self._state)
-        candidate_state.accept(
-            event_code=event_code,
-            state=target,
-            sequence=int(record["sequence"]),
-            previous_digest=str(record["previous_record_sha256"]),
-            monotonic_ns=int(record["monotonic_ns"]),
-            record_digest=digest,
-        )
-        start_offset = self._handle.tell()
-        durable = (
-            event_code != "PERIODIC_SAMPLE"
-            or candidate_state.sequence % 10 == 0
-        )
         try:
+            target = TRANSITIONS.get((self._state.previous_state, event_code))
+            if target is None:
+                raise Gate12C2ResourceQualificationError(
+                    "telemetry state-event transition is not frozen"
+                )
+            automatic = {
+                "schema_version": TELEMETRY_SCHEMA,
+                "sequence": self._state.sequence,
+                "utc_time": utc_time,
+                "monotonic_ns": monotonic_ns,
+                "previous_record_sha256": self._state.previous_digest,
+                "state": target,
+                "event_code": event_code,
+            }
+            overlap = set(automatic) & set(metrics)
+            if overlap:
+                raise Gate12C2ResourceQualificationError(
+                    "telemetry metrics overlap state-machine fields"
+                )
+            record = {**automatic, **dict(metrics)}
+            encoded, digest = encode_telemetry_record(record)
+            candidate_state = replace(self._state)
+            candidate_state.accept(
+                event_code=event_code,
+                state=target,
+                sequence=int(record["sequence"]),
+                previous_digest=str(record["previous_record_sha256"]),
+                monotonic_ns=int(record["monotonic_ns"]),
+                record_digest=digest,
+            )
+            durable = (
+                event_code != "PERIODIC_SAMPLE"
+                or candidate_state.sequence % 10 == 0
+            )
             written = self._handle.write(encoded)
             if written != len(encoded):
                 raise OSError("short telemetry write")
@@ -955,39 +1263,99 @@ class AppendOnlyTelemetryWriter:
             if durable:
                 self._fsync(self._handle.fileno())
         except Exception:
-            self._poison(start_offset, "telemetry append failed")
+            self._abort()
+            raise Gate12C2ResourceQualificationError(
+                "telemetry append failed"
+            ) from None
         self._state = candidate_state
-        if durable:
-            self._last_durable_offset = self._handle.tell()
         return digest
 
-    def close(self) -> None:
+    @property
+    def publication_receipt(self) -> dict[str, Any] | None:
+        if self._publication_receipt is None:
+            return None
+        return dict(self._publication_receipt)
+
+    def close(self) -> dict[str, Any]:
+        if self._published and self._publication_receipt is not None:
+            return dict(self._publication_receipt)
         if self._failed:
-            self._close_handle_only()
+            self._close_pending_handle()
             raise Gate12C2ResourceQualificationError(
                 "telemetry writer is terminally failed"
             )
         if self._closed:
-            return
+            raise Gate12C2ResourceQualificationError(
+                "closed telemetry pending file was not published"
+            )
         if not self._state.terminal:
-            self._poison(
-                self._last_durable_offset,
-                "telemetry writer closed before a terminal state",
+            self._abort()
+            raise Gate12C2ResourceQualificationError(
+                "telemetry writer closed before a terminal state"
             )
         try:
             self._handle.flush()
             self._fsync(self._handle.fileno())
         except Exception:
-            self._poison(
-                self._last_durable_offset,
-                "telemetry close failed",
-            )
-        self._last_durable_offset = self._handle.tell()
-        if not self._close_handle_only():
-            self._invalidate_after_close_failure()
+            self._abort()
+            raise Gate12C2ResourceQualificationError(
+                "telemetry close failed"
+            ) from None
+        if not self._close_pending_handle():
             raise Gate12C2ResourceQualificationError(
                 "telemetry handle close failed"
             )
+        try:
+            verified = verify_telemetry_file(self.pending_path)
+        except Exception:
+            self._failed = True
+            raise Gate12C2ResourceQualificationError(
+                "closed telemetry pending file failed strict verification"
+            ) from None
+        try:
+            self._publish_nonreplace(self.pending_path, self.final_path)
+            if self.pending_path.exists() or not self.final_path.is_file():
+                raise Gate12C2ResourceQualificationError(
+                    "telemetry publication path transition is invalid"
+                )
+            final_verified = verify_telemetry_file(self.final_path)
+            for field in (
+                "byte_count",
+                "telemetry_file_sha256",
+                "final_record_sha256",
+                "record_count",
+                "terminal_state",
+            ):
+                if final_verified[field] != verified[field]:
+                    raise Gate12C2ResourceQualificationError(
+                        "published telemetry bytes changed"
+                    )
+            receipt = _telemetry_publication_payload(
+                pending_path=self.pending_path,
+                final_path=self.final_path,
+                attempt_identity_sha256=self.attempt_identity_sha256,
+                verified=verified,
+                byte_count=int(verified["byte_count"]),
+            )
+            verify_telemetry_publication(
+                pending_path=self.pending_path,
+                final_path=self.final_path,
+                expected_attempt_identity_sha256=(
+                    self.attempt_identity_sha256
+                ),
+                receipt=receipt,
+            )
+        except Exception:
+            self._failed = True
+            self._quarantine_final_as_pending(
+                self.pending_path, self.final_path
+            )
+            raise Gate12C2ResourceQualificationError(
+                "telemetry publication failed"
+            ) from None
+        self._published = True
+        self._publication_receipt = receipt
+        return dict(receipt)
 
     def __enter__(self) -> "AppendOnlyTelemetryWriter":
         return self
@@ -995,17 +1363,7 @@ class AppendOnlyTelemetryWriter:
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         del tb
         if exc_type is not None or exc is not None:
-            self._failed = True
-            try:
-                if not self._closed:
-                    self._handle.seek(self._last_durable_offset)
-                    self._handle.truncate()
-                    self._handle.write(b"\x00")
-                    self._handle.flush()
-                    os.fsync(self._handle.fileno())
-            except Exception:
-                pass
-            self._close_handle_only()
+            self._abort()
             return
         self.close()
 
@@ -1015,16 +1373,27 @@ class LaunchDeadlineWatchdog:
 
     def __init__(
         self,
-        job_handle: "WatchdogOwnedWindowsJobHandle",
+        local_launch: "WatchdogLocalWindowsJobLaunch",
         *,
         monotonic_ns: Callable[[], int] = time.monotonic_ns,
     ) -> None:
-        if type(job_handle) is not WatchdogOwnedWindowsJobHandle:
+        if type(local_launch) is not WatchdogLocalWindowsJobLaunch:
             raise Gate12C2ResourceQualificationError(
-                "watchdog Job handle is not an OS-verified capability"
+                "watchdog-local launch state type is invalid"
             )
-        job_handle.reverify_for_watchdog()
-        self._job_handle = job_handle
+        try:
+            local_launch.reverify_for_watchdog()
+        except Exception:
+            try:
+                local_launch.close_for_kill()
+            except Exception:
+                raise Gate12C2ResourceQualificationError(
+                    "watchdog-local launch verification and cleanup failed"
+                ) from None
+            raise Gate12C2ResourceQualificationError(
+                "watchdog-local launch verification failed"
+            ) from None
+        self._local_launch = local_launch
         self._monotonic_ns = monotonic_ns
         self.resume_success_monotonic_ns: int | None = None
         self.ack_monotonic_ns: int | None = None
@@ -1049,7 +1418,7 @@ class LaunchDeadlineWatchdog:
             for _ in range(JOB_HANDLE_CLOSE_ATTEMPTS):
                 self.close_attempt_count += 1
                 try:
-                    self._job_handle.close_for_kill()
+                    self._local_launch.close_for_kill()
                 except Exception:
                     last_error = True
                     continue
@@ -1070,11 +1439,13 @@ class LaunchDeadlineWatchdog:
             )
         return self.resume_success_monotonic_ns + LAUNCH_EVIDENCE_DEADLINE_NS
 
-    def resume_and_arm(self, resume: Callable[[], int]) -> int:
+    def resume_and_arm(self) -> int:
         if self.resume_success_monotonic_ns is not None:
             self._terminate("scientific child was resumed more than once")
         try:
-            previous_suspend_count = resume()
+            previous_suspend_count = (
+                self._local_launch.resume_suspended_child()
+            )
         except Exception:
             self._terminate("scientific child resume failed")
         if type(previous_suspend_count) is not int or previous_suspend_count != 1:
@@ -1202,8 +1573,10 @@ class ProcessIdentity:
             label="process creation time",
             maximum=9_999_999_999_999_999_999,
         )
-        if self.pid == 0:
-            raise Gate12C2ResourceQualificationError("PID cannot be zero")
+        if self.pid == 0 or self.creation_time_ns == 0:
+            raise Gate12C2ResourceQualificationError(
+                "process identity values cannot be zero"
+            )
 
 
 class NoHandleGuardian:
@@ -1212,11 +1585,24 @@ class NoHandleGuardian:
     __slots__ = ("_identities",)
 
     def __init__(self, identities: Sequence[ProcessIdentity]) -> None:
-        if not identities:
+        try:
+            frozen_identities = tuple(identities)
+        except Exception:
             raise Gate12C2ResourceQualificationError(
-                "guardian identity surface is empty"
+                "guardian identity surface is invalid"
+            ) from None
+        if (
+            not frozen_identities
+            or any(
+                type(identity) is not ProcessIdentity
+                for identity in frozen_identities
             )
-        self._identities = tuple(identities)
+            or len(set(frozen_identities)) != len(frozen_identities)
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "guardian identity surface is invalid"
+            )
+        self._identities = frozen_identities
 
     @property
     def owns_job_handle(self) -> bool:
@@ -1228,7 +1614,12 @@ class NoHandleGuardian:
     ) -> dict[str, Any]:
         statuses = []
         for identity in self._identities:
-            status = probe(identity)
+            try:
+                status = probe(identity)
+            except Exception:
+                raise Gate12C2ResourceQualificationError(
+                    "guardian process probe failed"
+                ) from None
             if status not in {"DEAD", "ACTIVE", "UNKNOWN"}:
                 raise Gate12C2ResourceQualificationError(
                     "guardian process probe is invalid"
@@ -1276,7 +1667,13 @@ def classify_expected_legacy_closeout(
         "semantic_commitments_match",
         "telemetry_tail_complete",
     }
-    if set(evidence) != required:
+    try:
+        exact_fields = set(evidence)
+    except Exception:
+        raise Gate12C2ResourceQualificationError(
+            "legacy closeout evidence mapping is invalid"
+        ) from None
+    if exact_fields != required:
         raise Gate12C2ResourceQualificationError(
             "legacy closeout evidence fields differ from the frozen schema"
         )
@@ -1373,10 +1770,14 @@ def classify_expected_legacy_closeout(
 def verify_resource_envelope(
     evidence: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Verify only frozen resource-envelope scalars; emit no science."""
+    """Verify frozen resource scalars with distinct mathematical M and Job J."""
 
     required = {
         "physical_ram_bytes",
+        "native_page_size_bytes",
+        "mathematical_memory_limit_bytes",
+        "effective_job_memory_limit_bytes",
+        "rounding_delta_bytes",
         "peak_job_memory_bytes",
         "sampled_combined_rss_bytes",
         "sampled_available_physical_memory_bytes",
@@ -1389,7 +1790,13 @@ def verify_resource_envelope(
         "monitor_error_count",
         "partial_or_temp_count",
     }
-    if set(evidence) != required:
+    try:
+        exact_fields = set(evidence)
+    except Exception:
+        raise Gate12C2ResourceQualificationError(
+            "resource evidence mapping is invalid"
+        ) from None
+    if exact_fields != required:
         raise Gate12C2ResourceQualificationError(
             "resource evidence fields differ from the frozen schema"
         )
@@ -1401,29 +1808,38 @@ def verify_resource_envelope(
         )
         for field, value in evidence.items()
     }
-    physical = values["physical_ram_bytes"]
-    if physical <= 0:
+    geometry = derive_resource_memory_geometry(
+        values["physical_ram_bytes"],
+        values["native_page_size_bytes"],
+    )
+    if (
+        values["mathematical_memory_limit_bytes"]
+        != geometry.mathematical_memory_limit_bytes
+        or values["effective_job_memory_limit_bytes"]
+        != geometry.effective_job_memory_limit_bytes
+        or values["rounding_delta_bytes"] != geometry.rounding_delta_bytes
+    ):
         raise Gate12C2ResourceQualificationError(
-            "physical memory evidence is invalid"
+            "resource evidence P/S/M/J commitment mismatch"
         )
-    memory_limit = (3 * physical) // 4
-    available_floor = (physical + 9) // 10
+    available_floor = geometry.physical_ram_bytes // 10
     preflight_free = values["preflight_free_bytes"]
     if (
         preflight_free < MINIMUM_PREFLIGHT_FREE_BYTES
         or preflight_free - TOTAL_WORST_CASE_DISK_BYTES
-        < preflight_free // 2
+        < (preflight_free + 1) // 2
     ):
         raise Gate12C2ResourceQualificationError(
             "preflight disk evidence fails the frozen gate"
         )
     limits = (
-        values["peak_job_memory_bytes"] <= memory_limit,
-        values["sampled_combined_rss_bytes"] <= memory_limit,
+        values["peak_job_memory_bytes"]
+        <= geometry.effective_job_memory_limit_bytes,
+        values["sampled_combined_rss_bytes"]
+        <= geometry.mathematical_memory_limit_bytes,
         values["sampled_available_physical_memory_bytes"]
         >= available_floor,
-        values["minimum_observed_free_bytes"]
-        >= preflight_free // 2,
+        values["minimum_observed_free_bytes"] >= preflight_free // 2,
         values["qualification_output_bytes"]
         <= QUALIFICATION_OUTPUT_BUDGET_BYTES,
         values["telemetry_bytes"] <= TELEMETRY_WORST_CASE_BYTES,
@@ -1438,7 +1854,15 @@ def verify_resource_envelope(
         )
     return {
         "status": "pass",
-        "job_memory_limit_bytes": memory_limit,
+        "physical_ram_bytes": geometry.physical_ram_bytes,
+        "native_page_size_bytes": geometry.native_page_size_bytes,
+        "mathematical_memory_limit_bytes": (
+            geometry.mathematical_memory_limit_bytes
+        ),
+        "effective_job_memory_limit_bytes": (
+            geometry.effective_job_memory_limit_bytes
+        ),
+        "rounding_delta_bytes": geometry.rounding_delta_bytes,
         "sampled_available_memory_floor_bytes": available_floor,
         "scientific_values_emitted": False,
         "original_resource_gate_status": "indeterminate",
@@ -1481,15 +1905,272 @@ class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
     ]
 
 
+class _JOBOBJECT_BASIC_ACCOUNTING_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("TotalUserTime", ctypes.c_longlong),
+        ("TotalKernelTime", ctypes.c_longlong),
+        ("ThisPeriodTotalUserTime", ctypes.c_longlong),
+        ("ThisPeriodTotalKernelTime", ctypes.c_longlong),
+        ("TotalPageFaultCount", ctypes.wintypes.DWORD),
+        ("TotalProcesses", ctypes.wintypes.DWORD),
+        ("ActiveProcesses", ctypes.wintypes.DWORD),
+        ("TotalTerminatedProcesses", ctypes.wintypes.DWORD),
+    ]
+
+
+class _MEMORYSTATUSEX(ctypes.Structure):
+    _fields_ = [
+        ("dwLength", ctypes.wintypes.DWORD),
+        ("dwMemoryLoad", ctypes.wintypes.DWORD),
+        ("ullTotalPhys", ctypes.c_ulonglong),
+        ("ullAvailPhys", ctypes.c_ulonglong),
+        ("ullTotalPageFile", ctypes.c_ulonglong),
+        ("ullAvailPageFile", ctypes.c_ulonglong),
+        ("ullTotalVirtual", ctypes.c_ulonglong),
+        ("ullAvailVirtual", ctypes.c_ulonglong),
+        ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+    ]
+
+
+class _SYSTEM_INFO_ARCH(ctypes.Structure):
+    _fields_ = [
+        ("wProcessorArchitecture", ctypes.wintypes.WORD),
+        ("wReserved", ctypes.wintypes.WORD),
+    ]
+
+
+class _SYSTEM_INFO_UNION(ctypes.Union):
+    _anonymous_ = ("arch",)
+    _fields_ = [
+        ("dwOemId", ctypes.wintypes.DWORD),
+        ("arch", _SYSTEM_INFO_ARCH),
+    ]
+
+
+class _SYSTEM_INFO(ctypes.Structure):
+    _anonymous_ = ("identity",)
+    _fields_ = [
+        ("identity", _SYSTEM_INFO_UNION),
+        ("dwPageSize", ctypes.wintypes.DWORD),
+        ("lpMinimumApplicationAddress", ctypes.c_void_p),
+        ("lpMaximumApplicationAddress", ctypes.c_void_p),
+        ("dwActiveProcessorMask", ctypes.c_size_t),
+        ("dwNumberOfProcessors", ctypes.wintypes.DWORD),
+        ("dwProcessorType", ctypes.wintypes.DWORD),
+        ("dwAllocationGranularity", ctypes.wintypes.DWORD),
+        ("wProcessorLevel", ctypes.wintypes.WORD),
+        ("wProcessorRevision", ctypes.wintypes.WORD),
+    ]
+
+
+class _STARTUPINFOW(ctypes.Structure):
+    _fields_ = [
+        ("cb", ctypes.wintypes.DWORD),
+        ("lpReserved", ctypes.c_wchar_p),
+        ("lpDesktop", ctypes.c_wchar_p),
+        ("lpTitle", ctypes.c_wchar_p),
+        ("dwX", ctypes.wintypes.DWORD),
+        ("dwY", ctypes.wintypes.DWORD),
+        ("dwXSize", ctypes.wintypes.DWORD),
+        ("dwYSize", ctypes.wintypes.DWORD),
+        ("dwXCountChars", ctypes.wintypes.DWORD),
+        ("dwYCountChars", ctypes.wintypes.DWORD),
+        ("dwFillAttribute", ctypes.wintypes.DWORD),
+        ("dwFlags", ctypes.wintypes.DWORD),
+        ("wShowWindow", ctypes.wintypes.WORD),
+        ("cbReserved2", ctypes.wintypes.WORD),
+        ("lpReserved2", ctypes.POINTER(ctypes.c_ubyte)),
+        ("hStdInput", ctypes.wintypes.HANDLE),
+        ("hStdOutput", ctypes.wintypes.HANDLE),
+        ("hStdError", ctypes.wintypes.HANDLE),
+    ]
+
+
+class _STARTUPINFOEXW(ctypes.Structure):
+    _fields_ = [
+        ("StartupInfo", _STARTUPINFOW),
+        ("lpAttributeList", ctypes.c_void_p),
+    ]
+
+
+class _PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("hProcess", ctypes.wintypes.HANDLE),
+        ("hThread", ctypes.wintypes.HANDLE),
+        ("dwProcessId", ctypes.wintypes.DWORD),
+        ("dwThreadId", ctypes.wintypes.DWORD),
+    ]
+
+
+def _raw_handle_value(value: object) -> int:
+    if type(value) is int:
+        return value
+    raw = getattr(value, "value", None)
+    if type(raw) is int:
+        return raw
+    try:
+        converted = int(value)  # type: ignore[arg-type]
+    except Exception:
+        converted = 0
+    return converted
+
+
+class _JobListAttributeStorage:
+    """Exact one-entry PROC_THREAD_ATTRIBUTE_JOB_LIST storage lifecycle."""
+
+    __slots__ = (
+        "_api",
+        "_attribute_bytes",
+        "_buffer",
+        "_deleted",
+        "_delete_attempted",
+        "_job_array",
+        "_list_pointer",
+    )
+
+    def __init__(self, api: "WindowsJobApi", job_handle: int) -> None:
+        self._api = api
+        self._attribute_bytes = 0
+        self._buffer: Any = None
+        self._job_array: Any = None
+        self._list_pointer = ctypes.c_void_p()
+        self._deleted = False
+        self._delete_attempted = False
+        self._initialize(job_handle)
+
+    def _initialize(self, job_handle: int) -> None:
+        kernel32 = self._api.kernel32
+        initialize = kernel32.InitializeProcThreadAttributeList
+        initialize.argtypes = [
+            ctypes.c_void_p,
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.DWORD,
+            ctypes.POINTER(ctypes.c_size_t),
+        ]
+        initialize.restype = ctypes.wintypes.BOOL
+        update = kernel32.UpdateProcThreadAttribute
+        update.argtypes = [
+            ctypes.c_void_p,
+            ctypes.wintypes.DWORD,
+            ctypes.c_size_t,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+        ]
+        update.restype = ctypes.wintypes.BOOL
+
+        required_bytes = ctypes.c_size_t(0)
+        ctypes.set_last_error(0)
+        first_result = initialize(
+            None, 1, 0, ctypes.byref(required_bytes)
+        )
+        first_error = ctypes.get_last_error()
+        if (
+            bool(first_result)
+            or first_error != self._api.ERROR_INSUFFICIENT_BUFFER
+            or required_bytes.value <= 0
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "Job-list attribute sizing protocol failed"
+            )
+        self._attribute_bytes = int(required_bytes.value)
+        self._buffer = (ctypes.c_ubyte * self._attribute_bytes)()
+        self._list_pointer = ctypes.cast(self._buffer, ctypes.c_void_p)
+        second_bytes = ctypes.c_size_t(self._attribute_bytes)
+        if not initialize(
+            self._list_pointer, 1, 0, ctypes.byref(second_bytes)
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "Job-list attribute initialization failed"
+            )
+        if int(second_bytes.value) != self._attribute_bytes:
+            self.delete_once()
+            raise Gate12C2ResourceQualificationError(
+                "Job-list attribute size changed during initialization"
+            )
+        try:
+            self._job_array = (ctypes.wintypes.HANDLE * 1)(
+                ctypes.wintypes.HANDLE(job_handle)
+            )
+            updated = update(
+                self._list_pointer,
+                0,
+                self._api.PROC_THREAD_ATTRIBUTE_JOB_LIST,
+                ctypes.cast(self._job_array, ctypes.c_void_p),
+                ctypes.sizeof(ctypes.wintypes.HANDLE),
+                None,
+                None,
+            )
+        except Exception:
+            try:
+                self.delete_once()
+            except Exception:
+                raise Gate12C2ResourceQualificationError(
+                    "Job-list process attribute update and cleanup failed"
+                ) from None
+            raise Gate12C2ResourceQualificationError(
+                "Job-list process attribute update failed"
+            ) from None
+        if not updated:
+            self.delete_once()
+            raise Gate12C2ResourceQualificationError(
+                "Job-list process attribute update failed"
+            )
+
+    @property
+    def list_pointer(self) -> ctypes.c_void_p:
+        if self._delete_attempted:
+            raise Gate12C2ResourceQualificationError(
+                "Job-list attribute storage is already deleted"
+            )
+        return self._list_pointer
+
+    @property
+    def attribute_bytes(self) -> int:
+        return self._attribute_bytes
+
+    @property
+    def job_array_value(self) -> int:
+        if self._job_array is None:
+            return 0
+        return _raw_handle_value(self._job_array[0])
+
+    @property
+    def delete_attempted(self) -> bool:
+        return self._delete_attempted
+
+    @property
+    def deleted(self) -> bool:
+        return self._deleted
+
+    def delete_once(self) -> None:
+        if self._delete_attempted:
+            raise Gate12C2ResourceQualificationError(
+                "Job-list attribute storage deletion was attempted more than once"
+            )
+        self._delete_attempted = True
+        delete = self._api.kernel32.DeleteProcThreadAttributeList
+        delete.argtypes = [ctypes.c_void_p]
+        delete.restype = None
+        delete(self._list_pointer)
+        self._deleted = True
+
+
 class WindowsJobApi:
-    """Reviewed Win32 adapter; it never launches the scientific child."""
+    """Reviewed Win32 adapter used only inside the watchdog OS process."""
 
     JOB_OBJECT_LIMIT_JOB_MEMORY = 0x00000200
     JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+    JOB_OBJECT_BASIC_ACCOUNTING_INFORMATION = 1
     JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
-    DUPLICATE_CLOSE_SOURCE = 0x00000001
-    DUPLICATE_SAME_ACCESS = 0x00000002
     HANDLE_FLAG_INHERIT = 0x00000001
+    ERROR_INSUFFICIENT_BUFFER = 122
+    PROC_THREAD_ATTRIBUTE_JOB_LIST = 0x0002000D
+    CREATE_SUSPENDED = 0x00000004
+    EXTENDED_STARTUPINFO_PRESENT = 0x00080000
+    CREATEPROCESS_FLAGS = CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT
+    INVALID_SUSPEND_COUNT = 0xFFFFFFFF
 
     def __init__(self) -> None:
         if os.name != "nt":
@@ -1498,188 +2179,480 @@ class WindowsJobApi:
             )
         self.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-    def create_unnamed_job(self, *, physical_ram_bytes: int) -> int:
-        physical = _strict_int(
-            physical_ram_bytes,
-            label="physical RAM",
-            maximum=99_999_999_999_999,
-        )
-        if physical <= 0:
+    def measure_resource_geometry(self) -> ResourceMemoryGeometry:
+        memory = _MEMORYSTATUSEX()
+        memory.dwLength = ctypes.sizeof(_MEMORYSTATUSEX)
+        self.kernel32.GlobalMemoryStatusEx.argtypes = [
+            ctypes.POINTER(_MEMORYSTATUSEX)
+        ]
+        self.kernel32.GlobalMemoryStatusEx.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.GlobalMemoryStatusEx(ctypes.byref(memory)):
             raise Gate12C2ResourceQualificationError(
-                "physical RAM is invalid"
+                "GlobalMemoryStatusEx failed"
             )
+        system = _SYSTEM_INFO()
+        self.kernel32.GetNativeSystemInfo.argtypes = [
+            ctypes.POINTER(_SYSTEM_INFO)
+        ]
+        self.kernel32.GetNativeSystemInfo.restype = None
+        self.kernel32.GetNativeSystemInfo(ctypes.byref(system))
+        return derive_resource_memory_geometry(
+            int(memory.ullTotalPhys),
+            int(system.dwPageSize),
+        )
+
+    def verify_current_process_outside_job(self) -> None:
+        self.kernel32.GetCurrentProcess.argtypes = []
+        self.kernel32.GetCurrentProcess.restype = ctypes.wintypes.HANDLE
+        self.kernel32.IsProcessInJob.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.BOOL),
+        ]
+        self.kernel32.IsProcessInJob.restype = ctypes.wintypes.BOOL
+        in_job = ctypes.wintypes.BOOL()
+        if not self.kernel32.IsProcessInJob(
+            self.kernel32.GetCurrentProcess(), None, ctypes.byref(in_job)
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "current-process Job membership is unknown"
+            )
+        if bool(in_job.value):
+            raise Gate12C2ResourceQualificationError(
+                "watchdog process is already assigned to a Job"
+            )
+
+    def _create_watchdog_local_job(
+        self, geometry: ResourceMemoryGeometry
+    ) -> int:
+        geometry._validate()
         self.kernel32.CreateJobObjectW.argtypes = [
             ctypes.c_void_p,
             ctypes.c_wchar_p,
         ]
         self.kernel32.CreateJobObjectW.restype = ctypes.wintypes.HANDLE
-        handle = self.kernel32.CreateJobObjectW(None, None)
-        if not handle:
+        raw = self.kernel32.CreateJobObjectW(None, None)
+        handle = _raw_handle_value(raw)
+        if handle <= 0:
             raise Gate12C2ResourceQualificationError(
                 "could not create unnamed Job Object"
             )
-        info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
-        info.BasicLimitInformation.LimitFlags = (
-            self.JOB_OBJECT_LIMIT_JOB_MEMORY
-            | self.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        try:
+            if self.query_handle_inheritable(handle):
+                raise Gate12C2ResourceQualificationError(
+                    "watchdog-local Job handle is inheritable"
+                )
+            info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+            info.BasicLimitInformation.LimitFlags = (
+                self.JOB_OBJECT_LIMIT_JOB_MEMORY
+                | self.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            )
+            info.JobMemoryLimit = geometry.effective_job_memory_limit_bytes
+            self.kernel32.SetInformationJobObject.argtypes = [
+                ctypes.wintypes.HANDLE,
+                ctypes.c_int,
+                ctypes.c_void_p,
+                ctypes.wintypes.DWORD,
+            ]
+            self.kernel32.SetInformationJobObject.restype = (
+                ctypes.wintypes.BOOL
+            )
+            if not self.kernel32.SetInformationJobObject(
+                handle,
+                self.JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                ctypes.byref(info),
+                ctypes.sizeof(info),
+            ):
+                raise Gate12C2ResourceQualificationError(
+                    "could not apply page-aligned Job limits"
+                )
+            if not self.verify_job_handle(handle, geometry):
+                raise Gate12C2ResourceQualificationError(
+                    "post-set Job limit query differs from J"
+                )
+        except Exception:
+            self.close_handle_verified(handle)
+            raise
+        return handle
+
+    def _build_job_list_storage(
+        self, job_handle: int
+    ) -> _JobListAttributeStorage:
+        return _JobListAttributeStorage(self, job_handle)
+
+    def probe_job_list_attribute_support(self) -> dict[str, Any]:
+        """Exercise the exact attribute protocol without creating a child."""
+
+        self.verify_current_process_outside_job()
+        geometry = self.measure_resource_geometry()
+        job_handle = self._create_watchdog_local_job(geometry)
+        storage: _JobListAttributeStorage | None = None
+        deleted = False
+        probe_failed = False
+        try:
+            storage = self._build_job_list_storage(job_handle)
+            if storage.job_array_value != job_handle:
+                raise Gate12C2ResourceQualificationError(
+                    "support-probe Job-list value changed"
+                )
+            storage.delete_once()
+            deleted = storage.deleted
+        except Exception:
+            probe_failed = True
+        finally:
+            if storage is not None and not storage.delete_attempted:
+                try:
+                    storage.delete_once()
+                except Exception:
+                    probe_failed = True
+                else:
+                    deleted = storage.deleted
+            self.close_handle_verified(job_handle)
+        if probe_failed or not deleted:
+            raise Gate12C2ResourceQualificationError(
+                "support-probe attribute cleanup was not verified"
+            ) from None
+        return {
+            "status": "pass",
+            "entry_count": 1,
+            "attribute_bytes": storage.attribute_bytes,
+            "attribute_deleted_count": 1,
+            "temporary_job_closed": True,
+            "scientific_child_created": False,
+            "scientific_values_emitted": False,
+        }
+
+    def launch_scientific_child_suspended(
+        self,
+        *,
+        preflight_geometry: ResourceMemoryGeometry,
+        application_name: str | None,
+        command_line: str,
+        current_directory: Path,
+    ) -> "WatchdogLocalWindowsJobLaunch":
+        """Create the scientific root already assigned to the local Job."""
+
+        self.verify_current_process_outside_job()
+        watchdog_geometry = self.measure_resource_geometry()
+        verify_resource_memory_geometry_match(
+            preflight_geometry, watchdog_geometry
         )
-        info.JobMemoryLimit = (3 * physical) // 4
-        self.kernel32.SetInformationJobObject.argtypes = [
+        if application_name is not None and (
+            not isinstance(application_name, str)
+            or not application_name
+            or "\x00" in application_name
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "scientific application name is invalid"
+            )
+        if (
+            not isinstance(command_line, str)
+            or not command_line
+            or "\x00" in command_line
+            or len(command_line) >= 32_767
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "scientific command line is invalid"
+            )
+        cwd = Path(current_directory).resolve()
+        if not cwd.is_dir():
+            raise Gate12C2ResourceQualificationError(
+                "scientific current directory is invalid"
+            )
+
+        job_handle = self._create_watchdog_local_job(watchdog_geometry)
+        storage: _JobListAttributeStorage | None = None
+        process_info = _PROCESS_INFORMATION()
+        startup = _STARTUPINFOEXW()
+        startup.StartupInfo.cb = ctypes.sizeof(_STARTUPINFOEXW)
+        command_buffer = ctypes.create_unicode_buffer(command_line)
+        create_succeeded = False
+        delete_reached = False
+        attribute_storage_unchanged = False
+        creation_error = False
+        try:
+            storage = self._build_job_list_storage(job_handle)
+            startup.lpAttributeList = storage.list_pointer
+            self.kernel32.CreateProcessW.argtypes = [
+                ctypes.c_wchar_p,
+                ctypes.c_wchar_p,
+                ctypes.c_void_p,
+                ctypes.c_void_p,
+                ctypes.wintypes.BOOL,
+                ctypes.wintypes.DWORD,
+                ctypes.c_void_p,
+                ctypes.c_wchar_p,
+                ctypes.POINTER(_STARTUPINFOEXW),
+                ctypes.POINTER(_PROCESS_INFORMATION),
+            ]
+            self.kernel32.CreateProcessW.restype = ctypes.wintypes.BOOL
+            create_succeeded = bool(
+                self.kernel32.CreateProcessW(
+                    application_name,
+                    command_buffer,
+                    None,
+                    None,
+                    False,
+                    self.CREATEPROCESS_FLAGS,
+                    None,
+                    str(cwd),
+                    ctypes.byref(startup),
+                    ctypes.byref(process_info),
+                )
+            )
+        except Exception:
+            creation_error = True
+        finally:
+            if storage is not None:
+                try:
+                    attribute_storage_unchanged = (
+                        storage.job_array_value == job_handle
+                        and _raw_handle_value(startup.lpAttributeList)
+                        == _raw_handle_value(storage.list_pointer)
+                    )
+                    storage.delete_once()
+                    delete_reached = attribute_storage_unchanged
+                except Exception:
+                    delete_reached = False
+
+        process_handle = _raw_handle_value(process_info.hProcess)
+        thread_handle = _raw_handle_value(process_info.hThread)
+        if creation_error:
+            self._close_residual_process_information(
+                process_handle, thread_handle
+            )
+            self.close_handle_verified(job_handle)
+            raise Gate12C2ResourceQualificationError(
+                "atomic scientific-child launch preparation failed"
+            ) from None
+        if not create_succeeded:
+            self._close_residual_process_information(
+                process_handle, thread_handle
+            )
+            self.close_handle_verified(job_handle)
+            raise Gate12C2ResourceQualificationError(
+                "CreateProcessW failed for the scientific child"
+            )
+        if not delete_reached:
+            self._close_residual_process_information(
+                process_handle, thread_handle
+            )
+            self.close_handle_verified(job_handle)
+            raise Gate12C2ResourceQualificationError(
+                "process-attribute deletion was not verified"
+            )
+        try:
+            identity = self._verify_created_child(
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
+                declared_pid=int(process_info.dwProcessId),
+                declared_thread_id=int(process_info.dwThreadId),
+            )
+        except Exception:
+            self.close_handle_verified(job_handle)
+            self._close_residual_process_information(
+                process_handle, thread_handle
+            )
+            raise
+        try:
+            return WatchdogLocalWindowsJobLaunch._from_verified_creation(
+                api=self,
+                geometry=watchdog_geometry,
+                job_handle=job_handle,
+                process_handle=process_handle,
+                thread_handle=thread_handle,
+                child_identity=identity,
+                thread_id=int(process_info.dwThreadId),
+                attribute_bytes=storage.attribute_bytes,
+            )
+        except Exception:
+            self.close_handle_verified(job_handle)
+            self._close_residual_process_information(
+                process_handle, thread_handle
+            )
+            raise Gate12C2ResourceQualificationError(
+                "watchdog-local launch state verification failed"
+            ) from None
+
+    def reverify_suspended_child(
+        self,
+        *,
+        job_handle: int,
+        process_handle: int,
+        thread_handle: int,
+        expected_identity: ProcessIdentity,
+        expected_thread_id: int,
+    ) -> None:
+        """Recheck PID, creation time, thread, membership, and suspension."""
+
+        self.kernel32.GetProcessId.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.GetProcessId.restype = ctypes.wintypes.DWORD
+        self.kernel32.GetThreadId.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.GetThreadId.restype = ctypes.wintypes.DWORD
+        if (
+            int(self.kernel32.GetProcessId(process_handle))
+            != expected_identity.pid
+            or self._process_creation_time_ns(process_handle)
+            != expected_identity.creation_time_ns
+            or int(self.kernel32.GetThreadId(thread_handle))
+            != expected_thread_id
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "scientific child process identity changed"
+            )
+        in_job = ctypes.wintypes.BOOL()
+        self.kernel32.IsProcessInJob.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.BOOL),
+        ]
+        self.kernel32.IsProcessInJob.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.IsProcessInJob(
+            process_handle, job_handle, ctypes.byref(in_job)
+        ) or not bool(in_job.value):
+            raise Gate12C2ResourceQualificationError(
+                "scientific child Job membership changed"
+            )
+        if self._query_job_accounting(job_handle) != (1, 1, 0):
+            raise Gate12C2ResourceQualificationError(
+                "suspended child Job process surface changed"
+            )
+        self._verify_thread_remains_suspended(thread_handle)
+
+    def _verify_created_child(
+        self,
+        *,
+        job_handle: int,
+        process_handle: int,
+        thread_handle: int,
+        declared_pid: int,
+        declared_thread_id: int,
+    ) -> ProcessIdentity:
+        if (
+            process_handle <= 0
+            or thread_handle <= 0
+            or declared_pid <= 0
+            or declared_thread_id <= 0
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "CreateProcessW returned invalid process information"
+            )
+        self.kernel32.GetProcessId.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.GetProcessId.restype = ctypes.wintypes.DWORD
+        self.kernel32.GetThreadId.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.GetThreadId.restype = ctypes.wintypes.DWORD
+        if int(self.kernel32.GetProcessId(process_handle)) != declared_pid:
+            raise Gate12C2ResourceQualificationError(
+                "scientific child PID identity mismatch"
+            )
+        if int(self.kernel32.GetThreadId(thread_handle)) != declared_thread_id:
+            raise Gate12C2ResourceQualificationError(
+                "scientific child thread identity mismatch"
+            )
+        self.kernel32.IsProcessInJob.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.BOOL),
+        ]
+        self.kernel32.IsProcessInJob.restype = ctypes.wintypes.BOOL
+        in_job = ctypes.wintypes.BOOL()
+        if not self.kernel32.IsProcessInJob(
+            process_handle, job_handle, ctypes.byref(in_job)
+        ) or not bool(in_job.value):
+            raise Gate12C2ResourceQualificationError(
+                "scientific child is not atomically contained in the Job"
+            )
+        creation_time_ns = self._process_creation_time_ns(process_handle)
+        self._verify_thread_remains_suspended(thread_handle)
+        accounting = self._query_job_accounting(job_handle)
+        if accounting != (1, 1, 0):
+            raise Gate12C2ResourceQualificationError(
+                "suspended child Job process surface is not exact"
+            )
+        return ProcessIdentity(declared_pid, creation_time_ns)
+
+    def _verify_thread_remains_suspended(self, thread_handle: int) -> None:
+        self.kernel32.SuspendThread.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.SuspendThread.restype = ctypes.wintypes.DWORD
+        self.kernel32.ResumeThread.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.ResumeThread.restype = ctypes.wintypes.DWORD
+        previous = int(self.kernel32.SuspendThread(thread_handle))
+        if previous != 1:
+            if previous != self.INVALID_SUSPEND_COUNT:
+                self.kernel32.ResumeThread(thread_handle)
+            raise Gate12C2ResourceQualificationError(
+                "scientific primary thread was not exactly suspended"
+            )
+        restored = int(self.kernel32.ResumeThread(thread_handle))
+        if restored != 2:
+            raise Gate12C2ResourceQualificationError(
+                "scientific primary-thread suspend probe was not restored"
+            )
+
+    def _process_creation_time_ns(self, process_handle: int) -> int:
+        creation = ctypes.wintypes.FILETIME()
+        exit_time = ctypes.wintypes.FILETIME()
+        kernel = ctypes.wintypes.FILETIME()
+        user = ctypes.wintypes.FILETIME()
+        self.kernel32.GetProcessTimes.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.FILETIME),
+            ctypes.POINTER(ctypes.wintypes.FILETIME),
+            ctypes.POINTER(ctypes.wintypes.FILETIME),
+            ctypes.POINTER(ctypes.wintypes.FILETIME),
+        ]
+        self.kernel32.GetProcessTimes.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.GetProcessTimes(
+            process_handle,
+            ctypes.byref(creation),
+            ctypes.byref(exit_time),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "scientific process creation time is unavailable"
+            )
+        ticks = (
+            int(creation.dwHighDateTime) << 32
+        ) | int(creation.dwLowDateTime)
+        if ticks <= WINDOWS_TO_UNIX_EPOCH_100NS:
+            raise Gate12C2ResourceQualificationError(
+                "scientific process creation time is invalid"
+            )
+        return (ticks - WINDOWS_TO_UNIX_EPOCH_100NS) * 100
+
+    def _query_job_accounting(self, job_handle: int) -> tuple[int, int, int]:
+        info = _JOBOBJECT_BASIC_ACCOUNTING_INFORMATION()
+        returned = ctypes.wintypes.DWORD()
+        self.kernel32.QueryInformationJobObject.argtypes = [
             ctypes.wintypes.HANDLE,
             ctypes.c_int,
             ctypes.c_void_p,
             ctypes.wintypes.DWORD,
+            ctypes.POINTER(ctypes.wintypes.DWORD),
         ]
-        self.kernel32.SetInformationJobObject.restype = ctypes.wintypes.BOOL
-        if not self.kernel32.SetInformationJobObject(
-            handle,
-            self.JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+        self.kernel32.QueryInformationJobObject.restype = ctypes.wintypes.BOOL
+        if not self.kernel32.QueryInformationJobObject(
+            job_handle,
+            self.JOB_OBJECT_BASIC_ACCOUNTING_INFORMATION,
             ctypes.byref(info),
             ctypes.sizeof(info),
-        ):
-            self.close_handle(int(handle))
-            raise Gate12C2ResourceQualificationError(
-                "could not apply frozen Job Object limits"
-            )
-        return int(handle)
-
-    def assign_process(self, job_handle: int, process_handle: int) -> None:
-        self.kernel32.AssignProcessToJobObject.argtypes = [
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.HANDLE,
-        ]
-        self.kernel32.AssignProcessToJobObject.restype = ctypes.wintypes.BOOL
-        if not self.kernel32.AssignProcessToJobObject(
-            job_handle, process_handle
+            ctypes.byref(returned),
         ):
             raise Gate12C2ResourceQualificationError(
-                "could not assign process to Job Object"
+                "Job accounting query failed"
             )
-
-    def _duplicate_into_process(
-        self,
-        job_handle: int,
-        target_process_handle: int,
-    ) -> int:
-        self.kernel32.GetCurrentProcess.restype = ctypes.wintypes.HANDLE
-        self.kernel32.DuplicateHandle.argtypes = [
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.HANDLE,
-            ctypes.POINTER(ctypes.wintypes.HANDLE),
-            ctypes.wintypes.DWORD,
-            ctypes.wintypes.BOOL,
-            ctypes.wintypes.DWORD,
-        ]
-        self.kernel32.DuplicateHandle.restype = ctypes.wintypes.BOOL
-        duplicate = ctypes.wintypes.HANDLE()
-        if not self.kernel32.DuplicateHandle(
-            self.kernel32.GetCurrentProcess(),
-            job_handle,
-            target_process_handle,
-            ctypes.byref(duplicate),
-            0,
-            False,
-            self.DUPLICATE_SAME_ACCESS,
-        ):
-            raise Gate12C2ResourceQualificationError(
-                "could not duplicate Job handle into watchdog"
-            )
-        return int(duplicate.value)
-
-    def _close_remote_handle(
-        self,
-        target_process_handle: int,
-        remote_handle: int,
-    ) -> None:
-        self.kernel32.GetCurrentProcess.restype = ctypes.wintypes.HANDLE
-        self.kernel32.DuplicateHandle.argtypes = [
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.HANDLE,
-            ctypes.wintypes.HANDLE,
-            ctypes.POINTER(ctypes.wintypes.HANDLE),
-            ctypes.wintypes.DWORD,
-            ctypes.wintypes.BOOL,
-            ctypes.wintypes.DWORD,
-        ]
-        self.kernel32.DuplicateHandle.restype = ctypes.wintypes.BOOL
-        local = ctypes.wintypes.HANDLE()
-        if not self.kernel32.DuplicateHandle(
-            target_process_handle,
-            remote_handle,
-            self.kernel32.GetCurrentProcess(),
-            ctypes.byref(local),
-            0,
-            False,
-            self.DUPLICATE_CLOSE_SOURCE | self.DUPLICATE_SAME_ACCESS,
-        ):
-            raise Gate12C2ResourceQualificationError(
-                "could not close failed watchdog duplicate"
-            )
-        if self.close_handle_verified(int(local.value)) is not True:
-            raise Gate12C2ResourceQualificationError(
-                "failed watchdog duplicate cleanup was not verified"
-            )
-
-    def transfer_job_handle_to_watchdog(
-        self,
-        *,
-        source_job_handle: int,
-        target_process_handle: int,
-        source_identity: ProcessIdentity,
-        watchdog_identity: ProcessIdentity,
-        expected_job_memory_limit_bytes: int,
-    ) -> _JobHandleTransferReceipt:
-        expected_limit = _strict_int(
-            expected_job_memory_limit_bytes,
-            label="expected Job memory limit",
-            maximum=99_999_999_999_999,
+        return (
+            int(info.ActiveProcesses),
+            int(info.TotalProcesses),
+            int(info.TotalTerminatedProcesses),
         )
-        if expected_limit <= 0:
-            raise Gate12C2ResourceQualificationError(
-                "expected Job memory limit is invalid"
-            )
-        if self.verify_job_handle(
-            source_job_handle, expected_limit
-        ) is not True:
-            raise Gate12C2ResourceQualificationError(
-                "source Job handle does not carry the exact frozen limits"
-            )
-        duplicate = self._duplicate_into_process(
-            source_job_handle, target_process_handle
-        )
-        try:
-            if self.close_handle_verified(source_job_handle) is not True:
-                raise Gate12C2ResourceQualificationError(
-                    "source Job handle close was not verified"
-                )
-        except Exception:
-            try:
-                self._close_remote_handle(
-                    target_process_handle, duplicate
-                )
-            except Exception:
-                raise Gate12C2ResourceQualificationError(
-                    "source Job handle close and duplicate cleanup failed"
-                ) from None
-            raise Gate12C2ResourceQualificationError(
-                "source Job handle close failed"
-            ) from None
-        receipt = object.__new__(_JobHandleTransferReceipt)
-        values = {
-            "source_pid": source_identity.pid,
-            "source_creation_time_ns": source_identity.creation_time_ns,
-            "watchdog_pid": watchdog_identity.pid,
-            "watchdog_creation_time_ns": watchdog_identity.creation_time_ns,
-            "watchdog_raw_handle": duplicate,
-            "expected_job_memory_limit_bytes": expected_limit,
-            "source_handle_closed": True,
-            "duplicate_requested_noninheritable": True,
-        }
-        for field, value in values.items():
-            object.__setattr__(receipt, field, value)
-        receipt._validate()
-        return receipt
+
+    def resume_primary_thread(self, thread_handle: int) -> int:
+        self.kernel32.ResumeThread.argtypes = [ctypes.wintypes.HANDLE]
+        self.kernel32.ResumeThread.restype = ctypes.wintypes.DWORD
+        return int(self.kernel32.ResumeThread(thread_handle))
 
     def query_handle_inheritable(self, handle: int) -> bool:
         flags = ctypes.wintypes.DWORD()
@@ -1690,7 +2663,7 @@ class WindowsJobApi:
         self.kernel32.GetHandleInformation.restype = ctypes.wintypes.BOOL
         if not self.kernel32.GetHandleInformation(handle, ctypes.byref(flags)):
             raise Gate12C2ResourceQualificationError(
-                "could not query watchdog Job handle flags"
+                "could not query Job handle flags"
             )
         return bool(flags.value & self.HANDLE_FLAG_INHERIT)
 
@@ -1700,8 +2673,9 @@ class WindowsJobApi:
         *,
         limit_flags: int,
         job_memory_limit_bytes: int,
-        expected_job_memory_limit_bytes: int,
+        geometry: ResourceMemoryGeometry,
     ) -> bool:
+        geometry._validate()
         required = (
             cls.JOB_OBJECT_LIMIT_JOB_MEMORY
             | cls.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
@@ -1710,21 +2684,18 @@ class WindowsJobApi:
             type(limit_flags) is int
             and limit_flags == required
             and type(job_memory_limit_bytes) is int
-            and job_memory_limit_bytes == expected_job_memory_limit_bytes
+            and job_memory_limit_bytes
+            == geometry.effective_job_memory_limit_bytes
         )
 
     def verify_job_handle(
-        self, handle: int, expected_job_memory_limit_bytes: int
+        self, handle: int, geometry: ResourceMemoryGeometry
     ) -> bool:
-        expected_limit = _strict_int(
-            expected_job_memory_limit_bytes,
-            label="expected Job memory limit",
-            maximum=99_999_999_999_999,
-        )
-        if expected_limit <= 0:
+        if type(geometry) is not ResourceMemoryGeometry:
             raise Gate12C2ResourceQualificationError(
-                "expected Job memory limit is invalid"
+                "Job verification geometry type is invalid"
             )
+        geometry._validate()
         info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
         returned = ctypes.wintypes.DWORD()
         self.kernel32.QueryInformationJobObject.argtypes = [
@@ -1743,12 +2714,12 @@ class WindowsJobApi:
             ctypes.byref(returned),
         ):
             raise Gate12C2ResourceQualificationError(
-                "watchdog handle is not a verified Job Object"
+                "handle is not a verified Job Object"
             )
         return self._job_limits_match(
             limit_flags=int(info.BasicLimitInformation.LimitFlags),
             job_memory_limit_bytes=int(info.JobMemoryLimit),
-            expected_job_memory_limit_bytes=expected_limit,
+            geometry=geometry,
         )
 
     def close_handle(self, handle: int) -> None:
@@ -1756,7 +2727,7 @@ class WindowsJobApi:
         self.kernel32.CloseHandle.restype = ctypes.wintypes.BOOL
         if not self.kernel32.CloseHandle(handle):
             raise Gate12C2ResourceQualificationError(
-                "could not close Job handle"
+                "could not close Win32 handle"
             )
 
     def handle_is_closed(self, handle: int) -> bool:
@@ -1773,7 +2744,7 @@ class WindowsJobApi:
         if error == 6:
             return True
         raise Gate12C2ResourceQualificationError(
-            "could not verify Job handle closure"
+            "could not verify Win32 handle closure"
         )
 
     def close_handle_verified(self, handle: int) -> bool:
@@ -1783,129 +2754,183 @@ class WindowsJobApi:
             if self.handle_is_closed(handle):
                 return True
             raise Gate12C2ResourceQualificationError(
-                "could not close and verify Job handle"
+                "could not close and verify Win32 handle"
             ) from None
         if not self.handle_is_closed(handle):
             raise Gate12C2ResourceQualificationError(
-                "Job handle remained open after close"
+                "Win32 handle remained open after close"
             )
         return True
 
+    def _close_residual_process_information(
+        self, process_handle: int, thread_handle: int
+    ) -> None:
+        failures = 0
+        for handle in (thread_handle, process_handle):
+            if handle > 0:
+                try:
+                    self.close_handle_verified(handle)
+                except Exception:
+                    failures += 1
+        if failures:
+            raise Gate12C2ResourceQualificationError(
+                "process-information cleanup failed"
+            )
 
-class WatchdogOwnedWindowsJobHandle:
-    """OS-reverified final Job handle; direct construction is forbidden."""
 
-    inheritable = False
+def create_watchdog_local_scientific_launch(
+    *,
+    preflight_geometry: ResourceMemoryGeometry,
+    application_name: str | None,
+    command_line: str,
+    current_directory: Path,
+) -> "WatchdogLocalWindowsJobLaunch":
+    """Production boundary: instantiate the real Win32 API in the watchdog."""
+
+    api = WindowsJobApi()
+    return api.launch_scientific_child_suspended(
+        preflight_geometry=preflight_geometry,
+        application_name=application_name,
+        command_line=command_line,
+        current_directory=current_directory,
+    )
+
+
+class WatchdogLocalWindowsJobLaunch:
+    """Watchdog-local state holder; it is never serialized or transferred."""
+
+    __slots__ = (
+        "_api",
+        "_attribute_bytes",
+        "_child_identity",
+        "_closed",
+        "_geometry",
+        "_job_handle",
+        "_process_handle",
+        "_resumed",
+        "_thread_handle",
+        "_thread_id",
+    )
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         del args, kwargs
         raise Gate12C2ResourceQualificationError(
-            "direct watchdog Job-handle construction is forbidden"
+            "direct watchdog-local launch construction is forbidden"
         )
 
     @classmethod
-    def from_transfer_receipt(
+    def _from_verified_creation(
         cls,
-        receipt: _JobHandleTransferReceipt,
         *,
         api: WindowsJobApi,
-        current_identity: ProcessIdentity,
-    ) -> "WatchdogOwnedWindowsJobHandle":
-        if type(receipt) is not _JobHandleTransferReceipt:
-            raise Gate12C2ResourceQualificationError(
-                "watchdog Job transfer receipt type is invalid"
-            )
-        if type(api) is not WindowsJobApi:
-            raise Gate12C2ResourceQualificationError(
-                "watchdog Job API is not the reviewed Win32 adapter"
-            )
-        for method_name in (
-            "query_handle_inheritable",
-            "verify_job_handle",
-            "close_handle_verified",
-        ):
-            bound = getattr(api, method_name, None)
-            if (
-                getattr(bound, "__self__", None) is not api
-                or getattr(bound, "__func__", None)
-                is not getattr(WindowsJobApi, method_name)
-            ):
-                raise Gate12C2ResourceQualificationError(
-                    "watchdog Job API method identity is not frozen"
-                )
-        receipt._validate()
-        raw_handle = receipt.watchdog_raw_handle
-        expected_limit = receipt.expected_job_memory_limit_bytes
-        rejection: str | None = None
-        try:
-            if (
-                receipt.watchdog_pid != current_identity.pid
-                or receipt.watchdog_creation_time_ns
-                != current_identity.creation_time_ns
-            ):
-                rejection = (
-                    "Job transfer receipt targets another watchdog identity"
-                )
-            elif api.query_handle_inheritable(raw_handle):
-                rejection = "watchdog Job handle remains inheritable"
-            elif api.verify_job_handle(
-                raw_handle, expected_limit
-            ) is not True:
-                rejection = (
-                    "watchdog Job handle does not carry the exact frozen limits"
-                )
-        except Exception:
-            rejection = "watchdog Job handle verification failed"
-        if rejection is not None:
-            try:
-                if api.close_handle_verified(raw_handle) is not True:
-                    raise Gate12C2ResourceQualificationError(
-                        "rejected watchdog Job handle cleanup was not verified"
-                    )
-            except Exception:
-                raise Gate12C2ResourceQualificationError(
-                    f"{rejection}; rejected handle cleanup failed"
-                ) from None
-            raise Gate12C2ResourceQualificationError(rejection) from None
-        handle = object.__new__(cls)
-        handle._raw_handle = raw_handle
-        handle._api = api
-        handle._expected_job_memory_limit_bytes = expected_limit
-        handle._source_handle_closed = receipt.source_handle_closed
-        handle._target_handle_noninheritable = True
-        handle._target_handle_valid_job = True
-        handle._closed = False
-        return handle
-
-    def reverify_for_watchdog(self) -> None:
-        if self._closed or not self.sole_owner_verified:
-            raise Gate12C2ResourceQualificationError(
-                "watchdog Job ownership capability is invalid"
-            )
-        if self._api.query_handle_inheritable(self._raw_handle):
-            raise Gate12C2ResourceQualificationError(
-                "watchdog Job handle became inheritable"
-            )
-        if self._api.verify_job_handle(
-            self._raw_handle, self._expected_job_memory_limit_bytes
-        ) is not True:
-            raise Gate12C2ResourceQualificationError(
-                "watchdog Job handle limits changed"
-            )
+        geometry: ResourceMemoryGeometry,
+        job_handle: int,
+        process_handle: int,
+        thread_handle: int,
+        child_identity: ProcessIdentity,
+        thread_id: int,
+        attribute_bytes: int,
+    ) -> "WatchdogLocalWindowsJobLaunch":
+        launch = object.__new__(cls)
+        launch._api = api
+        launch._geometry = geometry
+        launch._job_handle = job_handle
+        launch._process_handle = process_handle
+        launch._thread_handle = thread_handle
+        launch._child_identity = child_identity
+        launch._thread_id = thread_id
+        launch._attribute_bytes = attribute_bytes
+        launch._resumed = False
+        launch._closed = False
+        launch.reverify_for_watchdog()
+        return launch
 
     @property
-    def sole_owner_verified(self) -> bool:
-        return (
-            self._source_handle_closed
-            and self._target_handle_noninheritable
-            and self._target_handle_valid_job
-            and not self._closed
+    def child_identity(self) -> ProcessIdentity:
+        return self._child_identity
+
+    @property
+    def resource_geometry(self) -> ResourceMemoryGeometry:
+        return self._geometry
+
+    @property
+    def attribute_bytes(self) -> int:
+        return self._attribute_bytes
+
+    def reverify_for_watchdog(self) -> None:
+        if self._closed or type(self._api) is not WindowsJobApi:
+            raise Gate12C2ResourceQualificationError(
+                "watchdog-local launch state is invalid"
+            )
+        self._geometry._validate()
+        if self._api.query_handle_inheritable(self._job_handle):
+            raise Gate12C2ResourceQualificationError(
+                "watchdog-local Job handle became inheritable"
+            )
+        if not self._api.verify_job_handle(
+            self._job_handle, self._geometry
+        ):
+            raise Gate12C2ResourceQualificationError(
+                "watchdog-local Job limits changed"
+            )
+        in_job = ctypes.wintypes.BOOL()
+        self._api.kernel32.IsProcessInJob.argtypes = [
+            ctypes.wintypes.HANDLE,
+            ctypes.wintypes.HANDLE,
+            ctypes.POINTER(ctypes.wintypes.BOOL),
+        ]
+        self._api.kernel32.IsProcessInJob.restype = ctypes.wintypes.BOOL
+        if not self._api.kernel32.IsProcessInJob(
+            self._process_handle,
+            self._job_handle,
+            ctypes.byref(in_job),
+        ) or not bool(in_job.value):
+            raise Gate12C2ResourceQualificationError(
+                "scientific child escaped the watchdog-local Job"
+            )
+        self._api.reverify_suspended_child(
+            job_handle=self._job_handle,
+            process_handle=self._process_handle,
+            thread_handle=self._thread_handle,
+            expected_identity=self._child_identity,
+            expected_thread_id=self._thread_id,
         )
+
+    def resume_suspended_child(self) -> int:
+        if self._closed or self._resumed:
+            raise Gate12C2ResourceQualificationError(
+                "scientific child cannot be resumed"
+            )
+        self.reverify_for_watchdog()
+        previous = self._api.resume_primary_thread(self._thread_handle)
+        if previous != 1:
+            self.close_for_kill()
+            raise Gate12C2ResourceQualificationError(
+                "scientific child resume result is invalid"
+            )
+        self._resumed = True
+        return previous
 
     def close_for_kill(self) -> None:
         if not self._closed:
-            if self._api.close_handle_verified(self._raw_handle) is not True:
+            if not self._api.close_handle_verified(self._job_handle):
                 raise Gate12C2ResourceQualificationError(
-                    "watchdog Job handle close was not verified"
+                    "watchdog-local Job close was not verified"
                 )
             self._closed = True
+
+    def close_child_handles(self) -> None:
+        failures = 0
+        for field in ("_thread_handle", "_process_handle"):
+            handle = int(getattr(self, field))
+            if handle > 0:
+                try:
+                    self._api.close_handle_verified(handle)
+                except Exception:
+                    failures += 1
+                else:
+                    setattr(self, field, 0)
+        if failures:
+            raise Gate12C2ResourceQualificationError(
+                "scientific child handle cleanup failed"
+            )
