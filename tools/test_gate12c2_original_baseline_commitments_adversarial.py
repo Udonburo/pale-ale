@@ -3794,7 +3794,7 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
             gate.R2_ARTIFACT_PATH_SURFACE_SHA256,
         )
         self.assertEqual(
-            independent.independent_load_plan()[
+            independent._independent_load_r2_active()[
                 "artifact_path_surface_sha256"
             ],
             gate.R2_ARTIFACT_PATH_SURFACE_SHA256,
@@ -4077,7 +4077,7 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
         )
         independent_authority = (
             independent._independent_reviewed_authority_payload(
-                independent.independent_load_plan(),
+                independent._independent_load_r2_active(),
                 candidate,
                 review,
                 candidate_file_hash=DIGEST,
@@ -4119,7 +4119,7 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
             independent.IndependentVerificationError
         ):
             independent._independent_reviewed_authority_payload(
-                independent.independent_load_plan(),
+                independent._independent_load_r2_active(),
                 candidate,
                 mixed_review,
                 candidate_file_hash=DIGEST,
@@ -4141,7 +4141,7 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
             independent.IndependentVerificationError
         ):
             independent._independent_reviewed_authority_payload(
-                independent.independent_load_plan(),
+                independent._independent_load_r2_active(),
                 mixed_candidate,
                 review,
                 candidate_file_hash=DIGEST,
@@ -4186,6 +4186,1029 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
                         expected_parent=base,
                     )
 
+
+class R2R1P1RemediationAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan()
+        cls.independent_plan = independent.independent_load_plan()
+        cls.control = cls.plan["r2r1_remediation_control"]
+        cls.source_commit = "b" * 40
+        cls.sibling_commit = "c" * 40
+        cls.raw = b"r2r1-implementation-byte\n"
+        cls.blob = gate.git_blob_oid(cls.raw, "sha1")
+        cls.plan_raw = gate.R2R1_REMEDIATION_PLAN_PATH.read_bytes()
+        role_by_path = gate.IMPLEMENTATION_ROLE_BY_PATH
+        cls.implementation_rows = sorted(
+            [
+                {
+                    "role": role_by_path[path],
+                    "relative_path": path,
+                    "file_sha256": gate.sha256_bytes(cls.raw),
+                    "git_blob_oid": cls.blob,
+                }
+                for path in gate.IMPLEMENTATION_PATHS
+            ],
+            key=lambda row: row["role"],
+        )
+        cls.changed_rows = [
+            {
+                "relative_path": path,
+                "file_sha256": gate.sha256_bytes(
+                    ("changed:" + path).encode("utf-8")
+                ),
+                "git_blob_oid": gate.sha256_bytes(
+                    ("blob:" + path).encode("utf-8")
+                )[:40],
+            }
+            for path in cls.control["allowed_changed_paths"]
+        ]
+        cls.changed_digest = gate.sha256_bytes(
+            gate.canonical_json_bytes(cls.changed_rows)
+        )
+        cls.restore = cls._make_restore(cls.source_commit)
+        cls.selection = cls._make_selection(cls.source_commit)
+
+    @classmethod
+    def _make_restore(cls, source_commit: str) -> dict[str, Any]:
+        contract = cls.control["clean_restore_receipt_contract"]
+        coverage = cls.control["review_coverage_identity"]
+        payload = {field: None for field in contract["exact_top_level_fields"]}
+        payload.update(contract["required_values"])
+        payload.update(
+            {
+                "source_commit": source_commit,
+                "source_parent_commit": gate.R2R1_PARENT_COMMIT,
+                "source_grandparent_commit": gate.R2R1_GRANDPARENT_COMMIT,
+                "bundle_path": "C:\\tmp\\r2r1-test.bundle",
+                "bundle_file_sha256": "1" * 64,
+                "bundle_size_bytes": 4,
+                "restore_path": "C:\\tmp\\r2r1-test-restore",
+                "restore_head": source_commit,
+                "targeted_test_count": coverage["targeted_test_count"],
+                "targeted_test_node_id_sha256": coverage[
+                    "targeted_test_node_id_sha256"
+                ],
+                "full_suite_test_count": coverage["full_suite_test_count"],
+                "full_suite_test_node_id_sha256": coverage[
+                    "full_suite_test_node_id_sha256"
+                ],
+            }
+        )
+        payload.pop("restore_receipt_payload_sha256", None)
+        return gate.add_self_hash(payload, "restore_receipt_payload_sha256")
+
+    @classmethod
+    def _make_selection(cls, source_commit: str) -> dict[str, Any]:
+        contract = cls.control["candidate_selection_contract"]
+        coverage = cls.control["review_coverage_identity"]
+        payload = {field: None for field in contract["exact_top_level_fields"]}
+        payload.update(contract["required_values"])
+        payload.update(
+            {
+                "exact_candidate_commit": source_commit,
+                "git_object_format": "sha1",
+                "changed_path_allowlist": cls.control[
+                    "allowed_changed_paths"
+                ],
+                "changed_files": cls.changed_rows,
+                "changed_file_manifest_sha256": cls.changed_digest,
+                "implementation_files": cls.implementation_rows,
+                "r2_activation_plan_file_sha256": (
+                    gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                ),
+                "r2_activation_plan_payload_sha256": (
+                    gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                ),
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    gate.R2R1_ARTIFACT_PATH_SURFACE_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "review_surface_identity_sha256": (
+                    gate.REVIEW_SURFACE_IDENTITY_SHA256
+                ),
+                "implementation_trust_model_sha256": (
+                    gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+                ),
+                "bundle_path": cls.restore["bundle_path"],
+                "bundle_file_sha256": cls.restore["bundle_file_sha256"],
+                "bundle_size_bytes": cls.restore["bundle_size_bytes"],
+                "clean_restore_receipt_file_sha256": DIGEST,
+                "clean_restore_receipt_payload_sha256": cls.restore[
+                    "restore_receipt_payload_sha256"
+                ],
+                "targeted_test_count": coverage["targeted_test_count"],
+                "targeted_test_node_id_sha256": coverage[
+                    "targeted_test_node_id_sha256"
+                ],
+                "full_suite_test_count": coverage["full_suite_test_count"],
+                "full_suite_test_node_id_sha256": coverage[
+                    "full_suite_test_node_id_sha256"
+                ],
+            }
+        )
+        payload.pop("candidate_selection_payload_sha256", None)
+        return gate.add_self_hash(payload, "candidate_selection_payload_sha256")
+
+    @staticmethod
+    def _rehash(value: Mapping[str, Any], field: str) -> dict[str, Any]:
+        payload = copy.deepcopy(dict(value))
+        payload.pop(field, None)
+        return gate.add_self_hash(payload, field)
+
+    def _lineage(self, commit: str) -> tuple[str, ...]:
+        if commit == self.selection["exact_candidate_commit"]:
+            return (commit, gate.R2R1_PARENT_COMMIT)
+        if commit == self.sibling_commit:
+            return (commit, gate.R2R1_PARENT_COMMIT)
+        if commit == gate.R2R1_PARENT_COMMIT:
+            return (commit, gate.R2R1_GRANDPARENT_COMMIT)
+        return (commit,)
+
+    @contextlib.contextmanager
+    def _core_selection_mocks(self) -> Iterator[None]:
+        with (
+            mock.patch.object(
+                gate,
+                "git_commit_parent_lineage",
+                side_effect=lambda _repo, commit: self._lineage(commit),
+            ),
+            mock.patch.object(
+                gate,
+                "r2r1_changed_file_manifest",
+                return_value=(self.changed_rows, self.changed_digest),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_clean_restore_receipt",
+                return_value=(self.restore, DIGEST),
+            ),
+            mock.patch.object(Path, "read_bytes", return_value=self.raw),
+            mock.patch.object(
+                gate, "git_path_blob_oid", return_value=self.blob
+            ),
+        ):
+            yield
+
+    @contextlib.contextmanager
+    def _independent_selection_mocks(
+        self, selection: Mapping[str, Any]
+    ) -> Iterator[None]:
+        def read_bytes(path: Path) -> bytes:
+            if path.name == gate.R2R1_REMEDIATION_PLAN_PATH.name:
+                return self.plan_raw
+            return self.raw
+
+        def blob_oid(
+            _repository: Path, _commit: str, relative: str
+        ) -> str:
+            if relative.endswith(
+                "gate12c2_original_baseline_r2r1_remediation_plan.json"
+            ):
+                return independent._git_blob(self.plan_raw, "sha1")
+            return self.blob
+
+        with (
+            mock.patch.object(
+                independent,
+                "_receipt",
+                return_value=(dict(selection), DIGEST),
+            ),
+            mock.patch.object(
+                independent,
+                "_git_parent_lineage",
+                side_effect=lambda _repo, commit: self._lineage(commit),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_changed_manifest",
+                return_value=(self.changed_rows, self.changed_digest),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_git_object_format",
+                return_value="sha1",
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_restore_receipt",
+                return_value=(self.restore, DIGEST),
+            ),
+            mock.patch.object(
+                Path, "read_bytes", autospec=True, side_effect=read_bytes
+            ),
+            mock.patch.object(
+                independent, "_git_path_blob_oid", side_effect=blob_oid
+            ),
+        ):
+            yield
+
+    def _candidate_review_freeze_evidence(
+        self,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+        selection = self.selection
+        candidate = {
+            "source_commit": selection["exact_candidate_commit"],
+            "authority_namespace_id": gate.R2R1_AUTHORITY_NAMESPACE_ID,
+            "review_surface_identity": gate.review_surface_identity(self.plan),
+            "implementation_candidate_binding_payload_sha256": "2" * 64,
+            "candidate_manifest_file_sha256": "3" * 64,
+            "candidate_manifest_payload_sha256": "4" * 64,
+            "candidate_selection_file_sha256": DIGEST,
+            "candidate_selection_payload_sha256": selection[
+                "candidate_selection_payload_sha256"
+            ],
+            "r2r1_remediation_plan_file_sha256": (
+                gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+            ),
+            "r2r1_remediation_plan_payload_sha256": (
+                gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+            ),
+            "occupied_r2_surface_sha256": (
+                gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+            ),
+            "clean_restore": {
+                "bundle_file_sha256": self.restore["bundle_file_sha256"],
+                "restore_receipt_file_sha256": DIGEST,
+                "restore_receipt_payload_sha256": self.restore[
+                    "restore_receipt_payload_sha256"
+                ],
+            },
+        }
+        packet = b"r2r1-review-packet\n"
+        freeze_contract = self.control["review_input_freeze_contract"]
+        coverage = self.control["review_coverage_identity"]
+        freeze = {
+            field: None for field in freeze_contract["exact_top_level_fields"]
+        }
+        freeze.update(freeze_contract["required_values"])
+        freeze.update(
+            {
+                "implementation_source_commit": candidate["source_commit"],
+                "candidate_selection_file_sha256": DIGEST,
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
+                "candidate_manifest_file_sha256": candidate[
+                    "candidate_manifest_file_sha256"
+                ],
+                "candidate_manifest_payload_sha256": candidate[
+                    "candidate_manifest_payload_sha256"
+                ],
+                "implementation_candidate_binding_file_sha256": DIGEST,
+                "implementation_candidate_binding_payload_sha256": candidate[
+                    "implementation_candidate_binding_payload_sha256"
+                ],
+                "clean_restore_receipt_file_sha256": DIGEST,
+                "clean_restore_receipt_payload_sha256": self.restore[
+                    "restore_receipt_payload_sha256"
+                ],
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    gate.R2R1_ARTIFACT_PATH_SURFACE_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "review_packet_path": self.control[
+                    "fresh_review_packet_path"
+                ],
+                "review_packet_file_sha256": gate.sha256_bytes(packet),
+                "review_packet_size_bytes": len(packet),
+                "changed_file_manifest_sha256": self.changed_digest,
+                "targeted_test_count": coverage["targeted_test_count"],
+                "targeted_test_node_id_sha256": coverage[
+                    "targeted_test_node_id_sha256"
+                ],
+                "full_suite_test_count": coverage["full_suite_test_count"],
+                "full_suite_test_node_id_sha256": coverage[
+                    "full_suite_test_node_id_sha256"
+                ],
+            }
+        )
+        freeze.pop("review_input_freeze_payload_sha256", None)
+        freeze = gate.add_self_hash(
+            freeze, "review_input_freeze_payload_sha256"
+        )
+        evidence_contract = self.control["fresh_review_evidence_contract"]
+        evidence = {
+            field: None for field in evidence_contract["exact_top_level_fields"]
+        }
+        evidence.update(evidence_contract["required_values"])
+        evidence.update(
+            {
+                "implementation_source_commit": candidate["source_commit"],
+                "implementation_candidate_binding_file_sha256": DIGEST,
+                "implementation_candidate_binding_payload_sha256": candidate[
+                    "implementation_candidate_binding_payload_sha256"
+                ],
+                "candidate_manifest_file_sha256": candidate[
+                    "candidate_manifest_file_sha256"
+                ],
+                "candidate_manifest_payload_sha256": candidate[
+                    "candidate_manifest_payload_sha256"
+                ],
+                "candidate_selection_file_sha256": DIGEST,
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
+                "review_input_freeze_file_sha256": OTHER_DIGEST,
+                "review_input_freeze_payload_sha256": freeze[
+                    "review_input_freeze_payload_sha256"
+                ],
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    gate.R2R1_ARTIFACT_PATH_SURFACE_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "review_surface_identity": gate.review_surface_identity(
+                    self.plan
+                ),
+                "implementation_review_packet_file_sha256": freeze[
+                    "review_packet_file_sha256"
+                ],
+                "changed_file_manifest_sha256": self.changed_digest,
+                "targeted_test_count": coverage["targeted_test_count"],
+                "targeted_test_node_id_sha256": coverage[
+                    "targeted_test_node_id_sha256"
+                ],
+                "full_suite_test_count": coverage["full_suite_test_count"],
+                "full_suite_test_node_id_sha256": coverage[
+                    "full_suite_test_node_id_sha256"
+                ],
+            }
+        )
+        evidence.pop("review_evidence_payload_sha256", None)
+        evidence = gate.add_self_hash(evidence, "review_evidence_payload_sha256")
+        review_schema = self.plan["review_receipt_schemas"][
+            "fresh_implementation_review_verdict"
+        ]
+        review = {
+            field: None
+            for field in gate.artifact_exact_fields(
+                self.plan, "fresh_implementation_review_verdict"
+            )
+        }
+        review.update(review_schema["outcomes"]["pass"]["required_values"])
+        review.update(
+            {
+                "reviewed_at_utc": "2026-08-03T00:00:00Z",
+                "implementation_author_separation_contract_sha256": (
+                    gate.IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
+                ),
+                "contract_file_sha256": gate.CONTRACT_FILE_SHA256,
+                "plan_file_sha256": gate.PLAN_FILE_SHA256,
+                "plan_payload_sha256": gate.PLAN_PAYLOAD_SHA256,
+                "formal_design_review_file_sha256": (
+                    gate.FORMAL_DESIGN_REVIEW_FILE_SHA256
+                ),
+                "formal_design_review_payload_sha256": (
+                    gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
+                ),
+                "implementation_trust_model_sha256": (
+                    gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+                ),
+                "implementation_candidate_binding_file_sha256": DIGEST,
+                "implementation_candidate_binding_payload_sha256": candidate[
+                    "implementation_candidate_binding_payload_sha256"
+                ],
+                "implementation_source_commit": candidate["source_commit"],
+                "implementation_review_packet_file_sha256": freeze[
+                    "review_packet_file_sha256"
+                ],
+                "bundle_file_sha256": self.restore["bundle_file_sha256"],
+                "restore_receipt_file_sha256": DIGEST,
+                "restore_receipt_payload_sha256": self.restore[
+                    "restore_receipt_payload_sha256"
+                ],
+                "P0_count": 0,
+                "P1_count": 0,
+                "P2_count": 0,
+                "review_surface_identity": gate.review_surface_identity(
+                    self.plan
+                ),
+                "r2_activation_plan_file_sha256": (
+                    gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                ),
+                "r2_activation_plan_payload_sha256": (
+                    gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    gate.R2R1_ARTIFACT_PATH_SURFACE_SHA256
+                ),
+                "occupied_v0_9_surface_sha256": (
+                    gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+                ),
+                "candidate_manifest_file_sha256": candidate[
+                    "candidate_manifest_file_sha256"
+                ],
+                "candidate_manifest_payload_sha256": candidate[
+                    "candidate_manifest_payload_sha256"
+                ],
+                "review_evidence_file_sha256": "5" * 64,
+                "review_evidence_payload_sha256": evidence[
+                    "review_evidence_payload_sha256"
+                ],
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "candidate_selection_file_sha256": DIGEST,
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
+                "review_input_freeze_file_sha256": OTHER_DIGEST,
+                "review_input_freeze_payload_sha256": freeze[
+                    "review_input_freeze_payload_sha256"
+                ],
+            }
+        )
+        review.pop("fresh_implementation_review_payload_sha256", None)
+        review = gate.add_self_hash(
+            review, "fresh_implementation_review_payload_sha256"
+        )
+        return candidate, review, freeze, evidence
+
+    def test_exact_candidate_sibling_commit_is_rejected(self) -> None:
+        with self._core_selection_mocks():
+            accepted = gate.validate_r2r1_candidate_selection(
+                self.plan,
+                self.selection,
+                repo_root=REPOSITORY,
+                current_head=self.selection["exact_candidate_commit"],
+            )
+            self.assertEqual(
+                accepted["exact_candidate_commit"],
+                self.selection["exact_candidate_commit"],
+            )
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r1_candidate_selection(
+                    self.plan,
+                    self.selection,
+                    repo_root=REPOSITORY,
+                    current_head=self.sibling_commit,
+                )
+        with self._independent_selection_mocks(self.selection):
+            independently, _file_hash = (
+                independent._independent_r2r1_candidate_selection(
+                    self.independent_plan, REPOSITORY
+                )
+            )
+        self.assertEqual(
+            independently["exact_candidate_commit"],
+            self.selection["exact_candidate_commit"],
+        )
+
+    def test_sibling_with_recomputed_downstream_hashes_is_rejected(self) -> None:
+        candidate, review, freeze, evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        candidate["source_commit"] = self.sibling_commit
+        review["implementation_source_commit"] = self.sibling_commit
+        with (
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_fresh_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+        with (
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+            self.assertRaises(independent.IndependentVerificationError),
+        ):
+            independent._independent_reviewed_authority_payload(
+                self.independent_plan,
+                candidate,
+                review,
+                candidate_file_hash=DIGEST,
+                review_file_hash=OTHER_DIGEST,
+            )
+
+    def test_selection_commit_mutation_and_self_rehash_is_rejected(self) -> None:
+        mutated = copy.deepcopy(self.selection)
+        mutated["exact_candidate_commit"] = self.sibling_commit
+        mutated = self._rehash(mutated, "candidate_selection_payload_sha256")
+        with self._core_selection_mocks():
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r1_candidate_selection(
+                    self.plan,
+                    mutated,
+                    repo_root=REPOSITORY,
+                    current_head=self.selection["exact_candidate_commit"],
+                )
+
+    def test_selection_and_candidate_mixed_lineage_is_rejected(self) -> None:
+        candidate, review, freeze, evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        candidate["candidate_selection_payload_sha256"] = "7" * 64
+        review["candidate_selection_payload_sha256"] = "7" * 64
+        with (
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_fresh_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+
+    def test_targeted_count_one_is_rejected(self) -> None:
+        mutated = copy.deepcopy(self.selection)
+        mutated["targeted_test_count"] = 1
+        mutated = self._rehash(mutated, "candidate_selection_payload_sha256")
+        with self._core_selection_mocks():
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r1_candidate_selection(
+                    self.plan, mutated, repo_root=REPOSITORY
+                )
+        with self._independent_selection_mocks(mutated):
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_r2r1_candidate_selection(
+                    self.independent_plan, REPOSITORY
+                )
+
+    def test_full_suite_count_one_is_rejected(self) -> None:
+        mutated = copy.deepcopy(self.selection)
+        mutated["full_suite_test_count"] = 1
+        mutated = self._rehash(mutated, "candidate_selection_payload_sha256")
+        with self._core_selection_mocks():
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r1_candidate_selection(
+                    self.plan, mutated, repo_root=REPOSITORY
+                )
+        with self._independent_selection_mocks(mutated):
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_r2r1_candidate_selection(
+                    self.independent_plan, REPOSITORY
+                )
+
+    def test_random_and_all_zero_node_digests_are_rejected(self) -> None:
+        for field in (
+            "targeted_test_node_id_sha256",
+            "full_suite_test_node_id_sha256",
+        ):
+            for value in ("0" * 64, "9" * 64):
+                with self.subTest(field=field, value=value[:1]):
+                    mutated = copy.deepcopy(self.selection)
+                    mutated[field] = value
+                    mutated = self._rehash(
+                        mutated, "candidate_selection_payload_sha256"
+                    )
+                    with self._core_selection_mocks():
+                        with self.assertRaises(
+                            gate.Gate12C2OriginalBaselineError
+                        ):
+                            gate.validate_r2r1_candidate_selection(
+                                self.plan, mutated, repo_root=REPOSITORY
+                            )
+                    with self._independent_selection_mocks(mutated):
+                        with self.assertRaises(
+                            independent.IndependentVerificationError
+                        ):
+                            independent._independent_r2r1_candidate_selection(
+                                self.independent_plan, REPOSITORY
+                            )
+
+    def test_changed_file_manifest_substitution_is_rejected(self) -> None:
+        mutated = copy.deepcopy(self.selection)
+        mutated["changed_file_manifest_sha256"] = "8" * 64
+        mutated = self._rehash(mutated, "candidate_selection_payload_sha256")
+        with self._core_selection_mocks():
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r1_candidate_selection(
+                    self.plan, mutated, repo_root=REPOSITORY
+                )
+        with self._independent_selection_mocks(mutated):
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_r2r1_candidate_selection(
+                    self.independent_plan, REPOSITORY
+                )
+
+    def test_packet_hash_substitution_and_downstream_rehash_is_rejected(self) -> None:
+        candidate, _review, freeze, _evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        mutated = copy.deepcopy(freeze)
+        mutated["review_packet_file_sha256"] = "d" * 64
+        mutated = self._rehash(mutated, "review_input_freeze_payload_sha256")
+        manifest = {
+            "candidate_manifest_payload_sha256": candidate[
+                "candidate_manifest_payload_sha256"
+            ]
+        }
+        restore = {
+            "restore_receipt_payload_sha256": self.restore[
+                "restore_receipt_payload_sha256"
+            ]
+        }
+        with (
+            mock.patch.object(Path, "read_bytes", return_value=b"packet\n"),
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_manifest",
+                return_value=(manifest, candidate["candidate_manifest_file_sha256"]),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_clean_restore_receipt",
+                return_value=(restore, DIGEST),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.validate_r2r1_review_input_freeze(
+                self.plan,
+                mutated,
+                candidate=candidate,
+                candidate_file_sha256=DIGEST,
+                selection=self.selection,
+                selection_file_sha256=DIGEST,
+            )
+        with (
+            mock.patch.object(
+                independent, "_receipt", return_value=(mutated, DIGEST)
+            ),
+            mock.patch.object(Path, "read_bytes", return_value=b"packet\n"),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_candidate_manifest",
+                return_value=(
+                    manifest,
+                    candidate["candidate_manifest_file_sha256"],
+                ),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_restore_receipt",
+                return_value=(restore, DIGEST),
+            ),
+            self.assertRaises(independent.IndependentVerificationError),
+        ):
+            independent._independent_r2r1_review_input_freeze(
+                self.independent_plan,
+                candidate,
+                DIGEST,
+                self.selection,
+                DIGEST,
+            )
+
+    def test_packet_one_byte_mutation_is_rejected(self) -> None:
+        candidate, _review, freeze, _evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        manifest = {
+            "candidate_manifest_payload_sha256": candidate[
+                "candidate_manifest_payload_sha256"
+            ]
+        }
+        restore = {
+            "restore_receipt_payload_sha256": self.restore[
+                "restore_receipt_payload_sha256"
+            ]
+        }
+        with (
+            mock.patch.object(
+                Path, "read_bytes", return_value=b"r2r1-review-packeu\n"
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_manifest",
+                return_value=(manifest, candidate["candidate_manifest_file_sha256"]),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_clean_restore_receipt",
+                return_value=(restore, DIGEST),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.validate_r2r1_review_input_freeze(
+                self.plan,
+                freeze,
+                candidate=candidate,
+                candidate_file_sha256=DIGEST,
+                selection=self.selection,
+                selection_file_sha256=DIGEST,
+            )
+        with (
+            mock.patch.object(
+                independent, "_receipt", return_value=(freeze, DIGEST)
+            ),
+            mock.patch.object(
+                Path, "read_bytes", return_value=b"r2r1-review-packeu\n"
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_candidate_manifest",
+                return_value=(
+                    manifest,
+                    candidate["candidate_manifest_file_sha256"],
+                ),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_restore_receipt",
+                return_value=(restore, DIGEST),
+            ),
+            self.assertRaises(independent.IndependentVerificationError),
+        ):
+            independent._independent_r2r1_review_input_freeze(
+                self.independent_plan,
+                candidate,
+                DIGEST,
+                self.selection,
+                DIGEST,
+            )
+
+    def test_valid_evidence_independent_verification_succeeds(self) -> None:
+        candidate, review, freeze, evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        with mock.patch.object(
+            independent,
+            "_receipt",
+            return_value=(evidence, "5" * 64),
+        ):
+            supplied, file_hash = independent._independent_r2r1_review_evidence(
+                self.independent_plan,
+                candidate,
+                DIGEST,
+                self.selection,
+                DIGEST,
+                freeze,
+                OTHER_DIGEST,
+            )
+        self.assertEqual(supplied, evidence)
+        self.assertEqual(file_hash, "5" * 64)
+        historical_plan = independent._independent_load_r2_active()
+        historical_contract = historical_plan["r2_activation_control"][
+            "fresh_review_evidence_contract"
+        ]
+        historical_candidate = {
+            "source_commit": "a" * 40,
+            "implementation_candidate_binding_payload_sha256": "1" * 64,
+            "candidate_manifest_file_sha256": "2" * 64,
+            "candidate_manifest_payload_sha256": "3" * 64,
+            "review_surface_identity": independent._review_surface_identity(
+                historical_plan
+            ),
+            "clean_restore": {
+                "bundle_file_sha256": "4" * 64,
+                "restore_receipt_file_sha256": "5" * 64,
+                "restore_receipt_payload_sha256": "6" * 64,
+            },
+        }
+        historical_evidence = {
+            field: None
+            for field in historical_contract["exact_top_level_fields"]
+        }
+        historical_evidence.update(historical_contract["required_values"])
+        historical_evidence.update(
+            {
+                "implementation_source_commit": "a" * 40,
+                "implementation_candidate_binding_file_sha256": DIGEST,
+                "implementation_candidate_binding_payload_sha256": "1" * 64,
+                "candidate_manifest_file_sha256": "2" * 64,
+                "candidate_manifest_payload_sha256": "3" * 64,
+                "r2_activation_plan_file_sha256": independent.R2_PLAN_FILE_SHA256,
+                "r2_activation_plan_payload_sha256": (
+                    independent.R2_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    independent.R2_ARTIFACT_SURFACE_SHA256
+                ),
+                "review_surface_identity": (
+                    independent._review_surface_identity(historical_plan)
+                ),
+                "bundle_file_sha256": "4" * 64,
+                "restore_receipt_file_sha256": "5" * 64,
+                "restore_receipt_payload_sha256": "6" * 64,
+                "changed_file_manifest_sha256": "7" * 64,
+                "targeted_test_count": 2,
+                "targeted_test_node_id_sha256": "8" * 64,
+                "full_suite_test_count": 2,
+                "full_suite_node_id_sha256": "9" * 64,
+            }
+        )
+        historical_evidence.pop("review_evidence_payload_sha256", None)
+        historical_evidence = gate.add_self_hash(
+            historical_evidence, "review_evidence_payload_sha256"
+        )
+        with mock.patch.object(
+            independent,
+            "_receipt",
+            return_value=(historical_evidence, DIGEST),
+        ):
+            historical_validated, _ = independent._independent_r2_review_evidence(
+                historical_plan, historical_candidate, DIGEST
+            )
+        self.assertEqual(historical_validated, historical_evidence)
+        with (
+            mock.patch.object(
+                gate,
+                "validate_r2r1_candidate_selection",
+                return_value=self.selection,
+            ),
+            mock.patch.object(
+                gate,
+                "validate_r2r1_review_input_freeze",
+                return_value=freeze,
+            ),
+            mock.patch.object(
+                gate,
+                "validate_r2r1_fresh_review_evidence",
+                return_value=evidence,
+            ),
+        ):
+            validated_review = gate.validate_implementation_review(
+                self.plan,
+                review,
+                candidate_file_sha256=DIGEST,
+                candidate_payload_sha256=candidate[
+                    "implementation_candidate_binding_payload_sha256"
+                ],
+                source_commit=candidate["source_commit"],
+                candidate=candidate,
+                review_evidence=evidence,
+                review_evidence_file_sha256="5" * 64,
+                candidate_selection=self.selection,
+                candidate_selection_file_sha256=DIGEST,
+                review_input_freeze=freeze,
+                review_input_freeze_file_sha256=OTHER_DIGEST,
+            )
+        self.assertEqual(validated_review, review)
+        with (
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_fresh_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+        ):
+            core_authority = gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+        with (
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                independent,
+                "_independent_r2r1_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+        ):
+            independent_authority = (
+                independent._independent_reviewed_authority_payload(
+                    self.independent_plan,
+                    candidate,
+                    review,
+                    candidate_file_hash=DIGEST,
+                    review_file_hash=OTHER_DIGEST,
+                )
+            )
+        self.assertEqual(independent_authority, core_authority)
+
+    def test_old_v09_r2_and_r2r1_namespace_mix_is_rejected(self) -> None:
+        candidate, review, freeze, evidence = (
+            self._candidate_review_freeze_evidence()
+        )
+        review["authority_namespace_id"] = gate.R2_AUTHORITY_NAMESPACE_ID
+        with (
+            mock.patch.object(
+                gate,
+                "read_r2r1_candidate_selection",
+                return_value=(self.selection, DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_review_input_freeze",
+                return_value=(freeze, OTHER_DIGEST),
+            ),
+            mock.patch.object(
+                gate,
+                "read_r2r1_fresh_review_evidence",
+                return_value=(evidence, "5" * 64),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+
+    def test_phase_a_plan_load_has_zero_protected_root_reads(self) -> None:
+        original = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+
+        def guarded(path: Path) -> bytes:
+            if str(path).casefold().startswith(protected):
+                raise AssertionError("protected root read during R2R1 Phase A")
+            return original(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded):
+            core_plan = gate.load_active_plan()
+            verifier_plan = independent.independent_load_plan()
+        self.assertEqual(
+            core_plan["artifact_path_surface_sha256"],
+            verifier_plan["artifact_path_surface_sha256"],
+        )
 
 if __name__ == "__main__":
     unittest.main()

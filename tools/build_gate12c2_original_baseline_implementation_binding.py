@@ -177,12 +177,150 @@ def validate_clean_restore(
     return supplied
 
 
+def build_candidate_selection(
+    repository: Path,
+    clean_restore: Mapping[str, Any],
+) -> dict[str, Any]:
+    root = Path(repository).resolve()
+    plan = gate.load_active_plan()
+    control = gate.r2r1_remediation_control(plan)
+    if control is None:
+        raise gate.Gate12C2OriginalBaselineError("INPUT_LINEAGE_MISMATCH")
+    source_commit = _git(root, "rev-parse", "HEAD")
+    if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    object_format = _git(root, "rev-parse", "--show-object-format")
+    if (
+        object_format not in {"sha1", "sha256"}
+        or _git_bool(root, "core.autocrlf", unset=False) is not False
+        or _git_bool(root, "core.longpaths", unset=False) is not True
+    ):
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    _require_direct_child_lineage(
+        source_commit,
+        _git(root, "rev-list", "--parents", "-n", "1", source_commit).split(),
+        expected_parent=gate.R2R1_PARENT_COMMIT,
+    )
+    _require_direct_child_lineage(
+        gate.R2R1_PARENT_COMMIT,
+        _git(
+            root,
+            "rev-list",
+            "--parents",
+            "-n",
+            "1",
+            gate.R2R1_PARENT_COMMIT,
+        ).split(),
+        expected_parent=gate.R2R1_GRANDPARENT_COMMIT,
+    )
+    restore = validate_clean_restore(clean_restore, source_commit=source_commit)
+    receipt, receipt_file_hash = gate.read_r2r1_clean_restore_receipt(plan)
+    if (
+        restore["restore_receipt_file_sha256"] != receipt_file_hash
+        or restore["restore_receipt_payload_sha256"]
+        != receipt["restore_receipt_payload_sha256"]
+        or receipt["source_commit"] != source_commit
+    ):
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    changed_rows, changed_digest = gate.r2r1_changed_file_manifest(
+        plan, root, source_commit
+    )
+    implementation_rows = []
+    for relative in gate.IMPLEMENTATION_PATHS:
+        file_hash, blob = _tree_blob(
+            root, source_commit, relative, object_format
+        )
+        implementation_rows.append(
+            {
+                "role": IMPLEMENTATION_ROLES[relative],
+                "relative_path": relative,
+                "file_sha256": file_hash,
+                "git_blob_oid": blob,
+            }
+        )
+    implementation_rows.sort(key=lambda row: row["role"])
+    coverage = control["review_coverage_identity"]
+    contract = control["candidate_selection_contract"]
+    payload = {
+        "schema_version": contract["schema_version"],
+        "authority_namespace_id": gate.R2R1_AUTHORITY_NAMESPACE_ID,
+        "state": contract["state"],
+        "exact_candidate_commit": source_commit,
+        "exact_parent_commit": gate.R2R1_PARENT_COMMIT,
+        "exact_grandparent_commit": gate.R2R1_GRANDPARENT_COMMIT,
+        "commit_parent_count": 1,
+        "parent_parent_count": 1,
+        "git_object_format": object_format,
+        "changed_path_allowlist": control["allowed_changed_paths"],
+        "changed_files": changed_rows,
+        "changed_file_manifest_sha256": changed_digest,
+        "implementation_files": implementation_rows,
+        "r2_activation_plan_file_sha256": (
+            gate.R2_ACTIVATION_PLAN_FILE_SHA256
+        ),
+        "r2_activation_plan_payload_sha256": (
+            gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+        ),
+        "r2r1_remediation_plan_file_sha256": (
+            gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+        ),
+        "r2r1_remediation_plan_payload_sha256": (
+            gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+        ),
+        "artifact_path_surface_sha256": gate.artifact_surface_sha256(plan),
+        "occupied_r2_surface_sha256": (
+            gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+        ),
+        "review_surface_identity_sha256": (
+            gate.REVIEW_SURFACE_IDENTITY_SHA256
+        ),
+        "implementation_trust_model_sha256": (
+            gate.recompute_implementation_trust_model_sha256(plan)
+        ),
+        "bundle_path": restore["bundle_path"],
+        "bundle_file_sha256": restore["bundle_file_sha256"],
+        "bundle_size_bytes": restore["bundle_size_bytes"],
+        "clean_restore_receipt_file_sha256": receipt_file_hash,
+        "clean_restore_receipt_payload_sha256": receipt[
+            "restore_receipt_payload_sha256"
+        ],
+        "targeted_test_count": coverage["targeted_test_count"],
+        "targeted_test_node_id_sha256": coverage[
+            "targeted_test_node_id_sha256"
+        ],
+        "full_suite_test_count": coverage["full_suite_test_count"],
+        "full_suite_test_node_id_sha256": coverage[
+            "full_suite_test_node_id_sha256"
+        ],
+        "protected_payload_accessed": False,
+        "scientific_values_inspected": False,
+        "runtime_authorization_issued": False,
+    }
+    selection = gate.add_self_hash(
+        payload, "candidate_selection_payload_sha256"
+    )
+    return gate.validate_r2r1_candidate_selection(
+        plan,
+        selection,
+        repo_root=root,
+        current_head=source_commit,
+    )
+
+
 def build_candidate_package(
     repository: Path,
     clean_restore: Mapping[str, Any],
     *,
     procedural_author_separation_precondition_satisfied: bool,
     current_exposed_design_context_authored_final_bytes: bool,
+    candidate_selection: Mapping[str, Any] | None = None,
+    candidate_selection_file_sha256: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     root = Path(repository).resolve()
     plan = gate.load_active_plan()
@@ -251,6 +389,7 @@ def build_candidate_package(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
     r2_control = gate.r2_activation_control(plan)
+    remediation_control = gate.r2r1_remediation_control(plan)
     if r2_control is None:
         raise gate.Gate12C2OriginalBaselineError(
             "INPUT_LINEAGE_MISMATCH"
@@ -272,6 +411,17 @@ def build_candidate_package(
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
+    if remediation_control is not None:
+        remediation_relative = (
+            "tools/gate12c2_original_baseline_r2r1_remediation_plan.json"
+        )
+        remediation_hash, _remediation_blob = _tree_blob(
+            root, source_commit, remediation_relative, object_format
+        )
+        if remediation_hash != gate.R2R1_REMEDIATION_PLAN_FILE_SHA256:
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
     implementation_rows = []
     for relative in gate.IMPLEMENTATION_PATHS:
         file_hash, blob = _tree_blob(
@@ -309,10 +459,45 @@ def build_candidate_package(
     restore = validate_clean_restore(
         clean_restore, source_commit=source_commit
     )
+    selection: dict[str, Any] | None = None
+    selection_file_hash: str | None = None
+    if remediation_control is not None:
+        if candidate_selection is None:
+            selection, selection_file_hash = gate.read_r2r1_candidate_selection(
+                plan,
+                repo_root=root,
+                current_head=source_commit,
+            )
+        else:
+            selection = gate.validate_r2r1_candidate_selection(
+                plan,
+                candidate_selection,
+                repo_root=root,
+                current_head=source_commit,
+            )
+            selection_file_hash = (
+                candidate_selection_file_sha256
+                if candidate_selection_file_sha256 is not None
+                else gate.sha256_bytes(gate.canonical_receipt_bytes(selection))
+            )
+        if (
+            selection["implementation_files"] != implementation_rows
+            or selection["bundle_file_sha256"]
+            != restore["bundle_file_sha256"]
+            or selection["clean_restore_receipt_file_sha256"]
+            != restore["restore_receipt_file_sha256"]
+        ):
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
     payload = {
         "schema_version": contract["schema_version"],
         "binding_id": required_values["binding_id"],
-        "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
+        "authority_namespace_id": (
+            gate.R2R1_AUTHORITY_NAMESPACE_ID
+            if remediation_control is not None
+            else gate.R2_AUTHORITY_NAMESPACE_ID
+        ),
         "source_commit": source_commit,
         "authorized_implementation_repository": str(
             gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY
@@ -361,10 +546,38 @@ def build_candidate_package(
         "implementation_authorship_machine_verified": False,
         "protected_payload_access_required_for_implementation": False,
     }
-    manifest_contract = r2_control["candidate_manifest_contract"]
+    if remediation_control is not None:
+        if selection is None or selection_file_hash is None:
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
+        payload.update(
+            {
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "candidate_selection_file_sha256": selection_file_hash,
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
+            }
+        )
+        manifest_contract = remediation_control["candidate_manifest_contract"]
+    else:
+        manifest_contract = r2_control["candidate_manifest_contract"]
     manifest_payload = {
         "schema_version": manifest_contract["schema_version"],
-        "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
+        "authority_namespace_id": (
+            gate.R2R1_AUTHORITY_NAMESPACE_ID
+            if remediation_control is not None
+            else gate.R2_AUTHORITY_NAMESPACE_ID
+        ),
         "state": manifest_contract["state"],
         "activation_source_commit": source_commit,
         "activation_parent_commit": expected_base,
@@ -377,9 +590,6 @@ def build_candidate_package(
         ),
         "artifact_path_surface_sha256": (
             gate.artifact_surface_sha256(plan)
-        ),
-        "occupied_v0_9_surface_sha256": (
-            gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
         ),
         "review_surface_identity_sha256": (
             gate.REVIEW_SURFACE_IDENTITY_SHA256
@@ -394,6 +604,28 @@ def build_candidate_package(
         "scientific_values_inspected": False,
         "runtime_authorization_issued": False,
     }
+    if remediation_control is not None:
+        manifest_payload.update(
+            {
+                "r2r1_remediation_plan_file_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
+                ),
+                "r2r1_remediation_plan_payload_sha256": (
+                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_r2_surface_sha256": (
+                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
+                ),
+                "candidate_selection_file_sha256": selection_file_hash,
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
+            }
+        )
+    else:
+        manifest_payload["occupied_v0_9_surface_sha256"] = (
+            gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+        )
     manifest = gate.add_self_hash(
         manifest_payload,
         "candidate_manifest_payload_sha256",
@@ -424,6 +656,8 @@ def build_candidate_package(
         current_head=source_commit,
         candidate_manifest=manifest,
         candidate_manifest_file_sha256=manifest_file_hash,
+        candidate_selection=selection,
+        candidate_selection_file_sha256=selection_file_hash,
     )
     return manifest, validated
 
@@ -477,14 +711,25 @@ def main(argv: list[str] | None = None) -> int:
         "implementation_rows_match": True,
         "scientific_dependency_rows_match": True,
     }
+    plan = gate.load_active_plan()
+    selection = build_candidate_selection(args.repository, restore)
+    selection_file_hash = gate.sha256_bytes(
+        gate.canonical_receipt_bytes(selection)
+    )
+    gate.publish_r2r1_control_receipt(
+        plan,
+        "candidate_selection_contract",
+        selection,
+    )
     manifest, payload = build_candidate_package(
         args.repository,
         restore,
         procedural_author_separation_precondition_satisfied=False,
         current_exposed_design_context_authored_final_bytes=True,
+        candidate_selection=selection,
+        candidate_selection_file_sha256=selection_file_hash,
     )
-    plan = gate.load_active_plan()
-    gate.publish_r2_control_receipt(
+    gate.publish_r2r1_control_receipt(
         plan,
         "candidate_manifest_contract",
         manifest,
@@ -494,6 +739,9 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(
             {
                 "state": "IMPLEMENTATION_CANDIDATE_BOUND",
+                "candidate_selection_payload_sha256": selection[
+                    "candidate_selection_payload_sha256"
+                ],
                 "candidate_manifest_payload_sha256": manifest[
                     "candidate_manifest_payload_sha256"
                 ],
