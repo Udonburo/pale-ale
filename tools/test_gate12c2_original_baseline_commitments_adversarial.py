@@ -562,7 +562,7 @@ class FrozenDesignMutationTests(unittest.TestCase):
                             stack.enter_context(
                                 mock.patch.object(
                                     extraction_runner.gate,
-                                    "load_frozen_plan",
+                                    "load_active_plan",
                                     return_value=plan,
                                 )
                             )
@@ -2693,7 +2693,7 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
                         stack.enter_context(
                             mock.patch.object(
                                 authorization_verifier.gate,
-                                "load_frozen_plan",
+                                "load_active_plan",
                                 return_value=self.plan,
                             )
                         )
@@ -3731,6 +3731,460 @@ class LiteralLineageAndSchemaTests(unittest.TestCase):
         self.assertIs(
             authority_required["authority_issuer_identity_required"], False
         )
+
+
+
+class R2ActivationLaneAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.base_plan = gate.load_frozen_plan()
+        cls.r2_plan = gate.load_r2_activation_plan(
+            base_plan=cls.base_plan,
+            check_legacy_occupancy=True,
+        )
+        cls.plan = gate.build_r2_active_plan(
+            cls.base_plan,
+            cls.r2_plan,
+        )
+
+    @staticmethod
+    def _rehash_r2(value: Mapping[str, Any]) -> dict[str, Any]:
+        payload = copy.deepcopy(dict(value))
+        payload.pop("r2_activation_plan_payload_sha256", None)
+        return gate.add_self_hash(
+            payload,
+            "r2_activation_plan_payload_sha256",
+        )
+
+    def _surface_mutation(
+        self,
+        mutate: Any,
+    ) -> tuple[dict[str, Any], str]:
+        payload = copy.deepcopy(self.r2_plan)
+        mutate(payload["artifact_path_surface"])
+        surface_hash = gate.sha256_bytes(
+            gate.canonical_json_bytes(payload["artifact_path_surface"])
+        )
+        payload["artifact_path_surface_sha256"] = surface_hash
+        payload["implementation_binding_contract_overlay"][
+            "artifact_path_surface_sha256"
+        ] = surface_hash
+        payload["reviewed_authority_contract_overlay"][
+            "artifact_path_surface_sha256"
+        ] = surface_hash
+        return self._rehash_r2(payload), surface_hash
+
+    def test_old_v09_occupancy_and_r2_surface_coexist(self) -> None:
+        rows = self.plan["artifact_path_surface"]
+        finals = [row["final_path"] for row in rows]
+        pending = [row["pending_path"] for row in rows]
+        self.assertEqual(len(finals), 18)
+        self.assertEqual(len(set(finals + pending)), 36)
+        occupied = self.r2_plan["occupied_v0_9"]
+        self.assertNotIn(
+            occupied["candidate_binding"]["path"],
+            finals,
+        )
+        self.assertNotIn(
+            occupied["review_verdict"]["path"],
+            finals,
+        )
+        self.assertEqual(
+            gate.artifact_surface_sha256(self.plan),
+            gate.R2_ARTIFACT_PATH_SURFACE_SHA256,
+        )
+        self.assertEqual(
+            independent.independent_load_plan()[
+                "artifact_path_surface_sha256"
+            ],
+            gate.R2_ARTIFACT_PATH_SURFACE_SHA256,
+        )
+
+    def test_phase_a_plan_load_never_reads_protected_root(self) -> None:
+        original = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+
+        def guarded(path: Path) -> bytes:
+            if str(path).casefold().startswith(protected):
+                raise AssertionError("protected root read during Phase A")
+            return original(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded):
+            core = gate.load_active_plan()
+            independently = independent.independent_load_plan()
+        self.assertEqual(
+            core["artifact_path_surface_sha256"],
+            independently["artifact_path_surface_sha256"],
+        )
+
+    def test_old_namespace_publication_is_rejected_before_io(self) -> None:
+        with mock.patch.object(gate, "atomic_publish_exact") as publish:
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.publish_role(
+                    self.plan,
+                    "formal_design_review_verdict",
+                    {},
+                )
+            tampered = copy.deepcopy(self.plan)
+            occupied = self.r2_plan["occupied_v0_9"]
+            row = next(
+                item
+                for item in tampered["artifact_path_surface"]
+                if item["role"] == "implementation_candidate_binding"
+            )
+            row["final_path"] = occupied["candidate_binding"]["path"]
+            row["pending_path"] = row["final_path"] + ".pending-v0.9"
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.publish_role(
+                    tampered,
+                    "implementation_candidate_binding",
+                    {},
+                )
+            publish.assert_not_called()
+
+    def test_unknown_duplicate_and_colliding_roles_are_rejected(self) -> None:
+        def duplicate(rows: list[dict[str, Any]]) -> None:
+            rows[1]["role"] = rows[0]["role"]
+
+        def unknown(rows: list[dict[str, Any]]) -> None:
+            rows[1]["role"] = "unknown_r2_role"
+
+        def collision(rows: list[dict[str, Any]]) -> None:
+            rows[1]["final_path"] = rows[0]["pending_path"]
+
+        for mutation in (duplicate, unknown, collision):
+            with self.subTest(mutation=mutation.__name__):
+                payload, surface_hash = self._surface_mutation(mutation)
+                with (
+                    mock.patch.object(
+                        gate,
+                        "R2_ARTIFACT_PATH_SURFACE_SHA256",
+                        surface_hash,
+                    ),
+                    mock.patch.object(
+                        gate,
+                        "R2_ACTIVATION_PLAN_PAYLOAD_SHA256",
+                        payload[
+                            "r2_activation_plan_payload_sha256"
+                        ],
+                    ),
+                    self.assertRaises(
+                        gate.Gate12C2OriginalBaselineError
+                    ),
+                ):
+                    gate.validate_r2_activation_plan(
+                        self.base_plan,
+                        payload,
+                        check_legacy_occupancy=False,
+                    )
+
+    def test_review_surface_shrink_is_rejected(self) -> None:
+        surface = gate.review_surface_identity(self.plan)
+        surface["compatibility_row_count"] -= 1
+        surface["review_surface_identity_sha256"] = gate.sha256_bytes(
+            gate.canonical_json_bytes(
+                {
+                    key: value
+                    for key, value in surface.items()
+                    if key != "review_surface_identity_sha256"
+                }
+            )
+        )
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.validate_review_surface_identity(self.plan, surface)
+
+        r2 = copy.deepcopy(self.r2_plan)
+        r2["preserved_identities"]["required_mutation_count"] -= 1
+        r2 = self._rehash_r2(r2)
+        with (
+            mock.patch.object(
+                gate,
+                "R2_ACTIVATION_PLAN_PAYLOAD_SHA256",
+                r2["r2_activation_plan_payload_sha256"],
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.validate_r2_activation_plan(
+                self.base_plan,
+                r2,
+                check_legacy_occupancy=False,
+            )
+
+    def test_boolean_only_pass_cannot_reach_review_validation(self) -> None:
+        schema = self.plan["review_receipt_schemas"][
+            "fresh_implementation_review_verdict"
+        ]
+        fields = gate.artifact_exact_fields(
+            self.plan,
+            "fresh_implementation_review_verdict",
+        )
+        review = {field: None for field in fields}
+        review.update(schema["outcomes"]["pass"]["required_values"])
+        review.update(
+            {
+                "reviewed_at_utc": "2026-08-03T00:00:00Z",
+                "reviewer_context_id": "fresh-r2-reviewer",
+                "review_surface_identity": gate.review_surface_identity(
+                    self.plan
+                ),
+                "P0_count": 0,
+                "P1_count": 0,
+                "P2_count": 0,
+                "implementation_candidate_binding_file_sha256": DIGEST,
+                "implementation_candidate_binding_payload_sha256": (
+                    OTHER_DIGEST
+                ),
+                "implementation_source_commit": SOURCE_COMMIT,
+                "implementation_review_packet_file_sha256": DIGEST,
+                "bundle_file_sha256": DIGEST,
+                "restore_receipt_file_sha256": DIGEST,
+                "restore_receipt_payload_sha256": DIGEST,
+                "implementation_author_separation_contract_sha256": (
+                    gate.IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
+                ),
+                "implementation_trust_model_sha256": (
+                    gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+                ),
+                "formal_design_review_file_sha256": (
+                    gate.FORMAL_DESIGN_REVIEW_FILE_SHA256
+                ),
+                "formal_design_review_payload_sha256": (
+                    gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
+                ),
+                "contract_file_sha256": gate.CONTRACT_FILE_SHA256,
+                "plan_file_sha256": gate.PLAN_FILE_SHA256,
+                "plan_payload_sha256": gate.PLAN_PAYLOAD_SHA256,
+                "r2_activation_plan_file_sha256": (
+                    gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                ),
+                "r2_activation_plan_payload_sha256": (
+                    gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                ),
+                "artifact_path_surface_sha256": (
+                    gate.R2_ARTIFACT_PATH_SURFACE_SHA256
+                ),
+                "occupied_v0_9_surface_sha256": (
+                    gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+                ),
+                "candidate_manifest_file_sha256": DIGEST,
+                "candidate_manifest_payload_sha256": OTHER_DIGEST,
+                "review_evidence_file_sha256": DIGEST,
+                "review_evidence_payload_sha256": OTHER_DIGEST,
+            }
+        )
+        review.pop(
+            "fresh_implementation_review_payload_sha256",
+            None,
+        )
+        review = gate.add_self_hash(
+            review,
+            "fresh_implementation_review_payload_sha256",
+        )
+        candidate = {
+            "source_commit": SOURCE_COMMIT,
+            "review_surface_identity": gate.review_surface_identity(
+                self.plan
+            ),
+            "clean_restore": {
+                "bundle_file_sha256": DIGEST,
+                "restore_receipt_file_sha256": DIGEST,
+                "restore_receipt_payload_sha256": DIGEST,
+            },
+            "candidate_manifest_file_sha256": DIGEST,
+            "candidate_manifest_payload_sha256": OTHER_DIGEST,
+        }
+        with (
+            mock.patch.object(
+                gate,
+                "read_r2_fresh_review_evidence",
+                side_effect=gate.Gate12C2OriginalBaselineError(
+                    "R2_REVIEW_EVIDENCE_INVALID"
+                ),
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            gate.validate_implementation_review(
+                self.plan,
+                review,
+                candidate_file_sha256=DIGEST,
+                candidate_payload_sha256=OTHER_DIGEST,
+                source_commit=SOURCE_COMMIT,
+                candidate=candidate,
+            )
+
+    def test_old_candidate_and_old_reopen_cannot_mix_into_r2(self) -> None:
+        occupied = self.r2_plan["occupied_v0_9"]
+        old_candidate = gate.read_canonical_receipt(
+            Path(occupied["candidate_binding"]["path"]),
+            expected_file_sha256=occupied["candidate_binding"][
+                "file_sha256"
+            ],
+            hash_field="implementation_candidate_binding_payload_sha256",
+            expected_payload_sha256=occupied["candidate_binding"][
+                "payload_sha256"
+            ],
+        )
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.validate_candidate_binding(
+                self.plan,
+                old_candidate,
+                repo_root=REPOSITORY,
+            )
+        old_review = gate.read_canonical_receipt(
+            Path(occupied["review_verdict"]["path"]),
+            expected_file_sha256=occupied["review_verdict"][
+                "file_sha256"
+            ],
+            hash_field="fresh_implementation_review_payload_sha256",
+            expected_payload_sha256=occupied["review_verdict"][
+                "payload_sha256"
+            ],
+        )
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.require_exact_keys(
+                old_review,
+                gate.artifact_exact_fields(
+                    self.plan,
+                    "fresh_implementation_review_verdict",
+                ),
+                code="INPUT_LINEAGE_MISMATCH",
+            )
+
+    def test_candidate_review_authority_rehash_mixes_are_rejected(self) -> None:
+        surface = gate.review_surface_identity(self.plan)
+        candidate = {
+            "source_commit": SOURCE_COMMIT,
+            "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
+            "review_surface_identity": surface,
+            "implementation_candidate_binding_payload_sha256": DIGEST,
+            "candidate_manifest_file_sha256": DIGEST,
+            "candidate_manifest_payload_sha256": OTHER_DIGEST,
+        }
+        review = {
+            "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
+            "implementation_source_commit": SOURCE_COMMIT,
+            "implementation_candidate_binding_file_sha256": DIGEST,
+            "implementation_candidate_binding_payload_sha256": DIGEST,
+            "review_surface_identity": surface,
+            "fresh_implementation_review_payload_sha256": OTHER_DIGEST,
+        }
+        authority = gate.build_reviewed_authority_payload(
+            self.plan,
+            candidate,
+            review,
+            candidate_file_sha256=DIGEST,
+            review_file_sha256=OTHER_DIGEST,
+        )
+        independent_authority = (
+            independent._independent_reviewed_authority_payload(
+                independent.independent_load_plan(),
+                candidate,
+                review,
+                candidate_file_hash=DIGEST,
+                review_file_hash=OTHER_DIGEST,
+            )
+        )
+        self.assertEqual(independent_authority, authority)
+        tampered_authority = dict(authority)
+        tampered_authority["candidate_manifest_file_sha256"] = (
+            "a" * 64
+        )
+        tampered_authority.pop(
+            "reviewed_implementation_authority_payload_sha256"
+        )
+        tampered_authority = gate.add_self_hash(
+            tampered_authority,
+            "reviewed_implementation_authority_payload_sha256",
+        )
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.validate_reviewed_authority(
+                self.plan,
+                tampered_authority,
+                candidate=candidate,
+                candidate_file_sha256=DIGEST,
+                review=review,
+                review_file_sha256=OTHER_DIGEST,
+            )
+        mixed_review = dict(review)
+        mixed_review["authority_namespace_id"] = "v0.9"
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                mixed_review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+        with self.assertRaises(
+            independent.IndependentVerificationError
+        ):
+            independent._independent_reviewed_authority_payload(
+                independent.independent_load_plan(),
+                candidate,
+                mixed_review,
+                candidate_file_hash=DIGEST,
+                review_file_hash=OTHER_DIGEST,
+            )
+        mixed_candidate = dict(candidate)
+        mixed_candidate[
+            "implementation_candidate_binding_payload_sha256"
+        ] = "a" * 64
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.build_reviewed_authority_payload(
+                self.plan,
+                mixed_candidate,
+                review,
+                candidate_file_sha256=DIGEST,
+                review_file_sha256=OTHER_DIGEST,
+            )
+        with self.assertRaises(
+            independent.IndependentVerificationError
+        ):
+            independent._independent_reviewed_authority_payload(
+                independent.independent_load_plan(),
+                mixed_candidate,
+                review,
+                candidate_file_hash=DIGEST,
+                review_file_hash=OTHER_DIGEST,
+            )
+
+    def test_exact_two_commit_lineage_rejects_other_shapes(self) -> None:
+        source = "1" * 40
+        base = gate.R2_TASK1_COMMIT
+        parent = gate.R2_TASK1_PARENT
+        gate.require_direct_child_lineage(
+            source,
+            base,
+            (source, base),
+        )
+        independent._require_direct_child_lineage(
+            source,
+            (source, base),
+            expected_parent=base,
+        )
+        for lineage in (
+            (source,),
+            (source, base, parent),
+            (source, parent),
+            (source, "f" * 40),
+        ):
+            with self.subTest(lineage=lineage):
+                with self.assertRaises(
+                    gate.Gate12C2OriginalBaselineError
+                ):
+                    gate.require_direct_child_lineage(
+                        source,
+                        base,
+                        lineage,
+                    )
+                with self.assertRaises(
+                    independent.IndependentVerificationError
+                ):
+                    independent._require_direct_child_lineage(
+                        source,
+                        lineage,
+                        expected_parent=base,
+                    )
 
 
 if __name__ == "__main__":

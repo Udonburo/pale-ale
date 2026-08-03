@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the deterministic Gate12C-2 v0.9 reviewed authority."""
+"""Build the deterministic Gate12C-2 R2 reviewed authority."""
 
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _head(repository: Path) -> str:
 
 def build_authority(repository: Path) -> dict[str, object]:
     root = Path(repository).resolve()
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,
@@ -103,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repository", type=Path, required=True)
     args = parser.parse_args(argv)
     authority = build_authority(args.repository)
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     gate.publish_role(plan, "reviewed_implementation_authority", authority)
     print(
         json.dumps(

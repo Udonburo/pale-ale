@@ -623,7 +623,7 @@ def _failure_leaf(
         "payload_seal_sha256": plan["original_input_lineage"][
             "payload_seal_payload_sha256"
         ],
-        "artifact_path_surface_sha256": gate.ARTIFACT_PATH_SURFACE_SHA256,
+        "artifact_path_surface_sha256": gate.artifact_surface_sha256(plan),
         "implementation_source_commit": claim["implementation_source_commit"],
         "git_head_at_protected_read": progress.get(
             "git_head_at_protected_read", claim["git_head_at_claim"]
@@ -683,7 +683,7 @@ def _reverify_claimed_lineage(
     *,
     now_ns: int | None,
 ) -> dict[str, dict[str, Any]]:
-    repeated_plan = gate.load_frozen_plan()
+    repeated_plan = gate.load_active_plan()
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,
@@ -720,7 +720,7 @@ def execute(
 ) -> dict[str, Any]:
     _runtime_isolated()
     root = Path(repository).absolute()
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,

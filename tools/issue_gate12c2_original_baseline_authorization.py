@@ -23,7 +23,7 @@ def issue_authorization(
     expires_at_utc: str,
     now_ns: int | None = None,
 ) -> dict[str, Any]:
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     if scope not in {"extraction", "verifier"}:
         raise gate.Gate12C2OriginalBaselineError("AUTHORIZATION_INVALID")
     gate.read_exact_bytes(
@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         issued_at_utc=args.issued_at_utc,
         expires_at_utc=args.expires_at_utc,
     )
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     gate.publish_role(plan, f"{args.scope}_authorization", payload)
     print(
         json.dumps(

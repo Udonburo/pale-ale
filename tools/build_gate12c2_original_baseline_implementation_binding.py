@@ -61,8 +61,10 @@ def _git(repository: Path, *arguments: str) -> str:
 def _require_direct_child_lineage(
     source_commit: str,
     lineage: list[str],
+    *,
+    expected_parent: str = gate.REMEDIATION_BASE_COMMIT,
 ) -> None:
-    if lineage != [source_commit, gate.REMEDIATION_BASE_COMMIT]:
+    if lineage != [source_commit, expected_parent]:
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
@@ -175,22 +177,30 @@ def validate_clean_restore(
     return supplied
 
 
-def build_candidate_binding(
+def build_candidate_package(
     repository: Path,
     clean_restore: Mapping[str, Any],
     *,
     procedural_author_separation_precondition_satisfied: bool,
     current_exposed_design_context_authored_final_bytes: bool,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    root = Path(repository).resolve()
+    plan = gate.load_active_plan()
+    contract = plan["implementation_binding_contract"]
+    required_values = contract["required_values"]
     if (
-        procedural_author_separation_precondition_satisfied is not True
-        or current_exposed_design_context_authored_final_bytes is not False
+        procedural_author_separation_precondition_satisfied
+        is not required_values[
+            "procedural_author_separation_precondition_satisfied"
+        ]
+        or current_exposed_design_context_authored_final_bytes
+        is not required_values[
+            "current_exposed_design_context_authored_final_bytes"
+        ]
     ):
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
-    root = Path(repository).resolve()
-    plan = gate.load_frozen_plan()
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,
@@ -202,25 +212,29 @@ def build_candidate_binding(
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
+    expected_base = required_values["remediation_base_commit"]
+    expected_base_parent = required_values["remediation_base_parent"]
     source_lineage = _git(
         root, "rev-list", "--parents", "-n", "1", source_commit
     ).split()
-    _require_direct_child_lineage(source_commit, source_lineage)
+    _require_direct_child_lineage(
+        source_commit,
+        source_lineage,
+        expected_parent=expected_base,
+    )
     base_lineage = _git(
         root,
         "rev-list",
         "--parents",
         "-n",
         "1",
-        gate.REMEDIATION_BASE_COMMIT,
+        expected_base,
     ).split()
-    if (
-        base_lineage
-        != [gate.REMEDIATION_BASE_COMMIT, gate.REMEDIATION_BASE_PARENT]
-    ):
-        raise gate.Gate12C2OriginalBaselineError(
-            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
-        )
+    _require_direct_child_lineage(
+        expected_base,
+        base_lineage,
+        expected_parent=expected_base_parent,
+    )
     if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
@@ -233,6 +247,28 @@ def build_candidate_binding(
     autocrlf = _git_bool(root, "core.autocrlf", unset=False)
     longpaths = _git_bool(root, "core.longpaths", unset=False)
     if autocrlf is not False or longpaths is not True:
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    r2_control = gate.r2_activation_control(plan)
+    if r2_control is None:
+        raise gate.Gate12C2OriginalBaselineError(
+            "INPUT_LINEAGE_MISMATCH"
+        )
+    activation_relative = gate.require_text(
+        gate.load_r2_activation_plan(
+            base_plan=gate.load_frozen_plan(),
+            check_legacy_occupancy=True,
+        )["activation_plan_relative_path"],
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    activation_hash, _activation_blob = _tree_blob(
+        root,
+        source_commit,
+        activation_relative,
+        object_format,
+    )
+    if activation_hash != gate.R2_ACTIVATION_PLAN_FILE_SHA256:
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
@@ -251,9 +287,7 @@ def build_candidate_binding(
         )
     implementation_rows.sort(key=lambda row: row["role"])
     scientific_rows = []
-    for frozen in plan["implementation_binding_contract"][
-        "scientific_dependencies"
-    ]:
+    for frozen in contract["scientific_dependencies"]:
         row = dict(frozen)
         current_hash, current_blob = _tree_blob(
             root, source_commit, row["relative_path"], object_format
@@ -276,18 +310,15 @@ def build_candidate_binding(
         clean_restore, source_commit=source_commit
     )
     payload = {
-        "schema_version": (
-            "gate12c2_original_baseline_implementation_candidate_binding_v0.9"
-        ),
-        "binding_id": (
-            "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_IMPLEMENTATION_CANDIDATE_BINDING_v0.9"
-        ),
+        "schema_version": contract["schema_version"],
+        "binding_id": required_values["binding_id"],
+        "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
         "source_commit": source_commit,
         "authorized_implementation_repository": str(
             gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY
         ),
-        "remediation_base_commit": gate.REMEDIATION_BASE_COMMIT,
-        "remediation_base_parent": gate.REMEDIATION_BASE_PARENT,
+        "remediation_base_commit": expected_base,
+        "remediation_base_parent": expected_base_parent,
         "git_object_format": object_format,
         "core_autocrlf": False,
         "core_longpaths": True,
@@ -295,23 +326,32 @@ def build_candidate_binding(
         "contract_file_sha256": gate.CONTRACT_FILE_SHA256,
         "plan_file_sha256": gate.PLAN_FILE_SHA256,
         "plan_payload_sha256": gate.PLAN_PAYLOAD_SHA256,
+        "r2_activation_plan_file_sha256": (
+            gate.R2_ACTIVATION_PLAN_FILE_SHA256
+        ),
+        "r2_activation_plan_payload_sha256": (
+            gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+        ),
         "formal_design_review_file_sha256": (
             gate.FORMAL_DESIGN_REVIEW_FILE_SHA256
         ),
         "formal_design_review_payload_sha256": (
             gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
         ),
+        "occupied_v0_9_surface_sha256": (
+            gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+        ),
         "implementation_author_separation_contract_sha256": (
             gate.IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
         ),
-        "procedural_author_separation_precondition_satisfied": True,
+        "procedural_author_separation_precondition_satisfied": False,
         "implementation_context_blindness_machine_authenticated": False,
-        "current_exposed_design_context_authored_final_bytes": False,
+        "current_exposed_design_context_authored_final_bytes": True,
         "implementation_trust_model_sha256": (
             gate.recompute_implementation_trust_model_sha256(plan)
         ),
         "artifact_path_surface_sha256": (
-            gate.ARTIFACT_PATH_SURFACE_SHA256
+            gate.artifact_surface_sha256(plan)
         ),
         "review_surface_identity": gate.review_surface_identity(plan),
         "implementation_files": implementation_rows,
@@ -321,16 +361,91 @@ def build_candidate_binding(
         "implementation_authorship_machine_verified": False,
         "protected_payload_access_required_for_implementation": False,
     }
-    result = gate.add_self_hash(
+    manifest_contract = r2_control["candidate_manifest_contract"]
+    manifest_payload = {
+        "schema_version": manifest_contract["schema_version"],
+        "authority_namespace_id": gate.R2_AUTHORITY_NAMESPACE_ID,
+        "state": manifest_contract["state"],
+        "activation_source_commit": source_commit,
+        "activation_parent_commit": expected_base,
+        "task1_parent_commit": expected_base_parent,
+        "r2_activation_plan_file_sha256": (
+            gate.R2_ACTIVATION_PLAN_FILE_SHA256
+        ),
+        "r2_activation_plan_payload_sha256": (
+            gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+        ),
+        "artifact_path_surface_sha256": (
+            gate.artifact_surface_sha256(plan)
+        ),
+        "occupied_v0_9_surface_sha256": (
+            gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+        ),
+        "review_surface_identity_sha256": (
+            gate.REVIEW_SURFACE_IDENTITY_SHA256
+        ),
+        "implementation_trust_model_sha256": (
+            gate.recompute_implementation_trust_model_sha256(plan)
+        ),
+        "implementation_files": implementation_rows,
+        "scientific_dependencies": scientific_rows,
+        "clean_restore": restore,
+        "protected_payload_accessed": False,
+        "scientific_values_inspected": False,
+        "runtime_authorization_issued": False,
+    }
+    manifest = gate.add_self_hash(
+        manifest_payload,
+        "candidate_manifest_payload_sha256",
+    )
+    gate.require_exact_keys(
+        manifest,
+        manifest_contract["exact_top_level_fields"],
+        code="IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+    )
+    manifest_file_hash = gate.sha256_bytes(
+        gate.canonical_receipt_bytes(manifest)
+    )
+    payload.update(
+        {
+            "candidate_manifest_file_sha256": manifest_file_hash,
+            "candidate_manifest_payload_sha256": manifest[
+                "candidate_manifest_payload_sha256"
+            ],
+        }
+    )
+    candidate = gate.add_self_hash(
         payload, "implementation_candidate_binding_payload_sha256"
     )
-    return gate.validate_candidate_binding(
+    validated = gate.validate_candidate_binding(
         plan,
-        result,
+        candidate,
         repo_root=root,
         current_head=source_commit,
+        candidate_manifest=manifest,
+        candidate_manifest_file_sha256=manifest_file_hash,
     )
+    return manifest, validated
 
+
+def build_candidate_binding(
+    repository: Path,
+    clean_restore: Mapping[str, Any],
+    *,
+    procedural_author_separation_precondition_satisfied: bool,
+    current_exposed_design_context_authored_final_bytes: bool,
+) -> dict[str, Any]:
+    _manifest, candidate = build_candidate_package(
+        repository,
+        clean_restore,
+        procedural_author_separation_precondition_satisfied=(
+            procedural_author_separation_precondition_satisfied
+        ),
+        current_exposed_design_context_authored_final_bytes=(
+            current_exposed_design_context_authored_final_bytes
+        ),
+    )
+    return candidate
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -341,14 +456,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--restore-receipt-file-sha256", required=True)
     parser.add_argument("--restore-receipt-payload-sha256", required=True)
     parser.add_argument("--restore-head", required=True)
-    parser.add_argument(
-        "--confirm-fresh-unexposed-no-history-implementation-task",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--confirm-exposed-design-context-authored-no-final-byte",
-        action="store_true",
-    )
     return parser
 
 
@@ -370,22 +477,26 @@ def main(argv: list[str] | None = None) -> int:
         "implementation_rows_match": True,
         "scientific_dependency_rows_match": True,
     }
-    payload = build_candidate_binding(
+    manifest, payload = build_candidate_package(
         args.repository,
         restore,
-        procedural_author_separation_precondition_satisfied=(
-            args.confirm_fresh_unexposed_no_history_implementation_task
-        ),
-        current_exposed_design_context_authored_final_bytes=not (
-            args.confirm_exposed_design_context_authored_no_final_byte
-        ),
+        procedural_author_separation_precondition_satisfied=False,
+        current_exposed_design_context_authored_final_bytes=True,
     )
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
+    gate.publish_r2_control_receipt(
+        plan,
+        "candidate_manifest_contract",
+        manifest,
+    )
     gate.publish_role(plan, "implementation_candidate_binding", payload)
     print(
         json.dumps(
             {
                 "state": "IMPLEMENTATION_CANDIDATE_BOUND",
+                "candidate_manifest_payload_sha256": manifest[
+                    "candidate_manifest_payload_sha256"
+                ],
                 "implementation_candidate_binding_payload_sha256": payload[
                     "implementation_candidate_binding_payload_sha256"
                 ],
@@ -395,7 +506,6 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
-
 
 def cli(argv: list[str] | None = None) -> int:
     try:

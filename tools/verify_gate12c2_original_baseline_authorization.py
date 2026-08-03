@@ -25,7 +25,7 @@ def verify_authorization(
     now_ns: int | None = None,
 ) -> dict[str, Any]:
     root = Path(repository).resolve()
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     if scope not in {"extraction", "verifier"}:
         raise gate.Gate12C2OriginalBaselineError("AUTHORIZATION_INVALID")
     binding_schema = plan["implementation_binding_contract"]
@@ -215,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         verification_id=args.verification_id,
         verified_at_utc=args.verified_at_utc,
     )
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     gate.publish_role(plan, f"{args.scope}_authorization_verdict", verdict)
     if verdict["outcome_kind"] == "reject":
         print(

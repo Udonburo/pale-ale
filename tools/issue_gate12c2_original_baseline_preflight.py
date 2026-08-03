@@ -261,7 +261,7 @@ def issue_preflight(
     now_ns: int | None = None,
 ) -> dict[str, Any]:
     root = Path(repository).resolve()
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     if scope not in {"extraction", "verifier"}:
         raise gate.Gate12C2OriginalBaselineError("AUTHORIZATION_INVALID")
     gate.read_exact_bytes(
@@ -318,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--issued-at-utc", required=True)
     parser.add_argument("--expires-at-utc", required=True)
     args = parser.parse_args(argv)
-    plan = gate.load_frozen_plan()
+    plan = gate.load_active_plan()
     payload = issue_preflight(
         args.repository,
         scope=args.scope,

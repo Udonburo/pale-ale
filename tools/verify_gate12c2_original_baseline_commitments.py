@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import copy
 import ctypes
 import ctypes.wintypes
 import hashlib
@@ -39,6 +40,16 @@ PLAN_FILE_SHA256 = "ae7979779675fc032b2919a4db0887d60011dcdc510a43deef43fc090e5e
 PLAN_PAYLOAD_SHA256 = "2bfaeb778494772a21975d0de22c6cc5221edbb742787fb1a34db5544eb24621"
 CONTRACT_FILE_SHA256 = "794cf22c89375424a3485a2f441ec53fc930f016d470e4cc95778cb2528ae82d"
 ARTIFACT_SURFACE_SHA256 = "7018f1a71ca8f41783f6228a7b73d25a28a37ba05462fbe7477f3fc76d1f5e2e"
+R2_AUTHORITY_NAMESPACE_ID = "R2_6e92079"
+R2_PLAN_PATH = Path(__file__).with_name(
+    "gate12c2_original_baseline_r2_activation_plan.json"
+)
+R2_PLAN_FILE_SHA256 = "ae9a9a7f46660e3ec846767c8cc01ecf7ecd7486a823b1b1491fd0189bf8e02a"
+R2_PLAN_PAYLOAD_SHA256 = "bef6f4e29f9fc61b95b40f3a3daa8b332779a4a26f7d04fa6bfac3edd3492c00"
+R2_ARTIFACT_SURFACE_SHA256 = "23c1595bc504ae3e500695679cfdb2f060370b3b6bb56652eee9d5aac0637c0b"
+R2_OCCUPIED_SURFACE_SHA256 = "2291c234118e033d60faacfc7181c7a5b8ba4890eb0af7cc9a43f61975111438"
+R2_TASK1_COMMIT = "6e92079cc962a9748d2c69147186aed2a59da8d0"
+R2_TASK1_PARENT = "2e51e0727d456792a474e38d67b1e3ebc605a8aa"
 FORMAL_DESIGN_REVIEW_FILE_SHA256 = (
     "5a0ba0d6ad6b5b79df819e73d7ab15831c081ad5e4e44ca6b8195e59bc97cc1e"
 )
@@ -1725,7 +1736,7 @@ class IndependentExecutingCodeIdentity:
 
 
 
-def independent_load_plan() -> dict[str, Any]:
+def _independent_load_base_plan() -> dict[str, Any]:
     try:
         raw = PLAN_PATH.read_bytes()
     except OSError:
@@ -1759,6 +1770,324 @@ def independent_load_plan() -> dict[str, Any]:
     _trust_model_sha256(plan)
     _review_surface_identity(plan)
     return plan
+
+
+
+def _replace_active_surface(
+    value: object,
+    old: str,
+    new: str,
+) -> object:
+    if type(value) is dict:
+        return {
+            key: (
+                copy.deepcopy(item)
+                if key.startswith("historical_v0_")
+                else _replace_active_surface(item, old, new)
+            )
+            for key, item in value.items()
+        }
+    if type(value) is list:
+        return [_replace_active_surface(item, old, new) for item in value]
+    return new if value == old else copy.deepcopy(value)
+
+
+def _merge_r2_delta(
+    target: dict[str, Any],
+    delta: Mapping[str, Any],
+) -> None:
+    for key, value in delta.items():
+        if type(value) is dict and type(target.get(key)) is dict:
+            _merge_r2_delta(target[key], value)
+        else:
+            target[key] = copy.deepcopy(value)
+
+
+def _legacy_r2_receipt(
+    row: Mapping[str, Any],
+    hash_field: str,
+) -> dict[str, Any]:
+    try:
+        raw = Path(row["path"]).read_bytes()
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if (
+        verifier_sha256(raw) != row["file_sha256"]
+        or not raw.endswith(b"\n")
+        or raw.endswith(b"\n\n")
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    payload = verifier_json(raw[:-1])
+    if (
+        raw != verifier_canonical_bytes(payload) + b"\n"
+        or _self_hash(payload, hash_field) != row["payload_sha256"]
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return payload
+
+
+def _independent_load_r2_plan(
+    base_plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    try:
+        raw = R2_PLAN_PATH.read_bytes()
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if (
+        verifier_sha256(raw) != R2_PLAN_FILE_SHA256
+        or not raw.endswith(b"\n")
+        or raw.endswith(b"\n\n")
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    r2 = verifier_json(raw[:-1])
+    if (
+        raw != verifier_canonical_bytes(r2) + b"\n"
+        or _self_hash(r2, "r2_activation_plan_payload_sha256")
+        != R2_PLAN_PAYLOAD_SHA256
+        or r2.get("schema_version")
+        != "gate12c2_original_baseline_r2_activation_plan_v0.1"
+        or r2.get("namespace_id") != R2_AUTHORITY_NAMESPACE_ID
+        or r2.get("state") != "R2_CONTROL_LINEAGE_FROZEN"
+        or r2.get("artifact_path_surface_sha256")
+        != R2_ARTIFACT_SURFACE_SHA256
+        or r2.get("occupied_v0_9_surface_sha256")
+        != R2_OCCUPIED_SURFACE_SHA256
+        or _digest(r2.get("occupied_v0_9"))
+        != R2_OCCUPIED_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    expected_lineage = {
+        "activation_commit_parent": R2_TASK1_COMMIT,
+        "activation_commit_parent_count": 1,
+        "task1_commit": R2_TASK1_COMMIT,
+        "task1_parent": R2_TASK1_PARENT,
+        "task1_parent_count": 1,
+    }
+    if (
+        r2.get("activation_lineage") != expected_lineage
+        or r2.get("base_plan")
+        != {
+            "file_sha256": PLAN_FILE_SHA256,
+            "path": str(PLAN_PATH),
+            "payload_sha256": PLAN_PAYLOAD_SHA256,
+        }
+        or r2.get("base_contract", {}).get("file_sha256")
+        != CONTRACT_FILE_SHA256
+        or r2.get("preserved_identities")
+        != {
+            "compatibility_row_count": 662,
+            "mutation_applicability_cell_count": 13456,
+            "normative_row_count": 841,
+            "required_mutation_count": 6487,
+            "review_surface_identity_sha256": (
+                REVIEW_SURFACE_IDENTITY_SHA256
+            ),
+            "trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        }
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    rows = r2.get("artifact_path_surface")
+    old_rows = {
+        row["role"]: row for row in base_plan["artifact_path_surface"]
+    }
+    if (
+        type(rows) is not list
+        or len(rows) != 18
+        or rows != sorted(rows, key=lambda row: row.get("role", ""))
+        or _digest(rows) != R2_ARTIFACT_SURFACE_SHA256
+        or {row.get("role") for row in rows} != set(old_rows)
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    paths: set[str] = set()
+    old_paths = {
+        path
+        for row in old_rows.values()
+        for path in (row["final_path"], row["pending_path"])
+    }
+    for row in rows:
+        if (
+            type(row) is not dict
+            or set(row)
+            != {
+                "role",
+                "final_path",
+                "pending_path",
+                "publication_mode",
+                "lifecycle_scope",
+            }
+            or type(row["final_path"]) is not str
+            or type(row["pending_path"]) is not str
+            or row["final_path"] in paths
+            or row["pending_path"] in paths
+            or row["publication_mode"]
+            != "MoveFileExW_nonreplace_write_through"
+            or row["lifecycle_scope"]
+            != old_rows[row["role"]]["lifecycle_scope"]
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        paths.update((row["final_path"], row["pending_path"]))
+        if row["role"] == "formal_design_review_verdict":
+            if row != old_rows[row["role"]]:
+                _fail("INPUT_LINEAGE_MISMATCH")
+        elif (
+            R2_AUTHORITY_NAMESPACE_ID not in Path(row["final_path"]).name
+            or row["pending_path"]
+            != row["final_path"] + ".pending-" + R2_AUTHORITY_NAMESPACE_ID
+            or row["final_path"] in old_paths
+            or row["pending_path"] in old_paths
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+    for name in (
+        "candidate_manifest_contract",
+        "clean_restore_receipt_contract",
+        "fresh_review_evidence_contract",
+    ):
+        contract = r2.get(name)
+        if type(contract) is not dict:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        final_path = contract.get("artifact_path")
+        pending_path = contract.get("pending_path")
+        if (
+            type(final_path) is not str
+            or type(pending_path) is not str
+            or final_path in paths
+            or pending_path in paths
+            or R2_AUTHORITY_NAMESPACE_ID not in Path(final_path).name
+            or pending_path
+            != final_path + ".pending-" + R2_AUTHORITY_NAMESPACE_ID
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        paths.update((final_path, pending_path))
+    binding = r2.get("implementation_binding_contract_overlay")
+    review = r2.get("fresh_review_contract_overlay")
+    authority = r2.get("reviewed_authority_contract_overlay")
+    role_rows = {row["role"]: row for row in rows}
+    if (
+        type(binding) is not dict
+        or type(review) is not dict
+        or type(authority) is not dict
+        or binding.get("artifact_path")
+        != role_rows["implementation_candidate_binding"]["final_path"]
+        or review.get("artifact_path")
+        != role_rows["fresh_implementation_review_verdict"]["final_path"]
+        or authority.get("artifact_path")
+        != role_rows["reviewed_implementation_authority"]["final_path"]
+        or authority.get("fresh_implementation_review_path")
+        != review.get("artifact_path")
+        or binding.get("required_values", {}).get(
+            "procedural_author_separation_precondition_satisfied"
+        )
+        is not False
+        or binding.get("required_values", {}).get(
+            "current_exposed_design_context_authored_final_bytes"
+        )
+        is not True
+        or review.get("outcomes", {})
+        .get("pass", {})
+        .get("required_values", {})
+        .get("procedural_author_separation_precondition_satisfied")
+        is not False
+        or review.get("outcomes", {})
+        .get("pass", {})
+        .get("required_values", {})
+        .get("current_exposed_design_context_authored_final_bytes")
+        is not True
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    occupied = r2["occupied_v0_9"]
+    old_candidate = _legacy_r2_receipt(
+        occupied["candidate_binding"],
+        "implementation_candidate_binding_payload_sha256",
+    )
+    old_review = _legacy_r2_receipt(
+        occupied["review_verdict"],
+        "fresh_implementation_review_payload_sha256",
+    )
+    if (
+        old_candidate.get("source_commit")
+        != occupied["candidate_binding"]["source_commit"]
+        or old_review.get("implementation_source_commit")
+        != occupied["review_verdict"]["source_commit"]
+        or old_review.get("state")
+        != "FRESH_IMPLEMENTATION_REVIEW_REOPEN"
+        or old_review.get("P0_count") != 0
+        or old_review.get("P1_count") != 1
+        or old_review.get("P2_count") != 0
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    for role in occupied["required_absent_final_roles"]:
+        if Path(old_rows[role]["final_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+    for role in occupied["required_absent_pending_roles"]:
+        if Path(old_rows[role]["pending_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+    return r2
+
+
+def independent_load_plan() -> dict[str, Any]:
+    base = _independent_load_base_plan()
+    r2 = _independent_load_r2_plan(base)
+    active = _replace_active_surface(
+        base,
+        ARTIFACT_SURFACE_SHA256,
+        R2_ARTIFACT_SURFACE_SHA256,
+    )
+    if type(active) is not dict:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    active["artifact_path_surface"] = copy.deepcopy(
+        r2["artifact_path_surface"]
+    )
+    active["artifact_path_surface_sha256"] = R2_ARTIFACT_SURFACE_SHA256
+    pending_by_role = {
+        row["role"]: row["pending_path"]
+        for row in r2["artifact_path_surface"]
+    }
+    for row in active["artifact_lifecycle_contract"][
+        "full_surface_checkpoint_contract"
+    ]["pending_injection_tests"]:
+        row["injected_pending_path"] = pending_by_role[row["role"]]
+    _merge_r2_delta(
+        active["implementation_binding_contract"],
+        r2["implementation_binding_contract_overlay"],
+    )
+    _merge_r2_delta(
+        active["review_receipt_schemas"][
+            "fresh_implementation_review_verdict"
+        ],
+        r2["fresh_review_contract_overlay"],
+    )
+    _merge_r2_delta(
+        active["reviewed_implementation_authority_contract"],
+        r2["reviewed_authority_contract_overlay"],
+    )
+    active["r2_activation_control"] = {
+        "authority_namespace_id": R2_AUTHORITY_NAMESPACE_ID,
+        "activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+        "activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
+        "occupied_v0_9_surface_sha256": R2_OCCUPIED_SURFACE_SHA256,
+        "activation_lineage": copy.deepcopy(r2["activation_lineage"]),
+        "candidate_manifest_contract": copy.deepcopy(
+            r2["candidate_manifest_contract"]
+        ),
+        "clean_restore_receipt_contract": copy.deepcopy(
+            r2["clean_restore_receipt_contract"]
+        ),
+        "fresh_review_evidence_contract": copy.deepcopy(
+            r2["fresh_review_evidence_contract"]
+        ),
+        "fresh_review_packet_path": r2["fresh_review_packet_path"],
+    }
+    if (
+        _digest(active["artifact_path_surface"])
+        != R2_ARTIFACT_SURFACE_SHA256
+        or _trust_model_sha256(active) != IMPLEMENTATION_TRUST_MODEL_SHA256
+        or _review_surface_identity(active)[
+            "review_surface_identity_sha256"
+        ]
+        != REVIEW_SURFACE_IDENTITY_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return active
 
 
 def _frozen_json(
@@ -2210,14 +2539,43 @@ def _git_parent_lineage(
     return values
 
 
+def _git_path_blob_oid(
+    repository: Path,
+    source_commit: str,
+    relative_path: str,
+) -> str:
+    try:
+        completed = subprocess.run(
+            ("git", "rev-parse", f"{source_commit}:{relative_path}"),
+            cwd=Path(repository),
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="ascii",
+        )
+    except (OSError, subprocess.SubprocessError):
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    lines = completed.stdout.splitlines()
+    if (
+        len(lines) != 1
+        or re.fullmatch(r"[0-9a-f]{40,64}", lines[0]) is None
+    ):
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    return lines[0]
+
+
 def _require_direct_child_lineage(
     source_commit: str,
     lineage: Sequence[str],
+    *,
+    expected_parent: str = REMEDIATION_BASE_COMMIT,
 ) -> None:
     if (
         len(lineage) != 2
         or lineage[0] != source_commit
-        or lineage[1] != REMEDIATION_BASE_COMMIT
+        or lineage[1] != expected_parent
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
 
@@ -2265,7 +2623,7 @@ def _independent_reviewed_authority_payload(
         ],
         "implementation_context_blindness_machine_authenticated": False,
         "implementation_trust_model_sha256": _trust_model_sha256(plan),
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "review_surface_identity": surface,
         "formal_design_review_file_sha256": (
             FORMAL_DESIGN_REVIEW_FILE_SHA256
@@ -2285,6 +2643,42 @@ def _independent_reviewed_authority_payload(
         "implementation_authorship_machine_verified": False,
         "authority_issuer_identity_required": False,
     }
+    if "r2_activation_control" in plan:
+        if (
+            candidate.get("authority_namespace_id")
+            != R2_AUTHORITY_NAMESPACE_ID
+            or review.get("authority_namespace_id")
+            != R2_AUTHORITY_NAMESPACE_ID
+            or review.get("implementation_source_commit")
+            != candidate.get("source_commit")
+            or review.get("implementation_candidate_binding_file_sha256")
+            != candidate_file_hash
+            or review.get(
+                "implementation_candidate_binding_payload_sha256"
+            )
+            != candidate.get(
+                "implementation_candidate_binding_payload_sha256"
+            )
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        payload.update(
+            {
+                "authority_namespace_id": R2_AUTHORITY_NAMESPACE_ID,
+                "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+                "r2_activation_plan_payload_sha256": (
+                    R2_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_v0_9_surface_sha256": (
+                    R2_OCCUPIED_SURFACE_SHA256
+                ),
+                "candidate_manifest_file_sha256": candidate.get(
+                    "candidate_manifest_file_sha256"
+                ),
+                "candidate_manifest_payload_sha256": candidate.get(
+                    "candidate_manifest_payload_sha256"
+                ),
+            }
+        )
     if (
         set(payload) | {"reviewed_implementation_authority_payload_sha256"}
         != set(_artifact_fields(plan, "reviewed_implementation_authority"))
@@ -2294,6 +2688,202 @@ def _independent_reviewed_authority_payload(
         payload
     )
     return payload
+
+
+
+def _independent_r2_candidate_manifest(
+    plan: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> tuple[dict[str, Any], str]:
+    control = plan["r2_activation_control"]
+    contract = control["candidate_manifest_contract"]
+    manifest, file_hash = _receipt(
+        Path(contract["artifact_path"]),
+        contract["exact_top_level_fields"],
+        "candidate_manifest_payload_sha256",
+    )
+    binding_required = plan["implementation_binding_contract"][
+        "required_values"
+    ]
+    expected = {
+        "schema_version": contract["schema_version"],
+        "authority_namespace_id": R2_AUTHORITY_NAMESPACE_ID,
+        "state": contract["state"],
+        "activation_source_commit": candidate.get("source_commit"),
+        "activation_parent_commit": binding_required[
+            "remediation_base_commit"
+        ],
+        "task1_parent_commit": binding_required[
+            "remediation_base_parent"
+        ],
+        "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+        "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
+        "artifact_path_surface_sha256": (
+            plan["artifact_path_surface_sha256"]
+        ),
+        "occupied_v0_9_surface_sha256": R2_OCCUPIED_SURFACE_SHA256,
+        "review_surface_identity_sha256": REVIEW_SURFACE_IDENTITY_SHA256,
+        "implementation_trust_model_sha256": _trust_model_sha256(plan),
+        "implementation_files": candidate.get("implementation_files"),
+        "scientific_dependencies": candidate.get(
+            "scientific_dependencies"
+        ),
+        "clean_restore": candidate.get("clean_restore"),
+        "protected_payload_accessed": False,
+        "scientific_values_inspected": False,
+        "runtime_authorization_issued": False,
+    }
+    if (
+        any(manifest.get(key) != value for key, value in expected.items())
+        or candidate.get("candidate_manifest_file_sha256") != file_hash
+        or candidate.get("candidate_manifest_payload_sha256")
+        != manifest.get("candidate_manifest_payload_sha256")
+    ):
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    return manifest, file_hash
+
+
+def _independent_r2_restore_receipt(
+    plan: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> tuple[dict[str, Any], str]:
+    control = plan["r2_activation_control"]
+    contract = control["clean_restore_receipt_contract"]
+    receipt, file_hash = _receipt(
+        Path(contract["artifact_path"]),
+        contract["exact_top_level_fields"],
+        "restore_receipt_payload_sha256",
+    )
+    restore = candidate.get("clean_restore")
+    binding_required = plan["implementation_binding_contract"][
+        "required_values"
+    ]
+    if type(restore) is not dict:
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    expected = {
+        "schema_version": contract["schema_version"],
+        "authority_namespace_id": R2_AUTHORITY_NAMESPACE_ID,
+        "state": contract["state"],
+        "source_commit": candidate.get("source_commit"),
+        "source_parent_commit": binding_required[
+            "remediation_base_commit"
+        ],
+        "task1_parent_commit": binding_required[
+            "remediation_base_parent"
+        ],
+        "bundle_path": restore.get("bundle_path"),
+        "bundle_file_sha256": restore.get("bundle_file_sha256"),
+        "bundle_size_bytes": restore.get("bundle_size_bytes"),
+        "restore_head": candidate.get("source_commit"),
+        "restore_worktree_clean": True,
+        "git_fsck_full_pass": True,
+        "core_autocrlf": False,
+        "core_longpaths": True,
+        "implementation_rows_match": True,
+        "scientific_dependency_rows_match": True,
+        "targeted_tests_passed": True,
+        "full_suite_passed": True,
+        "protected_payload_accessed": False,
+        "scientific_values_inspected": False,
+        "runtime_artifacts_created": 0,
+    }
+    if (
+        any(receipt.get(key) != value for key, value in expected.items())
+        or type(receipt.get("restore_path")) is not str
+        or not receipt["restore_path"]
+        or restore.get("restore_receipt_file_sha256") != file_hash
+        or restore.get("restore_receipt_payload_sha256")
+        != receipt.get("restore_receipt_payload_sha256")
+    ):
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    return receipt, file_hash
+
+
+def _independent_r2_review_evidence(
+    plan: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    candidate_file_hash: str,
+) -> tuple[dict[str, Any], str]:
+    control = plan["r2_activation_control"]
+    contract = control["fresh_review_evidence_contract"]
+    evidence, file_hash = _receipt(
+        Path(contract["artifact_path"]),
+        contract["exact_top_level_fields"],
+        "review_evidence_payload_sha256",
+    )
+    if any(
+        evidence.get(key) != value
+        for key, value in contract["required_values"].items()
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    restore = candidate["clean_restore"]
+    expected = {
+        "implementation_source_commit": candidate["source_commit"],
+        "implementation_candidate_binding_file_sha256": (
+            candidate_file_hash
+        ),
+        "implementation_candidate_binding_payload_sha256": candidate[
+            "implementation_candidate_binding_payload_sha256"
+        ],
+        "candidate_manifest_file_sha256": candidate[
+            "candidate_manifest_file_sha256"
+        ],
+        "candidate_manifest_payload_sha256": candidate[
+            "candidate_manifest_payload_sha256"
+        ],
+        "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+        "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
+        "artifact_path_surface_sha256": (
+            plan["artifact_path_surface_sha256"]
+        ),
+        "review_surface_identity": _review_surface_identity(plan),
+        "bundle_file_sha256": restore["bundle_file_sha256"],
+        "restore_receipt_file_sha256": restore[
+            "restore_receipt_file_sha256"
+        ],
+        "restore_receipt_payload_sha256": restore[
+            "restore_receipt_payload_sha256"
+        ],
+        "authority_namespace_id": R2_AUTHORITY_NAMESPACE_ID,
+        "contract_file_sha256": CONTRACT_FILE_SHA256,
+        "plan_file_sha256": PLAN_FILE_SHA256,
+        "plan_payload_sha256": PLAN_PAYLOAD_SHA256,
+        "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+        "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
+        "artifact_path_surface_sha256": (
+            plan["artifact_path_surface_sha256"]
+        ),
+        "occupied_v0_9_surface_sha256": R2_OCCUPIED_SURFACE_SHA256,
+        "candidate_manifest_file_sha256": candidate[
+            "candidate_manifest_file_sha256"
+        ],
+        "candidate_manifest_payload_sha256": candidate[
+            "candidate_manifest_payload_sha256"
+        ],
+        "review_evidence_file_sha256": review_evidence_file_hash,
+        "review_evidence_payload_sha256": review_evidence[
+            "review_evidence_payload_sha256"
+        ],
+    }
+    if any(evidence.get(key) != value for key, value in expected.items()):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    for field in (
+        "changed_file_manifest_sha256",
+        "targeted_test_node_id_sha256",
+        "full_suite_node_id_sha256",
+    ):
+        if (
+            type(evidence.get(field)) is not str
+            or SHA_RE.fullmatch(evidence[field]) is None
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+    for field in ("targeted_test_count", "full_suite_test_count"):
+        if (
+            type(evidence.get(field)) is not int
+            or evidence[field] < 1
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+    return evidence, file_hash
 
 
 def independent_runtime_lineage(
@@ -2362,7 +2952,10 @@ def independent_runtime_lineage(
         "schema_version": binding_contract["schema_version"],
         "plan_file_sha256": PLAN_FILE_SHA256,
         "plan_payload_sha256": PLAN_PAYLOAD_SHA256,
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
+        "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
+        "occupied_v0_9_surface_sha256": R2_OCCUPIED_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "review_surface_identity": _review_surface_identity(plan),
         "implementation_context_blindness_machine_authenticated": False,
         "current_exposed_design_context_authored_final_bytes": False,
@@ -2402,10 +2995,37 @@ def independent_runtime_lineage(
         or object_format not in {"sha1", "sha256"}
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    expected_base = binding_contract["required_values"][
+        "remediation_base_commit"
+    ]
+    expected_base_parent = binding_contract["required_values"][
+        "remediation_base_parent"
+    ]
     _require_direct_child_lineage(
         source_commit,
         _git_parent_lineage(repository, source_commit),
+        expected_parent=expected_base,
     )
+    _require_direct_child_lineage(
+        expected_base,
+        _git_parent_lineage(repository, expected_base),
+        expected_parent=expected_base_parent,
+    )
+    activation_relative = (
+        "tools/gate12c2_original_baseline_r2_activation_plan.json"
+    )
+    try:
+        activation_raw = (repository / activation_relative).read_bytes()
+    except OSError:
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    if (
+        verifier_sha256(activation_raw) != R2_PLAN_FILE_SHA256
+        or _git_path_blob_oid(
+            repository, source_commit, activation_relative
+        )
+        != _git_blob(activation_raw, object_format)
+    ):
+        _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     implementation_rows = candidate.get("implementation_files")
     if (
         type(implementation_rows) is not list
@@ -2513,6 +3133,8 @@ def independent_runtime_lineage(
         or verifier_sha256(bundle_raw) != restore["bundle_file_sha256"]
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    _independent_r2_restore_receipt(plan, candidate)
+    _independent_r2_candidate_manifest(plan, candidate)
     review_schema = plan["review_receipt_schemas"][
         "fresh_implementation_review_verdict"
     ]
@@ -2520,6 +3142,13 @@ def independent_runtime_lineage(
         Path(review_schema["artifact_path"]),
         _artifact_fields(plan, "fresh_implementation_review_verdict"),
         "fresh_implementation_review_payload_sha256",
+    )
+    review_evidence, review_evidence_file_hash = (
+        _independent_r2_review_evidence(
+            plan,
+            candidate,
+            candidate_file_hash,
+        )
     )
     candidate_surface = _validate_review_surface(
         plan, candidate.get("review_surface_identity")
@@ -2679,7 +3308,7 @@ def independent_verification_receipt(
         "outer_experiment_count": 768,
         "shard_count": 768,
         "index_count": 9,
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "implementation_source_commit": implementation_source_commit,
         "git_head_at_protected_read": git_head_at_protected_read,
         "git_head_at_terminal": git_head_at_terminal,
@@ -3104,9 +3733,23 @@ def _publish(
     final = Path(row["final_path"])
     pending = Path(row["pending_path"])
     raw = verifier_canonical_bytes(dict(payload)) + b"\n"
+    r2_active = "r2_activation_control" in plan
+    expected_suffix = (
+        ".pending-" + R2_AUTHORITY_NAMESPACE_ID
+        if r2_active
+        else ".pending-v0.9"
+    )
     if (
         final.parent != pending.parent
-        or pending.name != final.name + ".pending-v0.9"
+        or pending.name != final.name + expected_suffix
+        or (
+            r2_active
+            and (
+                role == "formal_design_review_verdict"
+                or R2_AUTHORITY_NAMESPACE_ID not in final.name
+                or R2_AUTHORITY_NAMESPACE_ID not in pending.name
+            )
+        )
         or final.exists()
         or pending.exists()
         or not final.parent.is_dir()
@@ -3262,7 +3905,7 @@ def _validate_control_preflight(
             "implementation_source_commit"
         ],
         "executing_code_identity_status": "verified",
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
         ],
@@ -3315,7 +3958,7 @@ def _validate_control_authorization(
         "preflight_file_sha256": preflight_file_hash,
         "preflight_payload_sha256": preflight["preflight_payload_sha256"],
         "protected_root_path": str(PROTECTED_ROOT),
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
         ],
@@ -3385,7 +4028,7 @@ def _validate_control_verdict(
         "authorization_payload_sha256": authorization[
             "authorization_payload_sha256"
         ],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
         ],
@@ -3453,7 +4096,7 @@ def _validate_control_claim(
         "authorization_verdict_payload_sha256": verdict[
             "authorization_verdict_payload_sha256"
         ],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
         ],
@@ -3638,7 +4281,7 @@ def _load_verifier_controls(
             for row in plan["upstream_authority"]["artifact_rows"]
             if row["role"] == "resource_implementation_pass"
         ),
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "implementation_source_commit": extraction_claim[
             "implementation_source_commit"
         ],
@@ -3806,7 +4449,7 @@ def _load_verifier_controls(
         "extraction_terminal_claim_payload_sha256": extraction_terminal[
             "terminal_claim_payload_sha256"
         ],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "input_lineage_status": "verified",
         "protected_root_status": "canonical_path_bound_no_payload_read",
         "output_surface_status": "fresh_exact",
@@ -3875,7 +4518,7 @@ def _load_verifier_controls(
         "extraction_terminal_claim_payload_sha256": extraction_terminal[
             "terminal_claim_payload_sha256"
         ],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "protected_root_path": str(PROTECTED_ROOT),
     }
     if any(
@@ -4049,7 +4692,7 @@ def _verifier_claim(
         "authorization_verdict_payload_sha256": controls["verdict"][
             "authorization_verdict_payload_sha256"
         ],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
         ],
@@ -4278,7 +4921,7 @@ def _verifier_failure(
         "extraction_terminal_claim_payload_sha256": controls[
             "extraction_terminal"
         ]["terminal_claim_payload_sha256"],
-        "artifact_path_surface_sha256": ARTIFACT_SURFACE_SHA256,
+        "artifact_path_surface_sha256": plan["artifact_path_surface_sha256"],
         "implementation_source_commit": claim["implementation_source_commit"],
         "git_head_at_protected_read": progress.get(
             "git_head_at_protected_read", claim["git_head_at_claim"]
