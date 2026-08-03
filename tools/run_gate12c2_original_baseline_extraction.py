@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Run an authorized Gate12C-2 v0.8 baseline extraction."""
+"""Run an authorized Gate12C-2 v0.9 baseline extraction."""
 
 
 from __future__ import annotations
 
 import argparse
+import ctypes
+import ctypes.wintypes
 import importlib.util
 import os
 import socket
@@ -12,12 +14,334 @@ import sys
 from pathlib import Path
 from typing import Any
 
+
+class _BootstrapAttributeTag(ctypes.Structure):
+    _fields_ = [
+        ("attributes", ctypes.wintypes.DWORD),
+        ("tag", ctypes.wintypes.DWORD),
+    ]
+
+
+class _BootstrapFileId128(ctypes.Structure):
+    _fields_ = [("identifier", ctypes.c_ubyte * 16)]
+
+
+class _BootstrapFileId(ctypes.Structure):
+    _fields_ = [
+        ("volume", ctypes.c_ulonglong),
+        ("identifier", _BootstrapFileId128),
+    ]
+
+
+_BOOTSTRAP_HANDLES: list[int] = globals().get("_BOOTSTRAP_HANDLES", [])
+_BOOTSTRAP_RECORDS: dict[str, dict[str, object]] = globals().get(
+    "_BOOTSTRAP_RECORDS", {}
+)
+_RETAINED_SELF_BOOTSTRAPPED = bool(
+    globals().get("_RETAINED_SELF_BOOTSTRAPPED", False)
+)
+
+
+def _bootstrap_fail() -> None:
+    sys.stderr.write(
+        "gate12c2-original-baseline:ERROR:"
+        "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH\n"
+    )
+    raise SystemExit(2)
+
+
+def _bootstrap_source(path: Path, *, directory: bool = False) -> dict[str, object]:
+    try:
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        prototypes = (
+            (
+                "CreateFileW",
+                [
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.wintypes.DWORD,
+                    ctypes.wintypes.DWORD,
+                    ctypes.c_void_p,
+                    ctypes.wintypes.DWORD,
+                    ctypes.wintypes.DWORD,
+                    ctypes.wintypes.HANDLE,
+                ],
+                ctypes.wintypes.HANDLE,
+            ),
+            (
+                "GetFileInformationByHandleEx",
+                [
+                    ctypes.wintypes.HANDLE,
+                    ctypes.c_int,
+                    ctypes.c_void_p,
+                    ctypes.wintypes.DWORD,
+                ],
+                ctypes.wintypes.BOOL,
+            ),
+            (
+                "GetFinalPathNameByHandleW",
+                [
+                    ctypes.wintypes.HANDLE,
+                    ctypes.wintypes.LPWSTR,
+                    ctypes.wintypes.DWORD,
+                    ctypes.wintypes.DWORD,
+                ],
+                ctypes.wintypes.DWORD,
+            ),
+            (
+                "GetFileSizeEx",
+                [ctypes.wintypes.HANDLE, ctypes.POINTER(ctypes.c_longlong)],
+                ctypes.wintypes.BOOL,
+            ),
+            (
+                "ReadFile",
+                [
+                    ctypes.wintypes.HANDLE,
+                    ctypes.c_void_p,
+                    ctypes.wintypes.DWORD,
+                    ctypes.POINTER(ctypes.wintypes.DWORD),
+                    ctypes.c_void_p,
+                ],
+                ctypes.wintypes.BOOL,
+            ),
+            (
+                "CompareStringOrdinal",
+                [
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.c_int,
+                    ctypes.wintypes.LPCWSTR,
+                    ctypes.c_int,
+                    ctypes.wintypes.BOOL,
+                ],
+                ctypes.c_int,
+            ),
+        )
+        for name, argtypes, restype in prototypes:
+            function = getattr(api, name)
+            function.argtypes = argtypes
+            function.restype = restype
+        handle_value = api.CreateFileW(
+            str(path),
+            0x0001 | 0x0080 if directory else 0x80000000,
+            0x00000001,
+            None,
+            3,
+            0x00200000 | (0x02000000 if directory else 0x08000000),
+            None,
+        )
+        handle = int(
+            handle_value
+            if isinstance(handle_value, int)
+            else ctypes.cast(handle_value, ctypes.c_void_p).value or 0
+        )
+        if handle in {0, ctypes.c_void_p(-1).value}:
+            _bootstrap_fail()
+        attribute = _BootstrapAttributeTag()
+        if not api.GetFileInformationByHandleEx(
+            handle, 9, ctypes.byref(attribute), ctypes.sizeof(attribute)
+        ):
+            _bootstrap_fail()
+        if attribute.attributes & 0x400 or attribute.tag:
+            _bootstrap_fail()
+        identity = _BootstrapFileId()
+        if not api.GetFileInformationByHandleEx(
+            handle, 18, ctypes.byref(identity), ctypes.sizeof(identity)
+        ):
+            _bootstrap_fail()
+        needed = api.GetFinalPathNameByHandleW(handle, None, 0, 0)
+        if not needed:
+            _bootstrap_fail()
+        buffer = ctypes.create_unicode_buffer(int(needed) + 1)
+        copied = api.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
+        if not copied or copied >= len(buffer):
+            _bootstrap_fail()
+        final = buffer.value
+        upper = final.upper()
+        if upper.startswith(
+            ("\\\\?\\UNC\\", "\\\\.\\", "\\\\?\\VOLUME", "\\\\?\\GLOBALROOT")
+        ):
+            _bootstrap_fail()
+        if final.startswith("\\\\?\\") and len(final) > 6 and final[4].isalpha():
+            final = final[4:]
+        elif final.startswith("\\\\?\\"):
+            _bootstrap_fail()
+        compare = api.CompareStringOrdinal
+        result = int(compare(final, -1, str(path), -1, True))
+        if result != 2:
+            _bootstrap_fail()
+        raw = b""
+        if not directory:
+            size = ctypes.c_longlong()
+            if not api.GetFileSizeEx(handle, ctypes.byref(size)) or size.value < 0:
+                _bootstrap_fail()
+            chunks: list[bytes] = []
+            remaining = int(size.value)
+            while remaining:
+                amount = min(remaining, 1 << 20)
+                block = ctypes.create_string_buffer(amount)
+                read = ctypes.wintypes.DWORD()
+                if not api.ReadFile(
+                    handle, block, amount, ctypes.byref(read), None
+                ):
+                    _bootstrap_fail()
+                if read.value <= 0:
+                    _bootstrap_fail()
+                chunks.append(block.raw[: read.value])
+                remaining -= int(read.value)
+            raw = b"".join(chunks)
+        _BOOTSTRAP_HANDLES.append(handle)
+        record = {
+            "handle": handle,
+            "directory": directory,
+            "final_path": final,
+            "volume_serial": int(identity.volume),
+            "file_id": bytes(identity.identifier.identifier),
+            "raw": raw,
+        }
+        _BOOTSTRAP_RECORDS[str(path)] = record
+        return record
+    except SystemExit:
+        raise
+    except Exception:
+        _bootstrap_fail()
+
+
+class _BootstrapLoader:
+    def __init__(self, name: str, origin: str, raw: bytes) -> None:
+        self.name = name
+        self.origin = origin
+        self.raw = raw
+
+    def create_module(self, _spec: object) -> None:
+        return None
+
+    def exec_module(self, module: object) -> None:
+        exec(compile(self.raw, self.origin, "exec", dont_inherit=True), module.__dict__)
+
+    def get_filename(self, _name: str) -> str:
+        return self.origin
+
+
+def _bootstrap_entry_from_retained_source() -> None:
+    global _RETAINED_SELF_BOOTSTRAPPED
+    if _RETAINED_SELF_BOOTSTRAPPED:
+        return
+    entry = _bootstrap_source(Path(__file__).absolute())
+    root = Path(str(entry["final_path"])).parent.parent
+    root_record = _bootstrap_source(root, directory=True)
+    try:
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        compare = api.CompareStringOrdinal
+        compare.argtypes = [
+            ctypes.wintypes.LPCWSTR,
+            ctypes.c_int,
+            ctypes.wintypes.LPCWSTR,
+            ctypes.c_int,
+            ctypes.wintypes.BOOL,
+        ]
+        compare.restype = ctypes.c_int
+        if (
+            int(
+                compare(
+                    str(root),
+                    -1,
+                    r"C:\Users\aoika\Documents\GitHub\pale-ale",
+                    -1,
+                    True,
+                )
+            )
+            != 2
+            or root_record["volume_serial"] != entry["volume_serial"]
+        ):
+            _bootstrap_fail()
+        module = sys.modules.get("__main__")
+        if module is None:
+            _bootstrap_fail()
+        loader = _BootstrapLoader(
+            "__main__", str(entry["final_path"]), bytes(entry["raw"])
+        )
+        spec = importlib.util.spec_from_loader(
+            "__main__", loader, origin=str(entry["final_path"])
+        )
+        if spec is None:
+            _bootstrap_fail()
+        module.__file__ = str(entry["final_path"])
+        module.__spec__ = spec
+        _RETAINED_SELF_BOOTSTRAPPED = True
+        module.__dict__["_RETAINED_SELF_BOOTSTRAPPED"] = True
+        exec(
+            compile(
+                bytes(entry["raw"]),
+                str(entry["final_path"]),
+                "exec",
+                dont_inherit=True,
+            ),
+            module.__dict__,
+        )
+    except SystemExit:
+        raise
+    except Exception:
+        _bootstrap_fail()
+    _bootstrap_fail()
+
+
+if __name__ == "__main__" and not _RETAINED_SELF_BOOTSTRAPPED:
+    _bootstrap_entry_from_retained_source()
+
+
 def _load_local_module(name: str, filename: str) -> Any:
-    path = Path(__file__).resolve().with_name(filename)
+    path = Path(__file__).absolute().with_name(filename)
+    if __name__ == "__main__":
+        entry = _bootstrap_source(Path(__file__).absolute())
+        root = Path(str(entry["final_path"])).parent.parent
+        root_record = _bootstrap_source(root, directory=True)
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        if (
+            int(
+                api.CompareStringOrdinal(
+                    str(root),
+                    -1,
+                    r"C:\Users\aoika\Documents\GitHub\pale-ale",
+                    -1,
+                    True,
+                )
+            )
+            != 2
+            or root_record["volume_serial"] != entry["volume_serial"]
+        ):
+            _bootstrap_fail()
+        entry_module = sys.modules.get("__main__")
+        if entry_module is None:
+            _bootstrap_fail()
+        entry_loader = _BootstrapLoader(
+            "__main__", str(entry["final_path"]), bytes(entry["raw"])
+        )
+        entry_spec = importlib.util.spec_from_loader(
+            "__main__", entry_loader, origin=str(entry["final_path"])
+        )
+        if entry_spec is None:
+            _bootstrap_fail()
+        entry_module.__file__ = str(entry["final_path"])
+        entry_module.__spec__ = entry_spec
+        source = _bootstrap_source(root / "tools" / filename)
+        loader = _BootstrapLoader(name, str(source["final_path"]), bytes(source["raw"]))
+        spec = importlib.util.spec_from_loader(
+            name, loader, origin=str(source["final_path"])
+        )
+        if spec is None:
+            _bootstrap_fail()
+        module = importlib.util.module_from_spec(spec)
+        module.__file__ = str(source["final_path"])
+        sys.modules[name] = module
+        try:
+            loader.exec_module(module)
+        except Exception:
+            sys.modules.pop(name, None)
+            _bootstrap_fail()
+        return module
     existing = sys.modules.get(name)
     if existing is not None:
         existing_path = getattr(existing, "__file__", None)
-        if existing_path is not None and Path(existing_path).resolve() == path:
+        if existing_path is not None and Path(existing_path).absolute() == path:
             return existing
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -42,7 +366,9 @@ def _load_reviewed_chain(
     binding_schema = plan["implementation_binding_contract"]
     candidate, candidate_file_hash = gate.read_schema_receipt(
         Path(binding_schema["artifact_path"]),
-        exact_fields=binding_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "implementation_candidate_binding"
+        ),
         hash_field="implementation_candidate_binding_payload_sha256",
     )
     gate.validate_candidate_binding(
@@ -53,7 +379,9 @@ def _load_reviewed_chain(
     ]
     review, review_file_hash = gate.read_schema_receipt(
         Path(review_schema["artifact_path"]),
-        exact_fields=review_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "fresh_implementation_review_verdict"
+        ),
         hash_field="fresh_implementation_review_payload_sha256",
     )
     gate.validate_implementation_review(
@@ -69,7 +397,9 @@ def _load_reviewed_chain(
     authority_schema = plan["reviewed_implementation_authority_contract"]
     authority, authority_file_hash = gate.read_schema_receipt(
         Path(authority_schema["artifact_path"]),
-        exact_fields=authority_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "reviewed_implementation_authority"
+        ),
         hash_field="reviewed_implementation_authority_payload_sha256",
     )
     gate.validate_reviewed_authority(
@@ -86,31 +416,7 @@ def _load_reviewed_chain(
 def _observe_surface(
     plan: dict[str, Any],
 ) -> dict[str, gate.ArtifactObservation]:
-    outcome_fields = plan["artifact_lifecycle_contract"][
-        "outcome_field_by_role"
-    ]
-    observations: dict[str, gate.ArtifactObservation] = {}
-    for row in plan["artifact_path_surface"]:
-        role = row["role"]
-        final = Path(row["final_path"])
-        pending = Path(row["pending_path"])
-        outcome = None
-        if final.is_file() and role in outcome_fields:
-            try:
-                raw = final.read_bytes()
-                if raw.endswith(b"\n"):
-                    payload = gate.require_mapping(
-                        gate.strict_json_loads(raw[:-1], canonical=True)
-                    )
-                    outcome = payload.get(outcome_fields[role])
-            except Exception:
-                outcome = "__invalid__"
-        observations[role] = gate.ArtifactObservation(
-            final_exists=final.is_file(),
-            pending_exists=pending.exists(),
-            outcome=outcome,
-        )
-    return observations
+    return gate.observe_artifact_surface(plan)
 
 
 def _load_controls(
@@ -127,6 +433,7 @@ def _load_controls(
     str,
     dict[str, Any],
     str,
+    dict[str, Any],
 ]:
     authority, authority_file_hash, candidate = _load_reviewed_chain(plan, repository)
     rows = gate.artifact_rows_by_role(plan)
@@ -145,6 +452,7 @@ def _load_controls(
         reviewed_authority_payload_sha256=authority[
             "reviewed_implementation_authority_payload_sha256"
         ],
+        implementation_source_commit=candidate["source_commit"],
         now_ns=now_ns,
     )
     authorization_schema = plan["control_receipt_schemas"][
@@ -208,6 +516,7 @@ def _load_controls(
         authorization_file_hash,
         verdict,
         verdict_file_hash,
+        candidate,
     )
 
 
@@ -315,6 +624,16 @@ def _failure_leaf(
             "payload_seal_payload_sha256"
         ],
         "artifact_path_surface_sha256": gate.ARTIFACT_PATH_SURFACE_SHA256,
+        "implementation_source_commit": claim["implementation_source_commit"],
+        "git_head_at_protected_read": progress.get(
+            "git_head_at_protected_read", claim["git_head_at_claim"]
+        ),
+        "git_head_at_terminal": progress.get(
+            "git_head_at_terminal", claim["git_head_at_claim"]
+        ),
+        "executing_code_identity_surface_sha256": claim[
+            "executing_code_identity_surface_sha256"
+        ],
         "reviewed_implementation_authority_file_sha256": claim[
             "reviewed_implementation_authority_file_sha256"
         ],
@@ -400,7 +719,7 @@ def execute(
     now_ns: int | None = None,
 ) -> dict[str, Any]:
     _runtime_isolated()
-    root = Path(repository).resolve()
+    root = Path(repository).absolute()
     plan = gate.load_frozen_plan()
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
@@ -420,15 +739,36 @@ def execute(
         authorization_file_hash,
         verdict,
         verdict_file_hash,
+        candidate,
     ) = controls
-    observations = _observe_surface(plan)
-    phase = gate.classify_lifecycle_surface(
+    gate.require_full_surface_checkpoint(
         plan,
-        observations,
+        scope="extraction",
+        checkpoint="before_execution_claim_publication",
+        state="EXTRACTION_AUTHORIZATION_VERIFIED_PASS",
         temporal_predicate="extraction_preflight_and_authorization_fresh",
     )
-    if phase != "extraction_authorization_verdict_pass_fresh":
-        raise gate.Gate12C2OriginalBaselineError("AUTHORIZATION_INVALID")
+    entry_module = sys.modules.get("__main__")
+    if entry_module is None:
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    identity = gate.ExecutingCodeIdentity(
+        plan,
+        candidate,
+        entry_path=Path(__file__).absolute(),
+        repository_argument=Path(repository).absolute(),
+        loaded_modules={
+            "__main__": entry_module,
+            "gate12c2_original_baseline_commitments": gate,
+        },
+        bootstrap_records=_BOOTSTRAP_RECORDS,
+    )
+    identity.load_scientific_dependencies()
+    gate.install_executing_code_identity(identity)
+    claim_identity = identity.checkpoint(
+        "immediately_before_execution_claim_publication"
+    )
     pid = os.getpid()
     creation = gate.query_process_creation_time_utc(pid)
     claim = gate.build_execution_claim_payload(
@@ -443,6 +783,10 @@ def execute(
         owner_hostname=socket.gethostname(),
         owner_pid=pid,
         owner_process_creation_time_utc=creation,
+        git_head_at_claim=claim_identity["git_head"],
+        executing_code_identity_surface_sha256=claim_identity[
+            "executing_code_identity_surface_sha256"
+        ],
         preflight_file_sha256=preflight_file_hash,
         authorization_file_sha256=authorization_file_hash,
         verdict_file_sha256=verdict_file_hash,
@@ -470,6 +814,24 @@ def execute(
 
     progress = gate.new_extraction_progress()
     try:
+        gate.require_full_surface_checkpoint(
+            plan,
+            scope="extraction",
+            checkpoint="protected_read_entry",
+            state="EXTRACTION_EXECUTION_CLAIMED",
+            liveness="ACTIVE",
+        )
+        protected_identity = identity.checkpoint(
+            "immediately_before_protected_read_entry"
+        )
+        if (
+            protected_identity["executing_code_identity_surface_sha256"]
+            != claim["executing_code_identity_surface_sha256"]
+        ):
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
+        progress["git_head_at_protected_read"] = protected_identity["git_head"]
         lineage = _reverify_claimed_lineage(
             plan,
             lineage,
@@ -501,6 +863,21 @@ def execute(
             execution_claim_payload_sha256=claim[
                 "execution_claim_payload_sha256"
             ],
+            implementation_source_commit=claim[
+                "implementation_source_commit"
+            ],
+            git_head_at_protected_read=protected_identity["git_head"],
+            git_head_at_terminal=claim["implementation_source_commit"],
+            executing_code_identity_surface_sha256=claim[
+                "executing_code_identity_surface_sha256"
+            ],
+        )
+        gate.require_full_surface_checkpoint(
+            plan,
+            scope="extraction",
+            checkpoint="before_success_terminal_publication",
+            state="EXTRACTION_POST_MANIFEST_VERIFIED",
+            liveness="ACTIVE",
         )
         terminal = gate.build_terminal_payload(
             plan,
@@ -546,6 +923,26 @@ def execute(
             verdict_file_sha256=verdict_file_hash,
             execution_claim_file_sha256=claim_file_hash,
         )
+        gate.require_full_surface_checkpoint(
+            plan,
+            scope="extraction",
+            checkpoint=(
+                "lineage_or_semantic_failure_before_failure_terminal_publication"
+            ),
+            state=str(progress["source_state"]),
+            liveness="ACTIVE",
+        )
+        terminal_identity = identity.checkpoint(
+            "immediately_before_terminal_publication"
+        )
+        if (
+            terminal_identity["executing_code_identity_surface_sha256"]
+            != claim["executing_code_identity_surface_sha256"]
+        ):
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
+        progress["git_head_at_terminal"] = terminal_identity["git_head"]
         gate.update_extraction_progress(
             progress,
             failure_phase="failure_terminal_claim_publication",
@@ -556,11 +953,37 @@ def execute(
             source_state="EXTRACTION_FAILURE_TERMINAL_CLAIM_PUBLISHED",
             failure_phase="leaf_publication",
         )
+        gate.require_full_surface_checkpoint(
+            plan,
+            scope="extraction",
+            checkpoint="before_failure_leaf_publication",
+            state="EXTRACTION_FAILURE_TERMINAL_CLAIM_PUBLISHED",
+            liveness="ACTIVE",
+        )
         gate.publish_role(plan, "extraction_failure", failure)
+        gate.require_full_surface_checkpoint(
+            plan,
+            scope="extraction",
+            checkpoint="terminal_failure_verification",
+            state="EXTRACTION_FAILURE_RECEIPT_PUBLISHED",
+        )
+        gate.clear_executing_code_identity(identity)
+        identity.close()
         raise gate.Gate12C2OriginalBaselineError(
             failure["failure_code"]
         ) from None
 
+    terminal_identity = identity.checkpoint(
+        "immediately_before_terminal_publication"
+    )
+    if (
+        terminal_identity["executing_code_identity_surface_sha256"]
+        != claim["executing_code_identity_surface_sha256"]
+    ):
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
+    progress["git_head_at_terminal"] = terminal_identity["git_head"]
     gate.update_extraction_progress(
         progress, failure_phase="terminal_claim_publication"
     )
@@ -570,7 +993,22 @@ def execute(
         source_state="EXTRACTION_SUCCESS_TERMINAL_CLAIM_PUBLISHED",
         failure_phase="leaf_publication",
     )
+    gate.require_full_surface_checkpoint(
+        plan,
+        scope="extraction",
+        checkpoint="before_success_leaf_publication",
+        state="EXTRACTION_SUCCESS_TERMINAL_CLAIM_PUBLISHED",
+        liveness="ACTIVE",
+    )
     gate.publish_role(plan, "extraction_success", leaf)
+    gate.require_full_surface_checkpoint(
+        plan,
+        scope="extraction",
+        checkpoint="terminal_success_verification",
+        state="BASELINE_RECEIPT_PUBLISHED",
+    )
+    gate.clear_executing_code_identity(identity)
+    identity.close()
     return leaf
 
 

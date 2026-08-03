@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Gate12C-2 v0.8 candidate implementation binding."""
+"""Build the Gate12C-2 v0.9 candidate implementation binding."""
 
 from __future__ import annotations
 
@@ -39,7 +39,6 @@ IMPLEMENTATION_ROLES = {
     ),
 }
 
-
 def _git(repository: Path, *arguments: str) -> str:
     try:
         completed = subprocess.run(
@@ -57,6 +56,16 @@ def _git(repository: Path, *arguments: str) -> str:
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         ) from None
     return completed.stdout.strip()
+
+
+def _require_direct_child_lineage(
+    source_commit: str,
+    lineage: list[str],
+) -> None:
+    if lineage != [source_commit, gate.REMEDIATION_BASE_COMMIT]:
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
 
 
 def _git_bool(repository: Path, key: str, *, unset: bool) -> bool:
@@ -193,6 +202,25 @@ def build_candidate_binding(
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
+    source_lineage = _git(
+        root, "rev-list", "--parents", "-n", "1", source_commit
+    ).split()
+    _require_direct_child_lineage(source_commit, source_lineage)
+    base_lineage = _git(
+        root,
+        "rev-list",
+        "--parents",
+        "-n",
+        "1",
+        gate.REMEDIATION_BASE_COMMIT,
+    ).split()
+    if (
+        base_lineage
+        != [gate.REMEDIATION_BASE_COMMIT, gate.REMEDIATION_BASE_PARENT]
+    ):
+        raise gate.Gate12C2OriginalBaselineError(
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        )
     if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
@@ -249,12 +277,17 @@ def build_candidate_binding(
     )
     payload = {
         "schema_version": (
-            "gate12c2_original_baseline_implementation_candidate_binding_v0.8"
+            "gate12c2_original_baseline_implementation_candidate_binding_v0.9"
         ),
         "binding_id": (
-            "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_IMPLEMENTATION_CANDIDATE_BINDING_v0.8"
+            "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_IMPLEMENTATION_CANDIDATE_BINDING_v0.9"
         ),
         "source_commit": source_commit,
+        "authorized_implementation_repository": str(
+            gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "remediation_base_commit": gate.REMEDIATION_BASE_COMMIT,
+        "remediation_base_parent": gate.REMEDIATION_BASE_PARENT,
         "git_object_format": object_format,
         "core_autocrlf": False,
         "core_longpaths": True,
@@ -275,11 +308,12 @@ def build_candidate_binding(
         "implementation_context_blindness_machine_authenticated": False,
         "current_exposed_design_context_authored_final_bytes": False,
         "implementation_trust_model_sha256": (
-            gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+            gate.recompute_implementation_trust_model_sha256(plan)
         ),
         "artifact_path_surface_sha256": (
             gate.ARTIFACT_PATH_SURFACE_SHA256
         ),
+        "review_surface_identity": gate.review_surface_identity(plan),
         "implementation_files": implementation_rows,
         "scientific_dependencies": scientific_rows,
         "clean_restore": restore,

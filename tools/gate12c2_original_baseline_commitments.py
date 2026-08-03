@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate12C-2 v0.8 original-baseline commitment extraction core.
+"""Gate12C-2 v0.9 original-baseline commitment extraction core.
 
 This module deliberately separates control-plane validation from the only
 code path that may parse the protected payload.  Importing it performs no
@@ -19,49 +19,56 @@ import math
 import os
 import re
 import socket
+import subprocess
 import sys
+import types
 import zlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Sequence
 
 
-GATE_ID = "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_v0.8"
-PLAN_SCHEMA = "gate12c2_original_baseline_commitment_gate_plan_v0.8"
+GATE_ID = "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_v0.9"
+PLAN_SCHEMA = "gate12c2_original_baseline_commitment_gate_plan_v0.9"
 PLAN_PATH = Path(
     r"C:\Users\aoika\Documents\Research\pale-ale-local\research-program"
-    r"\profile-plans\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_PLAN_v0.8_2026-08-01.json"
+    r"\profile-plans\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_PLAN_v0.9_2026-08-01.json"
 )
-PLAN_FILE_SHA256 = "0a433e92c04e92762aa930647a14c465614fcb2bd11836e63851c617a18a338a"
-PLAN_PAYLOAD_SHA256 = "5c2cefc27fd36dbf3343e5095ccfc2645f33a5bb4ce4cf596e0c80905df0d1b6"
+PLAN_FILE_SHA256 = "ae7979779675fc032b2919a4db0887d60011dcdc510a43deef43fc090e5ef03c"
+PLAN_PAYLOAD_SHA256 = "2bfaeb778494772a21975d0de22c6cc5221edbb742787fb1a34db5544eb24621"
 CONTRACT_PATH = Path(
     r"C:\Users\aoika\Documents\Research\pale-ale-local\research-program"
-    r"\contracts\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_CONTRACT_v0.8_2026-08-01.md"
+    r"\contracts\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_CONTRACT_v0.9_2026-08-01.md"
 )
-CONTRACT_FILE_SHA256 = "80cf61544a492e824865b5b5612b29f341b2052d20e6fb1eef169351b6456b46"
+CONTRACT_FILE_SHA256 = "794cf22c89375424a3485a2f441ec53fc930f016d470e4cc95778cb2528ae82d"
 FORMAL_DESIGN_REVIEW_PATH = Path(
     r"C:\Users\aoika\Documents\Research\pale-ale-local\research-program"
-    r"\receipts\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_FORMAL_FRESH_DESIGN_REVIEW_VERDICT_v0.8_2026-08-01.json"
+    r"\receipts\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_FORMAL_FRESH_DESIGN_REVIEW_VERDICT_v0.9_2026-08-01.json"
 )
 FORMAL_DESIGN_REVIEW_FILE_SHA256 = (
-    "57dd2e8ad95c35614f7af62eb3527d87f050260772201300971972fed2a2c04c"
+    "5a0ba0d6ad6b5b79df819e73d7ab15831c081ad5e4e44ca6b8195e59bc97cc1e"
 )
 FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256 = (
-    "83ec774e8fdefa9e2c8bc5463c27fa68bd29a70f09c389c4c58707db40644c62"
+    "fafcbb29e998e2e1a7d9c6351e0d2a925e9c652d01dd3236c13e041ac5eac3e2"
 )
 ARTIFACT_PATH_SURFACE_SHA256 = (
-    "5d622ba240ea5dd93d963cb47e94a5ff5c3756b370adf823d5e2446435eba005"
+    "7018f1a71ca8f41783f6228a7b73d25a28a37ba05462fbe7477f3fc76d1f5e2e"
 )
 CONFIGURATION_SURFACE_SHA256 = (
     "a564c25f28e42860f0a1e8f51d4a311b4eae2b771f02dc3f62504547799f19cf"
 )
 IMPLEMENTATION_AUTHOR_SEPARATION_SHA256 = (
-    "9876f27cfb0b4a3ab967d9d1421529c412181885f812c462e8b09ca5b563b44f"
+    "317fff23c2fcccfb9a6ae4a40c4d5eb77297b734f392f2642167936afca9e3c8"
 )
 IMPLEMENTATION_TRUST_MODEL_SHA256 = (
-    "0bb5de8494a08f4566561232aef0a14bba31ef69c1d98da69b4f43f4afd0f940"
+    "41247cd55b90fb4dc7dfb0d37f0154e7847e32a336fa0fcdb6e1d5bd6b5b944f"
 )
+AUTHORIZED_IMPLEMENTATION_REPOSITORY = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale"
+)
+REMEDIATION_BASE_COMMIT = "2e51e0727d456792a474e38d67b1e3ebc605a8aa"
+REMEDIATION_BASE_PARENT = "7f7a7a212364232e063774bcfdabb5d3f4f303b6"
 PROTECTED_ROOT = Path(
     r"C:\Users\aoika\Documents\Research\pale-ale-local\throughput"
     r"\C2_DRAW_PROFILE_f9bd14d_2026-07-26"
@@ -86,6 +93,137 @@ OUTER_EXPERIMENT_SCHEMA = "gate12c2_outer_experiment_v0.5"
 N1_NULL_ARM_ID = "gate12c2_n1_role_constrained_frame_reassignment_v0.1"
 S2_NULL_ARM_ID = (
     "gate12c2_s2_independent_edge_orientation_stress_v0.1"
+)
+
+S2_COMPONENT_ARMS = (
+    "observed",
+    "N1",
+    "graph_unconstrained_stressor",
+)
+S2_ALWAYS_DEFINED_COMPONENT_FIELDS = (
+    "a_q",
+    "u_q",
+    "v_q",
+    "x_q",
+    "y_q",
+)
+S2_CONDITIONALLY_DEFINED_COMPONENT_FIELDS = (
+    "c_q",
+    "p_L_q",
+    "p_R_q",
+)
+S2_COMPONENT_FIELDS = (
+    S2_ALWAYS_DEFINED_COMPONENT_FIELDS
+    + S2_CONDITIONALLY_DEFINED_COMPONENT_FIELDS
+)
+S2_COMPONENT_COUNT_FIELDS = (
+    "expected_count",
+    "defined_count",
+    "degenerate_count",
+    "unexpected_missing_count",
+    "nonfinite_count",
+)
+
+# This surface is a code-level strengthening of the frozen receipt schemas.  It
+# is reconstructed by every consumer and propagated literally through the
+# candidate -> review -> authority chain.  The row digests were independently
+# derived from the two frozen scientific source blobs without reading payloads.
+REVIEW_SURFACE_SOURCE_DEPENDENCIES_SHA256 = (
+    "3231bfaffc1b0cb9c7a24f6f48d2d5b14da7f4b1014a0728caa35e4ef4062857"
+)
+REVIEW_SURFACE_COMPATIBILITY_ROWS_SHA256 = (
+    "73de8992e52506b83eee075c6d3bee6ee2accd0c9ee255d4059ed68b40951ccc"
+)
+REVIEW_SURFACE_NORMATIVE_ROWS_SHA256 = (
+    "79a0d652c3adcb3986dc0ec3ad2c1fb0b83fe94803469a686383664f7e53689c"
+)
+REVIEW_SURFACE_MUTATION_APPLICABILITY_SHA256 = (
+    "b42f7050c489350f8c87ac31c34752ca35731dd90139495df904b0e624fd9dea"
+)
+REVIEW_SURFACE_REQUIRED_MUTATIONS_SHA256 = (
+    "e4f093941689e76f1acba490b36cd15fe3bffdb3ecdb835e8cc35f47994beb56"
+)
+REVIEW_SURFACE_IDENTITY_SHA256 = (
+    "4aedbc28d2314a51403cc5e6c01b93629553716d85045a24daf074f985d7dbf9"
+)
+REVIEW_SURFACE_MUTATION_DIMENSIONS = (
+    "missing_field",
+    "extra_sibling_field",
+    "wrong_primitive_or_container_type",
+    "bool_as_integer",
+    "bool_as_float",
+    "wrong_enum_or_value",
+    "below_lower_bound",
+    "above_upper_bound",
+    "nonfinite_number",
+    "forbidden_negative_zero",
+    "wrong_list_cardinality",
+    "wrong_list_order",
+    "duplicate_list_item",
+    "conditional_presence_violation",
+    "nested_row_violation",
+    "cross_link_hash_consistent_adversarial_mutation",
+)
+# Declarative audit surface only.  The verifier carries its own byte-for-byte
+# copy while implementing every check independently.
+EXTRACTOR_SCHEMA_INVARIANT_MANIFEST = (
+    "json.utf8_no_bom",
+    "json.duplicate_keys_rejected",
+    "json.nonfinite_numbers_rejected",
+    "json.canonical_bytes_required",
+    "json.boolean_is_not_integer",
+    "index.exact_required_or_optional_operational_fields",
+    "index.schema_version_exact",
+    "index.epistemic_status_development_shard_index_only",
+    "index.surface_id_development",
+    "index.locked_execution_authorized_false",
+    "index.plan_payload_sha256_exact",
+    "index.worker_count_integer_minimum_one",
+    "index.merge_order_exact",
+    "index.outer_experiment_count_exact",
+    "index.all_outer_indices_present_boolean_true",
+    "index.shards_nonempty_exact_coverage",
+    "index.scientific_projection_schema_version_exact",
+    "index.scientific_projection_sha256_exact",
+    "index.self_hash_exact",
+    "index.operational_execution_metrics_optional_object_finite",
+    "shard.relative_paths_exact_unique_coverage",
+    "shard.gzip_single_member",
+    "shard.canonical_json",
+    "shard.exact_fields",
+    "shard.schema_version_exact",
+    "shard.epistemic_status_development_outer_shard_only",
+    "shard.surface_id_development",
+    "shard.locked_execution_authorized_false",
+    "shard.plan_payload_sha256_exact",
+    "shard.outer_experiment_index_exact",
+    "shard.self_hash_exact",
+    "shard.result_object",
+    "shard.result_payload_sha256_exact",
+    "result.exact_fields_by_regime",
+    "result.fixed_envelope_values",
+    "result.max_draw_attempts_positive_exact",
+    "result.execution_contract_exact",
+    "result.numerical_contract_exact",
+    "result.effect_strength_exact",
+    "result.s2_fixed_arms_and_counts",
+    "pipeline.exact_fields",
+    "pipeline.boolean_fields_strict",
+    "pipeline.endpoint_count_integer_0_to_24",
+    "pipeline.directional_count_integer_0_to_24",
+    "pipeline.supporting_run_count_integer_0_to_12",
+    "pipeline.discordant_run_count_integer_0_to_12",
+    "pipeline.grid_outcome_nonempty_ascii",
+    "index_row.exact_required_or_optional_operational_fields",
+    "index_row.reused_existing_shard_boolean",
+    "index_row.operational_metrics_optional_object_finite",
+    "index_row.rebuilt_values_exact",
+    "projection.payload_exact",
+    "projection.sha256_exact",
+    "commitment.outer_id_surface_sha256_exact",
+    "commitment.result_surface_sha256_exact",
+    "commitment.semantic_index_sha256_exact",
+    "coverage.zero_coverage_rejected",
 )
 
 EXTRACTION_PASS_LINE = "gate12c2-original-baseline:PASS"
@@ -292,6 +430,137 @@ def require_exact_keys(
         _raise(code)
 
 
+REVIEW_SURFACE_BOUND_ROLES = frozenset(
+    {
+        "implementation_candidate_binding",
+        "fresh_implementation_review_verdict",
+        "reviewed_implementation_authority",
+    }
+)
+
+
+def recompute_implementation_trust_model_sha256(
+    plan: Mapping[str, Any],
+    *,
+    code: str = "INPUT_LINEAGE_MISMATCH",
+) -> str:
+    trust = require_mapping(
+        plan.get("implementation_trust_model_contract"),
+        code=code,
+    )
+    computed = sha256_bytes(canonical_json_bytes(trust))
+    if (
+        computed != IMPLEMENTATION_TRUST_MODEL_SHA256
+        or plan.get("implementation_trust_model_sha256") != computed
+    ):
+        _raise(code)
+    return computed
+
+
+def review_surface_identity(
+    plan: Mapping[str, Any],
+    *,
+    code: str = "INPUT_LINEAGE_MISMATCH",
+) -> dict[str, Any]:
+    binding = require_mapping(
+        plan.get("implementation_binding_contract"),
+        code=code,
+    )
+    dependencies = binding.get("scientific_dependencies")
+    if not isinstance(dependencies, list):
+        _raise(code)
+    dependency_digest = sha256_bytes(canonical_json_bytes(dependencies))
+    if dependency_digest != REVIEW_SURFACE_SOURCE_DEPENDENCIES_SHA256:
+        _raise(code)
+    payload = {
+        "schema_version": (
+            "gate12c2_original_baseline_review_surface_identity_v0.1"
+        ),
+        "source_dependency_surface_sha256": dependency_digest,
+        "canonical_row_order": (
+            "compatibility: schema_id then field_path; normative: row_id; "
+            "mutation: row_id then declared mutation_dimensions order"
+        ),
+        "compatibility_row_count": 662,
+        "compatibility_surface_sha256": (
+            REVIEW_SURFACE_COMPATIBILITY_ROWS_SHA256
+        ),
+        "compatibility_digest_domain": (
+            "sha256(canonical_json([{schema_id,field_path,json_type,presence}])); "
+            "no LF"
+        ),
+        "normative_row_count": 841,
+        "normative_surface_sha256": REVIEW_SURFACE_NORMATIVE_ROWS_SHA256,
+        "normative_digest_domain": (
+            "sha256(canonical_json(normative rows sorted by row_id)); no LF"
+        ),
+        "mutation_dimensions": list(REVIEW_SURFACE_MUTATION_DIMENSIONS),
+        "mutation_applicability_cell_count": 13456,
+        "mutation_applicability_surface_sha256": (
+            REVIEW_SURFACE_MUTATION_APPLICABILITY_SHA256
+        ),
+        "mutation_applicability_digest_domain": (
+            "sha256(canonical_json([{row_id,dimension,required}])); row_id "
+            "then declared dimension order; no LF"
+        ),
+        "required_mutation_count": 6487,
+        "required_mutation_surface_sha256": (
+            REVIEW_SURFACE_REQUIRED_MUTATIONS_SHA256
+        ),
+        "required_mutation_digest_domain": (
+            "sha256(canonical_json([{row_id,dimension}] required=true "
+            "subset)); inherited order; no LF"
+        ),
+    }
+    computed = sha256_bytes(canonical_json_bytes(payload))
+    if computed != REVIEW_SURFACE_IDENTITY_SHA256:
+        _raise(code)
+    return {
+        **payload,
+        "review_surface_identity_sha256": computed,
+    }
+
+
+def validate_review_surface_identity(
+    plan: Mapping[str, Any],
+    supplied: object,
+    *,
+    code: str = "INPUT_LINEAGE_MISMATCH",
+) -> dict[str, Any]:
+    value = require_mapping(supplied, code=code)
+    expected = review_surface_identity(plan, code=code)
+    require_exact_keys(value, expected, code=code)
+    if value != expected:
+        _raise(code)
+    return value
+
+
+def artifact_exact_fields(
+    plan: Mapping[str, Any],
+    role: str,
+) -> tuple[str, ...]:
+    if role == "implementation_candidate_binding":
+        fields = plan["implementation_binding_contract"][
+            "exact_top_level_fields"
+        ]
+    elif role == "fresh_implementation_review_verdict":
+        fields = plan["review_receipt_schemas"][role]["exact_top_level_fields"]
+    elif role == "reviewed_implementation_authority":
+        fields = plan["reviewed_implementation_authority_contract"][
+            "exact_top_level_fields"
+        ]
+    else:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    result = list(fields)
+    if "review_surface_identity" in result:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    self_hash = result.pop()
+    if not self_hash.endswith("_payload_sha256"):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    result.extend(("review_surface_identity", self_hash))
+    return tuple(result)
+
+
 def require_bool(value: object, *, code: str = "INPUT_SCHEMA_INVALID") -> bool:
     if type(value) is not bool:
         _raise(code)
@@ -464,7 +733,7 @@ def _walk_named_values(value: object, name: str, *, active: bool = True) -> list
 
 
 def validate_frozen_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
-    """Validate all machine-checkable frozen v0.8 design invariants."""
+    """Validate all machine-checkable frozen v0.9 design invariants."""
 
     supplied = dict(plan)
     if supplied.get("schema_version") != PLAN_SCHEMA:
@@ -505,7 +774,7 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
             role in roles
             or final_path in paths
             or pending_path in paths
-            or pending_path != final_path + ".pending-v0.8"
+            or pending_path != final_path + ".pending-v0.9"
             or row["publication_mode"] != "MoveFileExW_nonreplace_write_through"
         ):
             _raise("INPUT_LINEAGE_MISMATCH")
@@ -576,14 +845,8 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
         IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
     ):
         _raise("INPUT_LINEAGE_MISMATCH")
-    trust = require_mapping(
-        supplied.get("implementation_trust_model_contract"),
-        code="INPUT_LINEAGE_MISMATCH",
-    )
-    if sha256_bytes(canonical_json_bytes(trust)) != IMPLEMENTATION_TRUST_MODEL_SHA256:
-        _raise("INPUT_LINEAGE_MISMATCH")
-    if supplied.get("implementation_trust_model_sha256") != IMPLEMENTATION_TRUST_MODEL_SHA256:
-        _raise("INPUT_LINEAGE_MISMATCH")
+    recompute_implementation_trust_model_sha256(supplied)
+    review_surface_identity(supplied)
     if tuple(supplied.get("bounded_implementation_scope_after_fresh_design_pass", ())) != IMPLEMENTATION_PATHS:
         _raise("INPUT_LINEAGE_MISMATCH")
     _validate_design_algebras(supplied)
@@ -595,7 +858,7 @@ def _validate_design_algebras(plan: Mapping[str, Any]) -> None:
     if not isinstance(codes, list) or frozenset(codes) != FAILURE_CODES or len(codes) != 21:
         _raise("INPUT_LINEAGE_MISMATCH")
     matrix = plan.get("failure_matrix")
-    if not isinstance(matrix, list) or len(matrix) != 92:
+    if not isinstance(matrix, list) or len(matrix) != 94:
         _raise("INPUT_LINEAGE_MISMATCH")
     matrix_keys: set[bytes] = set()
     used_codes: set[str] = set()
@@ -758,10 +1021,10 @@ def validate_formal_design_pass(
     p1_count = require_int(
         payload.get("P1_count"), minimum=0, code="INPUT_LINEAGE_MISMATCH"
     )
-    require_int(
+    p2_count = require_int(
         payload.get("P2_count"), minimum=0, code="INPUT_LINEAGE_MISMATCH"
     )
-    if p0_count != 0 or p1_count != 0:
+    if p0_count != 0 or p1_count != 0 or p2_count != 0:
         _raise("INPUT_LINEAGE_MISMATCH")
     expected = {
         "contract_file_sha256": CONTRACT_FILE_SHA256,
@@ -770,7 +1033,9 @@ def validate_formal_design_pass(
         "implementation_author_separation_contract_sha256": (
             IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
         ),
-        "implementation_trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        "implementation_trust_model_sha256": (
+            recompute_implementation_trust_model_sha256(plan)
+        ),
     }
     if any(payload.get(key) != value for key, value in expected.items()):
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -790,6 +1055,281 @@ class ArtifactObservation:
     final_exists: bool
     pending_exists: bool = False
     outcome: str | None = None
+    final_valid: bool = True
+
+
+def _artifact_schema_descriptor(
+    plan: Mapping[str, Any], role: str
+) -> tuple[Mapping[str, Any], str]:
+    control = plan["control_receipt_schemas"]
+    review = plan["review_receipt_schemas"]
+    descriptors = {
+        "extraction_authorization": (
+            control["extraction_authorization"],
+            "authorization_payload_sha256",
+        ),
+        "extraction_authorization_verdict": (
+            control["extraction_authorization_verdict"],
+            "authorization_verdict_payload_sha256",
+        ),
+        "extraction_execution_claim": (
+            control["extraction_execution_claim"],
+            "execution_claim_payload_sha256",
+        ),
+        "extraction_failure": (
+            plan["extraction_failure_receipt"],
+            "failure_receipt_payload_sha256",
+        ),
+        "extraction_preflight": (
+            control["extraction_preflight"],
+            "preflight_payload_sha256",
+        ),
+        "extraction_success": (
+            plan["success_receipt"],
+            "baseline_receipt_payload_sha256",
+        ),
+        "extraction_terminal": (
+            control["extraction_terminal"],
+            "terminal_claim_payload_sha256",
+        ),
+        "formal_design_review_verdict": (
+            review["formal_design_review_verdict"],
+            "formal_design_review_payload_sha256",
+        ),
+        "fresh_implementation_review_verdict": (
+            review["fresh_implementation_review_verdict"],
+            "fresh_implementation_review_payload_sha256",
+        ),
+        "implementation_candidate_binding": (
+            plan["implementation_binding_contract"],
+            "implementation_candidate_binding_payload_sha256",
+        ),
+        "reviewed_implementation_authority": (
+            plan["reviewed_implementation_authority_contract"],
+            "reviewed_implementation_authority_payload_sha256",
+        ),
+        "verifier_authorization": (
+            control["verifier_authorization"],
+            "authorization_payload_sha256",
+        ),
+        "verifier_authorization_verdict": (
+            control["verifier_authorization_verdict"],
+            "authorization_verdict_payload_sha256",
+        ),
+        "verifier_execution_claim": (
+            control["verifier_execution_claim"],
+            "execution_claim_payload_sha256",
+        ),
+        "verifier_failure": (
+            plan["verifier_failure_receipt"],
+            "failure_receipt_payload_sha256",
+        ),
+        "verifier_preflight": (
+            control["verifier_preflight"],
+            "preflight_payload_sha256",
+        ),
+        "verifier_success": (
+            plan["verification_receipt"],
+            "verification_receipt_payload_sha256",
+        ),
+        "verifier_terminal": (
+            control["verifier_terminal"],
+            "terminal_claim_payload_sha256",
+        ),
+    }
+    try:
+        schema, hash_field = descriptors[role]
+    except KeyError:
+        _raise("UNEXPECTED_ARTIFACT")
+    if role in REVIEW_SURFACE_BOUND_ROLES:
+        effective = dict(schema)
+        effective["exact_top_level_fields"] = artifact_exact_fields(plan, role)
+        schema = effective
+    return schema, hash_field
+
+
+def _artifact_link_target(role: str, prefix: str) -> str | None:
+    explicit = {
+        "formal_design_review": "formal_design_review_verdict",
+        "implementation_candidate_binding": "implementation_candidate_binding",
+        "fresh_implementation_review": "fresh_implementation_review_verdict",
+        "reviewed_implementation_authority": (
+            "reviewed_implementation_authority"
+        ),
+        "extraction_preflight": "extraction_preflight",
+        "extraction_authorization": "extraction_authorization",
+        "extraction_authorization_verdict": (
+            "extraction_authorization_verdict"
+        ),
+        "extraction_execution_claim": "extraction_execution_claim",
+        "verifier_preflight": "verifier_preflight",
+        "verifier_authorization": "verifier_authorization",
+        "verifier_authorization_verdict": "verifier_authorization_verdict",
+        "verifier_execution_claim": "verifier_execution_claim",
+        "baseline_receipt": "extraction_success",
+        "extraction_terminal_claim": "extraction_terminal",
+    }
+    target = explicit.get(prefix)
+    if target is not None:
+        return target
+    if prefix not in {
+        "preflight",
+        "authorization",
+        "authorization_verdict",
+        "execution_claim",
+    }:
+        return None
+    scope = "verifier" if role.startswith("verifier_") else "extraction"
+    return f"{scope}_{prefix}"
+
+
+def _artifact_cross_links_valid(
+    plan: Mapping[str, Any],
+    role: str,
+    payload: Mapping[str, Any],
+    payloads: Mapping[str, Mapping[str, Any]],
+    file_hashes: Mapping[str, str],
+    payload_hashes: Mapping[str, str],
+    validity: Mapping[str, bool],
+) -> bool:
+    for field, value in payload.items():
+        suffix = "_file_sha256"
+        if not field.endswith(suffix):
+            continue
+        prefix = field[: -len(suffix)]
+        target = _artifact_link_target(role, prefix)
+        if target is None:
+            continue
+        payload_field = prefix + "_payload_sha256"
+        if (
+            target not in payloads
+            or validity.get(target) is not True
+            or value != file_hashes.get(target)
+            or payload_field not in payload
+            or payload[payload_field] != payload_hashes.get(target)
+        ):
+            return False
+    if role not in {"extraction_terminal", "verifier_terminal"}:
+        return True
+    scope = "verifier" if role == "verifier_terminal" else "extraction"
+    outcome = payload.get("outcome_kind")
+    if outcome not in {"success", "failure"}:
+        return False
+    target = f"{scope}_{outcome}"
+    try:
+        leaf_schema, leaf_hash_field = _artifact_schema_descriptor(
+            plan, target
+        )
+        leaf = require_mapping(
+            payload.get("leaf_exact_payload"), code="UNEXPECTED_ARTIFACT"
+        )
+        require_exact_keys(
+            leaf,
+            leaf_schema["exact_top_level_fields"],
+            code="UNEXPECTED_ARTIFACT",
+        )
+        verify_self_hash(
+            leaf, leaf_hash_field, code="UNEXPECTED_ARTIFACT"
+        )
+    except Exception:
+        return False
+    if (
+        payload.get("leaf_schema_version") != leaf.get("schema_version")
+        or payload.get("leaf_payload_sha256") != leaf.get(leaf_hash_field)
+    ):
+        return False
+    return target not in payloads or (
+        validity.get(target) is True and payloads[target] == leaf
+    )
+
+
+def observe_artifact_surface(
+    plan: Mapping[str, Any],
+) -> dict[str, ArtifactObservation]:
+    """Strictly classify all 18 final paths and all 18 pending paths."""
+
+    outcome_fields = plan["artifact_lifecycle_contract"]["outcome_field_by_role"]
+    observations: dict[str, ArtifactObservation] = {}
+    payloads: dict[str, Mapping[str, Any]] = {}
+    file_hashes: dict[str, str] = {}
+    payload_hashes: dict[str, str] = {}
+    for row in plan["artifact_path_surface"]:
+        role = str(row["role"])
+        final = Path(row["final_path"])
+        pending = Path(row["pending_path"])
+        final_exists = os.path.lexists(final)
+        valid = not final_exists
+        outcome: str | None = None
+        if final_exists:
+            try:
+                schema, hash_field = _artifact_schema_descriptor(plan, role)
+                if final.is_symlink() or not final.is_file():
+                    _raise("UNEXPECTED_ARTIFACT")
+                raw = final.read_bytes()
+                if not raw.endswith(b"\n") or raw.endswith(b"\n\n"):
+                    _raise("UNEXPECTED_ARTIFACT")
+                payload = require_mapping(
+                    strict_json_loads(raw[:-1], canonical=True),
+                    code="UNEXPECTED_ARTIFACT",
+                )
+                require_exact_keys(
+                    payload,
+                    schema["exact_top_level_fields"],
+                    code="UNEXPECTED_ARTIFACT",
+                )
+                verify_self_hash(payload, hash_field, code="UNEXPECTED_ARTIFACT")
+                if role in REVIEW_SURFACE_BOUND_ROLES:
+                    validate_review_surface_identity(
+                        plan,
+                        payload.get("review_surface_identity"),
+                        code="UNEXPECTED_ARTIFACT",
+                    )
+                if raw != canonical_receipt_bytes(payload):
+                    _raise("UNEXPECTED_ARTIFACT")
+                if role in outcome_fields:
+                    value = payload.get(outcome_fields[role])
+                    outcome = value if type(value) is str else "__invalid__"
+                payloads[role] = payload
+                file_hashes[role] = sha256_bytes(raw)
+                payload_hashes[role] = str(payload[hash_field])
+                valid = True
+            except Exception:
+                outcome = "__invalid__"
+                valid = False
+        observations[role] = ArtifactObservation(
+            final_exists=final_exists,
+            pending_exists=os.path.lexists(pending),
+            outcome=outcome,
+            final_valid=valid,
+        )
+    validity = {
+        role: observation.final_valid
+        for role, observation in observations.items()
+    }
+    changed = True
+    while changed:
+        changed = False
+        for role, payload in payloads.items():
+            if validity[role] and not _artifact_cross_links_valid(
+                plan,
+                role,
+                payload,
+                payloads,
+                file_hashes,
+                payload_hashes,
+                validity,
+            ):
+                validity[role] = False
+                changed = True
+    for role, valid in validity.items():
+        if observations[role].final_exists and not valid:
+            observations[role] = ArtifactObservation(
+                final_exists=True,
+                pending_exists=observations[role].pending_exists,
+                outcome="__invalid__",
+                final_valid=False,
+            )
+    return observations
 
 
 def classify_lifecycle_surface(
@@ -806,6 +1346,8 @@ def classify_lifecycle_surface(
         return "HOLD_new_review"
     if any(value.pending_exists for value in observations.values()):
         return "HOLD_new_review"
+    if any(value.final_exists and not value.final_valid for value in observations.values()):
+        return "HOLD_new_review"
     matches: list[str] = []
     for phase in plan["artifact_lifecycle_contract"]["stable_phases"]:
         if any(not observations[role].final_exists for role in phase["must_exist"]):
@@ -813,7 +1355,11 @@ def classify_lifecycle_surface(
         if any(observations[role].final_exists for role in phase["must_be_absent"]):
             continue
         if any(
-            observations[role].outcome != expected
+            (
+                observations[role].outcome not in {"success", "failure"}
+                if expected == "success_or_failure"
+                else observations[role].outcome != expected
+            )
             for role, expected in phase["required_outcomes"].items()
         ):
             continue
@@ -829,6 +1375,54 @@ def classify_lifecycle_surface(
             continue
         matches.append(str(phase["phase"]))
     return matches[0] if len(matches) == 1 else "HOLD_new_review"
+
+
+def require_full_surface_checkpoint(
+    plan: Mapping[str, Any],
+    *,
+    scope: str,
+    checkpoint: str,
+    state: str,
+    temporal_predicate: str = "not_applicable",
+    liveness: str = "not_applicable",
+) -> str:
+    contract = plan["artifact_lifecycle_contract"][
+        "full_surface_checkpoint_contract"
+    ]
+    rows = list(contract["checkpoint_rows"]) + list(
+        contract["failure_publication_checkpoint_contract"][
+            "failure_checkpoint_rows"
+        ]
+    )
+    matches = [
+        row
+        for row in rows
+        if row["scope"] == scope
+        and row["checkpoint"] == checkpoint
+        and row["expected_state"] == state
+    ]
+    if len(matches) != 1:
+        _raise("UNEXPECTED_ARTIFACT")
+    row = matches[0]
+    if any(
+        row[key] != 18
+        for key in (
+            "role_count_classified",
+            "final_path_count_classified",
+            "pending_path_count_classified",
+        )
+    ):
+        _raise("UNEXPECTED_ARTIFACT")
+    observed = observe_artifact_surface(plan)
+    phase = classify_lifecycle_surface(
+        plan,
+        observed,
+        temporal_predicate=temporal_predicate,
+        liveness=liveness,
+    )
+    if phase != row["expected_artifact_phase"]:
+        _raise("UNEXPECTED_ARTIFACT")
+    return phase
 
 
 def transition_state(plan: Mapping[str, Any], source: str, event: str) -> str:
@@ -882,9 +1476,9 @@ def atomic_publish_exact(
     pending = (
         Path(pending_path)
         if pending_path is not None
-        else final.with_name(final.name + ".pending-v0.8")
+        else final.with_name(final.name + ".pending-v0.9")
     )
-    if final.parent != pending.parent or pending.name != final.name + ".pending-v0.8":
+    if final.parent != pending.parent or pending.name != final.name + ".pending-v0.9":
         _raise("OUTPUT_PUBLICATION_FAILED")
     if not final.parent.is_dir() or final.exists() or pending.exists():
         _raise("UNEXPECTED_ARTIFACT")
@@ -1369,6 +1963,32 @@ class RetainedHandle:
     identity: HandleIdentity
 
 
+def windows_ordinal_equal(left: str, right: str, api: object) -> bool:
+    """Compare Windows paths with the frozen ordinal-ignore-case primitive."""
+
+    compare = getattr(api, "CompareStringOrdinal", None)
+    if compare is None:
+        _raise("READ_ONLY_HANDLE_FAILED")
+    try:
+        compare.argtypes = [
+            ctypes.wintypes.LPCWSTR,
+            ctypes.c_int,
+            ctypes.wintypes.LPCWSTR,
+            ctypes.c_int,
+            ctypes.wintypes.BOOL,
+        ]
+        compare.restype = ctypes.c_int
+    except Exception:
+        pass
+    try:
+        result = int(compare(left, -1, right, -1, True))
+    except Exception:
+        _raise("READ_ONLY_HANDLE_FAILED")
+    if result == 0:
+        _raise("READ_ONLY_HANDLE_FAILED")
+    return result == 2
+
+
 class RetainedProtectedSurface:
     """Own the frozen root, 23 directory, and 791 file handles."""
 
@@ -1573,21 +2193,7 @@ class RetainedProtectedSurface:
         return value
 
     def _same_path(self, left: str, right: str) -> bool:
-        compare = getattr(self.api, "CompareStringOrdinal", None)
-        if compare is None:
-            return left.casefold() == right.casefold()
-        try:
-            compare.argtypes = [
-                ctypes.wintypes.LPCWSTR,
-                ctypes.c_int,
-                ctypes.wintypes.LPCWSTR,
-                ctypes.c_int,
-                ctypes.wintypes.BOOL,
-            ]
-            compare.restype = ctypes.c_int
-        except Exception:
-            pass
-        return int(compare(left, len(left), right, len(right), True)) == 2
+        return windows_ordinal_equal(left, right, self.api)
 
     def _size(self, handle: int) -> int:
         size = ctypes.c_longlong()
@@ -1785,6 +2391,474 @@ class RetainedProtectedSurface:
         self.close()
 
 
+class _RetainedSourceLoader:
+    def __init__(self, name: str, origin: str, raw: bytes) -> None:
+        self.name = name
+        self.origin = origin
+        self.raw = raw
+
+    def create_module(self, _spec: object) -> None:
+        return None
+
+    def exec_module(self, module: types.ModuleType) -> None:
+        code = compile(self.raw, self.origin, "exec", dont_inherit=True)
+        exec(code, module.__dict__)
+
+    def get_filename(self, _fullname: str) -> str:
+        return self.origin
+
+
+class ExecutingCodeIdentity:
+    """Retain and revalidate the exact source bytes that the runner executes."""
+
+    def __init__(
+        self,
+        plan: Mapping[str, Any],
+        candidate: Mapping[str, Any],
+        *,
+        entry_path: Path,
+        repository_argument: Path,
+        loaded_modules: Mapping[str, object],
+        module_registry: MutableMapping[str, object] | None = None,
+        authorized_root: Path = AUTHORIZED_IMPLEMENTATION_REPOSITORY,
+        api: object | None = None,
+        git_head_reader: Callable[[Path], str] | None = None,
+        bootstrap_records: Mapping[str, Mapping[str, object]] | None = None,
+    ) -> None:
+        self.plan = dict(plan)
+        self.candidate = dict(candidate)
+        self.registry = sys.modules if module_registry is None else module_registry
+        self.loaded_modules: dict[str, object] = dict(loaded_modules)
+        self.object_format = str(candidate.get("git_object_format"))
+        self.source_commit = str(candidate.get("source_commit"))
+        self.git_head_reader = git_head_reader or self._git_head
+        self.bootstrap_records = (
+            {} if bootstrap_records is None else dict(bootstrap_records)
+        )
+        self.io = RetainedProtectedSurface(
+            Path(entry_path).parent,
+            {"files": [], "directories": []},
+            api=api,
+        )
+        self.root: Path | None = None
+        self.root_record: RetainedHandle | None = None
+        self.sources: dict[str, RetainedHandle] = {}
+        self.source_rows: dict[str, dict[str, Any]] = {}
+        self.module_name_by_relative: dict[str, str] = {}
+        self.loader_ids: set[int] = set()
+        self._owned_handles: set[int] = set()
+        self._checkpoint_index = 0
+        self._closed = False
+        contract = plan["executing_code_identity_contract"]
+        self.checkpoints = tuple(contract["checkpoints"])
+        try:
+            self._initialize(
+                Path(entry_path), Path(repository_argument), Path(authorized_root)
+            )
+        except Exception:
+            self.close()
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+
+    @staticmethod
+    def _git_head(root: Path) -> str:
+        def read_control(path: Path) -> bytes:
+            try:
+                metadata = os.lstat(path)
+                if getattr(metadata, "st_file_attributes", 0) & 0x400:
+                    _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+                raw = path.read_bytes()
+            except OSError:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            if len(raw) > 1 << 20:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            return raw
+
+        try:
+            git_directory = root / ".git"
+            git_metadata = os.lstat(git_directory)
+            if (
+                not git_directory.is_dir()
+                or getattr(git_metadata, "st_file_attributes", 0) & 0x400
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            head_raw = read_control(git_directory / "HEAD")
+            if (
+                not head_raw.endswith(b"\n")
+                or head_raw.count(b"\n") != 1
+                or b"\r" in head_raw
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            head_text = head_raw[:-1].decode("ascii", "strict")
+        except (OSError, UnicodeDecodeError):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        if re.fullmatch(r"[0-9a-f]{40}", head_text) is not None:
+            return head_text
+        if not head_text.startswith("ref: refs/"):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        reference = head_text[5:]
+        reference_path = PurePosixPath(reference)
+        if (
+            reference_path.is_absolute()
+            or any(part in {"", ".", ".."} for part in reference_path.parts)
+            or "\\" in reference
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        loose_path = git_directory.joinpath(*reference_path.parts)
+        if loose_path.exists():
+            loose_raw = read_control(loose_path)
+            if (
+                not loose_raw.endswith(b"\n")
+                or loose_raw.count(b"\n") != 1
+                or b"\r" in loose_raw
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            try:
+                value = loose_raw[:-1].decode("ascii", "strict")
+            except UnicodeDecodeError:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        else:
+            packed_raw = read_control(git_directory / "packed-refs")
+            try:
+                packed_lines = packed_raw.decode("ascii", "strict").splitlines()
+            except UnicodeDecodeError:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            matches = [
+                line.split(" ", 1)[0]
+                for line in packed_lines
+                if " " in line and line.split(" ", 1)[1] == reference
+            ]
+            if len(matches) != 1:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            value = matches[0]
+        if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        return value
+
+    def _same_path(self, left: str | Path, right: str | Path) -> bool:
+        return windows_ordinal_equal(str(left), str(right), self.io.api)
+
+    def _bootstrap_handle(
+        self, expected: Path, *, directory: bool
+    ) -> int | None:
+        matches = [
+            record
+            for record in self.bootstrap_records.values()
+            if record.get("directory") is directory
+            and self._same_path(str(record.get("final_path")), expected)
+        ]
+        if not matches:
+            return None
+        if len(matches) != 1 or type(matches[0].get("handle")) is not int:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        return int(matches[0]["handle"])
+
+    def _candidate_rows(self) -> dict[str, dict[str, Any]]:
+        rows = self.candidate.get("implementation_files")
+        scientific = self.candidate.get("scientific_dependencies")
+        if type(rows) is not list or type(scientific) is not list:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        combined = [dict(row) for row in rows] + [dict(row) for row in scientific]
+        by_path = {str(row.get("relative_path")): row for row in combined}
+        if len(by_path) != len(combined):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        return by_path
+
+    def _relative_for_final_path(self, final_path: str) -> str:
+        if self.root is None:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        matches = [
+            relative
+            for relative in self.source_rows
+            if self._same_path(final_path, self.root / relative)
+        ]
+        if len(matches) != 1:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        return matches[0]
+
+    def _open_source(
+        self, relative: str, *, existing_handle: int | None = None
+    ) -> tuple[RetainedHandle, bytes]:
+        if self.root is None:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        validate_relative_manifest_path(relative)
+        expected = self.root / relative
+        handle = (
+            existing_handle
+            if existing_handle is not None
+            else (
+                self._bootstrap_handle(expected, directory=False)
+                or self.io._open(expected, directory=False)
+            )
+        )
+        self._owned_handles.add(handle)
+        try:
+            identity = self.io._identity(handle, expected, directory=False)
+            if (
+                self.root_record is None
+                or identity.volume_serial
+                != self.root_record.identity.volume_serial
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            retained = RetainedHandle(handle, identity)
+            raw = self.io._read_all(retained)
+            row = self.source_rows.get(relative)
+            if row is None or (
+                sha256_bytes(raw) != row.get("file_sha256")
+                or git_blob_oid(raw, self.object_format) != row.get("git_blob_oid")
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            if any(
+                previous.identity.file_id == identity.file_id
+                and previous.identity.volume_serial == identity.volume_serial
+                for name, previous in self.sources.items()
+                if name != relative
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            self.sources[relative] = retained
+            return retained, raw
+        except Exception:
+            if existing_handle is None:
+                try:
+                    self.io.api.CloseHandle(handle)
+                except Exception:
+                    pass
+                self._owned_handles.discard(handle)
+            raise
+
+    def _verify_module(
+        self, name: str, module: object, relative: str
+    ) -> None:
+        if self.root is None:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        if self.registry.get(name) is not module:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        module_file = getattr(module, "__file__", None)
+        spec = getattr(module, "__spec__", None)
+        origin = getattr(spec, "origin", None)
+        loader = getattr(spec, "loader", None)
+        expected = self.root / relative
+        if (
+            type(module_file) is not str
+            or type(origin) is not str
+            or loader is None
+            or not self._same_path(module_file, expected)
+            or not self._same_path(origin, expected)
+            or id(loader) in self.loader_ids
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        self.loader_ids.add(id(loader))
+        self.module_name_by_relative[relative] = name
+
+    def _scan_aliases(self) -> None:
+        if self.root is None:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        for name, module in tuple(self.registry.items()):
+            module_file = getattr(module, "__file__", None)
+            if type(module_file) is not str:
+                continue
+            matches = [
+                relative
+                for relative in self.source_rows
+                if self._same_path(module_file, self.root / relative)
+            ]
+            if not matches:
+                continue
+            if len(matches) != 1:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            relative = matches[0]
+            expected_name = self.module_name_by_relative.get(relative)
+            if expected_name != name or self.loaded_modules.get(name) is not module:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+
+    def _initialize(
+        self, entry_path: Path, repository_argument: Path, authorized_root: Path
+    ) -> None:
+        if (
+            re.fullmatch(r"[0-9a-f]{40}", self.source_commit) is None
+            or self.object_format not in {"sha1", "sha256"}
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        self.source_rows = self._candidate_rows()
+        entry_handle = self._bootstrap_handle(
+            entry_path, directory=False
+        ) or self.io._open(entry_path, directory=False)
+        self._owned_handles.add(entry_handle)
+        entry_identity = self.io._identity(
+            entry_handle, entry_path, directory=False
+        )
+        derived_root = Path(entry_identity.final_path).parent.parent
+        if (
+            not self._same_path(derived_root, authorized_root)
+            or not self._same_path(repository_argument, derived_root)
+            or self.candidate.get("authorized_implementation_repository")
+            != str(AUTHORIZED_IMPLEMENTATION_REPOSITORY)
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        self.root = derived_root
+        root_handle = self._bootstrap_handle(
+            self.root, directory=True
+        ) or self.io._open(self.root, directory=True)
+        self._owned_handles.add(root_handle)
+        root_identity = self.io._identity(
+            root_handle, self.root, directory=True
+        )
+        self.root_record = RetainedHandle(root_handle, root_identity)
+        entry_relative = self._relative_for_final_path(entry_identity.final_path)
+        entry_record, _raw = self._open_source(
+            entry_relative, existing_handle=entry_handle
+        )
+        self.sources[entry_relative] = entry_record
+        expected_names = {
+            entry_relative: "__main__",
+            "tools/gate12c2_original_baseline_commitments.py": (
+                "gate12c2_original_baseline_commitments"
+            ),
+        }
+        for name, module in self.loaded_modules.items():
+            module_path = getattr(module, "__file__", None)
+            if type(module_path) is not str:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            relative = self._relative_for_final_path(module_path)
+            if expected_names.get(relative) != name:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            if relative not in self.sources:
+                self._open_source(relative)
+            self._verify_module(name, module, relative)
+        if set(self.module_name_by_relative) != set(expected_names):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        self._scan_aliases()
+
+    def load_scientific_dependencies(self) -> None:
+        names = (
+            ("gate12c2_synthetic_lab", "tools/gate12c2_synthetic_lab.py"),
+            (
+                "gate12c2_development_shards",
+                "tools/gate12c2_development_shards.py",
+            ),
+        )
+        for name, relative in names:
+            if name in self.loaded_modules or name in self.registry:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            retained, raw = self._open_source(relative)
+            loader = _RetainedSourceLoader(name, retained.identity.final_path, raw)
+            spec = importlib.util.spec_from_loader(
+                name, loader, origin=retained.identity.final_path
+            )
+            if spec is None:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            module = importlib.util.module_from_spec(spec)
+            module.__file__ = retained.identity.final_path
+            self.registry[name] = module
+            try:
+                loader.exec_module(module)
+            except Exception:
+                self.registry.pop(name, None)
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            self.loaded_modules[name] = module
+            self._verify_module(name, module, relative)
+        if getattr(
+            self.loaded_modules["gate12c2_development_shards"], "lab", None
+        ) is not self.loaded_modules["gate12c2_synthetic_lab"]:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        self._scan_aliases()
+
+    def module(self, name: str) -> object:
+        module = self.loaded_modules.get(name)
+        if module is None or self.registry.get(name) is not module:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        return module
+
+    def checkpoint(self, checkpoint: str) -> dict[str, str]:
+        try:
+            if (
+                self.root is None
+                or self.root_record is None
+                or self._checkpoint_index >= len(self.checkpoints)
+                or checkpoint != self.checkpoints[self._checkpoint_index]
+            ):
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            root_identity = self.io._identity(
+                self.root_record.handle, self.root, directory=True
+            )
+            if root_identity != self.root_record.identity:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            surface_rows: list[dict[str, Any]] = []
+            self.loader_ids.clear()
+            for relative in sorted(self.sources):
+                retained = self.sources[relative]
+                identity = self.io._identity(
+                    retained.handle, self.root / relative, directory=False
+                )
+                raw = self.io._read_all(retained)
+                row = self.source_rows[relative]
+                if (
+                    identity != retained.identity
+                    or sha256_bytes(raw) != row["file_sha256"]
+                    or git_blob_oid(raw, self.object_format) != row["git_blob_oid"]
+                ):
+                    _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+                module_name = self.module_name_by_relative.get(relative)
+                if module_name is None:
+                    _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+                self._verify_module(
+                    module_name, self.loaded_modules[module_name], relative
+                )
+                surface_rows.append(
+                    {
+                        "module_name": module_name,
+                        "role": row["role"],
+                        "relative_path": relative,
+                        "file_id_sha256": sha256_bytes(identity.file_id),
+                        "file_sha256": row["file_sha256"],
+                        "git_blob_oid": row["git_blob_oid"],
+                    }
+                )
+            self._scan_aliases()
+            head = self.git_head_reader(self.root)
+            if head != self.source_commit:
+                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            digest = sha256_bytes(canonical_json_bytes(surface_rows))
+            self._checkpoint_index += 1
+            return {
+                "git_head": head,
+                "executing_code_identity_surface_sha256": digest,
+            }
+        except Exception:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        handles = list(self._owned_handles)
+        handles.extend(record.handle for record in self.sources.values())
+        if self.root_record is not None:
+            handles.append(self.root_record.handle)
+        for handle in dict.fromkeys(handles):
+            try:
+                self.io.api.CloseHandle(handle)
+            except Exception:
+                pass
+        self._owned_handles.clear()
+
+
+_ACTIVE_EXECUTING_CODE_IDENTITY: ExecutingCodeIdentity | None = None
+
+
+def install_executing_code_identity(identity: ExecutingCodeIdentity) -> None:
+    global _ACTIVE_EXECUTING_CODE_IDENTITY
+    if _ACTIVE_EXECUTING_CODE_IDENTITY is not None:
+        _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    _ACTIVE_EXECUTING_CODE_IDENTITY = identity
+
+
+def clear_executing_code_identity(identity: ExecutingCodeIdentity) -> None:
+    global _ACTIVE_EXECUTING_CODE_IDENTITY
+    if _ACTIVE_EXECUTING_CODE_IDENTITY is not identity:
+        _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    _ACTIVE_EXECUTING_CODE_IDENTITY = None
+
+
 
 SHARD_FIELDS = {
     "schema_version",
@@ -1914,6 +2988,66 @@ def strict_gzip_json(raw: bytes) -> dict[str, Any]:
     )
 
 
+def validate_s2_component_surface(
+    endpoint: Mapping[str, Any],
+    *,
+    expected_count: int,
+) -> None:
+    expected = require_int(expected_count, minimum=1)
+    medians = require_mapping(endpoint.get("component_medians"))
+    coverage = require_mapping(endpoint.get("component_coverage"))
+    require_exact_keys(medians, S2_COMPONENT_ARMS)
+    require_exact_keys(coverage, S2_COMPONENT_ARMS)
+    for arm in S2_COMPONENT_ARMS:
+        arm_medians = require_mapping(medians.get(arm))
+        arm_coverage = require_mapping(coverage.get(arm))
+        require_exact_keys(arm_medians, S2_COMPONENT_FIELDS)
+        require_exact_keys(arm_coverage, S2_COMPONENT_FIELDS)
+        for field_name in S2_COMPONENT_FIELDS:
+            median = arm_medians[field_name]
+            if median is not None and (
+                type(median) is not float
+                or not math.isfinite(median)
+                or (
+                    median == 0.0
+                    and math.copysign(1.0, median) < 0.0
+                )
+            ):
+                _raise("INPUT_SCHEMA_INVALID")
+            counts = require_mapping(arm_coverage.get(field_name))
+            require_exact_keys(counts, S2_COMPONENT_COUNT_FIELDS)
+            checked = {
+                name: require_int(counts.get(name))
+                for name in S2_COMPONENT_COUNT_FIELDS
+            }
+            defined = checked["defined_count"]
+            degenerate = checked["degenerate_count"]
+            if checked["expected_count"] != expected:
+                _raise("INPUT_SCHEMA_INVALID")
+            if (
+                defined
+                + degenerate
+                + checked["unexpected_missing_count"]
+                + checked["nonfinite_count"]
+                != expected
+                or checked["unexpected_missing_count"] != 0
+                or checked["nonfinite_count"] != 0
+            ):
+                _raise("INPUT_SCHEMA_INVALID")
+            if field_name in S2_ALWAYS_DEFINED_COMPONENT_FIELDS:
+                if (
+                    defined != expected
+                    or degenerate != 0
+                    or median is None
+                ):
+                    _raise("INPUT_SCHEMA_INVALID")
+            elif defined == 0:
+                if degenerate != expected or median is not None:
+                    _raise("INPUT_SCHEMA_INVALID")
+            elif defined + degenerate != expected or median is None:
+                _raise("INPUT_SCHEMA_INVALID")
+
+
 def validate_result_envelope(
     subplan: Mapping[str, Any],
     result: Mapping[str, Any],
@@ -2038,12 +3172,16 @@ def validate_result_envelope(
         ):
             _raise("INPUT_SCHEMA_INVALID")
         threshold = float(subplan.get("minimum_log_null_inflation"))
-        for endpoint in result["endpoint_rows"]:
-            if (
-                not isinstance(endpoint, dict)
-                or endpoint.get("minimum_log_null_inflation") != threshold
-            ):
+        for endpoint_value in result["endpoint_rows"]:
+            endpoint = require_mapping(endpoint_value)
+            if endpoint.get("minimum_log_null_inflation") != threshold:
                 _raise("INPUT_SCHEMA_INVALID")
+            expected_blocks = require_int(
+                endpoint.get("expected_block_count"), minimum=1
+            )
+            validate_s2_component_surface(
+                endpoint, expected_count=expected_blocks * inner_count
+            )
     else:
         pipeline = require_mapping(result.get("pipeline_decision"))
         require_exact_keys(pipeline, PIPELINE_DECISION_FIELDS)
@@ -2501,51 +3639,15 @@ def extract_commitments_after_claim(
     )
     manifest = validate_incident_manifest(plan, lineage["incident_manifest"])
     original_plan = lineage["original_plan"]
-    def load_frozen_module(
-        name: str, filename: str, expected_sha256: str
-    ) -> Any:
-        path = Path(__file__).resolve().with_name(filename)
-        try:
-            raw = path.read_bytes()
-        except OSError:
-            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-        if sha256_bytes(raw) != expected_sha256:
-            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-        existing = sys.modules.get(name)
-        if existing is not None:
-            existing_path = getattr(existing, "__file__", None)
-            if (
-                existing_path is None
-                or Path(existing_path).resolve() != path
-            ):
-                _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-            return existing
-        spec = importlib.util.spec_from_file_location(name, path)
-        if spec is None or spec.loader is None:
-            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = module
-        try:
-            spec.loader.exec_module(module)
-        except Exception:
-            sys.modules.pop(name, None)
-            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-        return module
-
-    frozen_lab = load_frozen_module(
-        "gate12c2_synthetic_lab",
-        "gate12c2_synthetic_lab.py",
-        plan["original_input_lineage"][
-            "original_synthetic_lab_file_sha256"
-        ],
-    )
-    frozen_shards = load_frozen_module(
-        "gate12c2_development_shards",
-        "gate12c2_development_shards.py",
-        plan["original_input_lineage"][
-            "original_development_shards_file_sha256"
-        ],
-    )
+    identity = _ACTIVE_EXECUTING_CODE_IDENTITY
+    if identity is None:
+        _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    scientific_sources = {
+        "gate12c2_synthetic_lab": "gate12c2_synthetic_lab.py",
+        "gate12c2_development_shards": "gate12c2_development_shards.py",
+    }
+    frozen_lab = identity.module(next(iter(scientific_sources)))
+    frozen_shards = identity.module("gate12c2_development_shards")
     if getattr(frozen_shards, "lab", None) is not frozen_lab:
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
 
@@ -2645,7 +3747,25 @@ def build_extraction_success_leaf(
     authorization_verdict_payload_sha256: str,
     execution_claim_file_sha256: str,
     execution_claim_payload_sha256: str,
+    implementation_source_commit: str,
+    git_head_at_protected_read: str,
+    git_head_at_terminal: str,
+    executing_code_identity_surface_sha256: str,
 ) -> dict[str, Any]:
+    if (
+        any(
+            re.fullmatch(r"[0-9a-f]{40}", value) is None
+            for value in (
+                implementation_source_commit,
+                git_head_at_protected_read,
+                git_head_at_terminal,
+            )
+        )
+        or git_head_at_protected_read != implementation_source_commit
+        or git_head_at_terminal != implementation_source_commit
+        or not is_sha256(executing_code_identity_surface_sha256)
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
     schema = plan["success_receipt"]
     payload = {
         "schema_version": schema["schema_version"],
@@ -2694,6 +3814,12 @@ def build_extraction_success_leaf(
             if row["role"] == "resource_implementation_pass"
         ),
         "artifact_path_surface_sha256": ARTIFACT_PATH_SURFACE_SHA256,
+        "implementation_source_commit": implementation_source_commit,
+        "git_head_at_protected_read": git_head_at_protected_read,
+        "git_head_at_terminal": git_head_at_terminal,
+        "executing_code_identity_surface_sha256": (
+            executing_code_identity_surface_sha256
+        ),
         "reviewed_implementation_authority_file_sha256": (
             reviewed_authority_file_sha256
         ),
@@ -2754,6 +3880,10 @@ def validate_extraction_success_leaf(
     authorization_verdict_payload_sha256: str,
     execution_claim_file_sha256: str,
     execution_claim_payload_sha256: str,
+    implementation_source_commit: str,
+    git_head_at_protected_read: str,
+    git_head_at_terminal: str,
+    executing_code_identity_surface_sha256: str,
 ) -> dict[str, Any]:
     schema = plan["success_receipt"]
     supplied = dict(success)
@@ -2774,6 +3904,7 @@ def validate_extraction_success_leaf(
         authorization_verdict_payload_sha256,
         execution_claim_file_sha256,
         execution_claim_payload_sha256,
+        executing_code_identity_surface_sha256,
     )
     if any(not is_sha256(value) for value in linked_digests):
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -2860,6 +3991,12 @@ def validate_extraction_success_leaf(
         ),
         execution_claim_file_sha256=execution_claim_file_sha256,
         execution_claim_payload_sha256=execution_claim_payload_sha256,
+        implementation_source_commit=implementation_source_commit,
+        git_head_at_protected_read=git_head_at_protected_read,
+        git_head_at_terminal=git_head_at_terminal,
+        executing_code_identity_surface_sha256=(
+            executing_code_identity_surface_sha256
+        ),
     )
     if supplied != expected:
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -2867,6 +4004,61 @@ def validate_extraction_success_leaf(
 
 
 
+
+
+def git_commit_parent_lineage(
+    repository: Path,
+    source_commit: str,
+    *,
+    code: str = "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+) -> tuple[str, ...]:
+    if (
+        type(source_commit) is not str
+        or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None
+    ):
+        _raise(code)
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "rev-list",
+                "--parents",
+                "-n",
+                "1",
+                source_commit,
+            ],
+            cwd=Path(repository),
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="ascii",
+        )
+    except (OSError, subprocess.SubprocessError):
+        _raise(code)
+    output = completed.stdout
+    if (
+        not output.endswith("\n")
+        or output.count("\n") != 1
+        or "\r" in output
+    ):
+        _raise(code)
+    lineage = tuple(output[:-1].split(" "))
+    if any(re.fullmatch(r"[0-9a-f]{40}", value) is None for value in lineage):
+        _raise(code)
+    return lineage
+
+
+def require_direct_child_lineage(
+    source_commit: str,
+    remediation_base_commit: str,
+    lineage: Sequence[str],
+    *,
+    code: str = "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+) -> None:
+    if tuple(lineage) != (source_commit, remediation_base_commit):
+        _raise(code)
 
 
 def read_schema_receipt(
@@ -2901,12 +4093,17 @@ def validate_candidate_binding(
     supplied = dict(candidate)
     require_exact_keys(
         supplied,
-        contract["exact_top_level_fields"],
+        artifact_exact_fields(plan, "implementation_candidate_binding"),
         code="IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
     )
     verify_self_hash(
         supplied,
         "implementation_candidate_binding_payload_sha256",
+        code="IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+    )
+    validate_review_surface_identity(
+        plan,
+        supplied.get("review_surface_identity"),
         code="IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
     )
     if any(
@@ -2925,8 +4122,15 @@ def validate_candidate_binding(
         "implementation_author_separation_contract_sha256": (
             IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
         ),
-        "implementation_trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        "implementation_trust_model_sha256": (
+            recompute_implementation_trust_model_sha256(plan)
+        ),
         "artifact_path_surface_sha256": ARTIFACT_PATH_SURFACE_SHA256,
+        "authorized_implementation_repository": str(
+            AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "remediation_base_commit": REMEDIATION_BASE_COMMIT,
+        "remediation_base_parent": REMEDIATION_BASE_PARENT,
         "worktree_clean": True,
         "core_autocrlf": False,
         "core_longpaths": True,
@@ -2943,6 +4147,11 @@ def validate_candidate_binding(
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     if current_head is not None and source_commit != current_head:
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    require_direct_child_lineage(
+        source_commit,
+        REMEDIATION_BASE_COMMIT,
+        git_commit_parent_lineage(repo_root, source_commit),
+    )
     rows = supplied.get("implementation_files")
     if not isinstance(rows, list) or len(rows) != 10:
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
@@ -3062,13 +4271,23 @@ def validate_implementation_review(
     ]
     supplied = dict(review)
     require_exact_keys(
-        supplied, schema["exact_top_level_fields"], code="INPUT_LINEAGE_MISMATCH"
+        supplied,
+        artifact_exact_fields(plan, "fresh_implementation_review_verdict"),
+        code="INPUT_LINEAGE_MISMATCH",
     )
     verify_self_hash(
         supplied,
         "fresh_implementation_review_payload_sha256",
         code="INPUT_LINEAGE_MISMATCH",
     )
+    candidate_surface = validate_review_surface_identity(
+        plan, candidate.get("review_surface_identity")
+    )
+    review_surface = validate_review_surface_identity(
+        plan, supplied.get("review_surface_identity")
+    )
+    if review_surface != candidate_surface:
+        _raise("INPUT_LINEAGE_MISMATCH")
     required = schema["outcomes"]["pass"]["required_values"]
     if any(supplied.get(key) != value for key, value in required.items()):
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -3094,7 +4313,9 @@ def validate_implementation_review(
         "formal_design_review_payload_sha256": (
             FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
         ),
-        "implementation_trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        "implementation_trust_model_sha256": (
+            recompute_implementation_trust_model_sha256(plan)
+        ),
         "implementation_candidate_binding_file_sha256": candidate_file_sha256,
         "implementation_candidate_binding_payload_sha256": (
             candidate_payload_sha256
@@ -3125,12 +4346,24 @@ def build_reviewed_authority_payload(
     review_file_sha256: str,
 ) -> dict[str, Any]:
     contract = plan["reviewed_implementation_authority_contract"]
+    surface = validate_review_surface_identity(
+        plan, candidate.get("review_surface_identity")
+    )
+    review_surface = validate_review_surface_identity(
+        plan, review.get("review_surface_identity")
+    )
+    if review_surface != surface:
+        _raise("INPUT_LINEAGE_MISMATCH")
     payload = {
         "schema_version": contract["schema_version"],
         "authority_id": contract["authority_id_value"],
         "state": contract["state"],
         "authority_derivation_domain": contract["authority_derivation_domain"],
         "implementation_source_commit": candidate["source_commit"],
+        "authorized_implementation_repository": str(
+            AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "remediation_base_commit": REMEDIATION_BASE_COMMIT,
         "contract_file_sha256": CONTRACT_FILE_SHA256,
         "plan_file_sha256": PLAN_FILE_SHA256,
         "plan_payload_sha256": PLAN_PAYLOAD_SHA256,
@@ -3141,8 +4374,11 @@ def build_reviewed_authority_payload(
             "implementation_author_separation_basis"
         ],
         "implementation_context_blindness_machine_authenticated": False,
-        "implementation_trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        "implementation_trust_model_sha256": (
+            recompute_implementation_trust_model_sha256(plan)
+        ),
         "artifact_path_surface_sha256": ARTIFACT_PATH_SURFACE_SHA256,
+        "review_surface_identity": surface,
         "formal_design_review_file_sha256": FORMAL_DESIGN_REVIEW_FILE_SHA256,
         "formal_design_review_payload_sha256": (
             FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
@@ -3161,7 +4397,7 @@ def build_reviewed_authority_payload(
     }
     require_exact_keys(
         {**payload, "reviewed_implementation_authority_payload_sha256": ""},
-        contract["exact_top_level_fields"],
+        artifact_exact_fields(plan, "reviewed_implementation_authority"),
         code="INPUT_LINEAGE_MISMATCH",
     )
     return add_self_hash(
@@ -3181,12 +4417,17 @@ def validate_reviewed_authority(
     contract = plan["reviewed_implementation_authority_contract"]
     supplied = dict(authority)
     require_exact_keys(
-        supplied, contract["exact_top_level_fields"], code="INPUT_LINEAGE_MISMATCH"
+        supplied,
+        artifact_exact_fields(plan, "reviewed_implementation_authority"),
+        code="INPUT_LINEAGE_MISMATCH",
     )
     verify_self_hash(
         supplied,
         "reviewed_implementation_authority_payload_sha256",
         code="INPUT_LINEAGE_MISMATCH",
+    )
+    validate_review_surface_identity(
+        plan, supplied.get("review_surface_identity")
     )
     expected = build_reviewed_authority_payload(
         plan,
@@ -3233,6 +4474,7 @@ def build_preflight_payload(
     expires_at_utc: str,
     reviewed_authority_file_sha256: str,
     reviewed_authority_payload_sha256: str,
+    implementation_source_commit: str,
     extraction_terminal_file_sha256: str | None = None,
     extraction_terminal_payload_sha256: str | None = None,
     baseline_receipt_file_sha256: str | None = None,
@@ -3253,6 +4495,8 @@ def build_preflight_payload(
     ):
         if not is_sha256(digest):
             _raise("AUTHORIZATION_INVALID")
+    if re.fullmatch(r"[0-9a-f]{40}", implementation_source_commit) is None:
+        _raise("AUTHORIZATION_INVALID")
     payload: dict[str, Any] = {
         "schema_version": schema["schema_version"],
         "gate_id": GATE_ID,
@@ -3271,6 +4515,11 @@ def build_preflight_payload(
         "reviewed_implementation_authority_payload_sha256": (
             reviewed_authority_payload_sha256
         ),
+        "authorized_implementation_repository": str(
+            AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "implementation_source_commit": implementation_source_commit,
+        "executing_code_identity_status": "verified",
         "artifact_path_surface_sha256": ARTIFACT_PATH_SURFACE_SHA256,
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
@@ -3309,6 +4558,7 @@ def validate_preflight_payload(
     scope: str,
     reviewed_authority_file_sha256: str,
     reviewed_authority_payload_sha256: str,
+    implementation_source_commit: str,
     extraction_terminal_file_sha256: str | None = None,
     extraction_terminal_payload_sha256: str | None = None,
     baseline_receipt_file_sha256: str | None = None,
@@ -3338,6 +4588,11 @@ def validate_preflight_payload(
         "reviewed_implementation_authority_payload_sha256": (
             reviewed_authority_payload_sha256
         ),
+        "authorized_implementation_repository": str(
+            AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "implementation_source_commit": implementation_source_commit,
+        "executing_code_identity_status": "verified",
         "artifact_path_surface_sha256": ARTIFACT_PATH_SURFACE_SHA256,
         "artifact_lifecycle_phase": schema[
             "required_artifact_lifecycle_phase"
@@ -3674,6 +4929,8 @@ def build_execution_claim_payload(
     owner_hostname: str,
     owner_pid: int,
     owner_process_creation_time_utc: str,
+    git_head_at_claim: str,
+    executing_code_identity_surface_sha256: str,
     preflight_file_sha256: str,
     authorization_file_sha256: str,
     verdict_file_sha256: str,
@@ -3725,9 +4982,16 @@ def build_execution_claim_payload(
         preflight_file_sha256,
         authorization_file_sha256,
         verdict_file_sha256,
+        executing_code_identity_surface_sha256,
     ):
         if not is_sha256(digest):
             _raise("AUTHORIZATION_INVALID")
+    implementation_source_commit = preflight.get("implementation_source_commit")
+    if (
+        re.fullmatch(r"[0-9a-f]{40}", str(implementation_source_commit)) is None
+        or git_head_at_claim != implementation_source_commit
+    ):
+        _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     payload: dict[str, Any] = {
         "schema_version": schema["schema_version"],
         "gate_id": GATE_ID,
@@ -3747,6 +5011,11 @@ def build_execution_claim_payload(
         "reviewed_implementation_authority_payload_sha256": authorization[
             "reviewed_implementation_authority_payload_sha256"
         ],
+        "implementation_source_commit": implementation_source_commit,
+        "git_head_at_claim": git_head_at_claim,
+        "executing_code_identity_surface_sha256": (
+            executing_code_identity_surface_sha256
+        ),
         "preflight_file_sha256": preflight_file_sha256,
         "preflight_payload_sha256": preflight["preflight_payload_sha256"],
         "authorization_file_sha256": authorization_file_sha256,
@@ -3812,6 +5081,10 @@ def validate_execution_claim_payload(
         owner_pid=supplied.get("owner_pid"),
         owner_process_creation_time_utc=supplied.get(
             "owner_process_creation_time_utc"
+        ),
+        git_head_at_claim=supplied.get("git_head_at_claim"),
+        executing_code_identity_surface_sha256=supplied.get(
+            "executing_code_identity_surface_sha256"
         ),
         preflight_file_sha256=preflight_file_sha256,
         authorization_file_sha256=authorization_file_sha256,

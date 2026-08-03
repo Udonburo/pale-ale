@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independently verify a Gate12C-2 v0.8 authorization."""
+"""Independently verify a Gate12C-2 v0.9 authorization."""
 
 
 from __future__ import annotations
@@ -31,7 +31,9 @@ def verify_authorization(
     binding_schema = plan["implementation_binding_contract"]
     candidate, _candidate_file_hash = gate.read_schema_receipt(
         Path(binding_schema["artifact_path"]),
-        exact_fields=binding_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "implementation_candidate_binding"
+        ),
         hash_field="implementation_candidate_binding_payload_sha256",
         code="IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
     )
@@ -134,6 +136,9 @@ def verify_authorization(
             reviewed_authority_file_sha256=authority_file_hash,
             reviewed_authority_payload_sha256=authority[
                 "reviewed_implementation_authority_payload_sha256"
+            ],
+            implementation_source_commit=preflight[
+                "implementation_source_commit"
             ],
             now_ns=current_ns,
             **link_kwargs,

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Primary tests for the Gate12C-2 v0.8 baseline gate."""
+"""Primary tests for the Gate12C-2 v0.9 baseline gate."""
 
 
 from __future__ import annotations
 
+import ast
+import contextlib
 import copy
 import gzip
+import io
 import json
 import math
 import tempfile
@@ -227,6 +230,169 @@ def synthetic_configuration(
     return subplan, gate.canonical_json_bytes(index), shard_bytes
 
 
+def _synthetic_s2_endpoint() -> dict[str, object]:
+    medians = {
+        arm: {field: 0.0 for field in gate.S2_COMPONENT_FIELDS}
+        for arm in gate.S2_COMPONENT_ARMS
+    }
+    coverage = {
+        arm: {
+            field: {
+                "expected_count": 1,
+                "defined_count": 1,
+                "degenerate_count": 0,
+                "unexpected_missing_count": 0,
+                "nonfinite_count": 0,
+            }
+            for field in gate.S2_COMPONENT_FIELDS
+        }
+        for arm in gate.S2_COMPONENT_ARMS
+    }
+    return {
+        "minimum_log_null_inflation": 0.25,
+        "expected_block_count": 1,
+        "component_medians": medians,
+        "component_coverage": coverage,
+    }
+
+
+def synthetic_s2_configuration(
+) -> tuple[dict[str, object], bytes, dict[str, bytes]]:
+    subplan, index_raw, shard_bytes = synthetic_configuration()
+    subplan["regime_id"] = "S2_null_inflation"
+    subplan.pop("plan_payload_sha256")
+    subplan["plan_payload_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(subplan)
+    )
+    index = gate.strict_json_loads(index_raw, canonical=True)
+    index["plan_payload_sha256"] = subplan["plan_payload_sha256"]
+    for row in index["shards"]:
+        relative = row["relative_path"]
+        shard = gate.strict_json_loads(
+            gzip.decompress(shard_bytes[relative]), canonical=True
+        )
+        result = shard["result"]
+        for field in (
+            "effect_strength",
+            "dependency_structure",
+            "alternative",
+            "case_receipts",
+            "endpoint_receipts",
+            "pipeline_decision",
+        ):
+            result.pop(field)
+        result.update(
+            {
+                "regime_id": "S2_null_inflation",
+                "observed_process_modified": False,
+                "paired_null_arms": [
+                    gate.N1_NULL_ARM_ID,
+                    gate.S2_NULL_ARM_ID,
+                ],
+                "identified_case_count": 0,
+                "breadth_pass": False,
+                "identification_success": False,
+                "endpoint_rows": [
+                    _synthetic_s2_endpoint() for _ in range(24)
+                ],
+                "case_rows": [{} for _ in range(12)],
+            }
+        )
+        execution = result["execution_configuration_contract"]
+        execution["plan_payload_sha256"] = subplan["plan_payload_sha256"]
+        execution["regime_id"] = "S2_null_inflation"
+        shard["plan_payload_sha256"] = subplan["plan_payload_sha256"]
+        result_hash = gate.sha256_bytes(gate.canonical_json_bytes(result))
+        shard["result_payload_sha256"] = result_hash
+        shard.pop("shard_payload_sha256")
+        shard["shard_payload_sha256"] = gate.sha256_bytes(
+            gate.canonical_json_bytes(shard)
+        )
+        compressed = gzip.compress(
+            gate.canonical_json_bytes(shard), compresslevel=6, mtime=0
+        )
+        shard_bytes[relative] = compressed
+        row.update(
+            {
+                "compressed_file_sha256": gate.sha256_bytes(compressed),
+                "compressed_bytes": len(compressed),
+                "shard_payload_sha256": shard["shard_payload_sha256"],
+                "result_payload_sha256": result_hash,
+                "decision": gate.reconstruct_decision(result),
+            }
+        )
+    projection_rows = [
+        {
+            "outer_experiment_index": row["outer_experiment_index"],
+            "result_payload_sha256": row["result_payload_sha256"],
+            "decision": row["decision"],
+        }
+        for row in index["shards"]
+    ]
+    index["scientific_projection_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(
+            gate.scientific_projection(subplan, projection_rows)
+        )
+    )
+    index.pop("index_payload_sha256")
+    index["index_payload_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(index)
+    )
+    return subplan, gate.canonical_json_bytes(index), shard_bytes
+
+
+def mutate_s2_configuration(
+    mutation: object,
+) -> tuple[dict[str, object], bytes, dict[str, bytes]]:
+    subplan, index_raw, shard_bytes = synthetic_s2_configuration()
+    index = gate.strict_json_loads(index_raw, canonical=True)
+    row = index["shards"][0]
+    relative = row["relative_path"]
+    shard = gate.strict_json_loads(
+        gzip.decompress(shard_bytes[relative]), canonical=True
+    )
+    endpoint = shard["result"]["endpoint_rows"][0]
+    mutation(endpoint)
+    result = shard["result"]
+    result_hash = gate.sha256_bytes(gate.canonical_json_bytes(result))
+    shard["result_payload_sha256"] = result_hash
+    shard.pop("shard_payload_sha256")
+    shard["shard_payload_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(shard)
+    )
+    compressed = gzip.compress(
+        gate.canonical_json_bytes(shard), compresslevel=6, mtime=0
+    )
+    shard_bytes[relative] = compressed
+    row.update(
+        {
+            "compressed_file_sha256": gate.sha256_bytes(compressed),
+            "compressed_bytes": len(compressed),
+            "shard_payload_sha256": shard["shard_payload_sha256"],
+            "result_payload_sha256": result_hash,
+            "decision": gate.reconstruct_decision(result),
+        }
+    )
+    projection_rows = [
+        {
+            "outer_experiment_index": item["outer_experiment_index"],
+            "result_payload_sha256": item["result_payload_sha256"],
+            "decision": item["decision"],
+        }
+        for item in index["shards"]
+    ]
+    index["scientific_projection_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(
+            gate.scientific_projection(subplan, projection_rows)
+        )
+    )
+    index.pop("index_payload_sha256")
+    index["index_payload_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(index)
+    )
+    return subplan, gate.canonical_json_bytes(index), shard_bytes
+
+
 def derive_both(
     fixture: tuple[dict[str, object], bytes, dict[str, bytes]]
 ) -> tuple[dict[str, object], dict[str, object]]:
@@ -245,6 +411,73 @@ def derive_both(
         shard_raw_by_relative_path=shards,
     )
     return extracted, verified
+
+
+def synthetic_schema_mutation(
+    mutation_id: str,
+) -> tuple[dict[str, object], bytes, dict[str, bytes]]:
+    subplan, index_raw, shard_bytes = synthetic_configuration(operational=True)
+    index = gate.strict_json_loads(index_raw, canonical=True)
+    target_path = "shards/outer-000000.json.gz"
+    mutated_shard: dict[str, object] | None = None
+    if mutation_id == "SCHEMA-INDEX-EPISTEMIC-STATUS-FOREIGN":
+        index["epistemic_status"] = "synthetic_sensitive_marker"
+    elif mutation_id == "SCHEMA-INDEX-WORKER-COUNT-ZERO":
+        index["worker_count_operational_only"] = 0
+    elif mutation_id == "SCHEMA-INDEX-OPERATIONAL-EXECUTION-METRICS-NONOBJECT":
+        index["operational_execution_metrics"] = "synthetic_sensitive_marker"
+    elif mutation_id == "SCHEMA-RESULT-ROW-OPERATIONAL-METRICS-NONOBJECT":
+        index["shards"][0]["operational_metrics"] = "synthetic_sensitive_marker"
+    else:
+        mutated_shard = gate.strict_json_loads(
+            gzip.decompress(shard_bytes[target_path]), canonical=True
+        )
+        if mutation_id == "SCHEMA-SHARD-EPISTEMIC-STATUS-FOREIGN":
+            mutated_shard["epistemic_status"] = "synthetic_sensitive_marker"
+        elif mutation_id == "SCHEMA-PIPELINE-ENDPOINT-COUNT-NEGATIVE":
+            mutated_shard["result"]["pipeline_decision"]["endpoint_count"] = -1
+        elif mutation_id == "SCHEMA-PROMOTIONAL-FLAG-STRING":
+            mutated_shard["result"]["pipeline_decision"][
+                "partial_or_structured_is_promotional"
+            ] = "synthetic_sensitive_marker"
+        else:
+            raise AssertionError(mutation_id)
+    if mutated_shard is not None:
+        result = mutated_shard["result"]
+        result_hash = gate.sha256_bytes(gate.canonical_json_bytes(result))
+        mutated_shard["result_payload_sha256"] = result_hash
+        mutated_shard.pop("shard_payload_sha256")
+        mutated_shard["shard_payload_sha256"] = gate.sha256_bytes(
+            gate.canonical_json_bytes(mutated_shard)
+        )
+        compressed = gzip.compress(
+            gate.canonical_json_bytes(mutated_shard), compresslevel=6, mtime=0
+        )
+        shard_bytes[target_path] = compressed
+        row = index["shards"][0]
+        row["compressed_file_sha256"] = gate.sha256_bytes(compressed)
+        row["compressed_bytes"] = len(compressed)
+        row["shard_payload_sha256"] = mutated_shard["shard_payload_sha256"]
+        row["result_payload_sha256"] = result_hash
+        row["decision"] = gate.reconstruct_decision(result)
+        projection_rows = [
+            {
+                "outer_experiment_index": item["outer_experiment_index"],
+                "result_payload_sha256": item["result_payload_sha256"],
+                "decision": item["decision"],
+            }
+            for item in index["shards"]
+        ]
+        index["scientific_projection_sha256"] = gate.sha256_bytes(
+            gate.canonical_json_bytes(
+                gate.scientific_projection(subplan, projection_rows)
+            )
+        )
+    index.pop("index_payload_sha256")
+    index["index_payload_sha256"] = gate.sha256_bytes(
+        gate.canonical_json_bytes(index)
+    )
+    return subplan, gate.canonical_json_bytes(index), shard_bytes
 
 
 
@@ -382,7 +615,7 @@ class FrozenPlanTests(unittest.TestCase):
 
     def test_all_failure_rows_profiles_codes_and_phases_are_closed(self) -> None:
         matrix = self.plan["failure_matrix"]
-        self.assertEqual(len(matrix), 92)
+        self.assertEqual(len(matrix), 94)
         self.assertEqual(
             {row["failure_code"] for row in matrix}, gate.FAILURE_CODES
         )
@@ -391,7 +624,7 @@ class FrozenPlanTests(unittest.TestCase):
             set(self.plan["failure_phases"]),
         )
         self.assertEqual(
-            len({gate.canonical_json_bytes(row) for row in matrix}), 92
+            len({gate.canonical_json_bytes(row) for row in matrix}), 94
         )
         for row in matrix:
             self.assertIn(
@@ -410,7 +643,12 @@ class FrozenPlanTests(unittest.TestCase):
             observations = {
                 role: gate.ArtifactObservation(
                     final_exists=role in phase["must_exist"],
-                    outcome=phase["required_outcomes"].get(role),
+                    outcome=(
+                        "success"
+                        if phase["required_outcomes"].get(role)
+                        == "success_or_failure"
+                        else phase["required_outcomes"].get(role)
+                    ),
                 )
                 for role in roles
             }
@@ -449,7 +687,7 @@ class FrozenPlanTests(unittest.TestCase):
         self.assertEqual(len(all_paths), len(set(all_paths)))
         for row in rows:
             self.assertEqual(
-                row["pending_path"], row["final_path"] + ".pending-v0.8"
+                row["pending_path"], row["final_path"] + ".pending-v0.9"
             )
 
     def test_exact_configuration_surface_counts(self) -> None:
@@ -466,6 +704,52 @@ class FrozenPlanTests(unittest.TestCase):
 
 
 class IndependentCommitmentTests(unittest.TestCase):
+    def test_complete_invariant_manifests_and_seven_mutations(self) -> None:
+        self.assertEqual(
+            gate.EXTRACTOR_SCHEMA_INVARIANT_MANIFEST,
+            verifier.VERIFIER_SCHEMA_INVARIANT_MANIFEST,
+        )
+        self.assertEqual(
+            len(gate.EXTRACTOR_SCHEMA_INVARIANT_MANIFEST),
+            len(set(gate.EXTRACTOR_SCHEMA_INVARIANT_MANIFEST)),
+        )
+        mutation_ids = (
+            "SCHEMA-INDEX-EPISTEMIC-STATUS-FOREIGN",
+            "SCHEMA-INDEX-WORKER-COUNT-ZERO",
+            "SCHEMA-INDEX-OPERATIONAL-EXECUTION-METRICS-NONOBJECT",
+            "SCHEMA-RESULT-ROW-OPERATIONAL-METRICS-NONOBJECT",
+            "SCHEMA-SHARD-EPISTEMIC-STATUS-FOREIGN",
+            "SCHEMA-PIPELINE-ENDPOINT-COUNT-NEGATIVE",
+            "SCHEMA-PROMOTIONAL-FLAG-STRING",
+        )
+        for mutation_id in mutation_ids:
+            subplan, index_raw, shards = synthetic_schema_mutation(mutation_id)
+            with self.subTest(mutation_id=mutation_id, path="extractor"):
+                with self.assertRaises(
+                    gate.Gate12C2OriginalBaselineError
+                ) as caught:
+                    gate.derive_configuration_commitment(
+                        configuration_id="S0_true_null__d1",
+                        subplan=subplan,
+                        index_raw=index_raw,
+                        shard_raw_by_relative_path=shards,
+                        result_validator=lambda *_args: None,
+                    )
+                self.assertEqual(caught.exception.code, "INPUT_SCHEMA_INVALID")
+                self.assertNotIn("synthetic_sensitive_marker", str(caught.exception))
+            with self.subTest(mutation_id=mutation_id, path="verifier"):
+                with self.assertRaises(
+                    verifier.IndependentVerificationError
+                ) as caught:
+                    verifier.independent_configuration_commitment(
+                        configuration_id="S0_true_null__d1",
+                        subplan=subplan,
+                        index_raw=index_raw,
+                        shard_raw_by_relative_path=shards,
+                    )
+                self.assertEqual(caught.exception.code, "INPUT_SCHEMA_INVALID")
+                self.assertNotIn("synthetic_sensitive_marker", str(caught.exception))
+
     def test_independent_paths_rederive_identical_commitments(self) -> None:
         extracted, verified = derive_both(synthetic_configuration())
         self.assertEqual(extracted, verified)
@@ -587,15 +871,319 @@ class IndependentCommitmentTests(unittest.TestCase):
 
     def test_extractor_and_verifier_have_no_shared_implementation_import(self) -> None:
         source = Path(verifier.__file__).read_text(encoding="utf-8")
-        self.assertNotIn(
-            "gate12c2_original_baseline_commitments", source
+        syntax_tree = ast.parse(source)
+        imported_modules = {
+            alias.name
+            for node in ast.walk(syntax_tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        } | {
+            node.module
+            for node in ast.walk(syntax_tree)
+            if isinstance(node, ast.ImportFrom) and node.module is not None
+        }
+        self.assertFalse(
+            imported_modules
+            & {
+                "gate12c2_original_baseline_commitments",
+                "gate12c2_development_shards",
+                "gate12c2_synthetic_lab",
+            }
         )
-        self.assertNotIn("gate12c2_development_shards", source)
-        self.assertNotIn("gate12c2_synthetic_lab", source)
         self.assertIsNot(
             gate.derive_configuration_commitment,
             verifier.independent_configuration_commitment,
         )
+
+
+class S2ComponentSchemaProductionTests(unittest.TestCase):
+    def test_nested_component_surface_passes_both_production_paths(self) -> None:
+        subplan, index_raw, shards = synthetic_s2_configuration()
+        extracted = gate.derive_configuration_commitment(
+            configuration_id="S2_null_inflation__d1",
+            subplan=subplan,
+            index_raw=index_raw,
+            shard_raw_by_relative_path=shards,
+            result_validator=lambda *_args: None,
+        )
+        verified = verifier.independent_configuration_commitment(
+            configuration_id="S2_null_inflation__d1",
+            subplan=subplan,
+            index_raw=index_raw,
+            shard_raw_by_relative_path=shards,
+        )
+        self.assertEqual(extracted, verified)
+
+    def test_nested_component_mutations_rehashed_end_to_end_are_rejected(
+        self,
+    ) -> None:
+        marker = "synthetic_sensitive_marker"
+        mutations = {
+            "missing_median_arm": (
+                lambda endpoint: endpoint["component_medians"].pop("N1")
+            ),
+            "extra_median_arm": (
+                lambda endpoint: endpoint["component_medians"].__setitem__(
+                    marker, {}
+                )
+            ),
+            "wrong_median_arm_type": (
+                lambda endpoint: endpoint["component_medians"].__setitem__(
+                    "observed", []
+                )
+            ),
+            "missing_median_field": (
+                lambda endpoint: endpoint["component_medians"][
+                    "observed"
+                ].pop("a_q")
+            ),
+            "extra_median_field": (
+                lambda endpoint: endpoint["component_medians"][
+                    "observed"
+                ].__setitem__(marker, 0.0)
+            ),
+            "wrong_median_type": (
+                lambda endpoint: endpoint["component_medians"][
+                    "observed"
+                ].__setitem__("a_q", marker)
+            ),
+            "missing_coverage_arm": (
+                lambda endpoint: endpoint["component_coverage"].pop("N1")
+            ),
+            "extra_coverage_arm": (
+                lambda endpoint: endpoint["component_coverage"].__setitem__(
+                    marker, {}
+                )
+            ),
+            "missing_coverage_field": (
+                lambda endpoint: endpoint["component_coverage"]["N1"].pop(
+                    "a_q"
+                )
+            ),
+            "wrong_coverage_field_type": (
+                lambda endpoint: endpoint["component_coverage"]["N1"].__setitem__(
+                    "a_q", marker
+                )
+            ),
+            "missing_count_field": (
+                lambda endpoint: endpoint["component_coverage"]["N1"][
+                    "a_q"
+                ].pop("defined_count")
+            ),
+            "extra_count_field": (
+                lambda endpoint: endpoint["component_coverage"]["N1"][
+                    "a_q"
+                ].__setitem__(marker, 0)
+            ),
+            "bool_as_count": (
+                lambda endpoint: endpoint["component_coverage"]["N1"][
+                    "a_q"
+                ].__setitem__("defined_count", True)
+            ),
+            "count_total_mismatch": (
+                lambda endpoint: endpoint["component_coverage"]["N1"][
+                    "a_q"
+                ].__setitem__("defined_count", 0)
+            ),
+            "swapped_median_nesting": (
+                lambda endpoint: endpoint.__setitem__(
+                    "component_medians",
+                    {
+                        field: {
+                            arm: 0.0 for arm in gate.S2_COMPONENT_ARMS
+                        }
+                        for field in gate.S2_COMPONENT_FIELDS
+                    },
+                )
+            ),
+        }
+        paths = (
+            (
+                gate.derive_configuration_commitment,
+                gate.Gate12C2OriginalBaselineError,
+                {"result_validator": lambda *_args: None},
+            ),
+            (
+                verifier.independent_configuration_commitment,
+                verifier.IndependentVerificationError,
+                {},
+            ),
+        )
+        for mutation_id, mutation in mutations.items():
+            fixture = mutate_s2_configuration(mutation)
+            for function, error_type, extra in paths:
+                with self.subTest(
+                    mutation_id=mutation_id,
+                    path=function.__module__,
+                ):
+                    with self.assertRaises(error_type) as caught:
+                        function(
+                            configuration_id="S2_null_inflation__d1",
+                            subplan=fixture[0],
+                            index_raw=fixture[1],
+                            shard_raw_by_relative_path=fixture[2],
+                            **extra,
+                        )
+                    self.assertEqual(
+                        caught.exception.code, "INPUT_SCHEMA_INVALID"
+                    )
+                    self.assertNotIn(marker, str(caught.exception))
+
+
+    def test_conditionally_defined_all_degenerate_passes_both_paths(
+        self,
+    ) -> None:
+        def make_all_degenerate(endpoint: dict[str, object]) -> None:
+            for arm in gate.S2_COMPONENT_ARMS:
+                for field in gate.S2_CONDITIONALLY_DEFINED_COMPONENT_FIELDS:
+                    endpoint["component_medians"][arm][field] = None
+                    endpoint["component_coverage"][arm][field].update(
+                        {
+                            "defined_count": 0,
+                            "degenerate_count": 1,
+                        }
+                    )
+
+        fixture = mutate_s2_configuration(make_all_degenerate)
+        extracted = gate.derive_configuration_commitment(
+            configuration_id="S2_null_inflation__d1",
+            subplan=fixture[0],
+            index_raw=fixture[1],
+            shard_raw_by_relative_path=fixture[2],
+            result_validator=lambda *_args: None,
+        )
+        verified = verifier.independent_configuration_commitment(
+            configuration_id="S2_null_inflation__d1",
+            subplan=fixture[0],
+            index_raw=fixture[1],
+            shard_raw_by_relative_path=fixture[2],
+        )
+        self.assertEqual(extracted, verified)
+
+    def test_s2_semantic_mutations_rehashed_end_to_end_are_rejected(
+        self,
+    ) -> None:
+        paths = (
+            (
+                gate.derive_configuration_commitment,
+                gate.Gate12C2OriginalBaselineError,
+                {"result_validator": lambda *_args: None},
+            ),
+            (
+                verifier.independent_configuration_commitment,
+                verifier.IndependentVerificationError,
+                {},
+            ),
+        )
+        attacks_by_family = {
+            "always": (
+                "negative_zero_median",
+                "defined_without_median",
+                "always_defined_marked_degenerate",
+                "unexpected_missing_nonzero",
+                "nonfinite_count_nonzero",
+                "bool_as_count",
+                "negative_count",
+                "count_conservation_failure",
+            ),
+            "conditional": (
+                "negative_zero_median",
+                "defined_without_median",
+                "median_while_all_degenerate",
+                "unexpected_missing_nonzero",
+                "nonfinite_count_nonzero",
+                "bool_as_count",
+                "negative_count",
+                "count_conservation_failure",
+            ),
+        }
+        family_fields = {
+            "always": gate.S2_ALWAYS_DEFINED_COMPONENT_FIELDS[0],
+            "conditional": (
+                gate.S2_CONDITIONALLY_DEFINED_COMPONENT_FIELDS[0]
+            ),
+        }
+        for arm in gate.S2_COMPONENT_ARMS:
+            for family, attacks in attacks_by_family.items():
+                field = family_fields[family]
+                for attack in attacks:
+                    def mutate(
+                        endpoint: dict[str, object],
+                        *,
+                        selected_arm: str = arm,
+                        selected_field: str = field,
+                        selected_attack: str = attack,
+                    ) -> None:
+                        medians = endpoint["component_medians"][selected_arm]
+                        counts = endpoint["component_coverage"][selected_arm][
+                            selected_field
+                        ]
+                        if selected_attack == "negative_zero_median":
+                            medians[selected_field] = -0.0
+                        elif selected_attack == "defined_without_median":
+                            medians[selected_field] = None
+                        elif selected_attack in {
+                            "median_while_all_degenerate",
+                            "always_defined_marked_degenerate",
+                        }:
+                            counts["defined_count"] = 0
+                            counts["degenerate_count"] = 1
+                            medians[selected_field] = 0.0
+                        elif selected_attack == "unexpected_missing_nonzero":
+                            counts["defined_count"] = 0
+                            counts["degenerate_count"] = 0
+                            counts["unexpected_missing_count"] = 1
+                            medians[selected_field] = None
+                        elif selected_attack == "nonfinite_count_nonzero":
+                            counts["defined_count"] = 0
+                            counts["degenerate_count"] = 0
+                            counts["nonfinite_count"] = 1
+                            medians[selected_field] = None
+                        elif selected_attack == "bool_as_count":
+                            counts["defined_count"] = True
+                        elif selected_attack == "negative_count":
+                            counts["defined_count"] = 2
+                            counts["degenerate_count"] = -1
+                        elif selected_attack == "count_conservation_failure":
+                            counts["defined_count"] = 0
+                            counts["degenerate_count"] = 0
+                            medians[selected_field] = None
+                        else:
+                            raise AssertionError("unknown test mutation")
+
+                    fixture = mutate_s2_configuration(mutate)
+                    for function, error_type, extra in paths:
+                        stdout = io.StringIO()
+                        stderr = io.StringIO()
+                        with self.subTest(
+                            arm=arm,
+                            family=family,
+                            attack=attack,
+                            path=function.__module__,
+                        ):
+                            with contextlib.redirect_stdout(
+                                stdout
+                            ), contextlib.redirect_stderr(stderr):
+                                with self.assertRaises(error_type) as caught:
+                                    function(
+                                        configuration_id=(
+                                            "S2_null_inflation__d1"
+                                        ),
+                                        subplan=fixture[0],
+                                        index_raw=fixture[1],
+                                        shard_raw_by_relative_path=fixture[2],
+                                        **extra,
+                                    )
+                            self.assertEqual(
+                                caught.exception.code,
+                                "INPUT_SCHEMA_INVALID",
+                            )
+                            self.assertEqual(
+                                str(caught.exception),
+                                "INPUT_SCHEMA_INVALID",
+                            )
+                            self.assertEqual(stdout.getvalue(), "")
+                            self.assertEqual(stderr.getvalue(), "")
 
 
 class PublicationAndOwnershipTests(unittest.TestCase):
@@ -603,7 +1191,7 @@ class PublicationAndOwnershipTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             final = root / "artifact.json"
-            pending = root / "artifact.json.pending-v0.8"
+            pending = root / "artifact.json.pending-v0.9"
             expected = b"{}\n"
             self.assertEqual(
                 gate.classify_publication_after_exception(

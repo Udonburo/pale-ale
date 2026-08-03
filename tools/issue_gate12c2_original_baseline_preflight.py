@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue a Gate12C-2 v0.8 mechanical preflight."""
+"""Issue a Gate12C-2 v0.9 mechanical preflight."""
 
 
 from __future__ import annotations
@@ -38,7 +38,9 @@ def load_reviewed_chain(
     binding_schema = plan["implementation_binding_contract"]
     candidate, candidate_file_hash = gate.read_schema_receipt(
         Path(binding_schema["artifact_path"]),
-        exact_fields=binding_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "implementation_candidate_binding"
+        ),
         hash_field="implementation_candidate_binding_payload_sha256",
     )
     gate.validate_candidate_binding(
@@ -52,7 +54,9 @@ def load_reviewed_chain(
     ]
     review, review_file_hash = gate.read_schema_receipt(
         Path(review_schema["artifact_path"]),
-        exact_fields=review_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "fresh_implementation_review_verdict"
+        ),
         hash_field="fresh_implementation_review_payload_sha256",
     )
     gate.validate_implementation_review(
@@ -68,7 +72,9 @@ def load_reviewed_chain(
     authority_schema = plan["reviewed_implementation_authority_contract"]
     authority, authority_file_hash = gate.read_schema_receipt(
         Path(authority_schema["artifact_path"]),
-        exact_fields=authority_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "reviewed_implementation_authority"
+        ),
         hash_field="reviewed_implementation_authority_payload_sha256",
     )
     gate.validate_reviewed_authority(
@@ -85,31 +91,7 @@ def load_reviewed_chain(
 def _observe_surface(
     plan: dict[str, Any],
 ) -> dict[str, gate.ArtifactObservation]:
-    outcome_fields = plan["artifact_lifecycle_contract"][
-        "outcome_field_by_role"
-    ]
-    observations: dict[str, gate.ArtifactObservation] = {}
-    for row in plan["artifact_path_surface"]:
-        role = row["role"]
-        final = Path(row["final_path"])
-        pending = Path(row["pending_path"])
-        outcome = None
-        if final.is_file() and role in outcome_fields:
-            try:
-                raw = final.read_bytes()
-                if raw.endswith(b"\n"):
-                    payload = gate.require_mapping(
-                        gate.strict_json_loads(raw[:-1], canonical=True)
-                    )
-                    outcome = payload.get(outcome_fields[role])
-            except Exception:
-                outcome = "__invalid__"
-        observations[role] = gate.ArtifactObservation(
-            final_exists=final.is_file(),
-            pending_exists=pending.exists(),
-            outcome=outcome,
-        )
-    return observations
+    return gate.observe_artifact_surface(plan)
 
 
 def _load_verified_extraction(
@@ -145,6 +127,7 @@ def _load_verified_extraction(
         reviewed_authority_payload_sha256=authority[
             "reviewed_implementation_authority_payload_sha256"
         ],
+        implementation_source_commit=candidate["source_commit"],
         now_ns=gate.parse_utc_ns(
             preflight["issued_at_utc"], code="INPUT_LINEAGE_MISMATCH"
         ),
@@ -239,6 +222,12 @@ def _load_verified_extraction(
         ],
         execution_claim_file_sha256=claim_file_hash,
         execution_claim_payload_sha256=claim["execution_claim_payload_sha256"],
+        implementation_source_commit=claim["implementation_source_commit"],
+        git_head_at_protected_read=claim["implementation_source_commit"],
+        git_head_at_terminal=claim["implementation_source_commit"],
+        executing_code_identity_surface_sha256=claim[
+            "executing_code_identity_surface_sha256"
+        ],
     )
     terminal_schema = plan["control_receipt_schemas"]["extraction_terminal"]
     terminal, terminal_file_hash = gate.read_schema_receipt(
@@ -315,6 +304,7 @@ def issue_preflight(
         reviewed_authority_payload_sha256=authority[
             "reviewed_implementation_authority_payload_sha256"
         ],
+        implementation_source_commit=candidate["source_commit"],
         now_ns=now_ns,
         **kwargs,
     )

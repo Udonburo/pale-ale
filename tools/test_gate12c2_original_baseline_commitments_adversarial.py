@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Adversarial tests for the Gate12C-2 v0.8 baseline gate."""
+"""Adversarial tests for the Gate12C-2 v0.9 baseline gate."""
 
 from __future__ import annotations
 
 import ast
 import contextlib
 import copy
+import ctypes
 import gzip
 import inspect
 import io
@@ -14,6 +15,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
@@ -32,11 +34,112 @@ DIGEST = "d" * 64
 OTHER_DIGEST = "e" * 64
 SOURCE_COMMIT = "a" * 40
 
+V011_REVIEW_PLAN = Path(
+    "C:/Users/aoika/Documents/Research/pale-ale-local/research-program/"
+    "profile-plans/C2_ORIGINAL_BASELINE_COMMITMENT_GATE_PLAN_v0.11_2026-08-02.json"
+)
+V011_REVIEW_PLAN_FILE_SHA256 = (
+    "8a36d78e36bf20a162a6903c5968c15838f1df4da20451aca35638731c24049c"
+)
+
 
 def rehash_plan(value: Mapping[str, Any]) -> dict[str, Any]:
     payload = copy.deepcopy(dict(value))
     payload.pop("plan_payload_sha256", None)
     return gate.add_self_hash(payload, "plan_payload_sha256")
+
+
+def independently_rederive_review_surface() -> dict[str, object]:
+    raw = V011_REVIEW_PLAN.read_bytes()
+    if gate.sha256_bytes(raw) != V011_REVIEW_PLAN_FILE_SHA256:
+        raise AssertionError("v0.11 review-plan byte identity mismatch")
+    if not raw.endswith(b"\n") or raw.endswith(b"\n\n"):
+        raise AssertionError("v0.11 review-plan LF domain mismatch")
+    source = gate.strict_json_loads(raw[:-1], canonical=True)
+    gate.verify_self_hash(source, "plan_payload_sha256")
+    compatibility = []
+    catalogs = source["source_bound_leaf_schema_contract"][
+        "canonical_leaf_surface"
+    ]["catalogs"]
+    for catalog in catalogs:
+        for record in catalog["records"]:
+            if record["field_path"].startswith(
+                ("component_medians.", "component_coverage.")
+            ):
+                continue
+            compatibility.append(
+                {"schema_id": catalog["catalog_id"], **record}
+            )
+    schema_id = "input.source_bound_s2_endpoint_rows"
+    for arm in gate.S2_COMPONENT_ARMS:
+        for field in gate.S2_COMPONENT_FIELDS:
+            compatibility.append(
+                {
+                    "schema_id": schema_id,
+                    "field_path": f"component_medians.{arm}.{field}",
+                    "json_type": "null_or_number",
+                    "presence": "required",
+                }
+            )
+            for count_field in gate.S2_COMPONENT_COUNT_FIELDS:
+                compatibility.append(
+                    {
+                        "schema_id": schema_id,
+                        "field_path": (
+                            f"component_coverage.{arm}.{field}."
+                            f"{count_field}"
+                        ),
+                        "json_type": "integer",
+                        "presence": "required",
+                    }
+                )
+    compatibility.sort(
+        key=lambda row: (row["schema_id"], row["field_path"])
+    )
+    normative = []
+    for row in source["normative_schema_contract"]["rows"]:
+        field = row["field_name"]
+        if field.startswith(("component_medians.", "component_coverage.")):
+            prefix, remainder = field.split(".", 1)
+            for arm in gate.S2_COMPONENT_ARMS:
+                copied = copy.deepcopy(row)
+                copied["field_name"] = f"{prefix}.{arm}.{remainder}"
+                copied["row_id"] = (
+                    f"{copied['schema_id']}::{copied['field_name']}"
+                )
+                normative.append(copied)
+        else:
+            normative.append(copy.deepcopy(row))
+    normative.sort(key=lambda row: row["row_id"])
+    dimensions = source["mutation_coverage_contract"][
+        "mutation_dimensions"
+    ]
+    if tuple(dimensions) != gate.REVIEW_SURFACE_MUTATION_DIMENSIONS:
+        raise AssertionError("mutation dimension order mismatch")
+    applicability = []
+    required = []
+    for row in normative:
+        for dimension in dimensions:
+            is_required = bool(
+                row["mutation_dimension_applicability"][dimension]
+            )
+            applicability.append(
+                {
+                    "row_id": row["row_id"],
+                    "dimension": dimension,
+                    "required": is_required,
+                }
+            )
+            if is_required:
+                required.append(
+                    {"row_id": row["row_id"], "dimension": dimension}
+                )
+    return {
+        "compatibility": compatibility,
+        "normative": normative,
+        "applicability": applicability,
+        "required": required,
+    }
 
 
 def nested_key_paths(
@@ -82,10 +185,124 @@ def observations_for_phase(
         role: gate.ArtifactObservation(
             final_exists=role in phase["must_exist"],
             pending_exists=False,
-            outcome=required.get(role),
+            outcome=(
+                "success"
+                if required.get(role) == "success_or_failure"
+                else required.get(role)
+            ),
         )
         for role in plan["artifact_lifecycle_contract"]["roles"]
     }
+
+
+def synthetic_lifecycle_plan(
+    plan: Mapping[str, Any], phase_name: str, root: Path
+) -> dict[str, Any]:
+    copied = copy.deepcopy(dict(plan))
+    phase = next(
+        row
+        for row in copied["artifact_lifecycle_contract"]["stable_phases"]
+        if row["phase"] == phase_name
+    )
+    required_outcomes = phase["required_outcomes"]
+    root.mkdir(parents=True, exist_ok=True)
+    for row in copied["artifact_path_surface"]:
+        role = row["role"]
+        final = root / f"{role}.json"
+        pending = root / f"{role}.json.pending-v0.9"
+        row["final_path"] = str(final)
+        row["pending_path"] = str(pending)
+    order = (
+        "formal_design_review_verdict",
+        "implementation_candidate_binding",
+        "fresh_implementation_review_verdict",
+        "reviewed_implementation_authority",
+        "extraction_preflight",
+        "extraction_authorization",
+        "extraction_authorization_verdict",
+        "extraction_execution_claim",
+        "extraction_success",
+        "extraction_failure",
+        "extraction_terminal",
+        "verifier_preflight",
+        "verifier_authorization",
+        "verifier_authorization_verdict",
+        "verifier_execution_claim",
+        "verifier_success",
+        "verifier_failure",
+        "verifier_terminal",
+    )
+    payloads: dict[str, dict[str, Any]] = {}
+    outcome_fields = copied["artifact_lifecycle_contract"][
+        "outcome_field_by_role"
+    ]
+    for role in order:
+        schema, hash_field = gate._artifact_schema_descriptor(copied, role)
+        payload = {
+            field: None
+            for field in schema["exact_top_level_fields"]
+            if field != hash_field
+        }
+        if role in gate.REVIEW_SURFACE_BOUND_ROLES:
+            payload["review_surface_identity"] = (
+                gate.review_surface_identity(copied)
+            )
+        if role in required_outcomes:
+            payload[outcome_fields[role]] = required_outcomes[role]
+        elif role in outcome_fields:
+            payload[outcome_fields[role]] = (
+                "success"
+                if role in {"extraction_terminal", "verifier_terminal"}
+                else "pass"
+            )
+        for field in tuple(payload):
+            suffix = "_file_sha256"
+            if not field.endswith(suffix):
+                continue
+            prefix = field[: -len(suffix)]
+            target = gate._artifact_link_target(role, prefix)
+            if target is None:
+                continue
+            target_payload = payloads[target]
+            _target_schema, target_hash_field = (
+                gate._artifact_schema_descriptor(copied, target)
+            )
+            payload[field] = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(target_payload)
+            )
+            payload[prefix + "_payload_sha256"] = target_payload[
+                target_hash_field
+            ]
+        if role in {"extraction_terminal", "verifier_terminal"}:
+            scope = (
+                "verifier" if role == "verifier_terminal" else "extraction"
+            )
+            outcome = payload["outcome_kind"]
+            if outcome not in {"success", "failure"}:
+                outcome = "success"
+                payload["outcome_kind"] = outcome
+            target = f"{scope}_{outcome}"
+            target_payload = payloads[target]
+            _target_schema, target_hash_field = (
+                gate._artifact_schema_descriptor(copied, target)
+            )
+            payload["leaf_schema_version"] = target_payload[
+                "schema_version"
+            ]
+            payload["leaf_payload_sha256"] = target_payload[
+                target_hash_field
+            ]
+            payload["leaf_exact_payload"] = copy.deepcopy(target_payload)
+        payload = gate.add_self_hash(payload, hash_field)
+        payloads[role] = payload
+    rows = {
+        row["role"]: row for row in copied["artifact_path_surface"]
+    }
+    for role in phase["must_exist"]:
+        Path(rows[role]["final_path"]).write_bytes(
+            gate.canonical_receipt_bytes(payloads[role])
+        )
+    return copied
 
 
 def control_chain(
@@ -107,6 +324,7 @@ def control_chain(
         expires_at_utc="2026-08-01T00:20:00Z",
         reviewed_authority_file_sha256="3" * 64,
         reviewed_authority_payload_sha256="4" * 64,
+        implementation_source_commit=SOURCE_COMMIT,
         now_ns=gate.parse_utc_ns("2026-08-01T00:01:00Z"),
         **preflight_arguments,
     )
@@ -150,6 +368,8 @@ def control_chain(
         owner_hostname="test-host",
         owner_pid=1234,
         owner_process_creation_time_utc="2026-08-01T00:00:30Z",
+        git_head_at_claim=SOURCE_COMMIT,
+        executing_code_identity_surface_sha256="a" * 64,
         preflight_file_sha256="5" * 64,
         authorization_file_sha256="6" * 64,
         verdict_file_sha256="9" * 64,
@@ -159,9 +379,317 @@ def control_chain(
 
 
 class FrozenDesignMutationTests(unittest.TestCase):
+    def test_windows_ordinal_edges_and_exact_call_shape(self) -> None:
+        api = ctypes.WinDLL("kernel32", use_last_error=True)
+        cases = (
+            (r"C:\PALE-ALE\TOOLS", r"c:\pale-ale\tools", True),
+            ("C:\\pale-ale\\stra\u00dfe", r"C:\pale-ale\STRASSE", False),
+            ("C:\\pale-ale\\\ufb00", r"C:\pale-ale\ff", False),
+            ("C:\\pale-ale\\\u0130", "C:\\pale-ale\\i\u0307", False),
+        )
+        for left, right, expected in cases:
+            with self.subTest(left=left, right=right):
+                self.assertEqual(left.casefold(), right.casefold())
+                self.assertIs(gate.windows_ordinal_equal(left, right, api), expected)
+                self.assertIs(
+                    independent.independent_windows_ordinal_equal(
+                        left, right, api
+                    ),
+                    expected,
+                )
+
+        class Compare:
+            def __init__(self) -> None:
+                self.calls: list[tuple[object, ...]] = []
+
+            def __call__(self, *args: object) -> int:
+                self.calls.append(args)
+                return 2
+
+        class Api:
+            def __init__(self) -> None:
+                self.CompareStringOrdinal = Compare()
+
+        for function in (
+            gate.windows_ordinal_equal,
+            independent.independent_windows_ordinal_equal,
+        ):
+            fake = Api()
+            self.assertTrue(function("A", "a", fake))
+            self.assertEqual(fake.CompareStringOrdinal.calls, [("A", -1, "a", -1, True)])
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.windows_ordinal_equal("A", "a", object())
+        with self.assertRaises(independent.IndependentVerificationError):
+            independent.independent_windows_ordinal_equal("A", "a", object())
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.plan = gate.load_frozen_plan()
+
+    def test_all_12_final_and_15_failure_checkpoints_classify_18_by_18(self) -> None:
+        frozen = self.plan["artifact_lifecycle_contract"][
+            "full_surface_checkpoint_contract"
+        ]
+        checkpoint_rows = list(frozen["checkpoint_rows"])
+        failure_rows = list(
+            frozen["failure_publication_checkpoint_contract"][
+                "failure_checkpoint_rows"
+            ]
+        )
+        self.assertEqual((len(checkpoint_rows), len(failure_rows)), (12, 15))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for ordinal, row in enumerate(checkpoint_rows + failure_rows):
+                phase = next(
+                    item
+                    for item in self.plan["artifact_lifecycle_contract"][
+                        "stable_phases"
+                    ]
+                    if item["phase"] == row["expected_artifact_phase"]
+                )
+                plan = synthetic_lifecycle_plan(
+                    self.plan, phase["phase"], root / str(ordinal)
+                )
+                temporal = phase["temporal_predicate"]
+                liveness = (
+                    "ACTIVE"
+                    if phase["liveness_predicate"] == "ACTIVE_exact_owner"
+                    else "not_applicable"
+                )
+                function = (
+                    gate.require_full_surface_checkpoint
+                    if row["scope"] == "extraction"
+                    else independent.independent_require_full_surface_checkpoint
+                )
+                with self.subTest(
+                    scope=row["scope"],
+                    checkpoint=row["checkpoint"],
+                    state=row["expected_state"],
+                ):
+                    self.assertEqual(
+                        function(
+                            plan,
+                            scope=row["scope"],
+                            checkpoint=row["checkpoint"],
+                            state=row["expected_state"],
+                            temporal_predicate=temporal,
+                            liveness=liveness,
+                        ),
+                        row["expected_artifact_phase"],
+                    )
+
+    def test_cross_link_tamper_blocks_both_production_observers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            plan = synthetic_lifecycle_plan(
+                self.plan,
+                "extraction_execution_claimed_owner_active",
+                Path(temporary),
+            )
+            rows = {
+                row["role"]: row for row in plan["artifact_path_surface"]
+            }
+            claim_path = Path(
+                rows["extraction_execution_claim"]["final_path"]
+            )
+            payload = gate.require_mapping(
+                gate.strict_json_loads(
+                    claim_path.read_bytes()[:-1], canonical=True
+                )
+            )
+            _schema, hash_field = gate._artifact_schema_descriptor(
+                plan, "extraction_execution_claim"
+            )
+            payload.pop(hash_field)
+            payload["preflight_file_sha256"] = "f" * 64
+            payload = gate.add_self_hash(payload, hash_field)
+            claim_path.write_bytes(gate.canonical_receipt_bytes(payload))
+
+            core = gate.observe_artifact_surface(plan)
+            standalone = independent.independent_observe_artifact_surface(plan)
+            self.assertFalse(
+                core["extraction_execution_claim"].final_valid
+            )
+            self.assertIs(
+                standalone["extraction_execution_claim"]["final_valid"],
+                False,
+            )
+            self.assertEqual(
+                gate.classify_lifecycle_surface(
+                    plan, core, liveness="ACTIVE"
+                ),
+                "HOLD_new_review",
+            )
+            self.assertEqual(
+                independent.independent_classify_lifecycle_surface(
+                    plan, standalone, liveness="ACTIVE"
+                ),
+                "HOLD_new_review",
+            )
+
+    def test_all_18_pending_injections_block_both_production_clis(self) -> None:
+        roles = tuple(self.plan["artifact_lifecycle_contract"]["roles"])
+        self.assertEqual(len(roles), 18)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            extraction_plan = synthetic_lifecycle_plan(
+                self.plan,
+                "extraction_authorization_verdict_pass_fresh",
+                root / "extraction",
+            )
+            verifier_plan = synthetic_lifecycle_plan(
+                self.plan,
+                "verifier_authorization_verdict_pass_fresh",
+                root / "verifier",
+            )
+            for scope, plan in (
+                ("extraction", extraction_plan),
+                ("verifier", verifier_plan),
+            ):
+                rows = {row["role"]: row for row in plan["artifact_path_surface"]}
+                checked = 0
+                for role in roles:
+                    pending = Path(rows[role]["pending_path"])
+                    pending.write_bytes(b"synthetic-pending-only")
+                    stdout = io.StringIO()
+                    stderr = io.StringIO()
+                    if scope == "extraction":
+                        with contextlib.ExitStack() as stack:
+                            stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner, "_runtime_isolated"
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner.gate,
+                                    "load_frozen_plan",
+                                    return_value=plan,
+                                )
+                            )
+                            for name in (
+                                "read_exact_bytes",
+                                "validate_formal_design_pass",
+                                "validate_upstream_authority",
+                            ):
+                                stack.enter_context(
+                                    mock.patch.object(extraction_runner.gate, name)
+                                )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner.gate,
+                                    "validate_original_input_lineage",
+                                    return_value={},
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner,
+                                    "_load_controls",
+                                    return_value=(
+                                        {}, DIGEST, {}, DIGEST,
+                                        {}, DIGEST, {}, DIGEST, {},
+                                    ),
+                                )
+                            )
+                            publish = stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner.gate, "publish_role"
+                                )
+                            )
+                            protected = stack.enter_context(
+                                mock.patch.object(
+                                    extraction_runner.gate,
+                                    "extract_commitments_after_claim",
+                                )
+                            )
+                            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                                result = extraction_runner.cli(
+                                    [
+                                        "--repository", str(root),
+                                        "--execution-claim-id", "synthetic",
+                                        "--launch-id", "synthetic",
+                                        "--claimed-at-utc", "2026-08-01T00:00:00Z",
+                                    ]
+                                )
+                    else:
+                        with contextlib.ExitStack() as stack:
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent.sys,
+                                    "flags",
+                                    mock.Mock(
+                                        isolated=True,
+                                        dont_write_bytecode=True,
+                                    ),
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent.sys,
+                                    "dont_write_bytecode",
+                                    True,
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.dict(
+                                    independent.os.environ,
+                                    {"PYTHONPATH": ""},
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent,
+                                    "independent_load_plan",
+                                    return_value=plan,
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent,
+                                    "independent_lineage",
+                                    return_value=({}, {}),
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent,
+                                    "independent_runtime_lineage",
+                                    return_value=({}, DIGEST, {}),
+                                )
+                            )
+                            stack.enter_context(
+                                mock.patch.object(
+                                    independent,
+                                    "_load_verifier_controls",
+                                    return_value={},
+                                )
+                            )
+                            publish = stack.enter_context(
+                                mock.patch.object(independent, "_publish")
+                            )
+                            protected = stack.enter_context(
+                                mock.patch.object(
+                                    independent, "independent_rederive"
+                                )
+                            )
+                            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                                result = independent.cli(
+                                    [
+                                        "--repository", str(root),
+                                        "--execution-claim-id", "synthetic",
+                                        "--launch-id", "synthetic",
+                                        "--claimed-at-utc", "2026-08-01T00:00:00Z",
+                                    ]
+                                )
+                    with self.subTest(scope=scope, role=role):
+                        self.assertEqual(result, 2)
+                        self.assertEqual(stdout.getvalue(), "")
+                        self.assertIn("UNEXPECTED_ARTIFACT", stderr.getvalue())
+                        publish.assert_not_called()
+                        protected.assert_not_called()
+                    pending.unlink()
+                    checked += 1
+                self.assertEqual(checked, 18)
 
     def test_every_active_nested_surface_digest_is_recursive_and_enforced(self) -> None:
         paths = list(
@@ -201,7 +729,7 @@ class FrozenDesignMutationTests(unittest.TestCase):
         altered = copy.deepcopy(self.plan)
         row = altered["artifact_path_surface"][0]
         row["final_path"] += ".changed"
-        row["pending_path"] = row["final_path"] + ".pending-v0.8"
+        row["pending_path"] = row["final_path"] + ".pending-v0.9"
         altered = rehash_plan(altered)
         with mock.patch.object(
             gate, "PLAN_PAYLOAD_SHA256", altered["plan_payload_sha256"]
@@ -309,9 +837,9 @@ class FailureMatrixAdversarialTests(unittest.TestCase):
 
     def test_every_failure_row_is_unique_and_exactly_addressable(self) -> None:
         rows = self.plan["failure_matrix"]
-        self.assertEqual(len(rows), 92)
+        self.assertEqual(len(rows), 94)
         self.assertEqual(
-            len({gate.canonical_json_bytes(row) for row in rows}), 92
+            len({gate.canonical_json_bytes(row) for row in rows}), 94
         )
         for row in rows:
             with self.subTest(
@@ -428,6 +956,9 @@ class FailureMatrixAdversarialTests(unittest.TestCase):
             "authorization_payload_sha256": DIGEST,
             "authorization_verdict_payload_sha256": DIGEST,
             "execution_claim_payload_sha256": DIGEST,
+            "implementation_source_commit": "1" * 40,
+            "git_head_at_claim": "1" * 40,
+            "executing_code_identity_surface_sha256": DIGEST,
         }
         controls = {
             "baseline_file_hash": DIGEST,
@@ -440,13 +971,13 @@ class FailureMatrixAdversarialTests(unittest.TestCase):
         }
         return progress, claim, controls
 
-    def test_all_60_allowed_failure_rows_build_exact_receipts(self) -> None:
+    def test_all_62_allowed_failure_rows_build_exact_receipts(self) -> None:
         rows = [
             row
             for row in self.plan["failure_matrix"]
             if row["failure_receipt_allowed"] is True
         ]
-        self.assertEqual(len(rows), 60)
+        self.assertEqual(len(rows), 62)
         for row in rows:
             progress, claim, controls = self._failure_fixture(row)
             with self.subTest(
@@ -665,12 +1196,17 @@ def candidate_for_temp_repository(
     }
     payload = {
         "schema_version": (
-            "gate12c2_original_baseline_implementation_candidate_binding_v0.8"
+            "gate12c2_original_baseline_implementation_candidate_binding_v0.9"
         ),
         "binding_id": (
-            "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_IMPLEMENTATION_CANDIDATE_BINDING_v0.8"
+            "C2_ORIGINAL_BASELINE_COMMITMENT_GATE_IMPLEMENTATION_CANDIDATE_BINDING_v0.9"
         ),
         "source_commit": SOURCE_COMMIT,
+        "authorized_implementation_repository": str(
+            gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "remediation_base_commit": gate.REMEDIATION_BASE_COMMIT,
+        "remediation_base_parent": gate.REMEDIATION_BASE_PARENT,
         "git_object_format": "sha1",
         "core_autocrlf": False,
         "core_longpaths": True,
@@ -691,9 +1227,10 @@ def candidate_for_temp_repository(
         "implementation_context_blindness_machine_authenticated": False,
         "current_exposed_design_context_authored_final_bytes": False,
         "implementation_trust_model_sha256": (
-            gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+            gate.recompute_implementation_trust_model_sha256(plan)
         ),
         "artifact_path_surface_sha256": gate.ARTIFACT_PATH_SURFACE_SHA256,
+        "review_surface_identity": gate.review_surface_identity(plan),
         "implementation_files": rows,
         "scientific_dependencies": scientific,
         "clean_restore": clean_restore,
@@ -704,6 +1241,412 @@ def candidate_for_temp_repository(
     return gate.add_self_hash(
         payload, "implementation_candidate_binding_payload_sha256"
     )
+
+
+def synthetic_identity_candidate(
+    plan: Mapping[str, Any], root: Path
+) -> dict[str, Any]:
+    implementation_rows = []
+    for row in plan["executing_code_identity_contract"][
+        "loaded_gate_module_allowlist"
+    ]:
+        relative = row["relative_path"]
+        raw = (
+            "SYNTHETIC_IDENTITY_ROLE = " + repr(row["role"]) + "\n"
+        ).encode("utf-8")
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+        implementation_rows.append(
+            {
+                "role": row["role"],
+                "relative_path": relative,
+                "file_sha256": gate.sha256_bytes(raw),
+                "git_blob_oid": gate.git_blob_oid(raw),
+            }
+        )
+    scientific_rows = []
+    scientific_sources = {
+        "tools/gate12c2_synthetic_lab.py": (
+            b'SYNTHETIC_IDENTITY_MARKER = "lab"\n'
+        ),
+        "tools/gate12c2_development_shards.py": (
+            b"import gate12c2_synthetic_lab as lab\n"
+            b"SYNTHETIC_IDENTITY_MARKER = lab.SYNTHETIC_IDENTITY_MARKER\n"
+        ),
+    }
+    for frozen in plan["implementation_binding_contract"][
+        "scientific_dependencies"
+    ]:
+        relative = frozen["relative_path"]
+        raw = scientific_sources[relative]
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+        scientific_rows.append(
+            {
+                "role": frozen["role"],
+                "relative_path": relative,
+                "file_sha256": gate.sha256_bytes(raw),
+                "git_blob_oid": gate.git_blob_oid(raw),
+                "source_commit": SOURCE_COMMIT,
+            }
+        )
+    return {
+        "source_commit": SOURCE_COMMIT,
+        "git_object_format": "sha1",
+        "authorized_implementation_repository": str(
+            gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY
+        ),
+        "implementation_files": implementation_rows,
+        "scientific_dependencies": scientific_rows,
+    }
+
+
+def synthetic_loaded_module(name: str, path: Path) -> types.ModuleType:
+    raw = path.read_bytes()
+    module = types.ModuleType(name)
+    loader = types.SimpleNamespace(origin=str(path), synthetic=True)
+    module.__file__ = str(path)
+    module.__spec__ = types.SimpleNamespace(
+        origin=str(path), loader=loader
+    )
+    exec(compile(raw, str(path), "exec"), module.__dict__)
+    return module
+
+
+class ExecutingCodeIdentityAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_frozen_plan()
+
+    def _identity(
+        self,
+        family: str,
+        root: Path,
+        *,
+        repository_argument: Path | None = None,
+        authorized_root: Path | None = None,
+        head_values: Sequence[str] = (SOURCE_COMMIT,) * 3,
+    ) -> tuple[object, dict[str, object]]:
+        candidate = synthetic_identity_candidate(self.plan, root)
+        values = iter(head_values)
+
+        def read_head(_root: Path) -> str:
+            return next(values)
+
+        if family == "extractor":
+            entry_path = (
+                root / "tools/run_gate12c2_original_baseline_extraction.py"
+            )
+            core_path = (
+                root / "tools/gate12c2_original_baseline_commitments.py"
+            )
+            entry = synthetic_loaded_module("__main__", entry_path)
+            core = synthetic_loaded_module(
+                "gate12c2_original_baseline_commitments", core_path
+            )
+            registry: dict[str, object] = {
+                "__main__": entry,
+                "gate12c2_original_baseline_commitments": core,
+            }
+            identity = gate.ExecutingCodeIdentity(
+                self.plan,
+                candidate,
+                entry_path=entry_path,
+                repository_argument=(
+                    root
+                    if repository_argument is None
+                    else repository_argument
+                ),
+                loaded_modules=dict(registry),
+                module_registry=registry,
+                authorized_root=(
+                    root if authorized_root is None else authorized_root
+                ),
+                git_head_reader=read_head,
+            )
+            return identity, registry
+        entry_path = (
+            root / "tools/verify_gate12c2_original_baseline_commitments.py"
+        )
+        entry = synthetic_loaded_module("__main__", entry_path)
+        registry = {"__main__": entry}
+        identity = independent.IndependentExecutingCodeIdentity(
+            self.plan,
+            candidate,
+            entry_path=entry_path,
+            repository_argument=(
+                root if repository_argument is None else repository_argument
+            ),
+            entry_module=entry,
+            module_registry=registry,
+            authorized_root=(
+                root if authorized_root is None else authorized_root
+            ),
+            git_head_reader=read_head,
+        )
+        return identity, registry
+
+    def test_frozen_identity_attack_corpus_on_both_production_paths(self) -> None:
+        expected = set(
+            self.plan["executing_code_identity_contract"][
+                "substitution_tests"
+            ]
+        )
+        for family in ("extractor", "verifier"):
+            error = (
+                gate.Gate12C2OriginalBaselineError
+                if family == "extractor"
+                else independent.IndependentVerificationError
+            )
+            covered: set[str] = set()
+
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                with self.assertRaises(error):
+                    self._identity(
+                        family,
+                        root,
+                        repository_argument=root / "reviewed-checkout-R",
+                    )
+                covered.add(
+                    "checkout_S_execution_with_authorized_checkout_R_argument_rejected"
+                )
+
+            with tempfile.TemporaryDirectory() as temporary:
+                identity, _registry = self._identity(
+                    family,
+                    Path(temporary),
+                    head_values=("b" * 40,),
+                )
+                try:
+                    with self.assertRaises(error):
+                        identity.checkpoint(identity.checkpoints[0])
+                finally:
+                    identity.close()
+                covered.add("stale_compatible_checkout_rejected")
+
+            with tempfile.TemporaryDirectory() as temporary:
+                identity, _registry = self._identity(
+                    family, Path(temporary)
+                )
+                try:
+                    if family == "extractor":
+                        record = identity.root_record
+                        assert record is not None
+                        metadata = record.identity
+                        record.identity = gate.HandleIdentity(
+                            metadata.volume_serial,
+                            metadata.file_id,
+                            str(Path(temporary) / "moved"),
+                            metadata.size,
+                        )
+                    else:
+                        record = identity.root_record
+                        assert record is not None
+                        metadata = record[1]
+                        identity.root_record = (
+                            record[0],
+                            (
+                                metadata[0],
+                                metadata[1],
+                                str(Path(temporary) / "moved"),
+                                metadata[3],
+                            ),
+                        )
+                    with self.assertRaises(error):
+                        identity.checkpoint(identity.checkpoints[0])
+                finally:
+                    identity.close()
+                covered.add("moved_or_reparse_root_rejected")
+
+            with tempfile.TemporaryDirectory() as temporary:
+                identity, registry = self._identity(
+                    family, Path(temporary)
+                )
+                try:
+                    registry["__main__"] = types.ModuleType("__main__")
+                    with self.assertRaises(error):
+                        identity.checkpoint(identity.checkpoints[0])
+                finally:
+                    identity.close()
+                covered.add("loaded_module_substitution_rejected")
+
+            with tempfile.TemporaryDirectory() as temporary:
+                identity, registry = self._identity(
+                    family, Path(temporary)
+                )
+                try:
+                    registry["synthetic_alias"] = registry["__main__"]
+                    with self.assertRaises(error):
+                        identity.checkpoint(identity.checkpoints[0])
+                finally:
+                    identity.close()
+                covered.add("duplicate_or_alias_import_rejected")
+
+            with tempfile.TemporaryDirectory() as temporary:
+                identity, _registry = self._identity(
+                    family, Path(temporary)
+                )
+                method_name = (
+                    "_read_all" if family == "extractor" else "_read"
+                )
+                original_read = getattr(identity.io, method_name)
+
+                def mutated_read(*args: object, **kwargs: object) -> bytes:
+                    return original_read(*args, **kwargs) + b"#mutation"
+
+                try:
+                    with mock.patch.object(
+                        identity.io,
+                        method_name,
+                        side_effect=mutated_read,
+                    ), self.assertRaises(error):
+                        identity.checkpoint(identity.checkpoints[0])
+                finally:
+                    identity.close()
+                covered.add("loaded_source_byte_mutation_rejected")
+
+            drift_cases = (
+                (
+                    "git_HEAD_drift_before_claim_rejected",
+                    ("b" * 40,),
+                    0,
+                ),
+                (
+                    "git_HEAD_drift_before_protected_read_rejected",
+                    (SOURCE_COMMIT, "b" * 40),
+                    1,
+                ),
+                (
+                    "git_HEAD_drift_before_terminal_publication_rejected",
+                    (SOURCE_COMMIT, SOURCE_COMMIT, "b" * 40),
+                    2,
+                ),
+            )
+            for attack_id, heads, failing_index in drift_cases:
+                with tempfile.TemporaryDirectory() as temporary:
+                    identity, _registry = self._identity(
+                        family, Path(temporary), head_values=heads
+                    )
+                    try:
+                        for index in range(failing_index):
+                            identity.checkpoint(identity.checkpoints[index])
+                        with self.assertRaises(error):
+                            identity.checkpoint(
+                                identity.checkpoints[failing_index]
+                            )
+                    finally:
+                        identity.close()
+                covered.add(attack_id)
+
+            with self.subTest(family=family):
+                self.assertEqual(covered, expected)
+
+    def test_production_entries_bootstrap_before_unauthorized_checkout_use(
+        self,
+    ) -> None:
+        environment = dict(os.environ)
+        environment.pop("PYTHONPATH", None)
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        cases = (
+            (
+                REPOSITORY
+                / "tools/run_gate12c2_original_baseline_extraction.py",
+                "gate12c2-original-baseline:ERROR:"
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH\n",
+            ),
+            (
+                REPOSITORY
+                / "tools/verify_gate12c2_original_baseline_commitments.py",
+                "gate12c2-original-baseline-verification:ERROR:"
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH\n",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            unauthorized_root = Path(temporary) / "checkout"
+            unauthorized_tools = unauthorized_root / "tools"
+            unauthorized_tools.mkdir(parents=True)
+            for source, expected_stderr in cases:
+                entry = unauthorized_tools / source.name
+                entry.write_bytes(source.read_bytes())
+                completed = subprocess.run(
+                    [sys.executable, "-I", "-B", str(entry), "--help"],
+                    cwd=unauthorized_root,
+                    env=environment,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding="utf-8",
+                    timeout=30,
+                    check=False,
+                )
+                with self.subTest(entry=entry.name):
+                    self.assertEqual(completed.returncode, 2)
+                    self.assertEqual(completed.stdout, "")
+                    self.assertEqual(completed.stderr, expected_stderr)
+                    self.assertNotIn("Traceback", completed.stderr)
+
+    def test_scientific_dependencies_load_from_retained_synthetic_bytes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            candidate = synthetic_identity_candidate(self.plan, root)
+            entry_path = (
+                root / "tools/run_gate12c2_original_baseline_extraction.py"
+            )
+            core_path = (
+                root / "tools/gate12c2_original_baseline_commitments.py"
+            )
+            entry = synthetic_loaded_module("__main__", entry_path)
+            core = synthetic_loaded_module(
+                "gate12c2_original_baseline_commitments", core_path
+            )
+            names = (
+                "__main__",
+                "gate12c2_original_baseline_commitments",
+                "gate12c2_synthetic_lab",
+                "gate12c2_development_shards",
+            )
+            missing = object()
+            saved = {name: sys.modules.get(name, missing) for name in names}
+            identity: gate.ExecutingCodeIdentity | None = None
+            try:
+                sys.modules["__main__"] = entry
+                sys.modules["gate12c2_original_baseline_commitments"] = core
+                sys.modules.pop("gate12c2_synthetic_lab", None)
+                sys.modules.pop("gate12c2_development_shards", None)
+                identity = gate.ExecutingCodeIdentity(
+                    self.plan,
+                    candidate,
+                    entry_path=entry_path,
+                    repository_argument=root,
+                    loaded_modules={
+                        "__main__": entry,
+                        "gate12c2_original_baseline_commitments": core,
+                    },
+                    module_registry=sys.modules,
+                    authorized_root=root,
+                    git_head_reader=lambda _root: SOURCE_COMMIT,
+                )
+                identity.load_scientific_dependencies()
+                lab = identity.module("gate12c2_synthetic_lab")
+                shards = identity.module("gate12c2_development_shards")
+                self.assertIs(shards.lab, lab)
+                result = identity.checkpoint(identity.checkpoints[0])
+                self.assertEqual(result["git_head"], SOURCE_COMMIT)
+                self.assertEqual(len(identity.sources), 4)
+            finally:
+                if identity is not None:
+                    identity.close()
+                for name, module in saved.items():
+                    if module is missing:
+                        sys.modules.pop(name, None)
+                    else:
+                        sys.modules[name] = module
 
 
 def pass_review(
@@ -729,8 +1672,9 @@ def pass_review(
                 gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
             ),
             "implementation_trust_model_sha256": (
-                gate.IMPLEMENTATION_TRUST_MODEL_SHA256
+                gate.recompute_implementation_trust_model_sha256(plan)
             ),
+            "review_surface_identity": candidate["review_surface_identity"],
             "implementation_candidate_binding_file_sha256": (
                 candidate_file_sha256
             ),
@@ -753,15 +1697,558 @@ def pass_review(
     )
     self_field = "fresh_implementation_review_payload_sha256"
     self_keys = set(review) | {self_field}
-    if self_keys != set(schema["exact_top_level_fields"]):
+    if self_keys != set(
+        gate.artifact_exact_fields(plan, "fresh_implementation_review_verdict")
+    ):
         raise AssertionError("review fixture does not cover exact schema")
     return gate.add_self_hash(review, self_field)
+
+
+class ReviewSurfaceAndTrustModelAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_frozen_plan()
+
+    def test_complete_review_surface_is_independently_rederived(self) -> None:
+        surfaces = independently_rederive_review_surface()
+        expected = gate.review_surface_identity(self.plan)
+        independent_expected = independent._review_surface_identity(
+            self.plan
+        )
+        self.assertEqual(independent_expected, expected)
+        checks = (
+            (
+                "compatibility",
+                662,
+                "compatibility_surface_sha256",
+            ),
+            ("normative", 841, "normative_surface_sha256"),
+            (
+                "applicability",
+                13456,
+                "mutation_applicability_surface_sha256",
+            ),
+            (
+                "required",
+                6487,
+                "required_mutation_surface_sha256",
+            ),
+        )
+        for name, count, digest_field in checks:
+            rows = surfaces[name]
+            with self.subTest(surface=name):
+                self.assertEqual(len(rows), count)
+                self.assertEqual(
+                    gate.sha256_bytes(gate.canonical_json_bytes(rows)),
+                    expected[digest_field],
+                )
+        compatibility = surfaces["compatibility"]
+        normative = surfaces["normative"]
+        self.assertEqual(
+            compatibility,
+            sorted(
+                compatibility,
+                key=lambda row: (row["schema_id"], row["field_path"]),
+            ),
+        )
+        self.assertEqual(
+            normative,
+            sorted(normative, key=lambda row: row["row_id"]),
+        )
+        self.assertEqual(
+            expected["review_surface_identity_sha256"],
+            gate.REVIEW_SURFACE_IDENTITY_SHA256,
+        )
+
+    def test_boolean_only_or_incomplete_review_cannot_reach_authority(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = candidate_for_temp_repository(self.plan, root)
+            candidate_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(candidate)
+            )
+            review = pass_review(
+                self.plan, candidate, candidate_file_hash
+            )
+            old_boolean_only = dict(review)
+            old_boolean_only.pop(
+                "fresh_implementation_review_payload_sha256"
+            )
+            old_boolean_only.pop("review_surface_identity")
+            old_boolean_only = gate.add_self_hash(
+                old_boolean_only,
+                "fresh_implementation_review_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_implementation_review(
+                    self.plan,
+                    old_boolean_only,
+                    candidate_file_sha256=candidate_file_hash,
+                    candidate_payload_sha256=candidate[
+                        "implementation_candidate_binding_payload_sha256"
+                    ],
+                    source_commit=SOURCE_COMMIT,
+                    candidate=candidate,
+                )
+            review_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(review)
+            )
+            authority = gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=candidate_file_hash,
+                review_file_sha256=review_file_hash,
+            )
+            self.assertEqual(
+                candidate["review_surface_identity"],
+                review["review_surface_identity"],
+            )
+            self.assertEqual(
+                review["review_surface_identity"],
+                authority["review_surface_identity"],
+            )
+            altered_surface = copy.deepcopy(
+                candidate["review_surface_identity"]
+            )
+            altered_surface["compatibility_row_count"] = 144
+            altered_surface.pop("review_surface_identity_sha256")
+            altered_surface[
+                "review_surface_identity_sha256"
+            ] = gate.sha256_bytes(
+                gate.canonical_json_bytes(altered_surface)
+            )
+            altered_candidate = dict(candidate)
+            altered_candidate["review_surface_identity"] = altered_surface
+            altered_candidate.pop(
+                "implementation_candidate_binding_payload_sha256"
+            )
+            altered_candidate = gate.add_self_hash(
+                altered_candidate,
+                "implementation_candidate_binding_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_candidate_binding(
+                    self.plan,
+                    altered_candidate,
+                    repo_root=root,
+                    current_head=SOURCE_COMMIT,
+                )
+            altered_review = dict(review)
+            altered_review["review_surface_identity"] = altered_surface
+            altered_review.pop(
+                "fresh_implementation_review_payload_sha256"
+            )
+            altered_review = gate.add_self_hash(
+                altered_review,
+                "fresh_implementation_review_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_implementation_review(
+                    self.plan,
+                    altered_review,
+                    candidate_file_sha256=candidate_file_hash,
+                    candidate_payload_sha256=candidate[
+                        "implementation_candidate_binding_payload_sha256"
+                    ],
+                    source_commit=SOURCE_COMMIT,
+                    candidate=candidate,
+                )
+            altered_authority = dict(authority)
+            altered_authority["review_surface_identity"] = altered_surface
+            altered_authority.pop(
+                "reviewed_implementation_authority_payload_sha256"
+            )
+            altered_authority = gate.add_self_hash(
+                altered_authority,
+                "reviewed_implementation_authority_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_reviewed_authority(
+                    self.plan,
+                    altered_authority,
+                    candidate=candidate,
+                    candidate_file_sha256=candidate_file_hash,
+                    review=review,
+                    review_file_sha256=review_file_hash,
+                )
+
+    def test_trust_digest_is_recomputed_and_never_copied_through(self) -> None:
+        retained_digest = copy.deepcopy(self.plan)
+        retained_digest["implementation_trust_model_contract"][
+            "synthetic_sensitive_marker"
+        ] = False
+        replaced_digest = copy.deepcopy(retained_digest)
+        replaced_digest["implementation_trust_model_sha256"] = (
+            gate.sha256_bytes(
+                gate.canonical_json_bytes(
+                    replaced_digest[
+                        "implementation_trust_model_contract"
+                    ]
+                )
+            )
+        )
+        for altered in (retained_digest, replaced_digest):
+            with self.subTest(
+                digest=altered["implementation_trust_model_sha256"]
+            ):
+                with self.assertRaises(
+                    gate.Gate12C2OriginalBaselineError
+                ):
+                    gate.recompute_implementation_trust_model_sha256(
+                        altered
+                    )
+                with self.assertRaises(
+                    independent.IndependentVerificationError
+                ):
+                    independent._trust_model_sha256(altered)
+        wrong_digest = replaced_digest[
+            "implementation_trust_model_sha256"
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = candidate_for_temp_repository(self.plan, root)
+            candidate_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(candidate)
+            )
+            review = pass_review(
+                self.plan, candidate, candidate_file_hash
+            )
+            review_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(review)
+            )
+            authority = gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=candidate_file_hash,
+                review_file_sha256=review_file_hash,
+            )
+            altered_candidate = dict(candidate)
+            altered_candidate["implementation_trust_model_sha256"] = (
+                wrong_digest
+            )
+            altered_candidate.pop(
+                "implementation_candidate_binding_payload_sha256"
+            )
+            altered_candidate = gate.add_self_hash(
+                altered_candidate,
+                "implementation_candidate_binding_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_candidate_binding(
+                    self.plan,
+                    altered_candidate,
+                    repo_root=root,
+                    current_head=SOURCE_COMMIT,
+                )
+            altered_review = dict(review)
+            altered_review["implementation_trust_model_sha256"] = (
+                wrong_digest
+            )
+            altered_review.pop(
+                "fresh_implementation_review_payload_sha256"
+            )
+            altered_review = gate.add_self_hash(
+                altered_review,
+                "fresh_implementation_review_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_implementation_review(
+                    self.plan,
+                    altered_review,
+                    candidate_file_sha256=candidate_file_hash,
+                    candidate_payload_sha256=candidate[
+                        "implementation_candidate_binding_payload_sha256"
+                    ],
+                    source_commit=SOURCE_COMMIT,
+                    candidate=candidate,
+                )
+            altered_authority = dict(authority)
+            altered_authority["implementation_trust_model_sha256"] = (
+                wrong_digest
+            )
+            altered_authority.pop(
+                "reviewed_implementation_authority_payload_sha256"
+            )
+            altered_authority = gate.add_self_hash(
+                altered_authority,
+                "reviewed_implementation_authority_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_reviewed_authority(
+                    self.plan,
+                    altered_authority,
+                    candidate=candidate,
+                    candidate_file_sha256=candidate_file_hash,
+                    review=review,
+                    review_file_sha256=review_file_hash,
+                )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.build_reviewed_authority_payload(
+                    replaced_digest,
+                    candidate,
+                    review,
+                    candidate_file_sha256=candidate_file_hash,
+                    review_file_sha256=review_file_hash,
+                )
+            with self.assertRaises(
+                independent.IndependentVerificationError
+            ):
+                independent._independent_reviewed_authority_payload(
+                    replaced_digest,
+                    candidate,
+                    review,
+                    candidate_file_hash=candidate_file_hash,
+                    review_file_hash=review_file_hash,
+                )
+
+
+class CandidateLineageAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_frozen_plan()
+
+    @staticmethod
+    def _lineage_checks(
+        lineage: Sequence[str],
+    ) -> tuple[tuple[str, object, type[BaseException]], ...]:
+        return (
+            (
+                "builder",
+                lambda: binding_builder._require_direct_child_lineage(
+                    SOURCE_COMMIT, list(lineage)
+                ),
+                gate.Gate12C2OriginalBaselineError,
+            ),
+            (
+                "core",
+                lambda: gate.require_direct_child_lineage(
+                    SOURCE_COMMIT,
+                    gate.REMEDIATION_BASE_COMMIT,
+                    lineage,
+                ),
+                gate.Gate12C2OriginalBaselineError,
+            ),
+            (
+                "independent_verifier",
+                lambda: independent._require_direct_child_lineage(
+                    SOURCE_COMMIT, lineage
+                ),
+                independent.IndependentVerificationError,
+            ),
+        )
+
+    def test_direct_child_is_the_only_accepted_parent_shape(self) -> None:
+        direct = (SOURCE_COMMIT, gate.REMEDIATION_BASE_COMMIT)
+        for name, check, _error_type in self._lineage_checks(direct):
+            with self.subTest(path=name, shape="direct_child"):
+                check()
+
+        invalid = {
+            "grandchild": (SOURCE_COMMIT, "b" * 40),
+            "merge_commit": (
+                SOURCE_COMMIT,
+                gate.REMEDIATION_BASE_COMMIT,
+                "c" * 40,
+            ),
+            "zero_parent": (SOURCE_COMMIT,),
+            "unrelated_commit": ("d" * 40, gate.REMEDIATION_BASE_COMMIT),
+        }
+        for shape, lineage in invalid.items():
+            for name, check, error_type in self._lineage_checks(lineage):
+                with self.subTest(path=name, shape=shape):
+                    with self.assertRaises(error_type) as caught:
+                        check()
+                    self.assertEqual(
+                        caught.exception.code,
+                        "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+                    )
+
+    def test_all_lineage_consumers_read_the_frozen_base_parent(self) -> None:
+        self.assertEqual(
+            gate.git_commit_parent_lineage(
+                REPOSITORY, gate.REMEDIATION_BASE_COMMIT
+            ),
+            (
+                gate.REMEDIATION_BASE_COMMIT,
+                gate.REMEDIATION_BASE_PARENT,
+            ),
+        )
+
+        self.assertEqual(
+            tuple(
+                binding_builder._git(
+                    REPOSITORY,
+                    "rev-list",
+                    "--parents",
+                    "-n",
+                    "1",
+                    gate.REMEDIATION_BASE_COMMIT,
+                ).split()
+            ),
+            (
+                gate.REMEDIATION_BASE_COMMIT,
+                gate.REMEDIATION_BASE_PARENT,
+            ),
+        )
+        self.assertEqual(
+            independent._git_parent_lineage(
+                REPOSITORY, gate.REMEDIATION_BASE_COMMIT
+            ),
+            (
+                gate.REMEDIATION_BASE_COMMIT,
+                gate.REMEDIATION_BASE_PARENT,
+            ),
+        )
+
+    def test_candidate_source_swap_and_restore_head_mismatch_reject(
+        self,
+    ) -> None:
+        direct = (SOURCE_COMMIT, gate.REMEDIATION_BASE_COMMIT)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = candidate_for_temp_repository(self.plan, root)
+            with mock.patch.object(
+                gate,
+                "git_commit_parent_lineage",
+                return_value=direct,
+            ):
+                self.assertEqual(
+                    gate.validate_candidate_binding(
+                        self.plan,
+                        candidate,
+                        repo_root=root,
+                        current_head=SOURCE_COMMIT,
+                    ),
+                    candidate,
+                )
+
+            swapped = copy.deepcopy(candidate)
+            swapped["source_commit"] = "b" * 40
+            swapped.pop(
+                "implementation_candidate_binding_payload_sha256"
+            )
+            swapped = gate.add_self_hash(
+                swapped,
+                "implementation_candidate_binding_payload_sha256",
+            )
+            with mock.patch.object(
+                gate,
+                "git_commit_parent_lineage",
+                return_value=direct,
+            ):
+                with self.assertRaises(
+                    gate.Gate12C2OriginalBaselineError
+                ):
+                    gate.validate_candidate_binding(
+                        self.plan,
+                        swapped,
+                        repo_root=root,
+                        current_head="b" * 40,
+                    )
+
+            restore_mismatch = copy.deepcopy(candidate)
+            restore_mismatch["clean_restore"]["restore_head"] = "c" * 40
+            restore_mismatch.pop(
+                "implementation_candidate_binding_payload_sha256"
+            )
+            restore_mismatch = gate.add_self_hash(
+                restore_mismatch,
+                "implementation_candidate_binding_payload_sha256",
+            )
+            with mock.patch.object(
+                gate,
+                "git_commit_parent_lineage",
+                return_value=direct,
+            ):
+                with self.assertRaises(
+                    gate.Gate12C2OriginalBaselineError
+                ):
+                    gate.validate_candidate_binding(
+                        self.plan,
+                        restore_mismatch,
+                        repo_root=root,
+                        current_head=SOURCE_COMMIT,
+                    )
+
+    def test_downstream_authority_rehash_cannot_change_source_commit(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = candidate_for_temp_repository(self.plan, root)
+            candidate_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(candidate)
+            )
+            review = pass_review(
+                self.plan,
+                candidate,
+                candidate_file_hash,
+            )
+            review_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(review)
+            )
+            authority = gate.build_reviewed_authority_payload(
+                self.plan,
+                candidate,
+                review,
+                candidate_file_sha256=candidate_file_hash,
+                review_file_sha256=review_file_hash,
+            )
+            authority["implementation_source_commit"] = "b" * 40
+            authority.pop(
+                "reviewed_implementation_authority_payload_sha256"
+            )
+            authority = gate.add_self_hash(
+                authority,
+                "reviewed_implementation_authority_payload_sha256",
+            )
+            with self.assertRaises(
+                gate.Gate12C2OriginalBaselineError
+            ):
+                gate.validate_reviewed_authority(
+                    self.plan,
+                    authority,
+                    candidate=candidate,
+                    candidate_file_sha256=candidate_file_hash,
+                    review=review,
+                    review_file_sha256=review_file_hash,
+                )
 
 
 class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.plan = gate.load_frozen_plan()
+
+    def setUp(self) -> None:
+        lineage = (SOURCE_COMMIT, gate.REMEDIATION_BASE_COMMIT)
+        patcher = mock.patch.object(
+            gate,
+            "git_commit_parent_lineage",
+            return_value=lineage,
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_control_links_timestamps_and_integer_domains_fail_closed(self) -> None:
         preflight, authorization, verdict, _claim = control_chain(
@@ -774,6 +2261,7 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
             scope="verifier",
             reviewed_authority_file_sha256="3" * 64,
             reviewed_authority_payload_sha256="4" * 64,
+            implementation_source_commit=SOURCE_COMMIT,
             extraction_terminal_file_sha256=DIGEST,
             extraction_terminal_payload_sha256=OTHER_DIGEST,
             baseline_receipt_file_sha256="1" * 64,
@@ -791,6 +2279,7 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
                 scope="verifier",
                 reviewed_authority_file_sha256="3" * 64,
                 reviewed_authority_payload_sha256="4" * 64,
+                implementation_source_commit=SOURCE_COMMIT,
                 extraction_terminal_file_sha256=DIGEST,
                 extraction_terminal_payload_sha256=OTHER_DIGEST,
                 baseline_receipt_file_sha256="1" * 64,
@@ -846,6 +2335,8 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
                 owner_hostname="test-host",
                 owner_pid=1234,
                 owner_process_creation_time_utc="2026-08-01T00:00:30Z",
+                git_head_at_claim=SOURCE_COMMIT,
+                executing_code_identity_surface_sha256="a" * 64,
                 preflight_file_sha256="5" * 64,
                 authorization_file_sha256="6" * 64,
                 verdict_file_sha256="9" * 64,
@@ -1149,7 +2640,8 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
             ],
         }
         authority = {
-            "reviewed_implementation_authority_payload_sha256": "4" * 64
+            "reviewed_implementation_authority_payload_sha256": "4" * 64,
+            "implementation_source_commit": SOURCE_COMMIT,
         }
 
         def read_receipt(
@@ -1392,10 +2884,12 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
         candidate = {
             "source_commit": SOURCE_COMMIT,
             "implementation_candidate_binding_payload_sha256": DIGEST,
+            "review_surface_identity": gate.review_surface_identity(self.plan),
             "issuer_id": "ignored-by-derivation",
         }
         review = {
             "fresh_implementation_review_payload_sha256": OTHER_DIGEST,
+            "review_surface_identity": candidate["review_surface_identity"],
             "reviewer_id": "ignored-by-derivation",
         }
         expected = gate.canonical_receipt_bytes(
@@ -1448,19 +2942,19 @@ class AuthorityAndAuthorizationAdversarialTests(unittest.TestCase):
 
     def test_provenance_and_capability_audit_fields_are_absent(self) -> None:
         binding_fields = set(
-            self.plan["implementation_binding_contract"][
-                "exact_top_level_fields"
-            ]
+            gate.artifact_exact_fields(
+                self.plan, "implementation_candidate_binding"
+            )
         )
         review_fields = set(
-            self.plan["review_receipt_schemas"][
-                "fresh_implementation_review_verdict"
-            ]["exact_top_level_fields"]
+            gate.artifact_exact_fields(
+                self.plan, "fresh_implementation_review_verdict"
+            )
         )
         authority_fields = set(
-            self.plan["reviewed_implementation_authority_contract"][
-                "exact_top_level_fields"
-            ]
+            gate.artifact_exact_fields(
+                self.plan, "reviewed_implementation_authority"
+            )
         )
         identity_fragments = (
             "task_id",
@@ -1633,7 +3127,7 @@ class TerminalAndPublicationAdversarialTests(unittest.TestCase):
             self.assertEqual(codes, [0, 3], results)
             self.assertIn(final.read_bytes(), {b"claim-A", b"claim-B"})
             self.assertFalse(
-                final.with_name(final.name + ".pending-v0.8").exists()
+                final.with_name(final.name + ".pending-v0.9").exists()
             )
 
     def test_pid_reuse_owner_death_and_foreign_host_fail_closed(self) -> None:
@@ -1731,7 +3225,8 @@ class IndependentVerifierAdversarialTests(unittest.TestCase):
             self.plan, "verifier"
         )
         authority = {
-            "reviewed_implementation_authority_payload_sha256": "4" * 64
+            "reviewed_implementation_authority_payload_sha256": "4" * 64,
+            "implementation_source_commit": SOURCE_COMMIT,
         }
         verifier_row = {
             "relative_path": (
@@ -1785,6 +3280,48 @@ class IndependentVerifierAdversarialTests(unittest.TestCase):
             authorization_file_hash="6" * 64,
             verdict_file_hash="9" * 64,
         )
+        for field, replacement in (
+            ("authorized_implementation_repository", "C:\\substituted"),
+            ("implementation_source_commit", "b" * 40),
+            ("executing_code_identity_status", "unverified"),
+        ):
+            altered = dict(preflight)
+            altered[field] = replacement
+            with self.subTest(preflight_field=field), self.assertRaises(
+                independent.IndependentVerificationError
+            ):
+                independent._validate_control_preflight(
+                    self.plan,
+                    altered,
+                    scope="verifier",
+                    authority=authority,
+                    authority_file_hash="3" * 64,
+                    now_ns=gate.parse_utc_ns(
+                        "2026-08-01T00:01:00Z"
+                    ),
+                    linked_receipts=links,
+                )
+        for field, replacement in (
+            ("implementation_source_commit", "b" * 40),
+            ("git_head_at_claim", "b" * 40),
+            ("executing_code_identity_surface_sha256", "not-a-digest"),
+        ):
+            altered = dict(claim)
+            altered[field] = replacement
+            with self.subTest(claim_field=field), self.assertRaises(
+                independent.IndependentVerificationError
+            ):
+                independent._validate_control_claim(
+                    self.plan,
+                    altered,
+                    authorization,
+                    preflight,
+                    verdict,
+                    scope="verifier",
+                    preflight_file_hash="5" * 64,
+                    authorization_file_hash="6" * 64,
+                    verdict_file_hash="9" * 64,
+                )
         controls = {
             "baseline_file_hash": "1" * 64,
             "baseline": {"baseline_receipt_payload_sha256": "2" * 64},
@@ -1827,6 +3364,14 @@ class IndependentVerifierAdversarialTests(unittest.TestCase):
             ],
             claim_file_sha256="a" * 64,
             claim_payload_sha256=claim["execution_claim_payload_sha256"],
+            implementation_source_commit=claim[
+                "implementation_source_commit"
+            ],
+            git_head_at_protected_read=claim["git_head_at_claim"],
+            git_head_at_terminal=claim["git_head_at_claim"],
+            executing_code_identity_surface_sha256=claim[
+                "executing_code_identity_surface_sha256"
+            ],
         )
         terminal = independent._verifier_terminal(
             self.plan,
@@ -1923,19 +3468,41 @@ class IndependentVerifierAdversarialTests(unittest.TestCase):
         core_source = Path(gate.__file__).read_text(encoding="utf-8")
         self.assertNotIn("import gate12c2_development_shards", core_source)
         self.assertNotIn("import gate12c2_synthetic_lab", core_source)
-        extraction_source = inspect.getsource(gate.extract_commitments_after_claim)
+        extraction_source = inspect.getsource(
+            gate.ExecutingCodeIdentity.load_scientific_dependencies
+        )
         for filename in (
             "gate12c2_development_shards.py",
             "gate12c2_synthetic_lab.py",
         ):
             self.assertIn(filename, extraction_source)
-        self.assertLess(
-            extraction_source.index("sha256_bytes(raw) != expected_sha256"),
-            extraction_source.index("spec.loader.exec_module(module)"),
+        self.assertIn(
+            "sha256_bytes(raw)",
+            inspect.getsource(gate.ExecutingCodeIdentity._open_source),
         )
-        self.assertNotIn("subprocess", core_source)
-        self.assertNotIn("subprocess", verifier_source)
-        runner_source = Path(extraction_runner.__file__).read_text(encoding="utf-8")
+        self.assertLess(
+            extraction_source.index(
+                "retained, raw = self._open_source(relative)"
+            ),
+            extraction_source.index("loader.exec_module(module)"),
+        )
+        lineage_sources = (
+            inspect.getsource(gate.git_commit_parent_lineage),
+            inspect.getsource(independent._git_parent_lineage),
+        )
+        for source in lineage_sources:
+            self.assertIn("subprocess.run", source)
+            self.assertIn('"rev-list"', source)
+            self.assertIn('"--parents"', source)
+        protected_read_sources = (
+            inspect.getsource(gate.extract_commitments_after_claim),
+            inspect.getsource(independent.independent_rederive),
+        )
+        for source in protected_read_sources:
+            self.assertNotIn("subprocess", source)
+        runner_source = Path(extraction_runner.__file__).read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("subprocess", runner_source)
 
     def test_retained_handle_implementations_encode_all_frozen_controls(self) -> None:
@@ -2022,6 +3589,10 @@ class LiteralLineageAndSchemaTests(unittest.TestCase):
         cls.plan = gate.load_frozen_plan()
 
     def test_literal_upstream_paths_schemas_and_hash_domains_are_closed(self) -> None:
+        self.assertEqual(
+            independent.CONTRACT_FILE_SHA256,
+            gate.CONTRACT_FILE_SHA256,
+        )
         rows = self.plan["upstream_authority"]["artifact_rows"]
         self.assertEqual(len(rows), 4)
         self.assertEqual(rows, sorted(rows, key=lambda row: row["role"]))
@@ -2063,19 +3634,23 @@ class LiteralLineageAndSchemaTests(unittest.TestCase):
 
     def test_all_candidate_review_authority_fields_are_closed_and_noncyclic(self) -> None:
         candidate = set(
-            self.plan["implementation_binding_contract"][
-                "exact_top_level_fields"
-            ]
+            gate.artifact_exact_fields(
+                self.plan, "implementation_candidate_binding"
+            )
         )
         review = set(
-            self.plan["review_receipt_schemas"][
-                "fresh_implementation_review_verdict"
-            ]["exact_top_level_fields"]
+            gate.artifact_exact_fields(
+                self.plan, "fresh_implementation_review_verdict"
+            )
         )
         authority_contract = self.plan[
             "reviewed_implementation_authority_contract"
         ]
-        authority = set(authority_contract["exact_top_level_fields"])
+        authority = set(
+            gate.artifact_exact_fields(
+                self.plan, "reviewed_implementation_authority"
+            )
+        )
         self.assertIn(
             "implementation_candidate_binding_payload_sha256", candidate
         )
@@ -2099,6 +3674,35 @@ class LiteralLineageAndSchemaTests(unittest.TestCase):
                 "deterministic_reviewed_implementation_authority",
             ],
         )
+        candidate_fixture = {
+            "source_commit": SOURCE_COMMIT,
+            "implementation_candidate_binding_payload_sha256": DIGEST,
+            "review_surface_identity": gate.review_surface_identity(self.plan),
+        }
+        review_fixture = {
+            "fresh_implementation_review_payload_sha256": OTHER_DIGEST,
+            "review_surface_identity": candidate_fixture[
+                "review_surface_identity"
+            ],
+        }
+        core_authority = gate.build_reviewed_authority_payload(
+            self.plan,
+            candidate_fixture,
+            review_fixture,
+            candidate_file_sha256="1" * 64,
+            review_file_sha256="2" * 64,
+        )
+        independent_authority = (
+            independent._independent_reviewed_authority_payload(
+                self.plan,
+                candidate_fixture,
+                review_fixture,
+                candidate_file_hash="1" * 64,
+                review_file_hash="2" * 64,
+            )
+        )
+        self.assertEqual(independent_authority, core_authority)
+        self.assertEqual(set(independent_authority), authority)
 
     def test_procedural_separation_is_never_cryptographic_task_authority(self) -> None:
         binding_required = self.plan["implementation_binding_contract"][

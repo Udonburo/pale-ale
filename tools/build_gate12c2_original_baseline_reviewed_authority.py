@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the deterministic Gate12C-2 v0.8 reviewed authority."""
+"""Build the deterministic Gate12C-2 v0.9 reviewed authority."""
 
 
 from __future__ import annotations
@@ -45,7 +45,9 @@ def build_authority(repository: Path) -> dict[str, object]:
     candidate_path = Path(contract["artifact_path"])
     candidate, candidate_file_hash = gate.read_schema_receipt(
         candidate_path,
-        exact_fields=contract["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "implementation_candidate_binding"
+        ),
         hash_field="implementation_candidate_binding_payload_sha256",
     )
     gate.validate_candidate_binding(
@@ -64,7 +66,9 @@ def build_authority(repository: Path) -> dict[str, object]:
     )
     review, review_file_hash = gate.read_schema_receipt(
         review_path,
-        exact_fields=review_schema["exact_top_level_fields"],
+        exact_fields=gate.artifact_exact_fields(
+            plan, "fresh_implementation_review_verdict"
+        ),
         hash_field="fresh_implementation_review_payload_sha256",
     )
     gate.validate_implementation_review(

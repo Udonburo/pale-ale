@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue a Gate12C-2 v0.8 single-use authorization."""
+"""Issue a Gate12C-2 v0.9 single-use authorization."""
 
 
 from __future__ import annotations
@@ -72,6 +72,7 @@ def issue_authorization(
         reviewed_authority_payload_sha256=authority[
             "reviewed_implementation_authority_payload_sha256"
         ],
+        implementation_source_commit=candidate["source_commit"],
         now_ns=now_ns,
         **link_kwargs,
     )
