@@ -20,6 +20,7 @@ import math
 import os
 import re
 import socket
+import stat
 import subprocess
 import sys
 import types
@@ -92,6 +93,55 @@ R2R1_OCCUPIED_R2_SURFACE_SHA256 = (
 )
 R2R1_PARENT_COMMIT = "29058cd9289a9ccb6656878f10c8cbe3d19f11ba"
 R2R1_GRANDPARENT_COMMIT = R2_TASK1_COMMIT
+R2R2_BASE_COMMIT = "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+R2_ACTIVATION_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2_activation_plan.json"
+)
+R2_ACTIVATION_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2_activation_plan.json"
+)
+R2_ACTIVATION_PLAN_BASE_BLOB_OID = (
+    "d0bf666e6fbfc8b9a5c333a3480aea4626884343"
+)
+R2R1_REMEDIATION_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2r1_remediation_plan.json"
+)
+R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
+)
+R2R1_REMEDIATION_PLAN_BASE_BLOB_OID = (
+    "be34a081f52916d8ad9f5ed80758562143b7031c"
+)
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R2_20260804"
+R2R2_PORTABILITY_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
+)
+R2R2_PORTABILITY_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2r2_portability_plan.json"
+)
+# Frozen after the final focused collection; updated exactly once before the
+# bounded candidate commit is created.
+R2R2_PORTABILITY_PLAN_FILE_SHA256 = (
+    "4154f158ef3bacd7b238c4d25852c8e5c9053588d1b40ebf5d3bc78d5c0a323f"
+)
+R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256 = (
+    "57c435fdc04fbf534b30ac32d06ad8a07a0ad54913b4c0bf467c069fedc96ad3"
+)
+R2R2_ARTIFACT_PATH_SURFACE_SHA256 = (
+    "c34da48a051e93d7c79cfc5e1077776b8e55120539855f8a49631c1c0e31771b"
+)
+R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = (
+    "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
+)
+R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
+    "e3845403fb571597af613702b09b3691dd030d7abae1f32deb4e8284f5f9b172"
+)
+R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = (
+    "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
+)
 CONFIGURATION_SURFACE_SHA256 = (
     "a564c25f28e42860f0a1e8f51d4a311b4eae2b771f02dc3f62504547799f19cf"
 )
@@ -1567,6 +1617,7 @@ def validate_r2r1_remediation_plan(
     r2_active_plan: Mapping[str, Any],
     remediation_plan: Mapping[str, Any],
     *,
+    repository_root: Path | None = None,
     check_r2_occupancy: bool = True,
 ) -> dict[str, Any]:
     supplied = dict(remediation_plan)
@@ -1625,7 +1676,7 @@ def validate_r2r1_remediation_plan(
         _raise("INPUT_LINEAGE_MISMATCH")
     if supplied.get("r2_activation_plan") != {
         "file_sha256": R2_ACTIVATION_PLAN_FILE_SHA256,
-        "path": str(R2_ACTIVATION_PLAN_PATH),
+        "path": str(R2_ACTIVATION_PLAN_HISTORICAL_DECLARED_PATH),
         "payload_sha256": R2_ACTIVATION_PLAN_PAYLOAD_SHA256,
     } or supplied.get("parent_lineage") != {
         "remediation_parent": R2R1_PARENT_COMMIT,
@@ -1634,6 +1685,19 @@ def validate_r2r1_remediation_plan(
         "remediation_grandparent_count": 1,
     }:
         _raise("INPUT_LINEAGE_MISMATCH")
+    validate_repository_local_artifact(
+        repository_root,
+        historical_declared_path=supplied["r2_activation_plan"]["path"],
+        expected_historical_declared_path=(
+            R2_ACTIVATION_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        canonical_repository_relative_path=(
+            R2_ACTIVATION_PLAN_RELATIVE_PATH
+        ),
+        expected_file_sha256=R2_ACTIVATION_PLAN_FILE_SHA256,
+        bound_commit=R2R2_BASE_COMMIT,
+        expected_git_blob_oid=R2_ACTIVATION_PLAN_BASE_BLOB_OID,
+    )
     if supplied.get("preserved_identities") != {
         "compatibility_row_count": 662,
         "mutation_applicability_cell_count": 13456,
@@ -1821,11 +1885,15 @@ def validate_r2r1_remediation_plan(
 
 
 def load_r2r1_remediation_plan(
-    path: Path = R2R1_REMEDIATION_PLAN_PATH,
     *,
+    repository_root: Path | None = None,
     r2_active_plan: Mapping[str, Any] | None = None,
     check_r2_occupancy: bool = True,
 ) -> dict[str, Any]:
+    root = explicit_repository_root(repository_root)
+    path = root.joinpath(
+        *PurePosixPath(R2R1_REMEDIATION_PLAN_RELATIVE_PATH).parts
+    )
     raw = read_exact_bytes(
         path,
         R2R1_REMEDIATION_PLAN_FILE_SHA256,
@@ -1839,6 +1907,23 @@ def load_r2r1_remediation_plan(
     )
     if raw != canonical_receipt_bytes(value):
         _raise("INPUT_LINEAGE_MISMATCH")
+    materialized = validate_repository_local_artifact(
+        root,
+        historical_declared_path=str(
+            R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        expected_historical_declared_path=(
+            R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        canonical_repository_relative_path=(
+            R2R1_REMEDIATION_PLAN_RELATIVE_PATH
+        ),
+        expected_file_sha256=R2R1_REMEDIATION_PLAN_FILE_SHA256,
+        bound_commit=R2R2_BASE_COMMIT,
+        expected_git_blob_oid=R2R1_REMEDIATION_PLAN_BASE_BLOB_OID,
+    )
+    if materialized != raw:
+        _raise("INPUT_LINEAGE_MISMATCH")
     active_r2 = (
         load_r2_active_plan()
         if r2_active_plan is None
@@ -1847,6 +1932,7 @@ def load_r2r1_remediation_plan(
     return validate_r2r1_remediation_plan(
         active_r2,
         value,
+        repository_root=repository_root,
         check_r2_occupancy=check_r2_occupancy,
     )
 
@@ -1854,10 +1940,13 @@ def load_r2r1_remediation_plan(
 def build_r2r1_active_plan(
     r2_active_plan: Mapping[str, Any],
     remediation_plan: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
     overlay = validate_r2r1_remediation_plan(
         r2_active_plan,
         remediation_plan,
+        repository_root=repository_root,
         check_r2_occupancy=False,
     )
     active = _replace_active_string(
@@ -1897,7 +1986,7 @@ def build_r2r1_active_plan(
     )
     active["r2r1_remediation_control"] = {
         "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
-        "remediation_plan_path": str(R2R1_REMEDIATION_PLAN_PATH),
+        "remediation_plan_path": R2R1_REMEDIATION_PLAN_RELATIVE_PATH,
         "remediation_plan_file_sha256": (
             R2R1_REMEDIATION_PLAN_FILE_SHA256
         ),
@@ -1948,13 +2037,640 @@ def build_r2r1_active_plan(
     return active
 
 
-def load_active_plan() -> dict[str, Any]:
+def _validate_r2r2_occupied_r2r1(
+    r2r1_active_plan: Mapping[str, Any],
+    portability_plan: Mapping[str, Any],
+) -> None:
+    occupied = require_mapping(
+        portability_plan.get("occupied_r2r1"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        sha256_bytes(canonical_json_bytes(occupied))
+        != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        or occupied.get("candidate_commit") != R2R2_BASE_COMMIT
+        or occupied.get("stage1_failure_codes")
+        != [
+            "CLEAN_RESTORE_INPUT_LINEAGE_MISMATCH",
+            "INDEPENDENT_FRAMING_INPUT_LINEAGE_MISMATCH",
+        ]
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    receipt_specs = {
+        "candidate_selection": "candidate_selection_payload_sha256",
+        "candidate_manifest": "candidate_manifest_payload_sha256",
+        "candidate_binding": (
+            "implementation_candidate_binding_payload_sha256"
+        ),
+        "clean_restore_receipt": "restore_receipt_payload_sha256",
+        "review_input_freeze": "review_input_freeze_payload_sha256",
+        "review_evidence": "review_evidence_payload_sha256",
+        "review_verdict": "fresh_implementation_review_payload_sha256",
+        "reviewed_authority": (
+            "reviewed_implementation_authority_payload_sha256"
+        ),
+    }
+    for name, hash_field in receipt_specs.items():
+        row = require_mapping(
+            occupied.get(name), code="INPUT_LINEAGE_MISMATCH"
+        )
+        allowed = {"path", "file_sha256", "payload_sha256"}
+        if name == "reviewed_authority":
+            allowed.add("execution_status")
+            if row.get("execution_status") != (
+                "HISTORICAL_NON_EXECUTABLE_AFTER_FAILED_MANDATORY_STAGE1"
+            ):
+                _raise("INPUT_LINEAGE_MISMATCH")
+        require_exact_keys(row, allowed, code="INPUT_LINEAGE_MISMATCH")
+        receipt = read_canonical_receipt(
+            Path(row["path"]),
+            expected_file_sha256=row["file_sha256"],
+            hash_field=hash_field,
+            expected_payload_sha256=row["payload_sha256"],
+        )
+        if (
+            name == "candidate_binding"
+            and receipt.get("source_commit") != R2R2_BASE_COMMIT
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+    packet = require_mapping(
+        occupied.get("review_packet"), code="INPUT_LINEAGE_MISMATCH"
+    )
+    require_exact_keys(
+        packet,
+        {"path", "file_sha256", "size_bytes"},
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    packet_raw = read_exact_bytes(
+        Path(packet["path"]),
+        packet["file_sha256"],
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        len(packet_raw) != packet["size_bytes"]
+        or not packet_raw.endswith(b"\n")
+        or packet_raw.endswith(b"\n\n")
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    roles = {
+        row["role"]: row
+        for row in r2r1_active_plan["artifact_path_surface"]
+    }
+    for role in occupied["required_absent_final_roles"]:
+        if role not in roles or Path(roles[role]["final_path"]).exists():
+            _raise("UNEXPECTED_ARTIFACT")
+    for role in occupied["required_absent_pending_roles"]:
+        if role not in roles or Path(roles[role]["pending_path"]).exists():
+            _raise("UNEXPECTED_ARTIFACT")
+
+
+def validate_r2r2_portability_plan(
+    r2r1_active_plan: Mapping[str, Any],
+    portability_plan: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
+    check_r2r1_occupancy: bool = True,
+) -> dict[str, Any]:
+    supplied = dict(portability_plan)
+    require_exact_keys(
+        supplied,
+        {
+            "allowed_changed_paths",
+            "artifact_path_surface",
+            "artifact_path_surface_sha256",
+            "candidate_manifest_contract",
+            "candidate_selection_contract",
+            "clean_restore_receipt_contract",
+            "fresh_review_contract_overlay",
+            "fresh_review_evidence_contract",
+            "fresh_review_packet_path",
+            "implementation_binding_contract_overlay",
+            "namespace_id",
+            "occupied_r2r1",
+            "occupied_r2r1_surface_sha256",
+            "parent_lineage",
+            "preserved_identities",
+            "protected_surface_policy",
+            "publication_policy",
+            "purpose",
+            "r2r2_portability_plan_payload_sha256",
+            "remediation_plan_relative_path",
+            "repository_local_artifact_surface_sha256",
+            "repository_local_artifacts",
+            "repository_path_policy",
+            "review_coverage_identity",
+            "review_input_freeze_contract",
+            "reviewed_authority_contract_overlay",
+            "schema_version",
+            "state",
+            "upstream_json_framing",
+            "upstream_json_framing_surface_sha256",
+        },
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    verify_self_hash(
+        supplied,
+        "r2r2_portability_plan_payload_sha256",
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        supplied["r2r2_portability_plan_payload_sha256"]
+        != R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
+        or supplied.get("schema_version")
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.1"
+        or supplied.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
+        or supplied.get("state") != "R2R2_PORTABILITY_AND_FRAMING_FROZEN"
+        or supplied.get("remediation_plan_relative_path")
+        != R2R2_PORTABILITY_PLAN_RELATIVE_PATH
+        or supplied.get("artifact_path_surface_sha256")
+        != R2R2_ARTIFACT_PATH_SURFACE_SHA256
+        or supplied.get("occupied_r2r1_surface_sha256")
+        != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        or supplied.get("repository_local_artifact_surface_sha256")
+        != R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+        or supplied.get("upstream_json_framing_surface_sha256")
+        != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+        or supplied.get("parent_lineage")
+        != {
+            "remediation_parent": R2R2_BASE_COMMIT,
+            "remediation_parent_count": 1,
+            "remediation_grandparent": R2R1_PARENT_COMMIT,
+            "remediation_grandparent_count": 1,
+        }
+        or supplied.get("preserved_identities")
+        != {
+            "compatibility_row_count": 662,
+            "mutation_applicability_cell_count": 13456,
+            "normative_row_count": 841,
+            "required_mutation_count": 6487,
+            "review_surface_identity_sha256": (
+                REVIEW_SURFACE_IDENTITY_SHA256
+            ),
+            "trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        }
+        or supplied.get("repository_path_policy")
+        != {
+            "absolute_override_allowed": False,
+            "canonical_repository_relative_path_in_identity": True,
+            "current_materialized_path_in_identity": False,
+            "git_blob_verification_required": True,
+            "historical_declared_path_in_identity": True,
+            "parent_traversal_allowed": False,
+            "reparse_escape_allowed": False,
+        }
+        or supplied.get("protected_surface_policy")
+        != {
+            "phase_a_protected_root_reads_allowed": False,
+            "phase_a_runtime_artifacts_allowed": False,
+            "scientific_values_inspected": False,
+        }
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    publication = supplied.get("publication_policy")
+    if publication != {
+        "active_role_count": 18,
+        "active_role_publication_mode": (
+            "MoveFileExW_nonreplace_write_through"
+        ),
+        "final_pending_collisions_allowed": False,
+        "legacy_v0_9_write_allowed": False,
+        "mixed_v0_9_r2_r2r1_lineage_allowed": False,
+        "pending_suffix": ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID,
+        "publication_is_atomic_nonreplace": True,
+        "r2_write_allowed": False,
+        "unknown_or_duplicate_roles_allowed": False,
+    }:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    allowed = supplied.get("allowed_changed_paths")
+    if (
+        not isinstance(allowed, list)
+        or allowed != sorted(allowed)
+        or len(allowed) != 10
+        or len(allowed) != len(set(allowed))
+        or any(validate_relative_manifest_path(path) != path for path in allowed)
+        or R2R2_PORTABILITY_PLAN_RELATIVE_PATH not in allowed
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    coverage = require_mapping(
+        supplied.get("review_coverage_identity"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    require_exact_keys(
+        coverage,
+        {
+            "changed_file_manifest_domain",
+            "full_suite_test_count",
+            "full_suite_test_node_id_sha256",
+            "node_id_domain",
+            "targeted_test_count",
+            "targeted_test_node_id_sha256",
+        },
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    for field in ("targeted_test_count", "full_suite_test_count"):
+        require_int(
+            coverage.get(field),
+            minimum=2,
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+    for field in (
+        "targeted_test_node_id_sha256",
+        "full_suite_test_node_id_sha256",
+    ):
+        if not is_sha256(coverage.get(field)) or coverage.get(field) == "0" * 64:
+            _raise("INPUT_LINEAGE_MISMATCH")
+    repository_rows = supplied.get("repository_local_artifacts")
+    if (
+        not isinstance(repository_rows, list)
+        or len(repository_rows) != 3
+        or repository_rows
+        != sorted(repository_rows, key=lambda row: row.get("role", ""))
+        or sha256_bytes(canonical_json_bytes(repository_rows))
+        != R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    by_role = {
+        require_text(row.get("role"), code="INPUT_LINEAGE_MISMATCH"): row
+        for row in repository_rows
+    }
+    expected_local = {
+        "r2_activation_plan": (
+            R2_ACTIVATION_PLAN_HISTORICAL_DECLARED_PATH,
+            R2_ACTIVATION_PLAN_RELATIVE_PATH,
+            R2_ACTIVATION_PLAN_FILE_SHA256,
+            R2_ACTIVATION_PLAN_PAYLOAD_SHA256,
+            R2_ACTIVATION_PLAN_BASE_BLOB_OID,
+        ),
+        "r2r1_remediation_plan": (
+            R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH,
+            R2R1_REMEDIATION_PLAN_RELATIVE_PATH,
+            R2R1_REMEDIATION_PLAN_FILE_SHA256,
+            R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256,
+            R2R1_REMEDIATION_PLAN_BASE_BLOB_OID,
+        ),
+    }
+    for role, values in expected_local.items():
+        historical, relative, file_hash, payload_hash, blob = values
+        row = require_mapping(by_role.get(role), code="INPUT_LINEAGE_MISMATCH")
+        if row != {
+            "bound_commit": R2R2_BASE_COMMIT,
+            "canonical_repository_relative_path": relative,
+            "file_sha256": file_hash,
+            "git_blob_oid": blob,
+            "historical_declared_path": str(historical),
+            "identity_source": "frozen_parent_commit",
+            "payload_sha256": payload_hash,
+            "role": role,
+        }:
+            _raise("INPUT_LINEAGE_MISMATCH")
+        validate_repository_local_artifact(
+            repository_root,
+            historical_declared_path=row["historical_declared_path"],
+            expected_historical_declared_path=historical,
+            canonical_repository_relative_path=(
+                row["canonical_repository_relative_path"]
+            ),
+            expected_file_sha256=file_hash,
+            bound_commit=R2R2_BASE_COMMIT,
+            expected_git_blob_oid=blob,
+        )
+    if by_role.get("r2r2_portability_plan") != {
+        "bound_commit": None,
+        "canonical_repository_relative_path": (
+            R2R2_PORTABILITY_PLAN_RELATIVE_PATH
+        ),
+        "file_sha256": None,
+        "git_blob_oid": None,
+        "historical_declared_path": str(
+            R2R2_PORTABILITY_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        "identity_source": (
+            "compiled_constants_and_candidate_selection_exact_commit"
+        ),
+        "payload_sha256": None,
+        "role": "r2r2_portability_plan",
+    }:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    framing = supplied.get("upstream_json_framing")
+    if (
+        framing
+        != r2r1_active_plan["upstream_authority"]["artifact_rows"]
+        or sha256_bytes(canonical_json_bytes(framing))
+        != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    rows = supplied.get("artifact_path_surface")
+    old_rows = {
+        row["role"]: row
+        for row in r2r1_active_plan["artifact_path_surface"]
+    }
+    if (
+        not isinstance(rows, list)
+        or len(rows) != 18
+        or rows != sorted(rows, key=lambda row: row.get("role", ""))
+        or {row.get("role") for row in rows} != set(old_rows)
+        or sha256_bytes(canonical_json_bytes(rows))
+        != R2R2_ARTIFACT_PATH_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    old_paths = {
+        value
+        for row in old_rows.values()
+        for value in (row["final_path"], row["pending_path"])
+    }
+    seen: set[str] = set()
+    role_rows: dict[str, Mapping[str, Any]] = {}
+    for row_value in rows:
+        row = require_mapping(row_value, code="INPUT_LINEAGE_MISMATCH")
+        require_exact_keys(
+            row,
+            {
+                "role",
+                "final_path",
+                "pending_path",
+                "publication_mode",
+                "lifecycle_scope",
+            },
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        role = row["role"]
+        role_rows[role] = row
+        final_path = require_text(
+            row["final_path"], code="INPUT_LINEAGE_MISMATCH"
+        )
+        pending_path = require_text(
+            row["pending_path"], code="INPUT_LINEAGE_MISMATCH"
+        )
+        if (
+            final_path in seen
+            or pending_path in seen
+            or row["publication_mode"]
+            != "MoveFileExW_nonreplace_write_through"
+            or row["lifecycle_scope"] != old_rows[role]["lifecycle_scope"]
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        seen.update((final_path, pending_path))
+        if role == "formal_design_review_verdict":
+            if row != old_rows[role]:
+                _raise("INPUT_LINEAGE_MISMATCH")
+        elif (
+            R2R2_AUTHORITY_NAMESPACE_ID not in Path(final_path).name
+            or pending_path
+            != final_path + ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID
+            or final_path in old_paths
+            or pending_path in old_paths
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+    for name in (
+        "candidate_manifest_contract",
+        "candidate_selection_contract",
+        "clean_restore_receipt_contract",
+        "fresh_review_evidence_contract",
+        "review_input_freeze_contract",
+    ):
+        contract = require_mapping(
+            supplied.get(name), code="INPUT_LINEAGE_MISMATCH"
+        )
+        final_path = require_text(
+            contract.get("artifact_path"), code="INPUT_LINEAGE_MISMATCH"
+        )
+        pending_path = require_text(
+            contract.get("pending_path"), code="INPUT_LINEAGE_MISMATCH"
+        )
+        if (
+            final_path in seen
+            or pending_path in seen
+            or R2R2_AUTHORITY_NAMESPACE_ID not in Path(final_path).name
+            or pending_path
+            != final_path + ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        seen.update((final_path, pending_path))
+    packet_path = require_text(
+        supplied.get("fresh_review_packet_path"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        packet_path in seen
+        or R2R2_AUTHORITY_NAMESPACE_ID not in Path(packet_path).name
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    binding = require_mapping(
+        supplied.get("implementation_binding_contract_overlay"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    review = require_mapping(
+        supplied.get("fresh_review_contract_overlay"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    authority = require_mapping(
+        supplied.get("reviewed_authority_contract_overlay"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        binding.get("artifact_path")
+        != role_rows["implementation_candidate_binding"]["final_path"]
+        or review.get("artifact_path")
+        != role_rows["fresh_implementation_review_verdict"]["final_path"]
+        or authority.get("artifact_path")
+        != role_rows["reviewed_implementation_authority"]["final_path"]
+        or authority.get("fresh_implementation_review_path")
+        != review.get("artifact_path")
+        or any(
+            value.get("artifact_path_surface_sha256")
+            != R2R2_ARTIFACT_PATH_SURFACE_SHA256
+            for value in (binding, authority)
+        )
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if check_r2r1_occupancy:
+        _validate_r2r2_occupied_r2r1(r2r1_active_plan, supplied)
+    return supplied
+
+
+def load_r2r2_portability_plan(
+    *,
+    repository_root: Path | None = None,
+    r2r1_active_plan: Mapping[str, Any] | None = None,
+    check_r2r1_occupancy: bool = True,
+) -> dict[str, Any]:
+    root = explicit_repository_root(repository_root)
+    path = root.joinpath(
+        *PurePosixPath(R2R2_PORTABILITY_PLAN_RELATIVE_PATH).parts
+    )
+    raw = read_exact_bytes(
+        path,
+        R2R2_PORTABILITY_PLAN_FILE_SHA256,
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        not raw.endswith(b"\n")
+        or raw.endswith((b"\r\n", b"\n\n"))
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    value = require_mapping(
+        strict_json_loads(raw[:-1], canonical=True),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if raw != canonical_receipt_bytes(value):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    active = (
+        build_r2r1_active_plan(
+            load_r2_active_plan(),
+            load_r2r1_remediation_plan(
+                repository_root=root,
+                check_r2_occupancy=check_r2r1_occupancy,
+            ),
+            repository_root=root,
+        )
+        if r2r1_active_plan is None
+        else dict(r2r1_active_plan)
+    )
+    return validate_r2r2_portability_plan(
+        active,
+        value,
+        repository_root=root,
+        check_r2r1_occupancy=check_r2r1_occupancy,
+    )
+
+
+def build_r2r2_active_plan(
+    r2r1_active_plan: Mapping[str, Any],
+    portability_plan: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
+) -> dict[str, Any]:
+    overlay = validate_r2r2_portability_plan(
+        r2r1_active_plan,
+        portability_plan,
+        repository_root=repository_root,
+        check_r2r1_occupancy=False,
+    )
+    active = _replace_active_string(
+        r2r1_active_plan,
+        R2R1_ARTIFACT_PATH_SURFACE_SHA256,
+        R2R2_ARTIFACT_PATH_SURFACE_SHA256,
+    )
+    if not isinstance(active, dict):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    active["artifact_path_surface"] = copy.deepcopy(
+        overlay["artifact_path_surface"]
+    )
+    active["artifact_path_surface_sha256"] = (
+        R2R2_ARTIFACT_PATH_SURFACE_SHA256
+    )
+    pending_by_role = {
+        row["role"]: row["pending_path"]
+        for row in overlay["artifact_path_surface"]
+    }
+    for test_row in active["artifact_lifecycle_contract"][
+        "full_surface_checkpoint_contract"
+    ]["pending_injection_tests"]:
+        test_row["injected_pending_path"] = pending_by_role[test_row["role"]]
+    _merge_control_delta(
+        active["implementation_binding_contract"],
+        overlay["implementation_binding_contract_overlay"],
+    )
+    _merge_control_delta(
+        active["review_receipt_schemas"][
+            "fresh_implementation_review_verdict"
+        ],
+        overlay["fresh_review_contract_overlay"],
+    )
+    _merge_control_delta(
+        active["reviewed_implementation_authority_contract"],
+        overlay["reviewed_authority_contract_overlay"],
+    )
+    active["r2_activation_control"]["activation_plan_path"] = (
+        R2_ACTIVATION_PLAN_RELATIVE_PATH
+    )
+    active["r2r2_portability_control"] = {
+        "authority_namespace_id": R2R2_AUTHORITY_NAMESPACE_ID,
+        "portability_plan_path": R2R2_PORTABILITY_PLAN_RELATIVE_PATH,
+        "portability_plan_file_sha256": (
+            R2R2_PORTABILITY_PLAN_FILE_SHA256
+        ),
+        "portability_plan_payload_sha256": (
+            R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
+        ),
+        "occupied_r2r1_surface_sha256": (
+            R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        ),
+        "repository_local_artifact_surface_sha256": (
+            R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+        ),
+        "upstream_json_framing_surface_sha256": (
+            R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+        ),
+        "parent_lineage": copy.deepcopy(overlay["parent_lineage"]),
+        "allowed_changed_paths": copy.deepcopy(
+            overlay["allowed_changed_paths"]
+        ),
+        "review_coverage_identity": copy.deepcopy(
+            overlay["review_coverage_identity"]
+        ),
+        "candidate_selection_contract": copy.deepcopy(
+            overlay["candidate_selection_contract"]
+        ),
+        "candidate_manifest_contract": copy.deepcopy(
+            overlay["candidate_manifest_contract"]
+        ),
+        "clean_restore_receipt_contract": copy.deepcopy(
+            overlay["clean_restore_receipt_contract"]
+        ),
+        "review_input_freeze_contract": copy.deepcopy(
+            overlay["review_input_freeze_contract"]
+        ),
+        "fresh_review_evidence_contract": copy.deepcopy(
+            overlay["fresh_review_evidence_contract"]
+        ),
+        "fresh_review_packet_path": overlay["fresh_review_packet_path"],
+        "repository_local_artifacts": copy.deepcopy(
+            overlay["repository_local_artifacts"]
+        ),
+        "upstream_json_framing": copy.deepcopy(
+            overlay["upstream_json_framing"]
+        ),
+    }
+    if (
+        artifact_surface_sha256(active)
+        != R2R2_ARTIFACT_PATH_SURFACE_SHA256
+        or recompute_implementation_trust_model_sha256(active)
+        != IMPLEMENTATION_TRUST_MODEL_SHA256
+        or review_surface_identity(active)[
+            "review_surface_identity_sha256"
+        ]
+        != REVIEW_SURFACE_IDENTITY_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    nested = _walk_named_values(active, "artifact_path_surface_sha256")
+    if not nested or any(
+        value != R2R2_ARTIFACT_PATH_SURFACE_SHA256 for value in nested
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return active
+
+def load_active_plan(
+    *, repository_root: Path | None = None
+) -> dict[str, Any]:
+    root = explicit_repository_root(repository_root)
     r2_active = load_r2_active_plan()
     remediation = load_r2r1_remediation_plan(
+        repository_root=root,
         r2_active_plan=r2_active,
         check_r2_occupancy=True,
     )
-    return build_r2r1_active_plan(r2_active, remediation)
+    r2r1_active = build_r2r1_active_plan(
+        r2_active, remediation, repository_root=root
+    )
+    portability = load_r2r2_portability_plan(
+        repository_root=root,
+        r2r1_active_plan=r2r1_active,
+        check_r2r1_occupancy=True,
+    )
+    return build_r2r2_active_plan(
+        r2r1_active, portability, repository_root=root
+    )
 
 def validate_relative_manifest_path(value: object, *, allow_directory: bool = False) -> str:
     text = require_text(value, code="INPUT_LINEAGE_MISMATCH")
@@ -1974,6 +2690,84 @@ def validate_relative_manifest_path(value: object, *, allow_directory: bool = Fa
     if not allow_directory and pure.name == "":
         _raise("INPUT_LINEAGE_MISMATCH")
     return pure.as_posix()
+
+
+def explicit_repository_root(value: Path | None) -> Path:
+    supplied = (
+        Path(__file__).resolve().parent.parent
+        if value is None
+        else Path(value)
+    )
+    if not supplied.is_absolute():
+        _raise("INPUT_LINEAGE_MISMATCH")
+    try:
+        root = supplied.resolve(strict=True)
+    except OSError:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if not root.is_dir():
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return root
+
+
+def validate_repository_local_artifact(
+    repository_root: Path | None,
+    *,
+    historical_declared_path: object,
+    expected_historical_declared_path: Path,
+    canonical_repository_relative_path: object,
+    expected_file_sha256: str,
+    bound_commit: str,
+    expected_git_blob_oid: str,
+) -> bytes:
+    root = explicit_repository_root(repository_root)
+    historical = require_text(
+        historical_declared_path, code="INPUT_LINEAGE_MISMATCH"
+    )
+    if (
+        historical != str(expected_historical_declared_path)
+        or not Path(historical).is_absolute()
+        or not is_sha256(expected_file_sha256)
+        or re.fullmatch(r"[0-9a-f]{40,64}", expected_git_blob_oid)
+        is None
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    relative = validate_relative_manifest_path(
+        canonical_repository_relative_path
+    )
+    materialized = root.joinpath(*PurePosixPath(relative).parts)
+    current = root
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    try:
+        for part in PurePosixPath(relative).parts:
+            current = current / part
+            metadata = os.lstat(current)
+            if getattr(metadata, "st_file_attributes", 0) & reparse_flag:
+                _raise("INPUT_LINEAGE_MISMATCH")
+        resolved = materialized.resolve(strict=True)
+        common = Path(os.path.commonpath((str(root), str(resolved))))
+        if (
+            os.path.normcase(str(common)) != os.path.normcase(str(root))
+            or not resolved.is_file()
+            or resolved.is_symlink()
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        raw = resolved.read_bytes()
+    except Gate12C2OriginalBaselineError:
+        raise
+    except (OSError, ValueError):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if (
+        sha256_bytes(raw) != expected_file_sha256
+        or git_path_blob_oid(
+            root,
+            bound_commit,
+            relative,
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        != expected_git_blob_oid
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return raw
 
 
 def validate_formal_design_pass(
@@ -2463,6 +3257,7 @@ def atomic_publish_exact(
         final.name + ".pending-v0.9",
         final.name + ".pending-" + R2_AUTHORITY_NAMESPACE_ID,
         final.name + ".pending-" + R2R1_AUTHORITY_NAMESPACE_ID,
+        final.name + ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID,
     }
     if final.parent != pending.parent or pending.name not in allowed_pending_names:
         _raise("OUTPUT_PUBLICATION_FAILED")
@@ -2533,14 +3328,13 @@ def publish_role(
     if role not in rows:
         _raise("UNEXPECTED_ARTIFACT")
     row = rows[role]
-    remediation_control = r2r1_remediation_control(plan)
+    remediation_control = active_remediation_control(plan)
     if remediation_control is not None:
+        namespace = remediation_control["authority_namespace_id"]
         if (
             role == "formal_design_review_verdict"
-            or R2R1_AUTHORITY_NAMESPACE_ID
-            not in Path(row["final_path"]).name
-            or R2R1_AUTHORITY_NAMESPACE_ID
-            not in Path(row["pending_path"]).name
+            or namespace not in Path(row["final_path"]).name
+            or namespace not in Path(row["pending_path"]).name
         ):
             _raise("UNEXPECTED_ARTIFACT")
     elif r2_activation_control(plan) is not None:
@@ -2629,6 +3423,69 @@ def read_frozen_json_artifact(
     return payload
 
 
+FROZEN_JSON_WITHOUT_LF = (
+    "canonical_JSON_without_self_hash_no_terminating_LF"
+)
+FROZEN_JSON_WITH_SINGLE_LF = (
+    "canonical_JSON_without_self_hash_plus_single_LF"
+)
+
+
+def read_declared_frozen_json_artifact(
+    path: Path,
+    *,
+    expected_file_sha256: str,
+    expected_payload_sha256: str,
+    payload_hash_domain: object,
+    self_hash_field: object,
+    expected_schema_version: object,
+) -> dict[str, Any]:
+    domain = require_text(
+        payload_hash_domain, code="INPUT_LINEAGE_MISMATCH"
+    )
+    field = require_text(self_hash_field, code="INPUT_LINEAGE_MISMATCH")
+    schema = require_text(
+        expected_schema_version, code="INPUT_LINEAGE_MISMATCH"
+    )
+    if domain not in {FROZEN_JSON_WITHOUT_LF, FROZEN_JSON_WITH_SINGLE_LF}:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    raw = read_exact_bytes(
+        path, expected_file_sha256, code="INPUT_LINEAGE_MISMATCH"
+    )
+    if domain == FROZEN_JSON_WITHOUT_LF:
+        if raw.endswith((b"\n", b"\r")):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        encoded = raw
+        suffix = b""
+    else:
+        if (
+            not raw.endswith(b"\n")
+            or raw.endswith((b"\r\n", b"\n\n"))
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        encoded = raw[:-1]
+        suffix = b"\n"
+    payload = require_mapping(
+        strict_json_loads(encoded, canonical=True),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        payload.get("schema_version") != schema
+        or field not in payload
+        or payload.get(field) != expected_payload_sha256
+        or canonical_json_bytes(payload) + suffix != raw
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    unhashed = dict(payload)
+    del unhashed[field]
+    if (
+        sha256_bytes(canonical_json_bytes(unhashed) + suffix)
+        != expected_payload_sha256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return payload
+
+
 def validate_upstream_authority(
     plan: Mapping[str, Any],
 ) -> dict[str, dict[str, Any] | bytes]:
@@ -2641,6 +3498,20 @@ def validate_upstream_authority(
     result: dict[str, dict[str, Any] | bytes] = {}
     for row_value in rows:
         row = require_mapping(row_value, code="INPUT_LINEAGE_MISMATCH")
+        require_exact_keys(
+            row,
+            {
+                "file_sha256",
+                "format",
+                "path",
+                "payload_hash_domain",
+                "payload_sha256",
+                "role",
+                "schema_version",
+                "self_hash_field",
+            },
+            code="INPUT_LINEAGE_MISMATCH",
+        )
         path = Path(
             require_text(row.get("path"), code="INPUT_LINEAGE_MISMATCH")
         )
@@ -2651,21 +3522,33 @@ def validate_upstream_authority(
         if not is_sha256(file_hash):
             _raise("INPUT_LINEAGE_MISMATCH")
         if row.get("format") == "markdown_contract":
+            if any(
+                row.get(field) is not None
+                for field in (
+                    "payload_hash_domain",
+                    "payload_sha256",
+                    "schema_version",
+                    "self_hash_field",
+                )
+            ):
+                _raise("INPUT_LINEAGE_MISMATCH")
             result[role] = read_exact_bytes(
                 path, str(file_hash), code="INPUT_LINEAGE_MISMATCH"
             )
             continue
+        if row.get("format") != "canonical_self_hashed_JSON":
+            _raise("INPUT_LINEAGE_MISMATCH")
         payload_hash = row.get("payload_sha256")
         if not is_sha256(payload_hash):
             _raise("INPUT_LINEAGE_MISMATCH")
-        payload = read_frozen_json_artifact(
+        result[role] = read_declared_frozen_json_artifact(
             path,
             expected_file_sha256=str(file_hash),
             expected_payload_sha256=str(payload_hash),
+            payload_hash_domain=row.get("payload_hash_domain"),
+            self_hash_field=row.get("self_hash_field"),
+            expected_schema_version=row.get("schema_version"),
         )
-        if payload.get("schema_version") != row.get("schema_version"):
-            _raise("INPUT_LINEAGE_MISMATCH")
-        result[role] = payload
     return result
 
 
@@ -5419,6 +6302,69 @@ def r2r1_remediation_control(
     return require_mapping(value, code="INPUT_LINEAGE_MISMATCH")
 
 
+def r2r2_portability_control(
+    plan: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    value = plan.get("r2r2_portability_control")
+    if value is None:
+        return None
+    return require_mapping(value, code="INPUT_LINEAGE_MISMATCH")
+
+
+def active_remediation_control(
+    plan: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    r2r2 = r2r2_portability_control(plan)
+    return r2r2 if r2r2 is not None else r2r1_remediation_control(plan)
+
+
+def active_remediation_identity(
+    plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    control = active_remediation_control(plan)
+    if control is None:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    lineage = require_mapping(
+        control.get("parent_lineage"), code="INPUT_LINEAGE_MISMATCH"
+    )
+    identity = {
+        "authority_namespace_id": control["authority_namespace_id"],
+        "parent_commit": lineage["remediation_parent"],
+        "grandparent_commit": lineage["remediation_grandparent"],
+        "static_fields": {
+            "r2r1_remediation_plan_file_sha256": (
+                R2R1_REMEDIATION_PLAN_FILE_SHA256
+            ),
+            "r2r1_remediation_plan_payload_sha256": (
+                R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
+            ),
+            "occupied_r2_surface_sha256": (
+                R2R1_OCCUPIED_R2_SURFACE_SHA256
+            ),
+        },
+    }
+    if r2r2_portability_control(plan) is not None:
+        identity["static_fields"].update(
+            {
+                "r2r2_portability_plan_file_sha256": (
+                    R2R2_PORTABILITY_PLAN_FILE_SHA256
+                ),
+                "r2r2_portability_plan_payload_sha256": (
+                    R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_r2r1_surface_sha256": (
+                    R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+                ),
+                "repository_local_artifact_surface_sha256": (
+                    R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+                ),
+                "upstream_json_framing_surface_sha256": (
+                    R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+                ),
+            }
+        )
+    return identity
+
 def _git_object_format(
     repository: Path,
     *,
@@ -5448,7 +6394,7 @@ def r2r1_changed_file_manifest(
     repository: Path,
     source_commit: str,
 ) -> tuple[list[dict[str, str]], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     allowed = list(control["allowed_changed_paths"])
@@ -5505,7 +6451,7 @@ def validate_r2r1_clean_restore_receipt(
     plan: Mapping[str, Any],
     receipt: Mapping[str, Any],
 ) -> dict[str, Any]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["clean_restore_receipt_contract"]
@@ -5525,16 +6471,24 @@ def validate_r2r1_clean_restore_receipt(
         for key, value in contract["required_values"].items()
     ):
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    identity = active_remediation_identity(plan)
     source_commit = supplied.get("source_commit")
     if (
         not isinstance(source_commit, str)
         or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None
-        or supplied.get("source_parent_commit") != R2R1_PARENT_COMMIT
+        or supplied.get("source_parent_commit")
+        != identity["parent_commit"]
         or supplied.get("source_grandparent_commit")
-        != R2R1_GRANDPARENT_COMMIT
+        != identity["grandparent_commit"]
         or supplied.get("restore_head") != source_commit
     ):
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    for field, expected in identity["static_fields"].items():
+        if (
+            field in contract["exact_top_level_fields"]
+            and supplied.get(field) != expected
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     coverage = control["review_coverage_identity"]
     for field in (
         "targeted_test_count",
@@ -5574,7 +6528,7 @@ def validate_r2r1_clean_restore_receipt(
 def read_r2r1_clean_restore_receipt(
     plan: Mapping[str, Any],
 ) -> tuple[dict[str, Any], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["clean_restore_receipt_contract"]
@@ -5593,7 +6547,7 @@ def validate_r2r1_candidate_selection(
     repo_root: Path,
     current_head: str | None = None,
 ) -> dict[str, Any]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["candidate_selection_contract"]
@@ -5613,27 +6567,29 @@ def validate_r2r1_candidate_selection(
         for key, value in contract["required_values"].items()
     ):
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    identity = active_remediation_identity(plan)
     source_commit = supplied.get("exact_candidate_commit")
+    parent_commit = identity["parent_commit"]
+    grandparent_commit = identity["grandparent_commit"]
     if (
         not isinstance(source_commit, str)
         or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None
         or (current_head is not None and source_commit != current_head)
-        or supplied.get("exact_parent_commit") != R2R1_PARENT_COMMIT
-        or supplied.get("exact_grandparent_commit")
-        != R2R1_GRANDPARENT_COMMIT
+        or supplied.get("exact_parent_commit") != parent_commit
+        or supplied.get("exact_grandparent_commit") != grandparent_commit
         or supplied.get("commit_parent_count") != 1
         or supplied.get("parent_parent_count") != 1
     ):
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     require_direct_child_lineage(
         source_commit,
-        R2R1_PARENT_COMMIT,
+        parent_commit,
         git_commit_parent_lineage(repo_root, source_commit),
     )
     require_direct_child_lineage(
-        R2R1_PARENT_COMMIT,
-        R2R1_GRANDPARENT_COMMIT,
-        git_commit_parent_lineage(repo_root, R2R1_PARENT_COMMIT),
+        parent_commit,
+        grandparent_commit,
+        git_commit_parent_lineage(repo_root, parent_commit),
     )
     rows, digest = r2r1_changed_file_manifest(
         plan, repo_root, source_commit
@@ -5650,14 +6606,8 @@ def validate_r2r1_candidate_selection(
         "r2_activation_plan_payload_sha256": (
             R2_ACTIVATION_PLAN_PAYLOAD_SHA256
         ),
-        "r2r1_remediation_plan_file_sha256": (
-            R2R1_REMEDIATION_PLAN_FILE_SHA256
-        ),
-        "r2r1_remediation_plan_payload_sha256": (
-            R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-        ),
         "artifact_path_surface_sha256": artifact_surface_sha256(plan),
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        **identity["static_fields"],
         "review_surface_identity_sha256": REVIEW_SURFACE_IDENTITY_SHA256,
         "implementation_trust_model_sha256": (
             recompute_implementation_trust_model_sha256(plan)
@@ -5738,7 +6688,7 @@ def read_r2r1_candidate_selection(
     repo_root: Path,
     current_head: str | None = None,
 ) -> tuple[dict[str, Any], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["candidate_selection_contract"]
@@ -5766,10 +6716,11 @@ def validate_r2r1_candidate_manifest(
     selection: Mapping[str, Any],
     selection_file_sha256: str,
 ) -> dict[str, Any]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["candidate_manifest_contract"]
+    identity = active_remediation_identity(plan)
     supplied = dict(manifest)
     require_exact_keys(
         supplied,
@@ -5783,23 +6734,17 @@ def validate_r2r1_candidate_manifest(
     )
     expected = {
         "schema_version": contract["schema_version"],
-        "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
+        "authority_namespace_id": identity["authority_namespace_id"],
         "state": contract["state"],
         "activation_source_commit": selection["exact_candidate_commit"],
-        "activation_parent_commit": R2R1_PARENT_COMMIT,
-        "task1_parent_commit": R2R1_GRANDPARENT_COMMIT,
+        "activation_parent_commit": identity["parent_commit"],
+        "task1_parent_commit": identity["grandparent_commit"],
         "r2_activation_plan_file_sha256": R2_ACTIVATION_PLAN_FILE_SHA256,
         "r2_activation_plan_payload_sha256": (
             R2_ACTIVATION_PLAN_PAYLOAD_SHA256
         ),
-        "r2r1_remediation_plan_file_sha256": (
-            R2R1_REMEDIATION_PLAN_FILE_SHA256
-        ),
-        "r2r1_remediation_plan_payload_sha256": (
-            R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-        ),
         "artifact_path_surface_sha256": artifact_surface_sha256(plan),
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        **identity["static_fields"],
         "candidate_selection_file_sha256": selection_file_sha256,
         "candidate_selection_payload_sha256": selection[
             "candidate_selection_payload_sha256"
@@ -5823,7 +6768,7 @@ def validate_r2r1_candidate_manifest(
 def read_r2r1_candidate_manifest(
     plan: Mapping[str, Any],
 ) -> tuple[dict[str, Any], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["candidate_manifest_contract"]
@@ -5843,10 +6788,11 @@ def validate_r2r1_review_input_freeze(
     selection: Mapping[str, Any],
     selection_file_sha256: str,
 ) -> dict[str, Any]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["review_input_freeze_contract"]
+    identity = active_remediation_identity(plan)
     supplied = dict(freeze)
     require_exact_keys(
         supplied,
@@ -5891,14 +6837,8 @@ def validate_r2r1_review_input_freeze(
         "clean_restore_receipt_payload_sha256": restore[
             "restore_receipt_payload_sha256"
         ],
-        "r2r1_remediation_plan_file_sha256": (
-            R2R1_REMEDIATION_PLAN_FILE_SHA256
-        ),
-        "r2r1_remediation_plan_payload_sha256": (
-            R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-        ),
         "artifact_path_surface_sha256": artifact_surface_sha256(plan),
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        **identity["static_fields"],
         "review_packet_path": str(packet_path),
         "review_packet_file_sha256": sha256_bytes(packet_raw),
         "review_packet_size_bytes": len(packet_raw),
@@ -5927,7 +6867,7 @@ def read_r2r1_review_input_freeze(
     selection: Mapping[str, Any],
     selection_file_sha256: str,
 ) -> tuple[dict[str, Any], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["review_input_freeze_contract"]
@@ -5960,10 +6900,11 @@ def validate_r2r1_fresh_review_evidence(
     freeze: Mapping[str, Any] | None = None,
     freeze_file_sha256: str | None = None,
 ) -> dict[str, Any]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["fresh_review_evidence_contract"]
+    identity = active_remediation_identity(plan)
     supplied = dict(evidence)
     require_exact_keys(
         supplied,
@@ -6024,14 +6965,8 @@ def validate_r2r1_fresh_review_evidence(
         "review_input_freeze_payload_sha256": frozen[
             "review_input_freeze_payload_sha256"
         ],
-        "r2r1_remediation_plan_file_sha256": (
-            R2R1_REMEDIATION_PLAN_FILE_SHA256
-        ),
-        "r2r1_remediation_plan_payload_sha256": (
-            R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-        ),
         "artifact_path_surface_sha256": artifact_surface_sha256(plan),
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        **identity["static_fields"],
         "review_surface_identity": review_surface_identity(plan),
         "implementation_review_packet_file_sha256": frozen[
             "review_packet_file_sha256"
@@ -6061,7 +6996,7 @@ def read_r2r1_fresh_review_evidence(
     selection: Mapping[str, Any],
     selection_file_sha256: str,
 ) -> tuple[dict[str, Any], str]:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     if control is None:
         _raise("INPUT_LINEAGE_MISMATCH")
     contract = control["fresh_review_evidence_contract"]
@@ -6088,7 +7023,7 @@ def publish_r2r1_control_receipt(
     contract_name: str,
     payload: Mapping[str, Any],
 ) -> PublicationResult:
-    control = r2r1_remediation_control(plan)
+    control = active_remediation_control(plan)
     allowed = {
         "candidate_manifest_contract",
         "candidate_selection_contract",
@@ -6173,7 +7108,7 @@ def validate_candidate_binding(
         "core_longpaths": True,
     }
     control = r2_activation_control(plan)
-    remediation_control = r2r1_remediation_control(plan)
+    remediation_control = active_remediation_control(plan)
     if control is not None:
         expected_values.update(
             {
@@ -6190,17 +7125,7 @@ def validate_candidate_binding(
         )
     if remediation_control is not None:
         expected_values.update(
-            {
-                "r2r1_remediation_plan_file_sha256": (
-                    R2R1_REMEDIATION_PLAN_FILE_SHA256
-                ),
-                "r2r1_remediation_plan_payload_sha256": (
-                    R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-                ),
-                "occupied_r2_surface_sha256": (
-                    R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
-            }
+            active_remediation_identity(plan)["static_fields"]
         )
     if any(supplied.get(key) != value for key, value in expected_values.items()):
         _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
@@ -6243,8 +7168,15 @@ def validate_candidate_binding(
             != selection.get("candidate_selection_payload_sha256")
         ):
             _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-    expected_base = contract["required_values"]["remediation_base_commit"]
-    expected_base_parent = contract["required_values"]["remediation_base_parent"]
+    if remediation_control is not None:
+        remediation_identity = active_remediation_identity(plan)
+        expected_base = remediation_identity["parent_commit"]
+        expected_base_parent = remediation_identity["grandparent_commit"]
+    else:
+        expected_base = contract["required_values"]["remediation_base_commit"]
+        expected_base_parent = contract["required_values"][
+            "remediation_base_parent"
+        ]
     require_direct_child_lineage(
         source_commit,
         expected_base,
@@ -6295,6 +7227,25 @@ def validate_candidate_binding(
                 remediation_relative,
             )
             != git_blob_oid(remediation_raw, str(object_format))
+        ):
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    if r2r2_portability_control(plan) is not None:
+        portability_relative = R2R2_PORTABILITY_PLAN_RELATIVE_PATH
+        try:
+            portability_raw = (
+                Path(repo_root) / portability_relative
+            ).read_bytes()
+        except OSError:
+            _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        if (
+            sha256_bytes(portability_raw)
+            != R2R2_PORTABILITY_PLAN_FILE_SHA256
+            or git_path_blob_oid(
+                repo_root,
+                source_commit,
+                portability_relative,
+            )
+            != git_blob_oid(portability_raw, str(object_format))
         ):
             _raise("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     rows = supplied.get("implementation_files")
@@ -6554,7 +7505,7 @@ def validate_implementation_review(
         ),
     }
     control = r2_activation_control(plan)
-    remediation_control = r2r1_remediation_control(plan)
+    remediation_control = active_remediation_control(plan)
     if remediation_control is not None:
         if candidate_selection is None:
             selection, selection_file_hash = read_r2r1_candidate_selection(
@@ -6622,7 +7573,7 @@ def validate_implementation_review(
             )
         expected.update(
             {
-                "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
+                "authority_namespace_id": active_remediation_identity(plan)["authority_namespace_id"],
                 "contract_file_sha256": CONTRACT_FILE_SHA256,
                 "plan_file_sha256": PLAN_FILE_SHA256,
                 "plan_payload_sha256": PLAN_PAYLOAD_SHA256,
@@ -6632,21 +7583,14 @@ def validate_implementation_review(
                 "r2_activation_plan_payload_sha256": (
                     R2_ACTIVATION_PLAN_PAYLOAD_SHA256
                 ),
-                "r2r1_remediation_plan_file_sha256": (
-                    R2R1_REMEDIATION_PLAN_FILE_SHA256
-                ),
-                "r2r1_remediation_plan_payload_sha256": (
-                    R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-                ),
+                **active_remediation_identity(plan)["static_fields"],
                 "artifact_path_surface_sha256": (
                     artifact_surface_sha256(plan)
                 ),
                 "occupied_v0_9_surface_sha256": (
                     R2_OCCUPIED_V0_9_SURFACE_SHA256
                 ),
-                "occupied_r2_surface_sha256": (
-                    R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
+
                 "candidate_manifest_file_sha256": candidate.get(
                     "candidate_manifest_file_sha256"
                 ),
@@ -6785,7 +7729,7 @@ def build_reviewed_authority_payload(
         "authority_issuer_identity_required": False,
     }
     control = r2_activation_control(plan)
-    remediation_control = r2r1_remediation_control(plan)
+    remediation_control = active_remediation_control(plan)
     if remediation_control is not None:
         selection, selection_file_hash = read_r2r1_candidate_selection(
             plan,
@@ -6806,10 +7750,11 @@ def build_reviewed_authority_payload(
             selection=selection,
             selection_file_sha256=selection_file_hash,
         )
-        if (            candidate.get("authority_namespace_id")
-            != R2R1_AUTHORITY_NAMESPACE_ID
+        if (
+            candidate.get("authority_namespace_id")
+            != active_remediation_identity(plan)["authority_namespace_id"]
             or review.get("authority_namespace_id")
-            != R2R1_AUTHORITY_NAMESPACE_ID
+            != active_remediation_identity(plan)["authority_namespace_id"]
             or review.get("implementation_source_commit")
             != candidate.get("source_commit")
             or review.get("implementation_candidate_binding_file_sha256")
@@ -6823,7 +7768,8 @@ def build_reviewed_authority_payload(
             or review.get("candidate_selection_file_sha256")
             != candidate.get("candidate_selection_file_sha256")
             or review.get("candidate_selection_payload_sha256")
-            != candidate.get("candidate_selection_payload_sha256")            or candidate.get("source_commit")
+            != candidate.get("candidate_selection_payload_sha256")
+            or candidate.get("source_commit")
             != selection.get("exact_candidate_commit")
             or candidate.get("candidate_selection_file_sha256")
             != selection_file_hash
@@ -6843,25 +7789,18 @@ def build_reviewed_authority_payload(
             _raise("INPUT_LINEAGE_MISMATCH")
         payload.update(
             {
-                "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
+                "authority_namespace_id": active_remediation_identity(plan)["authority_namespace_id"],
                 "r2_activation_plan_file_sha256": (
                     R2_ACTIVATION_PLAN_FILE_SHA256
                 ),
                 "r2_activation_plan_payload_sha256": (
                     R2_ACTIVATION_PLAN_PAYLOAD_SHA256
                 ),
-                "r2r1_remediation_plan_file_sha256": (
-                    R2R1_REMEDIATION_PLAN_FILE_SHA256
-                ),
-                "r2r1_remediation_plan_payload_sha256": (
-                    R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-                ),
+                **active_remediation_identity(plan)["static_fields"],
                 "occupied_v0_9_surface_sha256": (
                     R2_OCCUPIED_V0_9_SURFACE_SHA256
                 ),
-                "occupied_r2_surface_sha256": (
-                    R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
+
                 "candidate_manifest_file_sha256": candidate.get(
                     "candidate_manifest_file_sha256"
                 ),

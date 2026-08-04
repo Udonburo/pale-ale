@@ -16,6 +16,7 @@ import math
 import os
 import re
 import socket
+import stat
 import subprocess
 import sys
 import zlib
@@ -60,6 +61,37 @@ R2R1_ARTIFACT_SURFACE_SHA256 = "17fcf271d542a2b9305d3ae1b029a2e0b07c46fad596117d
 R2R1_OCCUPIED_R2_SURFACE_SHA256 = "f592f536259e82ae624e7e9080901fee68cf7aa9ecb276e898fa0d7b99a125a8"
 R2R1_PARENT_COMMIT = "29058cd9289a9ccb6656878f10c8cbe3d19f11ba"
 R2R1_GRANDPARENT_COMMIT = R2_TASK1_COMMIT
+R2R2_BASE_COMMIT = "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+R2_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2_activation_plan.json"
+)
+R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2_activation_plan.json"
+)
+R2_PLAN_BASE_BLOB_OID = "d0bf666e6fbfc8b9a5c333a3480aea4626884343"
+R2R1_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2r1_remediation_plan.json"
+)
+R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
+)
+R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R2_20260804"
+R2R2_PLAN_RELATIVE_PATH = (
+    "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
+)
+R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
+    r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
+    r"\gate12c2_original_baseline_r2r2_portability_plan.json"
+)
+R2R2_PLAN_FILE_SHA256 = "4154f158ef3bacd7b238c4d25852c8e5c9053588d1b40ebf5d3bc78d5c0a323f"
+R2R2_PLAN_PAYLOAD_SHA256 = "57c435fdc04fbf534b30ac32d06ad8a07a0ad54913b4c0bf467c069fedc96ad3"
+R2R2_ARTIFACT_SURFACE_SHA256 = "c34da48a051e93d7c79cfc5e1077776b8e55120539855f8a49631c1c0e31771b"
+R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
+R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = "e3845403fb571597af613702b09b3691dd030d7abae1f32deb4e8284f5f9b172"
+R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 FORMAL_DESIGN_REVIEW_FILE_SHA256 = (
     "5a0ba0d6ad6b5b79df819e73d7ab15831c081ad5e4e44ca6b8195e59bc97cc1e"
 )
@@ -2118,11 +2150,96 @@ def _independent_named_values(
     return found
 
 
+def _independent_repository_root(value: Path | None) -> Path:
+    supplied = (
+        Path(__file__).resolve().parent.parent
+        if value is None
+        else Path(value)
+    )
+    if not supplied.is_absolute():
+        _fail("INPUT_LINEAGE_MISMATCH")
+    try:
+        root = supplied.resolve(strict=True)
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if not root.is_dir():
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return root
+
+
+def _independent_repository_artifact(
+    repository_root: Path | None,
+    *,
+    historical_declared_path: object,
+    expected_historical_declared_path: Path,
+    canonical_repository_relative_path: object,
+    expected_file_sha256: str,
+    bound_commit: str,
+    expected_git_blob_oid: str,
+) -> bytes:
+    root = _independent_repository_root(repository_root)
+    if (
+        type(historical_declared_path) is not str
+        or historical_declared_path != str(expected_historical_declared_path)
+        or not Path(historical_declared_path).is_absolute()
+        or type(canonical_repository_relative_path) is not str
+        or not canonical_repository_relative_path
+        or "\\" in canonical_repository_relative_path
+        or ":" in canonical_repository_relative_path
+        or canonical_repository_relative_path.startswith("/")
+        or any(
+            part in {"", ".", ".."}
+            for part in PurePosixPath(
+                canonical_repository_relative_path
+            ).parts
+        )
+        or type(expected_file_sha256) is not str
+        or SHA_RE.fullmatch(expected_file_sha256) is None
+        or type(expected_git_blob_oid) is not str
+        or re.fullmatch(r"[0-9a-f]{40,64}", expected_git_blob_oid) is None
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    relative = PurePosixPath(canonical_repository_relative_path).as_posix()
+    materialized = root.joinpath(*PurePosixPath(relative).parts)
+    current = root
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    try:
+        for part in PurePosixPath(relative).parts:
+            current = current / part
+            metadata = os.lstat(current)
+            if getattr(metadata, "st_file_attributes", 0) & reparse_flag:
+                _fail("INPUT_LINEAGE_MISMATCH")
+        resolved = materialized.resolve(strict=True)
+        common = Path(os.path.commonpath((str(root), str(resolved))))
+        if (
+            os.path.normcase(str(common)) != os.path.normcase(str(root))
+            or not resolved.is_file()
+            or resolved.is_symlink()
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        raw = resolved.read_bytes()
+    except IndependentVerificationError:
+        raise
+    except (OSError, ValueError):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if (
+        verifier_sha256(raw) != expected_file_sha256
+        or _git_path_blob_oid(root, bound_commit, relative)
+        != expected_git_blob_oid
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return raw
+
+
 def _independent_load_r2r1_plan(
     r2_active: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
+    root = _independent_repository_root(repository_root)
+    path = root.joinpath(*PurePosixPath(R2R1_PLAN_RELATIVE_PATH).parts)
     try:
-        raw = R2R1_PLAN_PATH.read_bytes()
+        raw = path.read_bytes()
     except OSError:
         _fail("INPUT_LINEAGE_MISMATCH")
     if (
@@ -2180,7 +2297,7 @@ def _independent_load_r2r1_plan(
         or overlay.get("r2_activation_plan")
         != {
             "file_sha256": R2_PLAN_FILE_SHA256,
-            "path": str(R2_PLAN_PATH),
+            "path": str(R2_PLAN_HISTORICAL_DECLARED_PATH),
             "payload_sha256": R2_PLAN_PAYLOAD_SHA256,
         }
         or overlay.get("parent_lineage")
@@ -2206,6 +2323,32 @@ def _independent_load_r2r1_plan(
             "scientific_values_inspected": False,
         }
     ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if _independent_repository_artifact(
+        root,
+        historical_declared_path=overlay["r2_activation_plan"]["path"],
+        expected_historical_declared_path=(
+            R2_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        canonical_repository_relative_path=R2_PLAN_RELATIVE_PATH,
+        expected_file_sha256=R2_PLAN_FILE_SHA256,
+        bound_commit=R2R2_BASE_COMMIT,
+        expected_git_blob_oid=R2_PLAN_BASE_BLOB_OID,
+    ) is None:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if _independent_repository_artifact(
+        root,
+        historical_declared_path=str(
+            R2R1_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        expected_historical_declared_path=(
+            R2R1_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        canonical_repository_relative_path=R2R1_PLAN_RELATIVE_PATH,
+        expected_file_sha256=R2R1_PLAN_FILE_SHA256,
+        bound_commit=R2R2_BASE_COMMIT,
+        expected_git_blob_oid=R2R1_PLAN_BASE_BLOB_OID,
+    ) != raw:
         _fail("INPUT_LINEAGE_MISMATCH")
     coverage = overlay.get("review_coverage_identity")
     if (
@@ -2469,7 +2612,7 @@ def _independent_build_r2r1_active(
     )
     active["r2r1_remediation_control"] = {
         "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
-        "remediation_plan_path": str(R2R1_PLAN_PATH),
+        "remediation_plan_path": R2R1_PLAN_RELATIVE_PATH,
         "remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
         "remediation_plan_payload_sha256": R2R1_PLAN_PAYLOAD_SHA256,
         "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
@@ -2513,10 +2656,655 @@ def _independent_build_r2r1_active(
     return active
 
 
-def independent_load_plan() -> dict[str, Any]:
+def _independent_r2r2_occupied(
+    r2r1_active: Mapping[str, Any],
+    overlay: Mapping[str, Any],
+) -> None:
+    occupied = overlay.get("occupied_r2r1")
+    if (
+        type(occupied) is not dict
+        or _digest(occupied) != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        or occupied.get("candidate_commit") != R2R2_BASE_COMMIT
+        or occupied.get("stage1_failure_codes")
+        != [
+            "CLEAN_RESTORE_INPUT_LINEAGE_MISMATCH",
+            "INDEPENDENT_FRAMING_INPUT_LINEAGE_MISMATCH",
+        ]
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    specifications = {
+        "candidate_selection": "candidate_selection_payload_sha256",
+        "candidate_manifest": "candidate_manifest_payload_sha256",
+        "candidate_binding": (
+            "implementation_candidate_binding_payload_sha256"
+        ),
+        "clean_restore_receipt": "restore_receipt_payload_sha256",
+        "review_input_freeze": "review_input_freeze_payload_sha256",
+        "review_evidence": "review_evidence_payload_sha256",
+        "review_verdict": "fresh_implementation_review_payload_sha256",
+        "reviewed_authority": (
+            "reviewed_implementation_authority_payload_sha256"
+        ),
+    }
+    for name, hash_field in specifications.items():
+        row = occupied.get(name)
+        expected_keys = {"file_sha256", "path", "payload_sha256"}
+        if name == "reviewed_authority":
+            expected_keys.add("execution_status")
+        if type(row) is not dict or set(row) != expected_keys:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        if (
+            name == "reviewed_authority"
+            and row.get("execution_status")
+            != "HISTORICAL_NON_EXECUTABLE_AFTER_FAILED_MANDATORY_STAGE1"
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        receipt = _legacy_r2_receipt(row, hash_field)
+        if (
+            name == "candidate_binding"
+            and receipt.get("source_commit") != R2R2_BASE_COMMIT
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+    packet = occupied.get("review_packet")
+    if type(packet) is not dict or set(packet) != {
+        "file_sha256",
+        "path",
+        "size_bytes",
+    }:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    try:
+        packet_raw = Path(packet["path"]).read_bytes()
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if (
+        verifier_sha256(packet_raw) != packet["file_sha256"]
+        or len(packet_raw) != packet["size_bytes"]
+        or not packet_raw.endswith(b"\n")
+        or packet_raw.endswith(b"\n\n")
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    roles = {
+        row["role"]: row for row in r2r1_active["artifact_path_surface"]
+    }
+    for role in occupied.get("required_absent_final_roles", []):
+        if role not in roles or Path(roles[role]["final_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+    for role in occupied.get("required_absent_pending_roles", []):
+        if role not in roles or Path(roles[role]["pending_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+
+
+def _independent_load_r2r2_plan(
+    r2r1_active: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
+    check_occupancy: bool = True,
+) -> dict[str, Any]:
+    root = _independent_repository_root(repository_root)
+    path = root.joinpath(*PurePosixPath(R2R2_PLAN_RELATIVE_PATH).parts)
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if (
+        verifier_sha256(raw) != R2R2_PLAN_FILE_SHA256
+        or not raw.endswith(b"\n")
+        or raw.endswith((b"\r\n", b"\n\n"))
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    overlay = verifier_json(raw[:-1])
+    exact_keys = {
+        "allowed_changed_paths",
+        "artifact_path_surface",
+        "artifact_path_surface_sha256",
+        "candidate_manifest_contract",
+        "candidate_selection_contract",
+        "clean_restore_receipt_contract",
+        "fresh_review_contract_overlay",
+        "fresh_review_evidence_contract",
+        "fresh_review_packet_path",
+        "implementation_binding_contract_overlay",
+        "namespace_id",
+        "occupied_r2r1",
+        "occupied_r2r1_surface_sha256",
+        "parent_lineage",
+        "preserved_identities",
+        "protected_surface_policy",
+        "publication_policy",
+        "purpose",
+        "r2r2_portability_plan_payload_sha256",
+        "remediation_plan_relative_path",
+        "repository_local_artifact_surface_sha256",
+        "repository_local_artifacts",
+        "repository_path_policy",
+        "review_coverage_identity",
+        "review_input_freeze_contract",
+        "reviewed_authority_contract_overlay",
+        "schema_version",
+        "state",
+        "upstream_json_framing",
+        "upstream_json_framing_surface_sha256",
+    }
+    if (
+        type(overlay) is not dict
+        or set(overlay) != exact_keys
+        or raw != verifier_canonical_bytes(overlay) + b"\n"
+        or _self_hash(
+            overlay, "r2r2_portability_plan_payload_sha256"
+        )
+        != R2R2_PLAN_PAYLOAD_SHA256
+        or overlay.get("schema_version")
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.1"
+        or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
+        or overlay.get("state")
+        != "R2R2_PORTABILITY_AND_FRAMING_FROZEN"
+        or overlay.get("remediation_plan_relative_path")
+        != R2R2_PLAN_RELATIVE_PATH
+        or overlay.get("artifact_path_surface_sha256")
+        != R2R2_ARTIFACT_SURFACE_SHA256
+        or overlay.get("occupied_r2r1_surface_sha256")
+        != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        or overlay.get("repository_local_artifact_surface_sha256")
+        != R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+        or overlay.get("upstream_json_framing_surface_sha256")
+        != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+        or overlay.get("parent_lineage")
+        != {
+            "remediation_parent": R2R2_BASE_COMMIT,
+            "remediation_parent_count": 1,
+            "remediation_grandparent": R2R1_PARENT_COMMIT,
+            "remediation_grandparent_count": 1,
+        }
+        or overlay.get("preserved_identities")
+        != {
+            "compatibility_row_count": 662,
+            "mutation_applicability_cell_count": 13456,
+            "normative_row_count": 841,
+            "required_mutation_count": 6487,
+            "review_surface_identity_sha256": (
+                REVIEW_SURFACE_IDENTITY_SHA256
+            ),
+            "trust_model_sha256": IMPLEMENTATION_TRUST_MODEL_SHA256,
+        }
+        or overlay.get("repository_path_policy")
+        != {
+            "absolute_override_allowed": False,
+            "canonical_repository_relative_path_in_identity": True,
+            "current_materialized_path_in_identity": False,
+            "git_blob_verification_required": True,
+            "historical_declared_path_in_identity": True,
+            "parent_traversal_allowed": False,
+            "reparse_escape_allowed": False,
+        }
+        or overlay.get("protected_surface_policy")
+        != {
+            "phase_a_protected_root_reads_allowed": False,
+            "phase_a_runtime_artifacts_allowed": False,
+            "scientific_values_inspected": False,
+        }
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if overlay.get("publication_policy") != {
+        "active_role_count": 18,
+        "active_role_publication_mode": (
+            "MoveFileExW_nonreplace_write_through"
+        ),
+        "final_pending_collisions_allowed": False,
+        "legacy_v0_9_write_allowed": False,
+        "mixed_v0_9_r2_r2r1_lineage_allowed": False,
+        "pending_suffix": ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID,
+        "publication_is_atomic_nonreplace": True,
+        "r2_write_allowed": False,
+        "unknown_or_duplicate_roles_allowed": False,
+    }:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    coverage = overlay.get("review_coverage_identity")
+    if (
+        type(coverage) is not dict
+        or set(coverage)
+        != {
+            "changed_file_manifest_domain",
+            "full_suite_test_count",
+            "full_suite_test_node_id_sha256",
+            "node_id_domain",
+            "targeted_test_count",
+            "targeted_test_node_id_sha256",
+        }
+        or any(
+            type(coverage.get(field)) is not int or coverage[field] < 2
+            for field in ("targeted_test_count", "full_suite_test_count")
+        )
+        or any(
+            type(coverage.get(field)) is not str
+            or SHA_RE.fullmatch(coverage[field]) is None
+            or coverage[field] == "0" * 64
+            for field in (
+                "targeted_test_node_id_sha256",
+                "full_suite_test_node_id_sha256",
+            )
+        )
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    allowed = overlay.get("allowed_changed_paths")
+    if (
+        type(allowed) is not list
+        or len(allowed) != 10
+        or allowed != sorted(allowed)
+        or len(allowed) != len(set(allowed))
+        or R2R2_PLAN_RELATIVE_PATH not in allowed
+        or any(
+            type(value) is not str
+            or not value
+            or "\\" in value
+            or ":" in value
+            or value.startswith("/")
+            or any(
+                part in {"", ".", ".."}
+                for part in PurePosixPath(value).parts
+            )
+            for value in allowed
+        )
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    repository_rows = overlay.get("repository_local_artifacts")
+    if (
+        type(repository_rows) is not list
+        or len(repository_rows) != 3
+        or repository_rows
+        != sorted(repository_rows, key=lambda row: row.get("role", ""))
+        or _digest(repository_rows) != R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    by_role = {
+        row.get("role"): row
+        for row in repository_rows
+        if type(row) is dict
+    }
+    expected_rows = {
+        "r2_activation_plan": (
+            R2_PLAN_HISTORICAL_DECLARED_PATH,
+            R2_PLAN_RELATIVE_PATH,
+            R2_PLAN_FILE_SHA256,
+            R2_PLAN_PAYLOAD_SHA256,
+            R2_PLAN_BASE_BLOB_OID,
+        ),
+        "r2r1_remediation_plan": (
+            R2R1_PLAN_HISTORICAL_DECLARED_PATH,
+            R2R1_PLAN_RELATIVE_PATH,
+            R2R1_PLAN_FILE_SHA256,
+            R2R1_PLAN_PAYLOAD_SHA256,
+            R2R1_PLAN_BASE_BLOB_OID,
+        ),
+    }
+    for role, values in expected_rows.items():
+        historical, relative, file_hash, payload_hash, blob = values
+        row = by_role.get(role)
+        if row != {
+            "bound_commit": R2R2_BASE_COMMIT,
+            "canonical_repository_relative_path": relative,
+            "file_sha256": file_hash,
+            "git_blob_oid": blob,
+            "historical_declared_path": str(historical),
+            "identity_source": "frozen_parent_commit",
+            "payload_sha256": payload_hash,
+            "role": role,
+        }:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        _independent_repository_artifact(
+            root,
+            historical_declared_path=row["historical_declared_path"],
+            expected_historical_declared_path=historical,
+            canonical_repository_relative_path=relative,
+            expected_file_sha256=file_hash,
+            bound_commit=R2R2_BASE_COMMIT,
+            expected_git_blob_oid=blob,
+        )
+    if by_role.get("r2r2_portability_plan") != {
+        "bound_commit": None,
+        "canonical_repository_relative_path": R2R2_PLAN_RELATIVE_PATH,
+        "file_sha256": None,
+        "git_blob_oid": None,
+        "historical_declared_path": str(
+            R2R2_PLAN_HISTORICAL_DECLARED_PATH
+        ),
+        "identity_source": (
+            "compiled_constants_and_candidate_selection_exact_commit"
+        ),
+        "payload_sha256": None,
+        "role": "r2r2_portability_plan",
+    }:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    framing = overlay.get("upstream_json_framing")
+    if (
+        framing != r2r1_active["upstream_authority"]["artifact_rows"]
+        or _digest(framing) != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    rows = overlay.get("artifact_path_surface")
+    old_rows = {
+        row["role"]: row for row in r2r1_active["artifact_path_surface"]
+    }
+    if (
+        type(rows) is not list
+        or len(rows) != 18
+        or rows != sorted(rows, key=lambda row: row.get("role", ""))
+        or {row.get("role") for row in rows} != set(old_rows)
+        or _digest(rows) != R2R2_ARTIFACT_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    old_paths = {
+        path
+        for row in old_rows.values()
+        for path in (row["final_path"], row["pending_path"])
+    }
+    seen: set[str] = set()
+    role_rows: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        if (
+            type(row) is not dict
+            or set(row)
+            != {
+                "role",
+                "final_path",
+                "pending_path",
+                "publication_mode",
+                "lifecycle_scope",
+            }
+            or row.get("role") in role_rows
+            or type(row.get("final_path")) is not str
+            or type(row.get("pending_path")) is not str
+            or row["final_path"] in seen
+            or row["pending_path"] in seen
+            or row["publication_mode"]
+            != "MoveFileExW_nonreplace_write_through"
+            or row["lifecycle_scope"]
+            != old_rows[row["role"]]["lifecycle_scope"]
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        role_rows[row["role"]] = row
+        seen.update((row["final_path"], row["pending_path"]))
+        if row["role"] == "formal_design_review_verdict":
+            if row != old_rows[row["role"]]:
+                _fail("INPUT_LINEAGE_MISMATCH")
+        elif (
+            R2R2_AUTHORITY_NAMESPACE_ID
+            not in Path(row["final_path"]).name
+            or row["pending_path"]
+            != row["final_path"]
+            + ".pending-"
+            + R2R2_AUTHORITY_NAMESPACE_ID
+            or row["final_path"] in old_paths
+            or row["pending_path"] in old_paths
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+    for name in (
+        "candidate_manifest_contract",
+        "candidate_selection_contract",
+        "clean_restore_receipt_contract",
+        "fresh_review_evidence_contract",
+        "review_input_freeze_contract",
+    ):
+        contract = overlay.get(name)
+        if (
+            type(contract) is not dict
+            or type(contract.get("artifact_path")) is not str
+            or type(contract.get("pending_path")) is not str
+            or contract["artifact_path"] in seen
+            or contract["pending_path"] in seen
+            or R2R2_AUTHORITY_NAMESPACE_ID
+            not in Path(contract["artifact_path"]).name
+            or contract["pending_path"]
+            != contract["artifact_path"]
+            + ".pending-"
+            + R2R2_AUTHORITY_NAMESPACE_ID
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        seen.update((contract["artifact_path"], contract["pending_path"]))
+    packet_path = overlay.get("fresh_review_packet_path")
+    if (
+        type(packet_path) is not str
+        or packet_path in seen
+        or R2R2_AUTHORITY_NAMESPACE_ID not in Path(packet_path).name
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    binding = overlay.get("implementation_binding_contract_overlay")
+    review = overlay.get("fresh_review_contract_overlay")
+    authority = overlay.get("reviewed_authority_contract_overlay")
+    if (
+        type(binding) is not dict
+        or type(review) is not dict
+        or type(authority) is not dict
+        or binding.get("artifact_path")
+        != role_rows["implementation_candidate_binding"]["final_path"]
+        or review.get("artifact_path")
+        != role_rows["fresh_implementation_review_verdict"]["final_path"]
+        or authority.get("artifact_path")
+        != role_rows["reviewed_implementation_authority"]["final_path"]
+        or authority.get("fresh_implementation_review_path")
+        != review.get("artifact_path")
+        or binding.get("artifact_path_surface_sha256")
+        != R2R2_ARTIFACT_SURFACE_SHA256
+        or authority.get("artifact_path_surface_sha256")
+        != R2R2_ARTIFACT_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if check_occupancy:
+        _independent_r2r2_occupied(r2r1_active, overlay)
+    return overlay
+
+
+def _independent_build_r2r2_active(
+    r2r1_active: Mapping[str, Any],
+    overlay: Mapping[str, Any],
+) -> dict[str, Any]:
+    active = _replace_active_surface(
+        r2r1_active,
+        R2R1_ARTIFACT_SURFACE_SHA256,
+        R2R2_ARTIFACT_SURFACE_SHA256,
+    )
+    if type(active) is not dict:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    active["artifact_path_surface"] = copy.deepcopy(
+        overlay["artifact_path_surface"]
+    )
+    active["artifact_path_surface_sha256"] = R2R2_ARTIFACT_SURFACE_SHA256
+    pending_by_role = {
+        row["role"]: row["pending_path"]
+        for row in overlay["artifact_path_surface"]
+    }
+    for row in active["artifact_lifecycle_contract"][
+        "full_surface_checkpoint_contract"
+    ]["pending_injection_tests"]:
+        row["injected_pending_path"] = pending_by_role[row["role"]]
+    _merge_r2_delta(
+        active["implementation_binding_contract"],
+        overlay["implementation_binding_contract_overlay"],
+    )
+    _merge_r2_delta(
+        active["review_receipt_schemas"][
+            "fresh_implementation_review_verdict"
+        ],
+        overlay["fresh_review_contract_overlay"],
+    )
+    _merge_r2_delta(
+        active["reviewed_implementation_authority_contract"],
+        overlay["reviewed_authority_contract_overlay"],
+    )
+    active["r2_activation_control"]["activation_plan_path"] = (
+        R2_PLAN_RELATIVE_PATH
+    )
+    active["r2r2_portability_control"] = {
+        "authority_namespace_id": R2R2_AUTHORITY_NAMESPACE_ID,
+        "portability_plan_path": R2R2_PLAN_RELATIVE_PATH,
+        "portability_plan_file_sha256": R2R2_PLAN_FILE_SHA256,
+        "portability_plan_payload_sha256": R2R2_PLAN_PAYLOAD_SHA256,
+        "occupied_r2r1_surface_sha256": (
+            R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+        ),
+        "repository_local_artifact_surface_sha256": (
+            R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+        ),
+        "upstream_json_framing_surface_sha256": (
+            R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+        ),
+        "parent_lineage": copy.deepcopy(overlay["parent_lineage"]),
+        "allowed_changed_paths": copy.deepcopy(
+            overlay["allowed_changed_paths"]
+        ),
+        "review_coverage_identity": copy.deepcopy(
+            overlay["review_coverage_identity"]
+        ),
+        "candidate_selection_contract": copy.deepcopy(
+            overlay["candidate_selection_contract"]
+        ),
+        "candidate_manifest_contract": copy.deepcopy(
+            overlay["candidate_manifest_contract"]
+        ),
+        "clean_restore_receipt_contract": copy.deepcopy(
+            overlay["clean_restore_receipt_contract"]
+        ),
+        "review_input_freeze_contract": copy.deepcopy(
+            overlay["review_input_freeze_contract"]
+        ),
+        "fresh_review_evidence_contract": copy.deepcopy(
+            overlay["fresh_review_evidence_contract"]
+        ),
+        "fresh_review_packet_path": overlay["fresh_review_packet_path"],
+        "repository_local_artifacts": copy.deepcopy(
+            overlay["repository_local_artifacts"]
+        ),
+        "upstream_json_framing": copy.deepcopy(
+            overlay["upstream_json_framing"]
+        ),
+    }
+    nested = _independent_named_values(active, "artifact_path_surface_sha256")
+    if (
+        _digest(active["artifact_path_surface"])
+        != R2R2_ARTIFACT_SURFACE_SHA256
+        or _trust_model_sha256(active) != IMPLEMENTATION_TRUST_MODEL_SHA256
+        or _review_surface_identity(active)[
+            "review_surface_identity_sha256"
+        ]
+        != REVIEW_SURFACE_IDENTITY_SHA256
+        or not nested
+        or any(value != R2R2_ARTIFACT_SURFACE_SHA256 for value in nested)
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return active
+
+def independent_load_plan(
+    *, repository_root: Path | None = None
+) -> dict[str, Any]:
+    root = _independent_repository_root(repository_root)
     r2_active = _independent_load_r2_active()
-    overlay = _independent_load_r2r1_plan(r2_active)
-    return _independent_build_r2r1_active(r2_active, overlay)
+    r2r1_overlay = _independent_load_r2r1_plan(
+        r2_active, repository_root=root
+    )
+    r2r1_active = _independent_build_r2r1_active(
+        r2_active, r2r1_overlay
+    )
+    r2r2_overlay = _independent_load_r2r2_plan(
+        r2r1_active,
+        repository_root=root,
+        check_occupancy=True,
+    )
+    return _independent_build_r2r2_active(
+        r2r1_active, r2r2_overlay
+    )
+
+FROZEN_JSON_WITHOUT_LF = (
+    "canonical_JSON_without_self_hash_no_terminating_LF"
+)
+FROZEN_JSON_WITH_SINGLE_LF = (
+    "canonical_JSON_without_self_hash_plus_single_LF"
+)
+
+
+def _independent_upstream_artifact(
+    row: Mapping[str, Any],
+) -> dict[str, Any] | bytes:
+    exact = {
+        "file_sha256",
+        "format",
+        "path",
+        "payload_hash_domain",
+        "payload_sha256",
+        "role",
+        "schema_version",
+        "self_hash_field",
+    }
+    if type(row) is not dict or set(row) != exact:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    path = Path(row.get("path")) if type(row.get("path")) is str else None
+    file_hash = row.get("file_sha256")
+    if (
+        path is None
+        or type(file_hash) is not str
+        or SHA_RE.fullmatch(file_hash) is None
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if verifier_sha256(raw) != file_hash:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if row.get("format") == "markdown_contract":
+        if any(
+            row.get(field) is not None
+            for field in (
+                "payload_hash_domain",
+                "payload_sha256",
+                "schema_version",
+                "self_hash_field",
+            )
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        return raw
+    if row.get("format") != "canonical_self_hashed_JSON":
+        _fail("INPUT_LINEAGE_MISMATCH")
+    domain = row.get("payload_hash_domain")
+    payload_hash = row.get("payload_sha256")
+    self_hash_field = row.get("self_hash_field")
+    schema = row.get("schema_version")
+    if (
+        domain not in {FROZEN_JSON_WITHOUT_LF, FROZEN_JSON_WITH_SINGLE_LF}
+        or type(payload_hash) is not str
+        or SHA_RE.fullmatch(payload_hash) is None
+        or type(self_hash_field) is not str
+        or not self_hash_field
+        or type(schema) is not str
+        or not schema
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    if domain == FROZEN_JSON_WITHOUT_LF:
+        if raw.endswith((b"\n", b"\r")):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        encoded = raw
+        suffix = b""
+    else:
+        if (
+            not raw.endswith(b"\n")
+            or raw.endswith((b"\r\n", b"\n\n"))
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        encoded = raw[:-1]
+        suffix = b"\n"
+    payload = verifier_json(encoded)
+    if (
+        type(payload) is not dict
+        or payload.get("schema_version") != schema
+        or self_hash_field not in payload
+        or payload.get(self_hash_field) != payload_hash
+        or verifier_canonical_bytes(payload) + suffix != raw
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    unhashed = dict(payload)
+    del unhashed[self_hash_field]
+    if verifier_sha256(verifier_canonical_bytes(unhashed) + suffix) != payload_hash:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return payload
+
 
 def _frozen_json(
     path: Path, file_hash: str, payload_hash: str
@@ -3028,10 +3816,67 @@ def _independent_git_object_format(repository: Path) -> str:
     return value
 
 
+def _independent_active_control(
+    plan: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    r2r2 = plan.get("r2r2_portability_control")
+    if r2r2 is not None:
+        if type(r2r2) is not dict:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        return r2r2
+    r2r1 = plan.get("r2r1_remediation_control")
+    if r2r1 is not None and type(r2r1) is not dict:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return r2r1
+
+
+def _independent_active_identity(
+    plan: Mapping[str, Any],
+) -> dict[str, Any]:
+    control = _independent_active_control(plan)
+    if type(control) is not dict:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    lineage = control.get("parent_lineage")
+    if type(lineage) is not dict:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    static = {
+        "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
+        "r2r1_remediation_plan_payload_sha256": (
+            R2R1_PLAN_PAYLOAD_SHA256
+        ),
+        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+    }
+    if "r2r2_portability_control" in plan:
+        static.update(
+            {
+                "r2r2_portability_plan_file_sha256": (
+                    R2R2_PLAN_FILE_SHA256
+                ),
+                "r2r2_portability_plan_payload_sha256": (
+                    R2R2_PLAN_PAYLOAD_SHA256
+                ),
+                "occupied_r2r1_surface_sha256": (
+                    R2R2_OCCUPIED_R2R1_SURFACE_SHA256
+                ),
+                "repository_local_artifact_surface_sha256": (
+                    R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
+                ),
+                "upstream_json_framing_surface_sha256": (
+                    R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+                ),
+            }
+        )
+    return {
+        "authority_namespace_id": control["authority_namespace_id"],
+        "parent_commit": lineage["remediation_parent"],
+        "grandparent_commit": lineage["remediation_grandparent"],
+        "static_fields": static,
+    }
+
 def _independent_r2r1_changed_manifest(
     plan: Mapping[str, Any], repository: Path, source_commit: str
 ) -> tuple[list[dict[str, str]], str]:
-    control = plan.get("r2r1_remediation_control")
+    control = _independent_active_control(plan)
     if type(control) is not dict:
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     try:
@@ -3094,7 +3939,7 @@ def _independent_r2r1_changed_manifest(
 def _independent_r2r1_restore_receipt(
     plan: Mapping[str, Any],
 ) -> tuple[dict[str, Any], str]:
-    control = plan.get("r2r1_remediation_control")
+    control = _independent_active_control(plan)
     if type(control) is not dict:
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     contract = control["clean_restore_receipt_contract"]
@@ -3108,10 +3953,11 @@ def _independent_r2r1_restore_receipt(
         for key, value in contract["required_values"].items()
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    identity = _independent_active_identity(plan)
     coverage = control["review_coverage_identity"]
     expected = {
-        "source_parent_commit": R2R1_PARENT_COMMIT,
-        "source_grandparent_commit": R2R1_GRANDPARENT_COMMIT,
+        "source_parent_commit": identity["parent_commit"],
+        "source_grandparent_commit": identity["grandparent_commit"],
         "restore_head": receipt.get("source_commit"),
         "targeted_test_count": coverage["targeted_test_count"],
         "targeted_test_node_id_sha256": coverage[
@@ -3122,6 +3968,9 @@ def _independent_r2r1_restore_receipt(
             "full_suite_test_node_id_sha256"
         ],
     }
+    for field, value in identity["static_fields"].items():
+        if field in contract["exact_top_level_fields"]:
+            expected[field] = value
     if (
         any(receipt.get(key) != value for key, value in expected.items())
         or type(receipt.get("source_commit")) is not str
@@ -3150,7 +3999,7 @@ def _independent_r2r1_restore_receipt(
 def _independent_r2r1_candidate_selection(
     plan: Mapping[str, Any], repository: Path
 ) -> tuple[dict[str, Any], str]:
-    control = plan.get("r2r1_remediation_control")
+    control = _independent_active_control(plan)
     if type(control) is not dict:
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     contract = control["candidate_selection_contract"]
@@ -3164,13 +4013,15 @@ def _independent_r2r1_candidate_selection(
         for key, value in contract["required_values"].items()
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    identity = _independent_active_identity(plan)
     source_commit = selection.get("exact_candidate_commit")
+    parent_commit = identity["parent_commit"]
+    grandparent_commit = identity["grandparent_commit"]
     if (
         type(source_commit) is not str
         or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None
-        or selection.get("exact_parent_commit") != R2R1_PARENT_COMMIT
-        or selection.get("exact_grandparent_commit")
-        != R2R1_GRANDPARENT_COMMIT
+        or selection.get("exact_parent_commit") != parent_commit
+        or selection.get("exact_grandparent_commit") != grandparent_commit
         or selection.get("commit_parent_count") != 1
         or selection.get("parent_parent_count") != 1
     ):
@@ -3178,12 +4029,12 @@ def _independent_r2r1_candidate_selection(
     _require_direct_child_lineage(
         source_commit,
         _git_parent_lineage(repository, source_commit),
-        expected_parent=R2R1_PARENT_COMMIT,
+        expected_parent=parent_commit,
     )
     _require_direct_child_lineage(
-        R2R1_PARENT_COMMIT,
-        _git_parent_lineage(repository, R2R1_PARENT_COMMIT),
-        expected_parent=R2R1_GRANDPARENT_COMMIT,
+        parent_commit,
+        _git_parent_lineage(repository, parent_commit),
+        expected_parent=grandparent_commit,
     )
     changed_rows, changed_digest = _independent_r2r1_changed_manifest(
         plan, repository, source_commit
@@ -3201,10 +4052,10 @@ def _independent_r2r1_candidate_selection(
         "git_object_format": _independent_git_object_format(repository),
         "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
         "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
-        "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-        "r2r1_remediation_plan_payload_sha256": R2R1_PLAN_PAYLOAD_SHA256,
-        "artifact_path_surface_sha256": R2R1_ARTIFACT_SURFACE_SHA256,
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        "artifact_path_surface_sha256": _digest(
+            plan["artifact_path_surface"]
+        ),
+        **identity["static_fields"],
         "review_surface_identity_sha256": REVIEW_SURFACE_IDENTITY_SHA256,
         "implementation_trust_model_sha256": _trust_model_sha256(plan),
         "targeted_test_count": coverage["targeted_test_count"],
@@ -3285,8 +4136,19 @@ def _independent_r2r1_candidate_selection(
         != _git_blob(plan_raw, selection["git_object_format"])
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    if "r2r2_portability_control" in plan:
+        plan_relative = R2R2_PLAN_RELATIVE_PATH
+        try:
+            plan_raw = (Path(repository) / plan_relative).read_bytes()
+        except OSError:
+            _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        if (
+            verifier_sha256(plan_raw) != R2R2_PLAN_FILE_SHA256
+            or _git_path_blob_oid(repository, source_commit, plan_relative)
+            != _git_blob(plan_raw, selection["git_object_format"])
+        ):
+            _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     return selection, file_hash
-
 
 def _independent_r2r1_candidate_manifest(
     plan: Mapping[str, Any],
@@ -3294,8 +4156,9 @@ def _independent_r2r1_candidate_manifest(
     selection: Mapping[str, Any],
     selection_file_hash: str,
 ) -> tuple[dict[str, Any], str]:
-    control = plan["r2r1_remediation_control"]
+    control = _independent_active_control(plan)
     contract = control["candidate_manifest_contract"]
+    identity = _independent_active_identity(plan)
     manifest, file_hash = _receipt(
         Path(contract["artifact_path"]),
         contract["exact_top_level_fields"],
@@ -3303,17 +4166,17 @@ def _independent_r2r1_candidate_manifest(
     )
     expected = {
         "schema_version": contract["schema_version"],
-        "authority_namespace_id": R2R1_AUTHORITY_NAMESPACE_ID,
+        "authority_namespace_id": identity["authority_namespace_id"],
         "state": contract["state"],
         "activation_source_commit": selection["exact_candidate_commit"],
-        "activation_parent_commit": R2R1_PARENT_COMMIT,
-        "task1_parent_commit": R2R1_GRANDPARENT_COMMIT,
+        "activation_parent_commit": identity["parent_commit"],
+        "task1_parent_commit": identity["grandparent_commit"],
         "r2_activation_plan_file_sha256": R2_PLAN_FILE_SHA256,
         "r2_activation_plan_payload_sha256": R2_PLAN_PAYLOAD_SHA256,
-        "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-        "r2r1_remediation_plan_payload_sha256": R2R1_PLAN_PAYLOAD_SHA256,
-        "artifact_path_surface_sha256": R2R1_ARTIFACT_SURFACE_SHA256,
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        "artifact_path_surface_sha256": _digest(
+            plan["artifact_path_surface"]
+        ),
+        **identity["static_fields"],
         "candidate_selection_file_sha256": selection_file_hash,
         "candidate_selection_payload_sha256": selection[
             "candidate_selection_payload_sha256"
@@ -3344,7 +4207,8 @@ def _independent_r2r1_review_input_freeze(
     selection: Mapping[str, Any],
     selection_file_hash: str,
 ) -> tuple[dict[str, Any], str]:
-    control = plan["r2r1_remediation_control"]
+    control = _independent_active_control(plan)
+    identity = _independent_active_identity(plan)
     contract = control["review_input_freeze_contract"]
     freeze, file_hash = _receipt(
         Path(contract["artifact_path"]),
@@ -3384,10 +4248,10 @@ def _independent_r2r1_review_input_freeze(
         "clean_restore_receipt_payload_sha256": restore[
             "restore_receipt_payload_sha256"
         ],
-        "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-        "r2r1_remediation_plan_payload_sha256": R2R1_PLAN_PAYLOAD_SHA256,
-        "artifact_path_surface_sha256": R2R1_ARTIFACT_SURFACE_SHA256,
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        "artifact_path_surface_sha256": _digest(
+            plan["artifact_path_surface"]
+        ),
+        **identity["static_fields"],
         "review_packet_path": str(packet_path),
         "review_packet_file_sha256": verifier_sha256(packet_raw),
         "review_packet_size_bytes": len(packet_raw),
@@ -3417,7 +4281,8 @@ def _independent_r2r1_review_evidence(
     freeze: Mapping[str, Any],
     freeze_file_hash: str,
 ) -> tuple[dict[str, Any], str]:
-    control = plan["r2r1_remediation_control"]
+    control = _independent_active_control(plan)
+    identity = _independent_active_identity(plan)
     contract = control["fresh_review_evidence_contract"]
     evidence, file_hash = _receipt(
         Path(contract["artifact_path"]),
@@ -3449,10 +4314,10 @@ def _independent_r2r1_review_evidence(
         "review_input_freeze_payload_sha256": freeze[
             "review_input_freeze_payload_sha256"
         ],
-        "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-        "r2r1_remediation_plan_payload_sha256": R2R1_PLAN_PAYLOAD_SHA256,
-        "artifact_path_surface_sha256": R2R1_ARTIFACT_SURFACE_SHA256,
-        "occupied_r2_surface_sha256": R2R1_OCCUPIED_R2_SURFACE_SHA256,
+        "artifact_path_surface_sha256": _digest(
+            plan["artifact_path_surface"]
+        ),
+        **identity["static_fields"],
         "review_surface_identity": _review_surface_identity(plan),
         "implementation_review_packet_file_sha256": freeze[
             "review_packet_file_sha256"
@@ -3537,9 +4402,9 @@ def _independent_reviewed_authority_payload(
         "authority_issuer_identity_required": False,
     }
     if "r2_activation_control" in plan:
-        r2r1_active = "r2r1_remediation_control" in plan
+        r2r1_active = _independent_active_control(plan) is not None
         expected_namespace = (
-            R2R1_AUTHORITY_NAMESPACE_ID
+            _independent_active_identity(plan)["authority_namespace_id"]
             if r2r1_active
             else R2_AUTHORITY_NAMESPACE_ID
         )
@@ -3618,10 +4483,10 @@ def _independent_reviewed_authority_payload(
                 or evidence_file_hash is None
             ):
                 _fail("INPUT_LINEAGE_MISMATCH")
-            equality_fields = (
-                "r2r1_remediation_plan_file_sha256",
-                "r2r1_remediation_plan_payload_sha256",
-                "occupied_r2_surface_sha256",
+            static_fields = _independent_active_identity(plan)[
+                "static_fields"
+            ]
+            equality_fields = tuple(static_fields) + (
                 "candidate_selection_file_sha256",
                 "candidate_selection_payload_sha256",
             )
@@ -3646,12 +4511,10 @@ def _independent_reviewed_authority_payload(
                 != evidence_file_hash
                 or review.get("review_evidence_payload_sha256")
                 != evidence.get("review_evidence_payload_sha256")
-                or candidate.get("r2r1_remediation_plan_file_sha256")
-                != R2R1_PLAN_FILE_SHA256
-                or candidate.get("r2r1_remediation_plan_payload_sha256")
-                != R2R1_PLAN_PAYLOAD_SHA256
-                or candidate.get("occupied_r2_surface_sha256")
-                != R2R1_OCCUPIED_R2_SURFACE_SHA256
+                or any(
+                    candidate.get(field) != value
+                    for field, value in static_fields.items()
+                )
                 or type(review.get("review_input_freeze_file_sha256"))
                 is not str
                 or SHA_RE.fullmatch(
@@ -3676,15 +4539,7 @@ def _independent_reviewed_authority_payload(
                 _fail("INPUT_LINEAGE_MISMATCH")
             payload.update(
                 {
-                    "r2r1_remediation_plan_file_sha256": (
-                        R2R1_PLAN_FILE_SHA256
-                    ),
-                    "r2r1_remediation_plan_payload_sha256": (
-                        R2R1_PLAN_PAYLOAD_SHA256
-                    ),
-                    "occupied_r2_surface_sha256": (
-                        R2R1_OCCUPIED_R2_SURFACE_SHA256
-                    ),
+                    **static_fields,
                     "candidate_selection_file_sha256": candidate[
                         "candidate_selection_file_sha256"
                     ],
@@ -3939,19 +4794,7 @@ def independent_runtime_lineage(
     ):
         _fail("INPUT_LINEAGE_MISMATCH")
     for row in plan["upstream_authority"]["artifact_rows"]:
-        path = Path(row["path"])
-        try:
-            raw = path.read_bytes()
-        except OSError:
-            _fail("INPUT_LINEAGE_MISMATCH")
-        if verifier_sha256(raw) != row["file_sha256"]:
-            _fail("INPUT_LINEAGE_MISMATCH")
-        if row["payload_sha256"] is not None:
-            upstream_payload = _frozen_json(
-                path, row["file_sha256"], row["payload_sha256"]
-            )
-            if upstream_payload.get("schema_version") != row["schema_version"]:
-                _fail("INPUT_LINEAGE_MISMATCH")
+        _independent_upstream_artifact(row)
     binding_contract = plan["implementation_binding_contract"]
     candidate, candidate_file_hash = _receipt(
         Path(binding_contract["artifact_path"]),
@@ -3973,18 +4816,10 @@ def independent_runtime_lineage(
         "implementation_authorship_machine_verified": False,
         "protected_payload_access_required_for_implementation": False,
     }
-    r2r1_active = "r2r1_remediation_control" in plan
+    r2r1_active = _independent_active_control(plan) is not None
     if r2r1_active:
         fixed_candidate.update(
-            {
-                "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-                "r2r1_remediation_plan_payload_sha256": (
-                    R2R1_PLAN_PAYLOAD_SHA256
-                ),
-                "occupied_r2_surface_sha256": (
-                    R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
-            }
+            _independent_active_identity(plan)["static_fields"]
         )
     fixed_candidate.update(binding_contract["required_values"])
     fixed_candidate.update(
@@ -4018,12 +4853,17 @@ def independent_runtime_lineage(
         or object_format not in {"sha1", "sha256"}
     ):
         _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
-    expected_base = binding_contract["required_values"][
-        "remediation_base_commit"
-    ]
-    expected_base_parent = binding_contract["required_values"][
-        "remediation_base_parent"
-    ]
+    if r2r1_active:
+        remediation_identity = _independent_active_identity(plan)
+        expected_base = remediation_identity["parent_commit"]
+        expected_base_parent = remediation_identity["grandparent_commit"]
+    else:
+        expected_base = binding_contract["required_values"][
+            "remediation_base_commit"
+        ]
+        expected_base_parent = binding_contract["required_values"][
+            "remediation_base_parent"
+        ]
     _require_direct_child_lineage(
         source_commit,
         _git_parent_lineage(repository, source_commit),
@@ -4063,6 +4903,22 @@ def independent_runtime_lineage(
                 repository, source_commit, remediation_relative
             )
             != _git_blob(remediation_raw, object_format)
+        ):
+            _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+    if "r2r2_portability_control" in plan:
+        portability_relative = R2R2_PLAN_RELATIVE_PATH
+        try:
+            portability_raw = (
+                repository / portability_relative
+            ).read_bytes()
+        except OSError:
+            _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+        if (
+            verifier_sha256(portability_raw) != R2R2_PLAN_FILE_SHA256
+            or _git_path_blob_oid(
+                repository, source_commit, portability_relative
+            )
+            != _git_blob(portability_raw, object_format)
         ):
             _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
     implementation_rows = candidate.get("implementation_files")
@@ -4302,13 +5158,7 @@ def independent_runtime_lineage(
                 "candidate_manifest_payload_sha256": candidate[
                     "candidate_manifest_payload_sha256"
                 ],
-                "r2r1_remediation_plan_file_sha256": R2R1_PLAN_FILE_SHA256,
-                "r2r1_remediation_plan_payload_sha256": (
-                    R2R1_PLAN_PAYLOAD_SHA256
-                ),
-                "occupied_r2_surface_sha256": (
-                    R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
+                **_independent_active_identity(plan)["static_fields"],
                 "candidate_selection_file_sha256": selection_file_hash,
                 "candidate_selection_payload_sha256": selection[
                     "candidate_selection_payload_sha256"
@@ -4325,7 +5175,7 @@ def independent_runtime_lineage(
                     "review_evidence_payload_sha256"
                 ],
                 "artifact_path_surface_sha256": (
-                    R2R1_ARTIFACT_SURFACE_SHA256
+                    plan["artifact_path_surface_sha256"]
                 ),
             }
         )
@@ -6116,7 +6966,7 @@ def _reverify_claimed_verifier_lineage(
     *,
     now_ns: int,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    repeated_plan = independent_load_plan()
+    repeated_plan = independent_load_plan(repository_root=repository)
     repeated_original, repeated_manifest = independent_lineage(repeated_plan)
     repeated_authority, repeated_authority_hash, repeated_candidate = independent_runtime_lineage(
         repeated_plan, repository
@@ -6156,7 +7006,7 @@ def execute_independent_verifier(
         or os.environ.get("PYTHONPATH")
     ):
         _fail("AUTHORIZATION_INVALID")
-    plan = independent_load_plan()
+    plan = independent_load_plan(repository_root=repository)
     original, manifest = independent_lineage(plan)
     repository_root = Path(repository).absolute()
     authority, authority_file_hash, candidate = independent_runtime_lineage(

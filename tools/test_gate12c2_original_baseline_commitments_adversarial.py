@@ -12,6 +12,7 @@ import inspect
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -4190,8 +4191,27 @@ class R2ActivationLaneAdversarialTests(unittest.TestCase):
 class R2R1P1RemediationAdversarialTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.plan = gate.load_active_plan()
-        cls.independent_plan = independent.independent_load_plan()
+        r2_active = gate.load_r2_active_plan()
+        remediation = gate.load_r2r1_remediation_plan(
+            repository_root=REPOSITORY,
+            r2_active_plan=r2_active,
+            check_r2_occupancy=True,
+        )
+        cls.plan = gate.build_r2r1_active_plan(
+            r2_active,
+            remediation,
+            repository_root=REPOSITORY,
+        )
+        independent_r2 = independent._independent_load_r2_active()
+        independent_overlay = independent._independent_load_r2r1_plan(
+            independent_r2,
+            repository_root=REPOSITORY,
+        )
+        cls.independent_plan = (
+            independent._independent_build_r2r1_active(
+                independent_r2, independent_overlay
+            )
+        )
         cls.control = cls.plan["r2r1_remediation_control"]
         cls.source_commit = "b" * 40
         cls.sibling_commit = "c" * 40
@@ -5210,5 +5230,960 @@ class R2R1P1RemediationAdversarialTests(unittest.TestCase):
             verifier_plan["artifact_path_surface_sha256"],
         )
 
+
+class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
+        cls.independent_plan = independent.independent_load_plan(
+            repository_root=REPOSITORY
+        )
+
+    @staticmethod
+    def _copy_repository_plans(root: Path) -> None:
+        target = root / "tools"
+        target.mkdir(parents=True)
+        for relative in (
+            gate.R2_ACTIVATION_PLAN_RELATIVE_PATH,
+            gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH,
+            gate.R2R2_PORTABILITY_PLAN_RELATIVE_PATH,
+        ):
+            shutil.copyfile(REPOSITORY / relative, root / relative)
+
+    @staticmethod
+    def _framed_payload(
+        domain: str, *, value: int = 1
+    ) -> tuple[dict[str, Any], bytes, str]:
+        suffix = (
+            b""
+            if domain == gate.FROZEN_JSON_WITHOUT_LF
+            else b"\n"
+        )
+        unhashed = {"schema_version": "r2r2_test_v0.1", "value": value}
+        payload_hash = gate.sha256_bytes(
+            gate.canonical_json_bytes(unhashed) + suffix
+        )
+        payload = {
+            **unhashed,
+            "payload_sha256": payload_hash,
+        }
+        return (
+            payload,
+            gate.canonical_json_bytes(payload) + suffix,
+            payload_hash,
+        )
+
+    def _assert_core_and_independent_framing(
+        self, raw: bytes, domain: str, payload_hash: str
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "artifact.json"
+            path.write_bytes(raw)
+            file_hash = gate.sha256_bytes(raw)
+            core = gate.read_declared_frozen_json_artifact(
+                path,
+                expected_file_sha256=file_hash,
+                expected_payload_sha256=payload_hash,
+                payload_hash_domain=domain,
+                self_hash_field="payload_sha256",
+                expected_schema_version="r2r2_test_v0.1",
+            )
+            row = {
+                "file_sha256": file_hash,
+                "format": "canonical_self_hashed_JSON",
+                "path": str(path),
+                "payload_hash_domain": domain,
+                "payload_sha256": payload_hash,
+                "role": "test",
+                "schema_version": "r2r2_test_v0.1",
+                "self_hash_field": "payload_sha256",
+            }
+            independently = independent._independent_upstream_artifact(row)
+            self.assertEqual(core, independently)
+
+    def _assert_framing_rejected(
+        self,
+        raw: bytes,
+        domain: str,
+        payload_hash: str,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "artifact.json"
+            path.write_bytes(raw)
+            file_hash = gate.sha256_bytes(raw)
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.read_declared_frozen_json_artifact(
+                    path,
+                    expected_file_sha256=file_hash,
+                    expected_payload_sha256=payload_hash,
+                    payload_hash_domain=domain,
+                    self_hash_field="payload_sha256",
+                    expected_schema_version="r2r2_test_v0.1",
+                )
+            row = {
+                "file_sha256": file_hash,
+                "format": "canonical_self_hashed_JSON",
+                "path": str(path),
+                "payload_hash_domain": domain,
+                "payload_sha256": payload_hash,
+                "role": "test",
+                "schema_version": "r2r2_test_v0.1",
+                "self_hash_field": "payload_sha256",
+            }
+            with self.assertRaises(
+                independent.IndependentVerificationError
+            ):
+                independent._independent_upstream_artifact(row)
+
+    def test_source_checkout_and_two_restore_locations_are_identical(
+        self,
+    ) -> None:
+        self.assertEqual(
+            gate.canonical_json_bytes(self.plan),
+            independent.verifier_canonical_bytes(self.independent_plan),
+        )
+        materialized: list[bytes] = []
+        independent_materialized: list[bytes] = []
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            for directory in (first, second):
+                root = Path(directory)
+                self._copy_repository_plans(root)
+
+                def core_blob(
+                    _repo: Path, _commit: str, relative: str, **_kwargs: Any
+                ) -> str:
+                    return {
+                        gate.R2_ACTIVATION_PLAN_RELATIVE_PATH: (
+                            gate.R2_ACTIVATION_PLAN_BASE_BLOB_OID
+                        ),
+                        gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH: (
+                            gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
+                        ),
+                    }[relative]
+
+                def verifier_blob(
+                    _repo: Path, _commit: str, relative: str
+                ) -> str:
+                    return {
+                        independent.R2_PLAN_RELATIVE_PATH: (
+                            independent.R2_PLAN_BASE_BLOB_OID
+                        ),
+                        independent.R2R1_PLAN_RELATIVE_PATH: (
+                            independent.R2R1_PLAN_BASE_BLOB_OID
+                        ),
+                    }[relative]
+
+                with mock.patch.object(
+                    gate, "git_path_blob_oid", side_effect=core_blob
+                ):
+                    reconstructed = gate.load_active_plan(
+                        repository_root=root
+                    )
+                with mock.patch.object(
+                    independent,
+                    "_git_path_blob_oid",
+                    side_effect=verifier_blob,
+                ):
+                    independently = independent.independent_load_plan(
+                        repository_root=root
+                    )
+                materialized.append(gate.canonical_json_bytes(reconstructed))
+                independent_materialized.append(
+                    independent.verifier_canonical_bytes(independently)
+                )
+        self.assertEqual(materialized[0], materialized[1])
+        self.assertEqual(
+            independent_materialized[0], independent_materialized[1]
+        )
+        self.assertEqual(materialized, independent_materialized)
+        row = {
+            item["role"]: item
+            for item in self.plan["r2r2_portability_control"][
+                "repository_local_artifacts"
+            ]
+        }["r2_activation_plan"]
+        self.assertEqual(
+            row["historical_declared_path"],
+            str(gate.R2_ACTIVATION_PLAN_HISTORICAL_DECLARED_PATH),
+        )
+        self.assertNotIn(first, materialized[0].decode("utf-8"))
+        self.assertNotIn(second, materialized[1].decode("utf-8"))
+
+    def test_repository_path_attacks_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "tools" / "bound.json"
+            target.parent.mkdir()
+            target.write_bytes(b"{}\n")
+            file_hash = gate.sha256_bytes(target.read_bytes())
+            historical = Path(r"C:\historical\bound.json")
+            arguments = {
+                "historical_declared_path": str(historical),
+                "expected_historical_declared_path": historical,
+                "canonical_repository_relative_path": "tools/bound.json",
+                "expected_file_sha256": file_hash,
+                "bound_commit": "a" * 40,
+                "expected_git_blob_oid": "b" * 40,
+            }
+            with mock.patch.object(
+                gate, "git_path_blob_oid", return_value="b" * 40
+            ):
+                self.assertEqual(
+                    gate.validate_repository_local_artifact(
+                        root, **arguments
+                    ),
+                    b"{}\n",
+                )
+            for override in (
+                str(target),
+                "../bound.json",
+                "tools/../bound.json",
+                "C:/bound.json",
+            ):
+                mutated = dict(arguments)
+                mutated["canonical_repository_relative_path"] = override
+                with (
+                    mock.patch.object(
+                        gate, "git_path_blob_oid", return_value="b" * 40
+                    ),
+                    self.assertRaises(
+                        gate.Gate12C2OriginalBaselineError
+                    ),
+                ):
+                    gate.validate_repository_local_artifact(
+                        root, **mutated
+                    )
+            with (
+                mock.patch.object(
+                    gate, "git_path_blob_oid", return_value="c" * 40
+                ),
+                self.assertRaises(gate.Gate12C2OriginalBaselineError),
+            ):
+                gate.validate_repository_local_artifact(root, **arguments)
+            original_lstat = gate.os.lstat
+
+            def reparse(path: Path) -> Any:
+                value = original_lstat(path)
+                if Path(path).name == "tools":
+                    return types.SimpleNamespace(
+                        st_file_attributes=0x400
+                    )
+                return value
+
+            with (
+                mock.patch.object(gate.os, "lstat", side_effect=reparse),
+                mock.patch.object(
+                    gate, "git_path_blob_oid", return_value="b" * 40
+                ),
+                self.assertRaises(gate.Gate12C2OriginalBaselineError),
+            ):
+                gate.validate_repository_local_artifact(root, **arguments)
+
+    def test_exact_no_lf_and_single_lf_domains_pass(self) -> None:
+        for domain, value in (
+            (gate.FROZEN_JSON_WITHOUT_LF, 1),
+            (gate.FROZEN_JSON_WITHOUT_LF, 2),
+            (gate.FROZEN_JSON_WITH_SINGLE_LF, 3),
+        ):
+            with self.subTest(domain=domain, value=value):
+                _payload, raw, payload_hash = self._framed_payload(
+                    domain, value=value
+                )
+                self._assert_core_and_independent_framing(
+                    raw, domain, payload_hash
+                )
+
+    def test_framing_and_canonicalization_attacks_are_rejected(self) -> None:
+        payload, no_lf, no_lf_hash = self._framed_payload(
+            gate.FROZEN_JSON_WITHOUT_LF
+        )
+        _single_payload, single_lf, single_hash = self._framed_payload(
+            gate.FROZEN_JSON_WITH_SINGLE_LF
+        )
+        reordered = (
+            b'{"value":1,"schema_version":"r2r2_test_v0.1",'
+            b'"payload_sha256":"'
+            + no_lf_hash.encode("ascii")
+            + b'"}'
+        )
+        duplicate = (
+            b'{"payload_sha256":"'
+            + no_lf_hash.encode("ascii")
+            + b'","schema_version":"r2r2_test_v0.1",'
+            b'"value":1,"value":1}'
+        )
+        mismatched = dict(payload)
+        mismatched["payload_sha256"] = "f" * 64
+        cases = (
+            (
+                "added_lf",
+                no_lf + b"\n",
+                gate.FROZEN_JSON_WITHOUT_LF,
+                no_lf_hash,
+            ),
+            (
+                "missing_lf",
+                single_lf[:-1],
+                gate.FROZEN_JSON_WITH_SINGLE_LF,
+                single_hash,
+            ),
+            (
+                "crlf",
+                single_lf[:-1] + b"\r\n",
+                gate.FROZEN_JSON_WITH_SINGLE_LF,
+                single_hash,
+            ),
+            (
+                "double_lf",
+                single_lf + b"\n",
+                gate.FROZEN_JSON_WITH_SINGLE_LF,
+                single_hash,
+            ),
+            (
+                "reordered",
+                reordered,
+                gate.FROZEN_JSON_WITHOUT_LF,
+                no_lf_hash,
+            ),
+            (
+                "duplicate",
+                duplicate,
+                gate.FROZEN_JSON_WITHOUT_LF,
+                no_lf_hash,
+            ),
+            (
+                "self_hash_mismatch",
+                gate.canonical_json_bytes(mismatched),
+                gate.FROZEN_JSON_WITHOUT_LF,
+                no_lf_hash,
+            ),
+        )
+        for name, raw, domain, payload_hash in cases:
+            with self.subTest(name=name):
+                self._assert_framing_rejected(
+                    raw, domain, payload_hash
+                )
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.read_declared_frozen_json_artifact(
+                Path(__file__),
+                expected_file_sha256=gate.sha256_bytes(
+                    Path(__file__).read_bytes()
+                ),
+                expected_payload_sha256=no_lf_hash,
+                payload_hash_domain="unknown",
+                self_hash_field="payload_sha256",
+                expected_schema_version="r2r2_test_v0.1",
+            )
+
+    def test_old_authority_is_not_r2r2_authority(self) -> None:
+        old = self.plan["r2r2_portability_control"]
+        occupied_plan = gate.load_r2r2_portability_plan(
+            repository_root=REPOSITORY,
+            r2r1_active_plan=gate.build_r2r1_active_plan(
+                gate.load_r2_active_plan(),
+                gate.load_r2r1_remediation_plan(
+                    repository_root=REPOSITORY
+                ),
+                repository_root=REPOSITORY,
+            ),
+        )
+        authority_row = occupied_plan["occupied_r2r1"][
+            "reviewed_authority"
+        ]
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.read_schema_receipt(
+                Path(authority_row["path"]),
+                exact_fields=gate.artifact_exact_fields(
+                    self.plan, "reviewed_implementation_authority"
+                ),
+                hash_field=(
+                    "reviewed_implementation_authority_payload_sha256"
+                ),
+            )
+        self.assertEqual(
+            old["authority_namespace_id"],
+            gate.R2R2_AUTHORITY_NAMESPACE_ID,
+        )
+
+    def test_core_independent_lineage_has_no_protected_read(self) -> None:
+        original = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+
+        def guarded(path: Path) -> bytes:
+            if str(path).casefold().startswith(protected):
+                raise AssertionError("protected root read during R2R2 Phase A")
+            return original(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded):
+            core_plan = gate.load_active_plan(repository_root=REPOSITORY)
+            independent_plan = independent.independent_load_plan(
+                repository_root=REPOSITORY
+            )
+        self.assertEqual(
+            gate.canonical_json_bytes(core_plan),
+            independent.verifier_canonical_bytes(independent_plan),
+        )
+
+    def test_core_and_independent_runtime_lineage_accept_exact_valid_fixture(
+        self,
+    ) -> None:
+        plan = self.plan
+        control = gate.active_remediation_control(plan)
+        identity = gate.active_remediation_identity(plan)
+        binding = plan["implementation_binding_contract"]
+        source_commit = "d" * 40
+        parent_commit = identity["parent_commit"]
+        grandparent_commit = identity["grandparent_commit"]
+        object_format = "sha1"
+        implementation_rows = []
+        for relative in gate.IMPLEMENTATION_PATHS:
+            role = gate.IMPLEMENTATION_ROLE_BY_PATH[relative]
+            raw = (REPOSITORY / relative).read_bytes()
+            implementation_rows.append(
+                {
+                    "role": role,
+                    "relative_path": relative,
+                    "file_sha256": gate.sha256_bytes(raw),
+                    "git_blob_oid": gate.git_blob_oid(raw, object_format),
+                }
+            )
+        implementation_rows.sort(key=lambda row: row["role"])
+        changed_rows = []
+        for relative in control["allowed_changed_paths"]:
+            raw = (REPOSITORY / relative).read_bytes()
+            changed_rows.append(
+                {
+                    "relative_path": relative,
+                    "file_sha256": gate.sha256_bytes(raw),
+                    "git_blob_oid": gate.git_blob_oid(raw, object_format),
+                }
+            )
+        changed_rows.sort(key=lambda row: row["relative_path"])
+        changed_digest = gate.sha256_bytes(
+            gate.canonical_json_bytes(changed_rows)
+        )
+        coverage = control["review_coverage_identity"]
+        candidate_file_hash = "1" * 64
+        manifest_file_hash = "2" * 64
+        manifest_payload_hash = "3" * 64
+        selection_file_hash = "4" * 64
+        freeze_file_hash = "5" * 64
+        evidence_file_hash = "6" * 64
+        review_file_hash = "7" * 64
+        restore_file_hash = "8" * 64
+        packet_hash = "9" * 64
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_path = Path(directory) / "r2r2-synthetic.bundle"
+            bundle_raw = b"r2r2-synthetic-bundle\n"
+            bundle_path.write_bytes(bundle_raw)
+            restore_contract = control["clean_restore_receipt_contract"]
+            restore_receipt = {
+                field: None
+                for field in restore_contract["exact_top_level_fields"]
+            }
+            restore_receipt.update(restore_contract["required_values"])
+            restore_receipt.update(
+                {
+                    "source_commit": source_commit,
+                    "source_parent_commit": parent_commit,
+                    "source_grandparent_commit": grandparent_commit,
+                    "bundle_path": str(bundle_path),
+                    "bundle_file_sha256": gate.sha256_bytes(bundle_raw),
+                    "bundle_size_bytes": len(bundle_raw),
+                    "restore_path": str(Path(directory) / "restore"),
+                    "restore_head": source_commit,
+                    "targeted_test_count": coverage["targeted_test_count"],
+                    "targeted_test_node_id_sha256": coverage[
+                        "targeted_test_node_id_sha256"
+                    ],
+                    "full_suite_test_count": coverage[
+                        "full_suite_test_count"
+                    ],
+                    "full_suite_test_node_id_sha256": coverage[
+                        "full_suite_test_node_id_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            restore_receipt.pop("restore_receipt_payload_sha256", None)
+            restore_receipt = gate.add_self_hash(
+                restore_receipt, "restore_receipt_payload_sha256"
+            )
+            selection_contract = control["candidate_selection_contract"]
+            selection = {
+                field: None
+                for field in selection_contract["exact_top_level_fields"]
+            }
+            selection.update(selection_contract["required_values"])
+            selection.update(
+                {
+                    "exact_candidate_commit": source_commit,
+                    "git_object_format": object_format,
+                    "changed_path_allowlist": control[
+                        "allowed_changed_paths"
+                    ],
+                    "changed_files": changed_rows,
+                    "changed_file_manifest_sha256": changed_digest,
+                    "implementation_files": implementation_rows,
+                    "r2_activation_plan_file_sha256": (
+                        gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                    ),
+                    "r2_activation_plan_payload_sha256": (
+                        gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                    ),
+                    "artifact_path_surface_sha256": (
+                        gate.artifact_surface_sha256(plan)
+                    ),
+                    "review_surface_identity_sha256": (
+                        gate.REVIEW_SURFACE_IDENTITY_SHA256
+                    ),
+                    "implementation_trust_model_sha256": (
+                        gate.recompute_implementation_trust_model_sha256(plan)
+                    ),
+                    "bundle_path": str(bundle_path),
+                    "bundle_file_sha256": gate.sha256_bytes(bundle_raw),
+                    "bundle_size_bytes": len(bundle_raw),
+                    "clean_restore_receipt_file_sha256": restore_file_hash,
+                    "clean_restore_receipt_payload_sha256": restore_receipt[
+                        "restore_receipt_payload_sha256"
+                    ],
+                    "targeted_test_count": coverage[
+                        "targeted_test_count"
+                    ],
+                    "targeted_test_node_id_sha256": coverage[
+                        "targeted_test_node_id_sha256"
+                    ],
+                    "full_suite_test_count": coverage[
+                        "full_suite_test_count"
+                    ],
+                    "full_suite_test_node_id_sha256": coverage[
+                        "full_suite_test_node_id_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            selection.pop("candidate_selection_payload_sha256", None)
+            selection = gate.add_self_hash(
+                selection, "candidate_selection_payload_sha256"
+            )
+            clean_restore = {
+                "bundle_path": str(bundle_path),
+                "bundle_file_sha256": gate.sha256_bytes(bundle_raw),
+                "bundle_size_bytes": len(bundle_raw),
+                "restore_receipt_file_sha256": restore_file_hash,
+                "restore_receipt_payload_sha256": restore_receipt[
+                    "restore_receipt_payload_sha256"
+                ],
+                "restore_head": source_commit,
+                "restore_worktree_clean": True,
+                "git_fsck_full_pass": True,
+                "core_autocrlf": False,
+                "core_longpaths": True,
+                "implementation_rows_match": True,
+                "scientific_dependency_rows_match": True,
+            }
+            candidate = {
+                field: None for field in binding["exact_top_level_fields"]
+            }
+            candidate.update(binding["required_values"])
+            candidate.update(
+                {
+                    "source_commit": source_commit,
+                    "git_object_format": object_format,
+                    "core_autocrlf": False,
+                    "core_longpaths": True,
+                    "worktree_clean": True,
+                    "contract_file_sha256": plan["contract_file_sha256"],
+                    "plan_file_sha256": gate.PLAN_FILE_SHA256,
+                    "plan_payload_sha256": gate.PLAN_PAYLOAD_SHA256,
+                    "r2_activation_plan_file_sha256": (
+                        gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                    ),
+                    "r2_activation_plan_payload_sha256": (
+                        gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                    ),
+                    "formal_design_review_file_sha256": (
+                        gate.FORMAL_DESIGN_REVIEW_FILE_SHA256
+                    ),
+                    "formal_design_review_payload_sha256": (
+                        gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
+                    ),
+                    "occupied_v0_9_surface_sha256": (
+                        gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+                    ),
+                    "candidate_manifest_file_sha256": manifest_file_hash,
+                    "candidate_manifest_payload_sha256": (
+                        manifest_payload_hash
+                    ),
+                    "implementation_author_separation_contract_sha256": (
+                        gate.IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
+                    ),
+                    "implementation_trust_model_sha256": (
+                        gate.recompute_implementation_trust_model_sha256(plan)
+                    ),
+                    "artifact_path_surface_sha256": (
+                        gate.artifact_surface_sha256(plan)
+                    ),
+                    "review_surface_identity": (
+                        gate.review_surface_identity(plan)
+                    ),
+                    "implementation_files": implementation_rows,
+                    "scientific_dependencies": binding[
+                        "scientific_dependencies"
+                    ],
+                    "clean_restore": clean_restore,
+                    "candidate_selection_file_sha256": selection_file_hash,
+                    "candidate_selection_payload_sha256": selection[
+                        "candidate_selection_payload_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            candidate.pop(
+                "implementation_candidate_binding_payload_sha256", None
+            )
+            candidate = gate.add_self_hash(
+                candidate,
+                "implementation_candidate_binding_payload_sha256",
+            )
+            freeze_contract = control["review_input_freeze_contract"]
+            freeze = {
+                field: None
+                for field in freeze_contract["exact_top_level_fields"]
+            }
+            freeze.update(freeze_contract["required_values"])
+            freeze.update(
+                {
+                    "implementation_source_commit": source_commit,
+                    "candidate_selection_file_sha256": selection_file_hash,
+                    "candidate_selection_payload_sha256": selection[
+                        "candidate_selection_payload_sha256"
+                    ],
+                    "candidate_manifest_file_sha256": manifest_file_hash,
+                    "candidate_manifest_payload_sha256": (
+                        manifest_payload_hash
+                    ),
+                    "implementation_candidate_binding_file_sha256": (
+                        candidate_file_hash
+                    ),
+                    "implementation_candidate_binding_payload_sha256": (
+                        candidate[
+                            "implementation_candidate_binding_payload_sha256"
+                        ]
+                    ),
+                    "clean_restore_receipt_file_sha256": restore_file_hash,
+                    "clean_restore_receipt_payload_sha256": restore_receipt[
+                        "restore_receipt_payload_sha256"
+                    ],
+                    "artifact_path_surface_sha256": (
+                        gate.artifact_surface_sha256(plan)
+                    ),
+                    "review_packet_path": control[
+                        "fresh_review_packet_path"
+                    ],
+                    "review_packet_file_sha256": packet_hash,
+                    "review_packet_size_bytes": 1,
+                    "changed_file_manifest_sha256": changed_digest,
+                    "targeted_test_count": coverage[
+                        "targeted_test_count"
+                    ],
+                    "targeted_test_node_id_sha256": coverage[
+                        "targeted_test_node_id_sha256"
+                    ],
+                    "full_suite_test_count": coverage[
+                        "full_suite_test_count"
+                    ],
+                    "full_suite_test_node_id_sha256": coverage[
+                        "full_suite_test_node_id_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            freeze.pop("review_input_freeze_payload_sha256", None)
+            freeze = gate.add_self_hash(
+                freeze, "review_input_freeze_payload_sha256"
+            )
+            evidence_contract = control["fresh_review_evidence_contract"]
+            evidence = {
+                field: None
+                for field in evidence_contract["exact_top_level_fields"]
+            }
+            evidence.update(evidence_contract["required_values"])
+            evidence.update(
+                {
+                    "implementation_source_commit": source_commit,
+                    "implementation_candidate_binding_file_sha256": (
+                        candidate_file_hash
+                    ),
+                    "implementation_candidate_binding_payload_sha256": (
+                        candidate[
+                            "implementation_candidate_binding_payload_sha256"
+                        ]
+                    ),
+                    "candidate_manifest_file_sha256": manifest_file_hash,
+                    "candidate_manifest_payload_sha256": (
+                        manifest_payload_hash
+                    ),
+                    "candidate_selection_file_sha256": selection_file_hash,
+                    "candidate_selection_payload_sha256": selection[
+                        "candidate_selection_payload_sha256"
+                    ],
+                    "review_input_freeze_file_sha256": freeze_file_hash,
+                    "review_input_freeze_payload_sha256": freeze[
+                        "review_input_freeze_payload_sha256"
+                    ],
+                    "artifact_path_surface_sha256": (
+                        gate.artifact_surface_sha256(plan)
+                    ),
+                    "review_surface_identity": (
+                        gate.review_surface_identity(plan)
+                    ),
+                    "implementation_review_packet_file_sha256": packet_hash,
+                    "changed_file_manifest_sha256": changed_digest,
+                    "targeted_test_count": coverage[
+                        "targeted_test_count"
+                    ],
+                    "targeted_test_node_id_sha256": coverage[
+                        "targeted_test_node_id_sha256"
+                    ],
+                    "full_suite_test_count": coverage[
+                        "full_suite_test_count"
+                    ],
+                    "full_suite_test_node_id_sha256": coverage[
+                        "full_suite_test_node_id_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            evidence.pop("review_evidence_payload_sha256", None)
+            evidence = gate.add_self_hash(
+                evidence, "review_evidence_payload_sha256"
+            )
+            review_schema = plan["review_receipt_schemas"][
+                "fresh_implementation_review_verdict"
+            ]
+            review = {
+                field: None
+                for field in review_schema["exact_top_level_fields"]
+            }
+            review.update(
+                review_schema["outcomes"]["pass"]["required_values"]
+            )
+            review.update(
+                {
+                    "reviewed_at_utc": "2026-08-04T00:00:00Z",
+                    "implementation_author_separation_contract_sha256": (
+                        gate.IMPLEMENTATION_AUTHOR_SEPARATION_SHA256
+                    ),
+                    "contract_file_sha256": plan["contract_file_sha256"],
+                    "plan_file_sha256": gate.PLAN_FILE_SHA256,
+                    "plan_payload_sha256": gate.PLAN_PAYLOAD_SHA256,
+                    "r2_activation_plan_file_sha256": (
+                        gate.R2_ACTIVATION_PLAN_FILE_SHA256
+                    ),
+                    "r2_activation_plan_payload_sha256": (
+                        gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
+                    ),
+                    "artifact_path_surface_sha256": (
+                        gate.artifact_surface_sha256(plan)
+                    ),
+                    "occupied_v0_9_surface_sha256": (
+                        gate.R2_OCCUPIED_V0_9_SURFACE_SHA256
+                    ),
+                    "candidate_manifest_file_sha256": manifest_file_hash,
+                    "candidate_manifest_payload_sha256": (
+                        manifest_payload_hash
+                    ),
+                    "formal_design_review_file_sha256": (
+                        gate.FORMAL_DESIGN_REVIEW_FILE_SHA256
+                    ),
+                    "formal_design_review_payload_sha256": (
+                        gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
+                    ),
+                    "implementation_trust_model_sha256": (
+                        gate.recompute_implementation_trust_model_sha256(plan)
+                    ),
+                    "implementation_candidate_binding_file_sha256": (
+                        candidate_file_hash
+                    ),
+                    "implementation_candidate_binding_payload_sha256": (
+                        candidate[
+                            "implementation_candidate_binding_payload_sha256"
+                        ]
+                    ),
+                    "implementation_source_commit": source_commit,
+                    "implementation_review_packet_file_sha256": packet_hash,
+                    "bundle_file_sha256": gate.sha256_bytes(bundle_raw),
+                    "restore_receipt_file_sha256": restore_file_hash,
+                    "restore_receipt_payload_sha256": restore_receipt[
+                        "restore_receipt_payload_sha256"
+                    ],
+                    "P0_count": 0,
+                    "P1_count": 0,
+                    "P2_count": 0,
+                    "review_surface_identity": (
+                        gate.review_surface_identity(plan)
+                    ),
+                    "review_evidence_file_sha256": evidence_file_hash,
+                    "review_evidence_payload_sha256": evidence[
+                        "review_evidence_payload_sha256"
+                    ],
+                    "candidate_selection_file_sha256": selection_file_hash,
+                    "candidate_selection_payload_sha256": selection[
+                        "candidate_selection_payload_sha256"
+                    ],
+                    "review_input_freeze_file_sha256": freeze_file_hash,
+                    "review_input_freeze_payload_sha256": freeze[
+                        "review_input_freeze_payload_sha256"
+                    ],
+                    **identity["static_fields"],
+                }
+            )
+            review.pop("fresh_implementation_review_payload_sha256", None)
+            review = gate.add_self_hash(
+                review, "fresh_implementation_review_payload_sha256"
+            )
+            with (
+                mock.patch.object(
+                    gate,
+                    "read_r2r1_candidate_selection",
+                    return_value=(selection, selection_file_hash),
+                ),
+                mock.patch.object(
+                    gate,
+                    "read_r2r1_review_input_freeze",
+                    return_value=(freeze, freeze_file_hash),
+                ),
+                mock.patch.object(
+                    gate,
+                    "read_r2r1_fresh_review_evidence",
+                    return_value=(evidence, evidence_file_hash),
+                ),
+            ):
+                authority = gate.build_reviewed_authority_payload(
+                    plan,
+                    candidate,
+                    review,
+                    candidate_file_sha256=candidate_file_hash,
+                    review_file_sha256=review_file_hash,
+                )
+            authority_file_hash = gate.sha256_bytes(
+                gate.canonical_receipt_bytes(authority)
+            )
+            formal_schema = plan["review_receipt_schemas"][
+                "formal_design_review_verdict"
+            ]
+            formal, formal_file_hash = independent._receipt(
+                Path(
+                    binding["formal_design_review_path"]
+                ),
+                formal_schema["exact_top_level_fields"],
+                "formal_design_review_payload_sha256",
+            )
+            receipt_rows = {
+                str(Path(binding["formal_design_review_path"])): (
+                    formal,
+                    formal_file_hash,
+                ),
+                str(Path(binding["artifact_path"])): (
+                    candidate,
+                    candidate_file_hash,
+                ),
+                str(Path(review_schema["artifact_path"])): (
+                    review,
+                    review_file_hash,
+                ),
+                str(
+                    Path(
+                        plan["reviewed_implementation_authority_contract"][
+                            "artifact_path"
+                        ]
+                    )
+                ): (authority, authority_file_hash),
+            }
+
+            def receipt_reader(
+                path: Path,
+                _fields: Any,
+                _hash_field: str,
+            ) -> tuple[dict[str, Any], str]:
+                try:
+                    value, file_hash = receipt_rows[str(path)]
+                except KeyError as exc:
+                    raise AssertionError(f"unexpected receipt: {path}") from exc
+                return copy.deepcopy(value), file_hash
+
+            def lineage(_repository: Path, commit: str) -> tuple[str, ...]:
+                if commit == source_commit:
+                    return (source_commit, parent_commit)
+                if commit == parent_commit:
+                    return (parent_commit, grandparent_commit)
+                return (commit,)
+
+            def blob_oid(
+                repository: Path, _commit: str, relative: str
+            ) -> str:
+                return independent._git_blob(
+                    (repository / relative).read_bytes(), object_format
+                )
+
+            original_read = Path.read_bytes
+            protected = str(gate.PROTECTED_ROOT).casefold()
+
+            def guarded_read(path: Path) -> bytes:
+                if str(path).casefold().startswith(protected):
+                    raise AssertionError("protected root read in R2R2 lineage")
+                return original_read(path)
+
+            with (
+                mock.patch.object(
+                    independent, "_receipt", side_effect=receipt_reader
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_upstream_artifact",
+                    return_value={},
+                ),
+                mock.patch.object(
+                    independent, "_git_parent_lineage", side_effect=lineage
+                ),
+                mock.patch.object(
+                    independent, "_git_path_blob_oid", side_effect=blob_oid
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_r2r1_candidate_selection",
+                    return_value=(selection, selection_file_hash),
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_r2r1_restore_receipt",
+                    return_value=(restore_receipt, restore_file_hash),
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_r2r1_candidate_manifest",
+                    return_value=({}, manifest_file_hash),
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_r2r1_review_input_freeze",
+                    return_value=(freeze, freeze_file_hash),
+                ),
+                mock.patch.object(
+                    independent,
+                    "_independent_r2r1_review_evidence",
+                    return_value=(evidence, evidence_file_hash),
+                ),
+                mock.patch.object(Path, "read_bytes", guarded_read),
+            ):
+                rebuilt, rebuilt_file_hash, rebuilt_candidate = (
+                    independent.independent_runtime_lineage(
+                        self.independent_plan, REPOSITORY
+                    )
+                )
+            self.assertEqual(rebuilt, authority)
+            self.assertEqual(rebuilt_file_hash, authority_file_hash)
+            self.assertEqual(rebuilt_candidate, candidate)
 if __name__ == "__main__":
     unittest.main()

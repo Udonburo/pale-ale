@@ -182,10 +182,11 @@ def build_candidate_selection(
     clean_restore: Mapping[str, Any],
 ) -> dict[str, Any]:
     root = Path(repository).resolve()
-    plan = gate.load_active_plan()
-    control = gate.r2r1_remediation_control(plan)
+    plan = gate.load_active_plan(repository_root=root)
+    control = gate.active_remediation_control(plan)
     if control is None:
         raise gate.Gate12C2OriginalBaselineError("INPUT_LINEAGE_MISMATCH")
+    identity = gate.active_remediation_identity(plan)
     source_commit = _git(root, "rev-parse", "HEAD")
     if _git(root, "status", "--porcelain=v1", "--untracked-files=all"):
         raise gate.Gate12C2OriginalBaselineError(
@@ -203,19 +204,19 @@ def build_candidate_selection(
     _require_direct_child_lineage(
         source_commit,
         _git(root, "rev-list", "--parents", "-n", "1", source_commit).split(),
-        expected_parent=gate.R2R1_PARENT_COMMIT,
+        expected_parent=identity["parent_commit"],
     )
     _require_direct_child_lineage(
-        gate.R2R1_PARENT_COMMIT,
+        identity["parent_commit"],
         _git(
             root,
             "rev-list",
             "--parents",
             "-n",
             "1",
-            gate.R2R1_PARENT_COMMIT,
+            identity["parent_commit"],
         ).split(),
-        expected_parent=gate.R2R1_GRANDPARENT_COMMIT,
+        expected_parent=identity["grandparent_commit"],
     )
     restore = validate_clean_restore(clean_restore, source_commit=source_commit)
     receipt, receipt_file_hash = gate.read_r2r1_clean_restore_receipt(plan)
@@ -249,11 +250,11 @@ def build_candidate_selection(
     contract = control["candidate_selection_contract"]
     payload = {
         "schema_version": contract["schema_version"],
-        "authority_namespace_id": gate.R2R1_AUTHORITY_NAMESPACE_ID,
+        "authority_namespace_id": identity["authority_namespace_id"],
         "state": contract["state"],
         "exact_candidate_commit": source_commit,
-        "exact_parent_commit": gate.R2R1_PARENT_COMMIT,
-        "exact_grandparent_commit": gate.R2R1_GRANDPARENT_COMMIT,
+        "exact_parent_commit": identity["parent_commit"],
+        "exact_grandparent_commit": identity["grandparent_commit"],
         "commit_parent_count": 1,
         "parent_parent_count": 1,
         "git_object_format": object_format,
@@ -267,16 +268,8 @@ def build_candidate_selection(
         "r2_activation_plan_payload_sha256": (
             gate.R2_ACTIVATION_PLAN_PAYLOAD_SHA256
         ),
-        "r2r1_remediation_plan_file_sha256": (
-            gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
-        ),
-        "r2r1_remediation_plan_payload_sha256": (
-            gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-        ),
         "artifact_path_surface_sha256": gate.artifact_surface_sha256(plan),
-        "occupied_r2_surface_sha256": (
-            gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
-        ),
+        **identity["static_fields"],
         "review_surface_identity_sha256": (
             gate.REVIEW_SURFACE_IDENTITY_SHA256
         ),
@@ -323,7 +316,7 @@ def build_candidate_package(
     candidate_selection_file_sha256: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     root = Path(repository).resolve()
-    plan = gate.load_active_plan()
+    plan = gate.load_active_plan(repository_root=root)
     contract = plan["implementation_binding_contract"]
     required_values = contract["required_values"]
     if (
@@ -388,8 +381,9 @@ def build_candidate_package(
         raise gate.Gate12C2OriginalBaselineError(
             "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
         )
+    identity = gate.active_remediation_identity(plan)
     r2_control = gate.r2_activation_control(plan)
-    remediation_control = gate.r2r1_remediation_control(plan)
+    remediation_control = gate.active_remediation_control(plan)
     if r2_control is None:
         raise gate.Gate12C2OriginalBaselineError(
             "INPUT_LINEAGE_MISMATCH"
@@ -419,6 +413,17 @@ def build_candidate_package(
             root, source_commit, remediation_relative, object_format
         )
         if remediation_hash != gate.R2R1_REMEDIATION_PLAN_FILE_SHA256:
+            raise gate.Gate12C2OriginalBaselineError(
+                "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+            )
+    if gate.r2r2_portability_control(plan) is not None:
+        portability_hash, _portability_blob = _tree_blob(
+            root,
+            source_commit,
+            gate.R2R2_PORTABILITY_PLAN_RELATIVE_PATH,
+            object_format,
+        )
+        if portability_hash != gate.R2R2_PORTABILITY_PLAN_FILE_SHA256:
             raise gate.Gate12C2OriginalBaselineError(
                 "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
             )
@@ -494,7 +499,7 @@ def build_candidate_package(
         "schema_version": contract["schema_version"],
         "binding_id": required_values["binding_id"],
         "authority_namespace_id": (
-            gate.R2R1_AUTHORITY_NAMESPACE_ID
+            identity["authority_namespace_id"]
             if remediation_control is not None
             else gate.R2_AUTHORITY_NAMESPACE_ID
         ),
@@ -553,15 +558,7 @@ def build_candidate_package(
             )
         payload.update(
             {
-                "r2r1_remediation_plan_file_sha256": (
-                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
-                ),
-                "r2r1_remediation_plan_payload_sha256": (
-                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-                ),
-                "occupied_r2_surface_sha256": (
-                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
+                **identity["static_fields"],
                 "candidate_selection_file_sha256": selection_file_hash,
                 "candidate_selection_payload_sha256": selection[
                     "candidate_selection_payload_sha256"
@@ -574,7 +571,7 @@ def build_candidate_package(
     manifest_payload = {
         "schema_version": manifest_contract["schema_version"],
         "authority_namespace_id": (
-            gate.R2R1_AUTHORITY_NAMESPACE_ID
+            identity["authority_namespace_id"]
             if remediation_control is not None
             else gate.R2_AUTHORITY_NAMESPACE_ID
         ),
@@ -607,15 +604,7 @@ def build_candidate_package(
     if remediation_control is not None:
         manifest_payload.update(
             {
-                "r2r1_remediation_plan_file_sha256": (
-                    gate.R2R1_REMEDIATION_PLAN_FILE_SHA256
-                ),
-                "r2r1_remediation_plan_payload_sha256": (
-                    gate.R2R1_REMEDIATION_PLAN_PAYLOAD_SHA256
-                ),
-                "occupied_r2_surface_sha256": (
-                    gate.R2R1_OCCUPIED_R2_SURFACE_SHA256
-                ),
+                **identity["static_fields"],
                 "candidate_selection_file_sha256": selection_file_hash,
                 "candidate_selection_payload_sha256": selection[
                     "candidate_selection_payload_sha256"
@@ -711,7 +700,7 @@ def main(argv: list[str] | None = None) -> int:
         "implementation_rows_match": True,
         "scientific_dependency_rows_match": True,
     }
-    plan = gate.load_active_plan()
+    plan = gate.load_active_plan(repository_root=args.repository)
     selection = build_candidate_selection(args.repository, restore)
     selection_file_hash = gate.sha256_bytes(
         gate.canonical_receipt_bytes(selection)

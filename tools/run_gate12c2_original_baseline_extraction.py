@@ -683,7 +683,7 @@ def _reverify_claimed_lineage(
     *,
     now_ns: int | None,
 ) -> dict[str, dict[str, Any]]:
-    repeated_plan = gate.load_active_plan()
+    repeated_plan = gate.load_active_plan(repository_root=repository)
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,
@@ -720,7 +720,7 @@ def execute(
 ) -> dict[str, Any]:
     _runtime_isolated()
     root = Path(repository).absolute()
-    plan = gate.load_active_plan()
+    plan = gate.load_active_plan(repository_root=root)
     gate.read_exact_bytes(
         gate.CONTRACT_PATH,
         gate.CONTRACT_FILE_SHA256,
