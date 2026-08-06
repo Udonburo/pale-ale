@@ -96,7 +96,10 @@ R2R1_GRANDPARENT_COMMIT = R2_TASK1_COMMIT
 R2R2_HISTORICAL_CANDIDATE_COMMIT = (
     "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
 )
-R2R2_BASE_COMMIT = "e8bdb16e0e47296dbe4f7c04bc7ba52db8766f78"
+R2R4_REMEDIATION_GRANDPARENT_COMMIT = (
+    "e8bdb16e0e47296dbe4f7c04bc7ba52db8766f78"
+)
+R2R2_BASE_COMMIT = "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 R2_ACTIVATION_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -117,7 +120,7 @@ R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH = Path(
 R2R1_REMEDIATION_PLAN_BASE_BLOB_OID = (
     "be34a081f52916d8ad9f5ed80758562143b7031c"
 )
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R3_20260807"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R4_20260807"
 R2R2_PORTABILITY_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -128,22 +131,25 @@ R2R2_PORTABILITY_PLAN_HISTORICAL_DECLARED_PATH = Path(
 # Frozen after the final focused collection; updated exactly once before the
 # bounded candidate commit is created.
 R2R2_PORTABILITY_PLAN_FILE_SHA256 = (
-    "91c574b99ae3a48a257e75531a1f4d2569a657c3c10352c27efc551f80460874"
+    "8903b7f70365691285dc1b073132a13faafe144322b8d0c2340d20e0a05bf2bd"
 )
 R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256 = (
-    "1e3f2879062b17cecff57738bdc4888a0c09de5ab88bc5e653c704dd0eadca45"
+    "8b8212172886f8eb6b1c28db1ebefa0a0f76e2f5215307b3e4914e298bf9f717"
 )
 R2R2_ARTIFACT_PATH_SURFACE_SHA256 = (
-    "3c9055988a4836524d57ff2c73af1092f6e35f55c26be3dd0493c2aae6d5fdf1"
+    "c7becf8ad32060038429a04661e7629bc70c762922801b01d2765b28987aaedd"
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = (
     "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 )
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "2bf9b5c8e7ba11738dc8d02dffa8964026787d73c602e32589df86137c1ffe61"
+    "47ad6a895596df9422664c729cbb2cd832fabcab646507e5f01f8495700b8564"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = (
     "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
+)
+R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256 = (
+    "0268d1f8f3855acee7103ada520c78049631887b67fafdf32a8ee074525dd49a"
 )
 CONFIGURATION_SURFACE_SHA256 = (
     "a564c25f28e42860f0a1e8f51d4a311b4eae2b771f02dc3f62504547799f19cf"
@@ -2156,10 +2162,13 @@ def validate_r2r2_portability_plan(
             "fresh_review_contract_overlay",
             "fresh_review_evidence_contract",
             "fresh_review_packet_path",
+            "historical_r2r3_authority",
             "implementation_binding_contract_overlay",
             "namespace_id",
             "occupied_r2r1",
             "occupied_r2r1_surface_sha256",
+            "original_input_json_framing",
+            "original_input_json_framing_surface_sha256",
             "parent_lineage",
             "preserved_identities",
             "protected_surface_policy",
@@ -2189,10 +2198,10 @@ def validate_r2r2_portability_plan(
         supplied["r2r2_portability_plan_payload_sha256"]
         != R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
         or supplied.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.2"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.3"
         or supplied.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or supplied.get("state")
-        != "R2R3_ROOT_PORTABILITY_AND_NAMESPACE_FROZEN"
+        != "R2R4_ORIGINAL_INPUT_LINEAGE_FROZEN"
         or supplied.get("remediation_plan_relative_path")
         != R2R2_PORTABILITY_PLAN_RELATIVE_PATH
         or supplied.get("artifact_path_surface_sha256")
@@ -2203,11 +2212,13 @@ def validate_r2r2_portability_plan(
         != R2R2_REPOSITORY_LOCAL_SURFACE_SHA256
         or supplied.get("upstream_json_framing_surface_sha256")
         != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+        or supplied.get("original_input_json_framing_surface_sha256")
+        != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
         or supplied.get("parent_lineage")
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R2_HISTORICAL_CANDIDATE_COMMIT,
+            "remediation_grandparent": R2R4_REMEDIATION_GRANDPARENT_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or supplied.get("preserved_identities")
@@ -2370,6 +2381,76 @@ def validate_r2r2_portability_plan(
         != r2r1_active_plan["upstream_authority"]["artifact_rows"]
         or sha256_bytes(canonical_json_bytes(framing))
         != R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    original_framing = supplied.get("original_input_json_framing")
+    expected_original_framing = original_input_framing_surface(
+        r2r1_active_plan
+    )
+    if (
+        original_framing != expected_original_framing
+        or sha256_bytes(canonical_json_bytes(original_framing))
+        != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    historical_authority = require_mapping(
+        supplied.get("historical_r2r3_authority"),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    historical_path = Path(
+        r"C:\Users\aoika\Documents\Research\pale-ale-local"
+        r"\research-program\receipts"
+        r"\C2_ORIGINAL_BASELINE_COMMITMENT_GATE_REVIEWED_"
+        r"IMPLEMENTATION_AUTHORITY_R2R3_20260807_2026-08-07.json"
+    )
+    if historical_authority != {
+        "execution_status": (
+            "HISTORICALLY_VALID_RUNTIME_INELIGIBLE_AFTER_"
+            "MANDATORY_PREFLIGHT_FAIL_CLOSED"
+        ),
+        "file_sha256": (
+            "9939913669d2529cdc0f7efaeb5c6438ca9963d0c2751730ae96993650690aad"
+        ),
+        "path": str(historical_path),
+        "payload_sha256": (
+            "a8c63605ee9df1973d5060c7e62bffa257f950b528a243e5257ca8cb17e5c24e"
+        ),
+    }:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    historical_raw = read_exact_bytes(
+        historical_path,
+        historical_authority["file_sha256"],
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        not historical_raw.endswith(b"\n")
+        or historical_raw.endswith((b"\r\n", b"\n\n"))
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    historical_payload = require_mapping(
+        strict_json_loads(historical_raw[:-1], canonical=True),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    historical_field = "reviewed_implementation_authority_payload_sha256"
+    historical_unhashed = dict(historical_payload)
+    try:
+        del historical_unhashed[historical_field]
+    except KeyError:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if (
+        canonical_receipt_bytes(historical_payload) != historical_raw
+        or historical_payload.get("schema_version")
+        != (
+            "gate12c2_original_baseline_r2r3_"
+            "reviewed_implementation_authority_v0.1"
+        )
+        or historical_payload.get(historical_field)
+        != historical_authority["payload_sha256"]
+        or sha256_bytes(canonical_json_bytes(historical_unhashed))
+        != historical_authority["payload_sha256"]
+        or historical_payload.get("authority_namespace_id") != "R2R3_20260807"
+        or historical_payload.get("state")
+        != "REVIEWED_IMPLEMENTATION_AUTHORITY_PUBLISHED"
     ):
         _raise("INPUT_LINEAGE_MISMATCH")
     rows = supplied.get("artifact_path_surface")
@@ -2630,6 +2711,9 @@ def build_r2r2_active_plan(
         "upstream_json_framing_surface_sha256": (
             R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
         ),
+        "original_input_json_framing_surface_sha256": (
+            R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+        ),
         "parent_lineage": copy.deepcopy(overlay["parent_lineage"]),
         "allowed_changed_paths": copy.deepcopy(
             overlay["allowed_changed_paths"]
@@ -2658,6 +2742,12 @@ def build_r2r2_active_plan(
         ),
         "upstream_json_framing": copy.deepcopy(
             overlay["upstream_json_framing"]
+        ),
+        "original_input_json_framing": copy.deepcopy(
+            overlay["original_input_json_framing"]
+        ),
+        "historical_r2r3_authority": copy.deepcopy(
+            overlay["historical_r2r3_authority"]
         ),
     }
     if (
@@ -3593,61 +3683,159 @@ def _recursive_values(value: object, key: str) -> list[Any]:
     return found
 
 
-def validate_original_input_lineage(
+ORIGINAL_INPUT_FRAMING_SPECIFICATIONS = (
+    (
+        "original_plan",
+        "original_plan_path",
+        "original_plan_file_sha256",
+        "original_plan_payload_sha256",
+        "gate12c2_draw_profile_plan_v0.2",
+        "draw_profile_plan_payload_sha256",
+    ),
+    (
+        "incident_manifest",
+        "incident_manifest_path",
+        "incident_manifest_file_sha256",
+        "incident_manifest_payload_sha256",
+        "gate12c2_closeout_incident_byte_manifest_v0.1",
+        "incident_manifest_payload_sha256",
+    ),
+    (
+        "payload_seal",
+        "payload_seal_path",
+        "payload_seal_file_sha256",
+        "payload_seal_payload_sha256",
+        "gate12c2_payload_completion_seal_v0.3",
+        "payload_seal_sha256",
+    ),
+    (
+        "payload_seal_verification",
+        "payload_seal_verification_path",
+        "payload_seal_verification_file_sha256",
+        "payload_seal_verification_payload_sha256",
+        "gate12c2_payload_completion_seal_verification_v0.1",
+        "verification_receipt_payload_sha256",
+    ),
+    (
+        "formal_payload_closeout",
+        "formal_payload_closeout_path",
+        "formal_payload_closeout_file_sha256",
+        "formal_payload_closeout_payload_sha256",
+        "gate12c2_payload_seal_formal_closeout_v0.1",
+        "formal_closeout_payload_sha256",
+    ),
+)
+ORIGINAL_INPUT_FRAMING_ROW_FIELDS = {
+    "file_sha256",
+    "path",
+    "payload_hash_domain",
+    "payload_sha256",
+    "role",
+    "schema_version",
+    "self_hash_field",
+}
+
+
+def original_input_framing_surface(
     plan: Mapping[str, Any],
-) -> dict[str, dict[str, Any]]:
+) -> list[dict[str, str]]:
     lineage = require_mapping(
         plan.get("original_input_lineage"), code="INPUT_LINEAGE_MISMATCH"
     )
-    specifications = (
-        (
-            "original_plan",
-            "original_plan_path",
-            "original_plan_file_sha256",
-            "original_plan_payload_sha256",
-        ),
-        (
-            "incident_manifest",
-            "incident_manifest_path",
-            "incident_manifest_file_sha256",
-            "incident_manifest_payload_sha256",
-        ),
-        (
-            "payload_seal",
-            "payload_seal_path",
-            "payload_seal_file_sha256",
-            "payload_seal_payload_sha256",
-        ),
-        (
-            "payload_seal_verification",
-            "payload_seal_verification_path",
-            "payload_seal_verification_file_sha256",
-            "payload_seal_verification_payload_sha256",
-        ),
-        (
-            "formal_payload_closeout",
-            "formal_payload_closeout_path",
-            "formal_payload_closeout_file_sha256",
-            "formal_payload_closeout_payload_sha256",
-        ),
-    )
-    result: dict[str, dict[str, Any]] = {}
-    for role, path_key, file_key, payload_key in specifications:
-        path = Path(
-            require_text(lineage.get(path_key), code="INPUT_LINEAGE_MISMATCH")
+    rows: list[dict[str, str]] = []
+    for (
+        role,
+        path_key,
+        file_key,
+        payload_key,
+        schema,
+        self_hash_field,
+    ) in ORIGINAL_INPUT_FRAMING_SPECIFICATIONS:
+        path = require_text(
+            lineage.get(path_key), code="INPUT_LINEAGE_MISMATCH"
         )
         file_hash = lineage.get(file_key)
         payload_hash = lineage.get(payload_key)
         if not is_sha256(file_hash) or not is_sha256(payload_hash):
             _raise("INPUT_LINEAGE_MISMATCH")
-        result[role] = read_frozen_json_artifact(
-            path,
-            expected_file_sha256=str(file_hash),
-            expected_payload_sha256=str(payload_hash),
+        rows.append(
+            {
+                "file_sha256": str(file_hash),
+                "path": path,
+                "payload_hash_domain": FROZEN_JSON_WITHOUT_LF,
+                "payload_sha256": str(payload_hash),
+                "role": role,
+                "schema_version": schema,
+                "self_hash_field": self_hash_field,
+            }
+        )
+    if (
+        sha256_bytes(canonical_json_bytes(rows))
+        != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return rows
+
+
+def validate_original_input_lineage(
+    plan: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    expected_rows = original_input_framing_surface(plan)
+    control = r2r2_portability_control(plan)
+    if control is None:
+        rows: object = expected_rows
+        surface_hash: object = R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+    else:
+        rows = control.get("original_input_json_framing")
+        surface_hash = control.get(
+            "original_input_json_framing_surface_sha256"
+        )
+    if (
+        not isinstance(rows, list)
+        or rows != expected_rows
+        or len(rows) != 5
+        or len({row.get("role") for row in rows if isinstance(row, dict)})
+        != 5
+        or surface_hash != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+        or sha256_bytes(canonical_json_bytes(rows))
+        != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    result: dict[str, dict[str, Any]] = {}
+    for row_value in rows:
+        row = require_mapping(row_value, code="INPUT_LINEAGE_MISMATCH")
+        require_exact_keys(
+            row,
+            ORIGINAL_INPUT_FRAMING_ROW_FIELDS,
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        role = require_text(
+            row.get("role"), ascii_only=True, code="INPUT_LINEAGE_MISMATCH"
+        )
+        if role in result:
+            _raise("INPUT_LINEAGE_MISMATCH")
+        result[role] = read_declared_frozen_json_artifact(
+            Path(
+                require_text(
+                    row.get("path"), code="INPUT_LINEAGE_MISMATCH"
+                )
+            ),
+            expected_file_sha256=require_text(
+                row.get("file_sha256"), code="INPUT_LINEAGE_MISMATCH"
+            ),
+            expected_payload_sha256=require_text(
+                row.get("payload_sha256"), code="INPUT_LINEAGE_MISMATCH"
+            ),
+            payload_hash_domain=row.get("payload_hash_domain"),
+            self_hash_field=row.get("self_hash_field"),
+            expected_schema_version=row.get("schema_version"),
         )
     original_plan = result["original_plan"]
+    lineage = require_mapping(
+        plan.get("original_input_lineage"), code="INPUT_LINEAGE_MISMATCH"
+    )
     if (
-        original_plan.get("plan_payload_sha256")
+        original_plan.get("draw_profile_plan_payload_sha256")
         != lineage["original_plan_payload_sha256"]
     ):
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -3670,7 +3858,6 @@ def validate_original_input_lineage(
                 _raise("INPUT_LINEAGE_MISMATCH")
     validate_incident_manifest(plan, result["incident_manifest"])
     return result
-
 
 INCIDENT_MANIFEST_FIELDS = {
     "schema_version",
@@ -6388,6 +6575,9 @@ def active_remediation_identity(
                 ),
                 "upstream_json_framing_surface_sha256": (
                     R2R2_UPSTREAM_FRAMING_SURFACE_SHA256
+                ),
+                "original_input_json_framing_surface_sha256": (
+                    R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
                 ),
             }
         )

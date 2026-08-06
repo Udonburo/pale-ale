@@ -24,6 +24,7 @@ from unittest import mock
 
 import build_gate12c2_original_baseline_implementation_binding as binding_builder
 import gate12c2_original_baseline_commitments as gate
+import issue_gate12c2_original_baseline_preflight as preflight_issuer
 import test_gate12c2_original_baseline_commitments as primary
 import run_gate12c2_original_baseline_extraction as extraction_runner
 import verify_gate12c2_original_baseline_commitments as independent
@@ -6296,5 +6297,304 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
             self.assertEqual(rebuilt, authority)
             self.assertEqual(rebuilt_file_hash, authority_file_hash)
             self.assertEqual(rebuilt_candidate, candidate)
+
+class R2R4OriginalInputLineageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
+        cls.independent_plan = independent.independent_load_plan(
+            repository_root=REPOSITORY
+        )
+
+    def _assert_readers_reject(
+        self, raw: bytes, row: Mapping[str, Any]
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "artifact.json"
+            path.write_bytes(raw)
+            attacked = dict(row)
+            attacked["path"] = str(path)
+            attacked["file_sha256"] = gate.sha256_bytes(raw)
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.read_declared_frozen_json_artifact(
+                    path,
+                    expected_file_sha256=attacked["file_sha256"],
+                    expected_payload_sha256=attacked["payload_sha256"],
+                    payload_hash_domain=attacked["payload_hash_domain"],
+                    self_hash_field=attacked["self_hash_field"],
+                    expected_schema_version=attacked["schema_version"],
+                )
+            with self.assertRaises(
+                independent.IndependentVerificationError
+            ):
+                independent._independent_original_input_artifact(attacked)
+
+    def _assert_lineage_rejected(self, plan: Mapping[str, Any]) -> None:
+        with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+            gate.validate_original_input_lineage(plan)
+        with self.assertRaises(
+            independent.IndependentVerificationError
+        ):
+            independent.independent_lineage(plan)
+
+    def test_exact_five_row_surface_and_real_lineage_pass(self) -> None:
+        expected_roles = [
+            "original_plan",
+            "incident_manifest",
+            "payload_seal",
+            "payload_seal_verification",
+            "formal_payload_closeout",
+        ]
+        core_rows = gate.original_input_framing_surface(self.plan)
+        independent_rows = (
+            independent._independent_original_input_framing_surface(
+                self.independent_plan
+            )
+        )
+        self.assertEqual([row["role"] for row in core_rows], expected_roles)
+        self.assertEqual(core_rows, independent_rows)
+        self.assertEqual(
+            gate.sha256_bytes(gate.canonical_json_bytes(core_rows)),
+            gate.R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256,
+        )
+        original_read = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+
+        def guarded(path: Path) -> bytes:
+            if str(path).casefold().startswith(protected):
+                raise AssertionError("protected root read during original lineage")
+            return original_read(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded):
+            core = gate.validate_original_input_lineage(self.plan)
+            independently = independent.independent_lineage(
+                self.independent_plan
+            )
+        self.assertEqual(set(core), set(expected_roles))
+        self.assertEqual(
+            core["original_plan"]["draw_profile_plan_payload_sha256"],
+            self.plan["original_input_lineage"][
+                "original_plan_payload_sha256"
+            ],
+        )
+        self.assertEqual(
+            independently[0]["draw_profile_plan_payload_sha256"],
+            self.plan["original_input_lineage"][
+                "original_plan_payload_sha256"
+            ],
+        )
+        core_source = inspect.getsource(gate.validate_original_input_lineage)
+        independent_source = inspect.getsource(independent.independent_lineage)
+        self.assertNotIn('original_plan.get("plan_payload_sha256")', core_source)
+        self.assertNotIn('original.get("plan_payload_sha256")', independent_source)
+
+    def test_each_artifact_rejects_framing_and_identity_attacks(self) -> None:
+        rows = gate.original_input_framing_surface(self.plan)
+        for row in rows:
+            raw = Path(row["path"]).read_bytes()
+            payload = gate.strict_json_loads(raw, canonical=True)
+            reordered = json.dumps(
+                dict(reversed(list(payload.items()))),
+                ensure_ascii=False,
+                allow_nan=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            duplicate = b'{"__duplicate__":0,"__duplicate__":0,' + raw[1:]
+            wrong_schema = dict(payload)
+            wrong_schema["schema_version"] = "wrong_schema"
+            cases = {
+                "added_lf": (raw + b"\n", {}),
+                "crlf": (raw + b"\r\n", {}),
+                "double_lf": (raw + b"\n\n", {}),
+                "truncated": (raw[:-1], {}),
+                "reordered": (reordered, {}),
+                "duplicate": (duplicate, {}),
+                "wrong_schema": (
+                    gate.canonical_json_bytes(wrong_schema),
+                    {},
+                ),
+                "wrong_self_hash_field": (
+                    raw,
+                    {"self_hash_field": "plan_payload_sha256"},
+                ),
+                "wrong_payload_hash": (
+                    raw,
+                    {"payload_sha256": "f" * 64},
+                ),
+                "unknown_domain": (
+                    raw,
+                    {"payload_hash_domain": "unknown"},
+                ),
+            }
+            for name, (attacked_raw, updates) in cases.items():
+                with self.subTest(role=row["role"], attack=name):
+                    attacked_row = dict(row)
+                    attacked_row.update(updates)
+                    self._assert_readers_reject(attacked_raw, attacked_row)
+
+    def test_surface_attacks_and_full_downstream_rehash_are_rejected(self) -> None:
+        mutations = {}
+
+        def missing(rows: list[dict[str, Any]]) -> None:
+            rows.pop()
+
+        def extra(rows: list[dict[str, Any]]) -> None:
+            row = dict(rows[-1])
+            row["role"] = "unexpected_role"
+            rows.append(row)
+
+        def duplicate(rows: list[dict[str, Any]]) -> None:
+            rows[-1] = dict(rows[0])
+
+        def substitution(rows: list[dict[str, Any]]) -> None:
+            rows[0], rows[1] = rows[1], rows[0]
+
+        def wrong_domain(rows: list[dict[str, Any]]) -> None:
+            rows[0]["payload_hash_domain"] = "unknown"
+
+        def wrong_field(rows: list[dict[str, Any]]) -> None:
+            rows[0]["self_hash_field"] = "plan_payload_sha256"
+
+        mutations.update(
+            {
+                "missing": missing,
+                "extra": extra,
+                "duplicate": duplicate,
+                "role_row_substitution": substitution,
+                "unknown_domain": wrong_domain,
+                "original_plan_wrong_field": wrong_field,
+            }
+        )
+        for name, mutate in mutations.items():
+            with self.subTest(attack=name):
+                plan = copy.deepcopy(self.plan)
+                rows = plan["r2r2_portability_control"][
+                    "original_input_json_framing"
+                ]
+                mutate(rows)
+                plan["r2r2_portability_control"][
+                    "original_input_json_framing_surface_sha256"
+                ] = gate.sha256_bytes(gate.canonical_json_bytes(rows))
+                self._assert_lineage_rejected(plan)
+
+        specs = {
+            role: (path_key, file_key, payload_key, self_hash_field)
+            for (
+                role,
+                path_key,
+                file_key,
+                payload_key,
+                _schema,
+                self_hash_field,
+            ) in gate.ORIGINAL_INPUT_FRAMING_SPECIFICATIONS
+        }
+        for original_row in gate.original_input_framing_surface(self.plan):
+            role = original_row["role"]
+            with self.subTest(attack="downstream_rehash", role=role):
+                payload = gate.strict_json_loads(
+                    Path(original_row["path"]).read_bytes(), canonical=True
+                )
+                self_hash_field = original_row["self_hash_field"]
+                payload = dict(payload)
+                payload.pop(self_hash_field)
+                payload["r2r4_adversarial_probe"] = True
+                payload_hash = gate.sha256_bytes(
+                    gate.canonical_json_bytes(payload)
+                )
+                payload[self_hash_field] = payload_hash
+                attacked_raw = gate.canonical_json_bytes(payload)
+                with tempfile.TemporaryDirectory() as directory:
+                    attacked_path = Path(directory) / f"{role}.json"
+                    attacked_path.write_bytes(attacked_raw)
+                    plan = copy.deepcopy(self.plan)
+                    path_key, file_key, payload_key, _field = specs[role]
+                    lineage = plan["original_input_lineage"]
+                    lineage[path_key] = str(attacked_path)
+                    lineage[file_key] = gate.sha256_bytes(attacked_raw)
+                    lineage[payload_key] = payload_hash
+                    rows = plan["r2r2_portability_control"][
+                        "original_input_json_framing"
+                    ]
+                    for row in rows:
+                        if row["role"] == role:
+                            row["path"] = str(attacked_path)
+                            row["file_sha256"] = gate.sha256_bytes(attacked_raw)
+                            row["payload_sha256"] = payload_hash
+                    plan["r2r2_portability_control"][
+                        "original_input_json_framing_surface_sha256"
+                    ] = gate.sha256_bytes(gate.canonical_json_bytes(rows))
+                    self._assert_lineage_rejected(plan)
+
+    def test_real_issue_preflight_reaches_pass_without_publication(self) -> None:
+        plan = self.plan
+        runtime_roles = {
+            row["role"]: row
+            for row in plan["artifact_path_surface"]
+            if row["lifecycle_scope"] in {"extraction", "verifier"}
+        }
+        paths = [
+            Path(row[key])
+            for row in runtime_roles.values()
+            for key in ("final_path", "pending_path")
+        ]
+        self.assertTrue(all(not path.exists() for path in paths))
+        authority_fixture = {
+            "reviewed_implementation_authority_payload_sha256": "a" * 64
+        }
+        candidate_fixture = {
+            "source_commit": "b" * 40,
+        }
+        original_read = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+
+        def guarded(path: Path) -> bytes:
+            if str(path).casefold().startswith(protected):
+                raise AssertionError("protected root read during preflight")
+            return original_read(path)
+
+        issued = "2026-08-07T00:00:00Z"
+        expires = "2026-08-07T00:10:00Z"
+        with (
+            mock.patch.object(Path, "read_bytes", guarded),
+            mock.patch.object(
+                gate, "validate_formal_design_pass", return_value={}
+            ),
+            mock.patch.object(
+                gate, "validate_upstream_authority", return_value={}
+            ),
+            mock.patch.object(
+                preflight_issuer,
+                "load_reviewed_chain",
+                return_value=(
+                    authority_fixture,
+                    "c" * 64,
+                    candidate_fixture,
+                ),
+            ),
+            mock.patch.object(
+                preflight_issuer, "_observe_surface", return_value={}
+            ),
+            mock.patch.object(
+                gate,
+                "classify_lifecycle_surface",
+                return_value="reviewed_implementation_authority_published",
+            ),
+        ):
+            payload = preflight_issuer.issue_preflight(
+                REPOSITORY,
+                scope="extraction",
+                preflight_id="r2r4-no-publication-regression",
+                issued_at_utc=issued,
+                expires_at_utc=expires,
+                now_ns=gate.parse_utc_ns(issued),
+            )
+        self.assertEqual(payload["state"], "EXTRACTION_PREFLIGHT_PASS")
+        self.assertEqual(
+            payload["protected_root_status"],
+            "canonical_path_bound_no_payload_read",
+        )
+        self.assertNotIn("scientific_values_emitted", payload)
+        self.assertTrue(all(not path.exists() for path in paths))
+
 if __name__ == "__main__":
     unittest.main()
