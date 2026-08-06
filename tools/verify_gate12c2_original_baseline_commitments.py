@@ -61,7 +61,10 @@ R2R1_ARTIFACT_SURFACE_SHA256 = "17fcf271d542a2b9305d3ae1b029a2e0b07c46fad596117d
 R2R1_OCCUPIED_R2_SURFACE_SHA256 = "f592f536259e82ae624e7e9080901fee68cf7aa9ecb276e898fa0d7b99a125a8"
 R2R1_PARENT_COMMIT = "29058cd9289a9ccb6656878f10c8cbe3d19f11ba"
 R2R1_GRANDPARENT_COMMIT = R2_TASK1_COMMIT
-R2R2_BASE_COMMIT = "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+R2R2_HISTORICAL_CANDIDATE_COMMIT = (
+    "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+)
+R2R2_BASE_COMMIT = "e8bdb16e0e47296dbe4f7c04bc7ba52db8766f78"
 R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -78,7 +81,7 @@ R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
 )
 R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R2_20260804"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R3_20260807"
 R2R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -86,11 +89,11 @@ R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
     r"\gate12c2_original_baseline_r2r2_portability_plan.json"
 )
-R2R2_PLAN_FILE_SHA256 = "4154f158ef3bacd7b238c4d25852c8e5c9053588d1b40ebf5d3bc78d5c0a323f"
-R2R2_PLAN_PAYLOAD_SHA256 = "57c435fdc04fbf534b30ac32d06ad8a07a0ad54913b4c0bf467c069fedc96ad3"
-R2R2_ARTIFACT_SURFACE_SHA256 = "c34da48a051e93d7c79cfc5e1077776b8e55120539855f8a49631c1c0e31771b"
+R2R2_PLAN_FILE_SHA256 = "91c574b99ae3a48a257e75531a1f4d2569a657c3c10352c27efc551f80460874"
+R2R2_PLAN_PAYLOAD_SHA256 = "1e3f2879062b17cecff57738bdc4888a0c09de5ab88bc5e653c704dd0eadca45"
+R2R2_ARTIFACT_SURFACE_SHA256 = "3c9055988a4836524d57ff2c73af1092f6e35f55c26be3dd0493c2aae6d5fdf1"
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
-R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = "e3845403fb571597af613702b09b3691dd030d7abae1f32deb4e8284f5f9b172"
+R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = "2bf9b5c8e7ba11738dc8d02dffa8964026787d73c602e32589df86137c1ffe61"
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 FORMAL_DESIGN_REVIEW_FILE_SHA256 = (
     "5a0ba0d6ad6b5b79df819e73d7ab15831c081ad5e4e44ca6b8195e59bc97cc1e"
@@ -1870,9 +1873,15 @@ def _legacy_r2_receipt(
 
 def _independent_load_r2_plan(
     base_plan: Mapping[str, Any],
+    *,
+    repository_root: Path | None = None,
 ) -> dict[str, Any]:
+    root = _independent_repository_root(repository_root)
+    materialized_plan = root.joinpath(
+        *PurePosixPath(R2_PLAN_RELATIVE_PATH).parts
+    )
     try:
-        raw = R2_PLAN_PATH.read_bytes()
+        raw = materialized_plan.read_bytes()
     except OSError:
         _fail("INPUT_LINEAGE_MISMATCH")
     if (
@@ -2066,9 +2075,12 @@ def _independent_load_r2_plan(
     return r2
 
 
-def _independent_load_r2_active() -> dict[str, Any]:
+def _independent_load_r2_active(
+    *, repository_root: Path | None = None
+) -> dict[str, Any]:
+    root = _independent_repository_root(repository_root)
     base = _independent_load_base_plan()
-    r2 = _independent_load_r2_plan(base)
+    r2 = _independent_load_r2_plan(base, repository_root=root)
     active = _replace_active_surface(
         base,
         ARTIFACT_SURFACE_SHA256,
@@ -2664,7 +2676,8 @@ def _independent_r2r2_occupied(
     if (
         type(occupied) is not dict
         or _digest(occupied) != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
-        or occupied.get("candidate_commit") != R2R2_BASE_COMMIT
+        or occupied.get("candidate_commit")
+        != R2R2_HISTORICAL_CANDIDATE_COMMIT
         or occupied.get("stage1_failure_codes")
         != [
             "CLEAN_RESTORE_INPUT_LINEAGE_MISMATCH",
@@ -2702,7 +2715,8 @@ def _independent_r2r2_occupied(
         receipt = _legacy_r2_receipt(row, hash_field)
         if (
             name == "candidate_binding"
-            and receipt.get("source_commit") != R2R2_BASE_COMMIT
+            and receipt.get("source_commit")
+            != R2R2_HISTORICAL_CANDIDATE_COMMIT
         ):
             _fail("INPUT_LINEAGE_MISMATCH")
     packet = occupied.get("review_packet")
@@ -2794,10 +2808,10 @@ def _independent_load_r2r2_plan(
         )
         != R2R2_PLAN_PAYLOAD_SHA256
         or overlay.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.1"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.2"
         or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or overlay.get("state")
-        != "R2R2_PORTABILITY_AND_FRAMING_FROZEN"
+        != "R2R3_ROOT_PORTABILITY_AND_NAMESPACE_FROZEN"
         or overlay.get("remediation_plan_relative_path")
         != R2R2_PLAN_RELATIVE_PATH
         or overlay.get("artifact_path_surface_sha256")
@@ -2812,7 +2826,7 @@ def _independent_load_r2r2_plan(
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R1_PARENT_COMMIT,
+            "remediation_grandparent": R2R2_HISTORICAL_CANDIDATE_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or overlay.get("preserved_identities")
@@ -2888,7 +2902,7 @@ def _independent_load_r2r2_plan(
     allowed = overlay.get("allowed_changed_paths")
     if (
         type(allowed) is not list
-        or len(allowed) != 10
+        or len(allowed) != 4
         or allowed != sorted(allowed)
         or len(allowed) != len(set(allowed))
         or R2R2_PLAN_RELATIVE_PATH not in allowed
@@ -3023,10 +3037,7 @@ def _independent_load_r2r2_plan(
             _fail("INPUT_LINEAGE_MISMATCH")
         role_rows[row["role"]] = row
         seen.update((row["final_path"], row["pending_path"]))
-        if row["role"] == "formal_design_review_verdict":
-            if row != old_rows[row["role"]]:
-                _fail("INPUT_LINEAGE_MISMATCH")
-        elif (
+        if (
             R2R2_AUTHORITY_NAMESPACE_ID
             not in Path(row["final_path"]).name
             or row["pending_path"]
@@ -3108,6 +3119,24 @@ def _independent_build_r2r2_active(
         overlay["artifact_path_surface"]
     )
     active["artifact_path_surface_sha256"] = R2R2_ARTIFACT_SURFACE_SHA256
+    role_rows = {
+        row["role"]: row for row in overlay["artifact_path_surface"]
+    }
+    formal_input_path = role_rows["formal_design_review_verdict"][
+        "final_path"
+    ]
+    active["future_artifact_paths"]["formal_design_review_verdict"] = (
+        formal_input_path
+    )
+    active["implementation_binding_contract"][
+        "formal_design_review_path"
+    ] = formal_input_path
+    active["review_receipt_schemas"]["formal_design_review_verdict"][
+        "artifact_path"
+    ] = formal_input_path
+    active["reviewed_implementation_authority_contract"][
+        "formal_design_review_path"
+    ] = formal_input_path
     pending_by_role = {
         row["role"]: row["pending_path"]
         for row in overlay["artifact_path_surface"]
@@ -3196,7 +3225,7 @@ def independent_load_plan(
     *, repository_root: Path | None = None
 ) -> dict[str, Any]:
     root = _independent_repository_root(repository_root)
-    r2_active = _independent_load_r2_active()
+    r2_active = _independent_load_r2_active(repository_root=root)
     r2r1_overlay = _independent_load_r2r1_plan(
         r2_active, repository_root=root
     )

@@ -5409,6 +5409,117 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
         self.assertNotIn(first, materialized[0].decode("utf-8"))
         self.assertNotIn(second, materialized[1].decode("utf-8"))
 
+    def test_explicit_root_ignores_import_checkout_r2_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._copy_repository_plans(root)
+            blocked = {
+                str(gate.R2_ACTIVATION_PLAN_PATH).casefold(),
+                str(independent.R2_PLAN_PATH).casefold(),
+            }
+            original = Path.read_bytes
+
+            def guarded(path: Path) -> bytes:
+                if str(path).casefold() in blocked:
+                    raise AssertionError(
+                        "import-checkout R2 activation plan read"
+                    )
+                return original(path)
+
+            def core_blob(
+                _repo: Path, _commit: str, relative: str, **_kwargs: Any
+            ) -> str:
+                return {
+                    gate.R2_ACTIVATION_PLAN_RELATIVE_PATH: (
+                        gate.R2_ACTIVATION_PLAN_BASE_BLOB_OID
+                    ),
+                    gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH: (
+                        gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
+                    ),
+                }[relative]
+
+            def verifier_blob(
+                _repo: Path, _commit: str, relative: str
+            ) -> str:
+                return {
+                    independent.R2_PLAN_RELATIVE_PATH: (
+                        independent.R2_PLAN_BASE_BLOB_OID
+                    ),
+                    independent.R2R1_PLAN_RELATIVE_PATH: (
+                        independent.R2R1_PLAN_BASE_BLOB_OID
+                    ),
+                }[relative]
+
+            with mock.patch.object(Path, "read_bytes", guarded):
+                with mock.patch.object(
+                    gate, "git_path_blob_oid", side_effect=core_blob
+                ):
+                    core_plan = gate.load_active_plan(
+                        repository_root=root
+                    )
+                with mock.patch.object(
+                    independent,
+                    "_git_path_blob_oid",
+                    side_effect=verifier_blob,
+                ):
+                    independent_plan = independent.independent_load_plan(
+                        repository_root=root
+                    )
+        self.assertEqual(
+            gate.canonical_json_bytes(core_plan),
+            independent.verifier_canonical_bytes(independent_plan),
+        )
+
+    def test_all_r2r2_roles_use_isolated_namespace_paths(self) -> None:
+        rows = self.plan["artifact_path_surface"]
+        current_paths = {
+            value
+            for row in rows
+            for value in (row["final_path"], row["pending_path"])
+        }
+        self.assertEqual(len(rows), 18)
+        self.assertEqual(len(current_paths), 36)
+        for row in rows:
+            self.assertIn(
+                gate.R2R2_AUTHORITY_NAMESPACE_ID,
+                Path(row["final_path"]).name,
+            )
+            self.assertEqual(
+                row["pending_path"],
+                row["final_path"]
+                + ".pending-"
+                + gate.R2R2_AUTHORITY_NAMESPACE_ID,
+            )
+        formal = next(
+            row
+            for row in rows
+            if row["role"] == "formal_design_review_verdict"
+        )
+        self.assertNotEqual(
+            formal["final_path"], str(gate.FORMAL_DESIGN_REVIEW_PATH)
+        )
+        r2 = gate.load_r2_active_plan(repository_root=REPOSITORY)
+        r2r1 = gate.build_r2r1_active_plan(
+            r2,
+            gate.load_r2r1_remediation_plan(
+                repository_root=REPOSITORY, r2_active_plan=r2
+            ),
+            repository_root=REPOSITORY,
+        )
+        for historical in (gate.load_frozen_plan(), r2, r2r1):
+            historical_paths = {
+                value
+                for row in historical["artifact_path_surface"]
+                for value in (row["final_path"], row["pending_path"])
+            }
+            self.assertTrue(current_paths.isdisjoint(historical_paths))
+        with mock.patch.object(gate, "atomic_publish_exact") as publish:
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.publish_role(
+                    self.plan, "formal_design_review_verdict", {}
+                )
+            publish.assert_not_called()
+
     def test_repository_path_attacks_are_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -5580,7 +5691,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
         occupied_plan = gate.load_r2r2_portability_plan(
             repository_root=REPOSITORY,
             r2r1_active_plan=gate.build_r2r1_active_plan(
-                gate.load_r2_active_plan(),
+                gate.load_r2_active_plan(repository_root=REPOSITORY),
                 gate.load_r2r1_remediation_plan(
                     repository_root=REPOSITORY
                 ),

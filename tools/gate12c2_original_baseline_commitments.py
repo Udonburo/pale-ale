@@ -93,7 +93,10 @@ R2R1_OCCUPIED_R2_SURFACE_SHA256 = (
 )
 R2R1_PARENT_COMMIT = "29058cd9289a9ccb6656878f10c8cbe3d19f11ba"
 R2R1_GRANDPARENT_COMMIT = R2_TASK1_COMMIT
-R2R2_BASE_COMMIT = "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+R2R2_HISTORICAL_CANDIDATE_COMMIT = (
+    "88ad45d9c7e516e4d4fbaa2054a4ccf850dbbbf2"
+)
+R2R2_BASE_COMMIT = "e8bdb16e0e47296dbe4f7c04bc7ba52db8766f78"
 R2_ACTIVATION_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -114,7 +117,7 @@ R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH = Path(
 R2R1_REMEDIATION_PLAN_BASE_BLOB_OID = (
     "be34a081f52916d8ad9f5ed80758562143b7031c"
 )
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R2_20260804"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R3_20260807"
 R2R2_PORTABILITY_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -125,19 +128,19 @@ R2R2_PORTABILITY_PLAN_HISTORICAL_DECLARED_PATH = Path(
 # Frozen after the final focused collection; updated exactly once before the
 # bounded candidate commit is created.
 R2R2_PORTABILITY_PLAN_FILE_SHA256 = (
-    "4154f158ef3bacd7b238c4d25852c8e5c9053588d1b40ebf5d3bc78d5c0a323f"
+    "91c574b99ae3a48a257e75531a1f4d2569a657c3c10352c27efc551f80460874"
 )
 R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256 = (
-    "57c435fdc04fbf534b30ac32d06ad8a07a0ad54913b4c0bf467c069fedc96ad3"
+    "1e3f2879062b17cecff57738bdc4888a0c09de5ab88bc5e653c704dd0eadca45"
 )
 R2R2_ARTIFACT_PATH_SURFACE_SHA256 = (
-    "c34da48a051e93d7c79cfc5e1077776b8e55120539855f8a49631c1c0e31771b"
+    "3c9055988a4836524d57ff2c73af1092f6e35f55c26be3dd0493c2aae6d5fdf1"
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = (
     "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 )
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "e3845403fb571597af613702b09b3691dd030d7abae1f32deb4e8284f5f9b172"
+    "2bf9b5c8e7ba11738dc8d02dffa8964026787d73c602e32589df86137c1ffe61"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = (
     "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
@@ -1540,9 +1543,16 @@ def build_r2_active_plan(
     return active
 
 
-def load_r2_active_plan() -> dict[str, Any]:
+def load_r2_active_plan(
+    *, repository_root: Path | None = None
+) -> dict[str, Any]:
+    root = explicit_repository_root(repository_root)
+    materialized_plan = root.joinpath(
+        *PurePosixPath(R2_ACTIVATION_PLAN_RELATIVE_PATH).parts
+    )
     base_plan = load_frozen_plan()
     r2_plan = load_r2_activation_plan(
+        path=materialized_plan,
         base_plan=base_plan,
         check_legacy_occupancy=True,
     )
@@ -1925,7 +1935,7 @@ def load_r2r1_remediation_plan(
     if materialized != raw:
         _raise("INPUT_LINEAGE_MISMATCH")
     active_r2 = (
-        load_r2_active_plan()
+        load_r2_active_plan(repository_root=root)
         if r2_active_plan is None
         else dict(r2_active_plan)
     )
@@ -2048,7 +2058,8 @@ def _validate_r2r2_occupied_r2r1(
     if (
         sha256_bytes(canonical_json_bytes(occupied))
         != R2R2_OCCUPIED_R2R1_SURFACE_SHA256
-        or occupied.get("candidate_commit") != R2R2_BASE_COMMIT
+        or occupied.get("candidate_commit")
+        != R2R2_HISTORICAL_CANDIDATE_COMMIT
         or occupied.get("stage1_failure_codes")
         != [
             "CLEAN_RESTORE_INPUT_LINEAGE_MISMATCH",
@@ -2090,7 +2101,8 @@ def _validate_r2r2_occupied_r2r1(
         )
         if (
             name == "candidate_binding"
-            and receipt.get("source_commit") != R2R2_BASE_COMMIT
+            and receipt.get("source_commit")
+            != R2R2_HISTORICAL_CANDIDATE_COMMIT
         ):
             _raise("INPUT_LINEAGE_MISMATCH")
     packet = require_mapping(
@@ -2177,9 +2189,10 @@ def validate_r2r2_portability_plan(
         supplied["r2r2_portability_plan_payload_sha256"]
         != R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
         or supplied.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.1"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.2"
         or supplied.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
-        or supplied.get("state") != "R2R2_PORTABILITY_AND_FRAMING_FROZEN"
+        or supplied.get("state")
+        != "R2R3_ROOT_PORTABILITY_AND_NAMESPACE_FROZEN"
         or supplied.get("remediation_plan_relative_path")
         != R2R2_PORTABILITY_PLAN_RELATIVE_PATH
         or supplied.get("artifact_path_surface_sha256")
@@ -2194,7 +2207,7 @@ def validate_r2r2_portability_plan(
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R1_PARENT_COMMIT,
+            "remediation_grandparent": R2R2_HISTORICAL_CANDIDATE_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or supplied.get("preserved_identities")
@@ -2245,7 +2258,7 @@ def validate_r2r2_portability_plan(
     if (
         not isinstance(allowed, list)
         or allowed != sorted(allowed)
-        or len(allowed) != 10
+        or len(allowed) != 4
         or len(allowed) != len(set(allowed))
         or any(validate_relative_manifest_path(path) != path for path in allowed)
         or R2R2_PORTABILITY_PLAN_RELATIVE_PATH not in allowed
@@ -2410,10 +2423,7 @@ def validate_r2r2_portability_plan(
         ):
             _raise("INPUT_LINEAGE_MISMATCH")
         seen.update((final_path, pending_path))
-        if role == "formal_design_review_verdict":
-            if row != old_rows[role]:
-                _raise("INPUT_LINEAGE_MISMATCH")
-        elif (
+        if (
             R2R2_AUTHORITY_NAMESPACE_ID not in Path(final_path).name
             or pending_path
             != final_path + ".pending-" + R2R2_AUTHORITY_NAMESPACE_ID
@@ -2516,7 +2526,7 @@ def load_r2r2_portability_plan(
         _raise("INPUT_LINEAGE_MISMATCH")
     active = (
         build_r2r1_active_plan(
-            load_r2_active_plan(),
+            load_r2_active_plan(repository_root=root),
             load_r2r1_remediation_plan(
                 repository_root=root,
                 check_r2_occupancy=check_r2r1_occupancy,
@@ -2559,6 +2569,24 @@ def build_r2r2_active_plan(
     active["artifact_path_surface_sha256"] = (
         R2R2_ARTIFACT_PATH_SURFACE_SHA256
     )
+    role_rows = {
+        row["role"]: row for row in overlay["artifact_path_surface"]
+    }
+    formal_input_path = role_rows["formal_design_review_verdict"][
+        "final_path"
+    ]
+    active["future_artifact_paths"]["formal_design_review_verdict"] = (
+        formal_input_path
+    )
+    active["implementation_binding_contract"][
+        "formal_design_review_path"
+    ] = formal_input_path
+    active["review_receipt_schemas"]["formal_design_review_verdict"][
+        "artifact_path"
+    ] = formal_input_path
+    active["reviewed_implementation_authority_contract"][
+        "formal_design_review_path"
+    ] = formal_input_path
     pending_by_role = {
         row["role"]: row["pending_path"]
         for row in overlay["artifact_path_surface"]
@@ -2654,7 +2682,7 @@ def load_active_plan(
     *, repository_root: Path | None = None
 ) -> dict[str, Any]:
     root = explicit_repository_root(repository_root)
-    r2_active = load_r2_active_plan()
+    r2_active = load_r2_active_plan(repository_root=root)
     remediation = load_r2r1_remediation_plan(
         repository_root=root,
         r2_active_plan=r2_active,
