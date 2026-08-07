@@ -5248,6 +5248,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
             gate.R2_ACTIVATION_PLAN_RELATIVE_PATH,
             gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH,
             gate.R2R2_PORTABILITY_PLAN_RELATIVE_PATH,
+            gate.R2R5_RUNNER_RELATIVE_PATH,
         ):
             shutil.copyfile(REPOSITORY / relative, root / relative)
 
@@ -5360,6 +5361,9 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                         gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH: (
                             gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
                         ),
+                        gate.R2R5_RUNNER_RELATIVE_PATH: (
+                            "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                        ),
                     }[relative]
 
                 def verifier_blob(
@@ -5371,6 +5375,9 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                         ),
                         independent.R2R1_PLAN_RELATIVE_PATH: (
                             independent.R2R1_PLAN_BASE_BLOB_OID
+                        ),
+                        independent.R2R5_RUNNER_RELATIVE_PATH: (
+                            "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
                         ),
                     }[relative]
 
@@ -5437,6 +5444,9 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                     gate.R2R1_REMEDIATION_PLAN_RELATIVE_PATH: (
                         gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
                     ),
+                    gate.R2R5_RUNNER_RELATIVE_PATH: (
+                        "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                    ),
                 }[relative]
 
             def verifier_blob(
@@ -5448,6 +5458,9 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                     ),
                     independent.R2R1_PLAN_RELATIVE_PATH: (
                         independent.R2R1_PLAN_BASE_BLOB_OID
+                    ),
+                    independent.R2R5_RUNNER_RELATIVE_PATH: (
+                        "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
                     ),
                 }[relative]
 
@@ -6186,9 +6199,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                 "formal_design_review_verdict"
             ]
             formal, formal_file_hash = independent._receipt(
-                Path(
-                    binding["formal_design_review_path"]
-                ),
+                gate.FORMAL_DESIGN_REVIEW_PATH,
                 formal_schema["exact_top_level_fields"],
                 "formal_design_review_payload_sha256",
             )
@@ -6595,6 +6606,306 @@ class R2R4OriginalInputLineageTests(unittest.TestCase):
         )
         self.assertNotIn("scientific_values_emitted", payload)
         self.assertTrue(all(not path.exists() for path in paths))
+
+
+class R2R5LaunchRetryTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
+        cls.independent_plan = independent.independent_load_plan(
+            repository_root=REPOSITORY
+        )
+        cls.control = cls.plan["r2r2_portability_control"]
+        cls.historical = cls.control["historical_r2r4_preclaim_stop"]
+        cls.current_by_role = {
+            row["role"]: row for row in cls.plan["artifact_path_surface"]
+        }
+        cls.historical_by_role = {
+            row["role"]: row
+            for row in cls.historical["artifact_path_surface"]
+        }
+
+    def _runner_command(self, *flags: str) -> list[str]:
+        contract = self.control["extraction_launch_contract"]
+        return [
+            contract["python_executable_path"],
+            *flags,
+            contract["argv_prefix"][3],
+            "--repository",
+            str(REPOSITORY),
+            "--execution-claim-id",
+            "r2r5-focused-preclaim",
+            "--launch-id",
+            "r2r5-focused-preclaim",
+            "--claimed-at-utc",
+            "2026-08-07T00:00:00Z",
+        ]
+
+    def _run_runner(
+        self, *flags: str, pythonpath: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        environment = dict(os.environ)
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        if pythonpath is None:
+            environment.pop("PYTHONPATH", None)
+        else:
+            environment["PYTHONPATH"] = pythonpath
+        return subprocess.run(
+            self._runner_command(*flags),
+            cwd=REPOSITORY,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+        )
+
+    def _assert_no_r2r5_runtime(self) -> None:
+        runtime = {
+            "extraction_execution_claim",
+            "extraction_failure",
+            "extraction_success",
+            "extraction_terminal",
+            "verifier_authorization",
+            "verifier_authorization_verdict",
+            "verifier_execution_claim",
+            "verifier_failure",
+            "verifier_preflight",
+            "verifier_success",
+            "verifier_terminal",
+        }
+        for role in runtime:
+            row = self.current_by_role[role]
+            self.assertFalse(Path(row["final_path"]).exists(), role)
+            self.assertFalse(Path(row["pending_path"]).exists(), role)
+
+    def test_exact_launch_contract_and_isolation_guard_order(self) -> None:
+        core = gate.validate_r2r5_extraction_launch_contract(
+            self.control["extraction_launch_contract"],
+            repository_root=REPOSITORY,
+        )
+        standalone = independent._independent_validate_r2r5_launch_contract(
+            self.independent_plan["r2r2_portability_control"][
+                "extraction_launch_contract"
+            ],
+            repository_root=REPOSITORY,
+        )
+        self.assertEqual(core, standalone)
+        self.assertEqual(
+            gate.sha256_bytes(gate.canonical_json_bytes(core)),
+            gate.R2R5_EXTRACTION_LAUNCH_CONTRACT_SHA256,
+        )
+        self.assertEqual(core["argv_prefix"][1:3], ["-I", "-B"])
+        self.assertEqual(core["cwd"], str(REPOSITORY))
+        self.assertEqual(core["stdin"], "DEVNULL")
+        self.assertEqual(
+            gate.sha256_bytes(
+                (REPOSITORY / core["runner_relative_path"]).read_bytes()
+            ),
+            gate.R2R5_RUNNER_FILE_SHA256,
+        )
+        source = inspect.getsource(extraction_runner.execute)
+        self.assertLess(source.index("_runtime_isolated()"), source.index("load_active_plan"))
+        self.assertLess(source.index("_runtime_isolated()"), source.index("publish_role"))
+
+    def test_nonisolated_and_pythonpath_reject_before_claim(self) -> None:
+        self._assert_no_r2r5_runtime()
+        nonisolated = self._run_runner("-B")
+        self.assertEqual(nonisolated.returncode, 2)
+        self.assertEqual(nonisolated.stdout, "")
+        self.assertEqual(
+            nonisolated.stderr,
+            "gate12c2-original-baseline:ERROR:AUTHORIZATION_INVALID\n",
+        )
+        with_pythonpath = self._run_runner(
+            "-I", "-B", pythonpath=str(REPOSITORY)
+        )
+        self.assertEqual(with_pythonpath.returncode, 2)
+        self.assertEqual(with_pythonpath.stdout, "")
+        self.assertEqual(
+            with_pythonpath.stderr,
+            "gate12c2-original-baseline:ERROR:AUTHORIZATION_INVALID\n",
+        )
+        self._assert_no_r2r5_runtime()
+
+    def test_isolated_launch_passes_guard_and_stops_on_absent_controls(self) -> None:
+        self._assert_no_r2r5_runtime()
+        isolated = self._run_runner("-I", "-B")
+        self.assertEqual(isolated.returncode, 2)
+        self.assertEqual(isolated.stdout, "")
+        self.assertEqual(
+            isolated.stderr,
+            "gate12c2-original-baseline:ERROR:INPUT_LINEAGE_MISMATCH\n",
+        )
+        self.assertNotIn("AUTHORIZATION_INVALID", isolated.stderr)
+        self._assert_no_r2r5_runtime()
+
+    def test_historical_controls_are_exact_retired_and_runtime_absent(self) -> None:
+        core = gate.validate_r2r5_historical_preclaim_stop(
+            self.historical, self.plan["artifact_path_surface"]
+        )
+        standalone = independent._independent_validate_r2r5_preclaim_stop(
+            self.independent_plan["r2r2_portability_control"][
+                "historical_r2r4_preclaim_stop"
+            ],
+            self.independent_plan["artifact_path_surface"],
+        )
+        self.assertEqual(core, standalone)
+        self.assertEqual(
+            core["execution_status"],
+            "HISTORICALLY_VALID_CONTROLS_OPERATIONALLY_RETIRED_AFTER_"
+            "PRECLAIM_LAUNCH_CONTRACT_MISMATCH",
+        )
+        self.assertEqual(core["launch_failure_code"], "AUTHORIZATION_INVALID")
+        for row in core["occupied_controls"]:
+            raw = Path(row["path"]).read_bytes()
+            self.assertEqual(gate.sha256_bytes(raw), row["file_sha256"])
+        self._assert_no_r2r5_runtime()
+
+    def test_tampered_historical_control_and_present_leaf_are_rejected(self) -> None:
+        target = Path(self.historical["occupied_controls"][0]["path"])
+        original_read = Path.read_bytes
+
+        def tampered_read(path: Path) -> bytes:
+            raw = original_read(path)
+            return raw + b" " if path == target else raw
+
+        with mock.patch.object(Path, "read_bytes", tampered_read):
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r5_historical_preclaim_stop(
+                    self.historical, self.plan["artifact_path_surface"]
+                )
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_validate_r2r5_preclaim_stop(
+                    self.historical,
+                    self.independent_plan["artifact_path_surface"],
+                )
+
+        claim = Path(
+            self.historical_by_role["extraction_execution_claim"]["final_path"]
+        )
+        original_exists = Path.exists
+
+        def injected_exists(path: Path) -> bool:
+            return path == claim or original_exists(path)
+
+        with mock.patch.object(Path, "exists", injected_exists):
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r5_historical_preclaim_stop(
+                    self.historical, self.plan["artifact_path_surface"]
+                )
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_validate_r2r5_preclaim_stop(
+                    self.historical,
+                    self.independent_plan["artifact_path_surface"],
+                )
+
+    def test_r2r5_surface_is_disjoint_from_every_historical_path(self) -> None:
+        current = {
+            path
+            for row in self.plan["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        historical = {
+            path
+            for row in self.historical["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        self.assertEqual(len(current), 36)
+        self.assertEqual(len(historical), 36)
+        self.assertFalse(current & historical)
+        self.assertTrue(
+            all(gate.R2R2_AUTHORITY_NAMESPACE_ID in Path(path).name for path in current)
+        )
+
+    def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
+        original_read = Path.read_bytes
+        protected = str(gate.PROTECTED_ROOT).casefold()
+        reads: list[str] = []
+
+        def guarded(path: Path) -> bytes:
+            normalized = str(path).casefold()
+            if normalized.startswith(protected):
+                raise AssertionError("protected root read during R2R5 Phase A")
+            reads.append(normalized)
+            return original_read(path)
+
+        with mock.patch.object(Path, "read_bytes", guarded):
+            core = gate.load_active_plan(repository_root=REPOSITORY)
+            standalone = independent.independent_load_plan(
+                repository_root=REPOSITORY
+            )
+        self.assertEqual(
+            core["r2r2_portability_control"]["authority_namespace_id"],
+            "R2R5_20260807",
+        )
+        self.assertEqual(
+            standalone["r2r2_portability_control"]["authority_namespace_id"],
+            "R2R5_20260807",
+        )
+        self.assertTrue(reads)
+        self.assertFalse(any(path.startswith(protected) for path in reads))
+
+    def test_launch_contract_and_historical_surface_rehash_attacks_fail(self) -> None:
+        overlay = gate.load_r2r2_portability_plan(
+            repository_root=REPOSITORY,
+            check_r2r1_occupancy=True,
+        )
+        attacks = []
+        launch = copy.deepcopy(overlay)
+        launch["extraction_launch_contract"]["argv_prefix"][1] = "-B"
+        launch["extraction_launch_contract_sha256"] = gate.sha256_bytes(
+            gate.canonical_json_bytes(launch["extraction_launch_contract"])
+        )
+        launch = gate.add_self_hash(
+            {
+                key: value
+                for key, value in launch.items()
+                if key != "r2r2_portability_plan_payload_sha256"
+            },
+            "r2r2_portability_plan_payload_sha256",
+        )
+        attacks.append(launch)
+        historical = copy.deepcopy(overlay)
+        historical["historical_r2r4_preclaim_stop"][
+            "required_absent_final_roles"
+        ].pop()
+        historical["historical_r2r4_preclaim_surface_sha256"] = (
+            gate.sha256_bytes(
+                gate.canonical_json_bytes(
+                    historical["historical_r2r4_preclaim_stop"]
+                )
+            )
+        )
+        historical = gate.add_self_hash(
+            {
+                key: value
+                for key, value in historical.items()
+                if key != "r2r2_portability_plan_payload_sha256"
+            },
+            "r2r2_portability_plan_payload_sha256",
+        )
+        attacks.append(historical)
+        r2r1 = gate.build_r2r1_active_plan(
+            gate.load_r2_active_plan(repository_root=REPOSITORY),
+            gate.load_r2r1_remediation_plan(
+                repository_root=REPOSITORY,
+                check_r2_occupancy=True,
+            ),
+            repository_root=REPOSITORY,
+        )
+        for attacked in attacks:
+            with self.subTest(attack=attacked["state"]):
+                with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                    gate.validate_r2r2_portability_plan(
+                        r2r1,
+                        attacked,
+                        repository_root=REPOSITORY,
+                        check_r2r1_occupancy=True,
+                    )
 
 if __name__ == "__main__":
     unittest.main()
