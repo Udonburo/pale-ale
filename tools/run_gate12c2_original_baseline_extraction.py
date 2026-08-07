@@ -715,7 +715,6 @@ def execute(
     *,
     execution_claim_id: str,
     launch_id: str,
-    claimed_at_utc: str,
     now_ns: int | None = None,
 ) -> dict[str, Any]:
     _runtime_isolated()
@@ -771,6 +770,7 @@ def execute(
     )
     pid = os.getpid()
     creation = gate.query_process_creation_time_utc(pid)
+    claimed_at_utc = gate.utc_now_text()
     claim = gate.build_execution_claim_payload(
         plan,
         authorization,
@@ -1017,13 +1017,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repository", type=Path, required=True)
     parser.add_argument("--execution-claim-id", required=True)
     parser.add_argument("--launch-id", required=True)
-    parser.add_argument("--claimed-at-utc", required=True)
     args = parser.parse_args(argv)
     execute(
         args.repository,
         execution_claim_id=args.execution_claim_id,
         launch_id=args.launch_id,
-        claimed_at_utc=args.claimed_at_utc,
     )
     print(gate.EXTRACTION_PASS_LINE)
     return 0

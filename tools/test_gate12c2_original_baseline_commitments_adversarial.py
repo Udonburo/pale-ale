@@ -611,7 +611,6 @@ class FrozenDesignMutationTests(unittest.TestCase):
                                         "--repository", str(root),
                                         "--execution-claim-id", "synthetic",
                                         "--launch-id", "synthetic",
-                                        "--claimed-at-utc", "2026-08-01T00:00:00Z",
                                     ]
                                 )
                     else:
@@ -681,7 +680,6 @@ class FrozenDesignMutationTests(unittest.TestCase):
                                         "--repository", str(root),
                                         "--execution-claim-id", "synthetic",
                                         "--launch-id", "synthetic",
-                                        "--claimed-at-utc", "2026-08-01T00:00:00Z",
                                     ]
                                 )
                     with self.subTest(scope=scope, role=role):
@@ -6804,7 +6802,9 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             gate.R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256,
         )
         self.assertEqual(core["argv_prefix"][1:3], ["-I", "-B"])
-        self.assertEqual(core["cwd"], str(REPOSITORY))
+        self.assertEqual(
+            core["cwd"], str(gate.AUTHORIZED_IMPLEMENTATION_REPOSITORY)
+        )
         self.assertEqual(core["stdin"], "DEVNULL")
         self.assertEqual(core["child_environment"]["PYTHONPATH"], "MUST_BE_ABSENT")
         self.assertEqual(
@@ -6841,7 +6841,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     def test_exact_runtime_loads_plan_under_i_b(self) -> None:
         completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "R2R8_20260807\n")
+        self.assertEqual(completed.stdout, "R2R9_20260807\n")
         self.assertEqual(completed.stderr, "")
 
     def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
@@ -6855,7 +6855,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             with self.subTest(executable=str(executable)):
                 completed = self._run_isolated(executable)
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertNotIn("R2R8_20260807", completed.stdout)
+                self.assertNotIn("R2R9_20260807", completed.stdout)
 
     def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
         pythonpath = self._run_isolated(
@@ -7025,7 +7025,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
         self.assertFalse(current & r2r4)
         self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all("R2R8_20260807" in Path(path).name for path in current)
+            all("R2R9_20260807" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -7047,11 +7047,11 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R8_20260807",
+            "R2R9_20260807",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R8_20260807",
+            "R2R9_20260807",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))
@@ -7131,6 +7131,432 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
                     repository_root=REPOSITORY,
                     check_r2r1_occupancy=True,
                 )
+
+class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
+        cls.independent_plan = independent.independent_load_plan(
+            repository_root=REPOSITORY
+        )
+
+    @staticmethod
+    def _identity() -> mock.Mock:
+        identity = mock.Mock()
+        identity.checkpoints = ("claim",)
+        identity.checkpoint.return_value = {
+            "git_head": SOURCE_COMMIT,
+            "executing_code_identity_surface_sha256": DIGEST,
+        }
+        return identity
+
+    def test_production_clis_reject_parent_supplied_claim_time(self) -> None:
+        cases = (
+            (extraction_runner, "execute"),
+            (independent, "execute_independent_verifier"),
+        )
+        for module, function_name in cases:
+            execute = getattr(module, function_name)
+            self.assertNotIn("claimed_at_utc", inspect.signature(execute).parameters)
+            stderr = io.StringIO()
+            with (
+                self.subTest(module=module.__name__),
+                mock.patch.object(module, function_name) as invoked,
+                contextlib.redirect_stderr(stderr),
+                self.assertRaises(SystemExit) as raised,
+            ):
+                module.main(
+                    [
+                        "--repository",
+                        str(REPOSITORY),
+                        "--execution-claim-id",
+                        "r2r9-claim",
+                        "--launch-id",
+                        "r2r9-launch",
+                        "--claimed-at-utc",
+                        "2026-08-07T13:17:00Z",
+                    ]
+                )
+            self.assertEqual(raised.exception.code, 2)
+            invoked.assert_not_called()
+
+    def test_extractor_owns_claim_time_after_creation_query(self) -> None:
+        events: list[str] = []
+        identity = self._identity()
+        candidate = {"source_commit": SOURCE_COMMIT}
+
+        def creation(_pid: int) -> str:
+            events.append("creation")
+            return "2026-08-07T13:17:00.0000000Z"
+
+        def clock() -> str:
+            events.append("claimed")
+            return "2026-08-07T13:17:00.5000000Z"
+
+        def claim_builder(*_args: Any, **kwargs: Any) -> dict[str, Any]:
+            events.append("builder")
+            self.assertEqual(
+                kwargs["claimed_at_utc"], "2026-08-07T13:17:00.5000000Z"
+            )
+            raise gate.Gate12C2OriginalBaselineError("AUTHORIZATION_INVALID")
+
+        publish = mock.Mock()
+        with (
+            mock.patch.object(extraction_runner, "_runtime_isolated"),
+            mock.patch.object(
+                extraction_runner.gate,
+                "load_active_plan",
+                return_value=self.plan,
+            ),
+            mock.patch.object(extraction_runner.gate, "read_exact_bytes"),
+            mock.patch.object(extraction_runner.gate, "validate_formal_design_pass"),
+            mock.patch.object(extraction_runner.gate, "validate_upstream_authority"),
+            mock.patch.object(
+                extraction_runner.gate,
+                "validate_original_input_lineage",
+                return_value={},
+            ),
+            mock.patch.object(
+                extraction_runner,
+                "_load_controls",
+                return_value=(
+                    {}, DIGEST, {}, DIGEST, {}, DIGEST, {}, DIGEST, candidate
+                ),
+            ),
+            mock.patch.object(
+                extraction_runner.gate, "require_full_surface_checkpoint"
+            ),
+            mock.patch.object(
+                extraction_runner.gate,
+                "ExecutingCodeIdentity",
+                return_value=identity,
+            ),
+            mock.patch.object(extraction_runner.gate, "install_executing_code_identity"),
+            mock.patch.object(extraction_runner.os, "getpid", return_value=1234),
+            mock.patch.object(
+                extraction_runner.gate,
+                "query_process_creation_time_utc",
+                side_effect=creation,
+            ),
+            mock.patch.object(
+                extraction_runner.gate, "utc_now_text", side_effect=clock
+            ),
+            mock.patch.object(
+                extraction_runner.gate,
+                "build_execution_claim_payload",
+                side_effect=claim_builder,
+            ),
+            mock.patch.object(
+                extraction_runner.gate, "publish_role", publish
+            ),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            extraction_runner.execute(
+                REPOSITORY,
+                execution_claim_id="r2r9-extraction-claim",
+                launch_id="r2r9-extraction-launch",
+                now_ns=gate.parse_utc_ns("2026-08-07T13:17:01Z"),
+            )
+        self.assertEqual(events, ["creation", "claimed", "builder"])
+        publish.assert_not_called()
+
+    def test_verifier_owns_claim_and_resamples_current_time(self) -> None:
+        events: list[str] = []
+        identity = self._identity()
+        candidate = {"source_commit": SOURCE_COMMIT}
+        times = iter(
+            [
+                ("claimed", "2026-08-07T13:17:00.500000Z"),
+                ("current", "2026-08-07T13:17:00.750000Z"),
+            ]
+        )
+
+        def clock() -> str:
+            label, value = next(times)
+            events.append(label)
+            return value
+
+        def creation(_pid: int) -> str:
+            events.append("creation")
+            return "2026-08-07T13:17:00.000000Z"
+
+        def claim_builder(*_args: Any, **kwargs: Any) -> dict[str, Any]:
+            events.append("builder")
+            self.assertEqual(
+                kwargs["claimed_at_utc"], "2026-08-07T13:17:00.500000Z"
+            )
+            self.assertEqual(
+                kwargs["now_ns"],
+                independent._parse_ns("2026-08-07T13:17:00.750000Z"),
+            )
+            raise independent.IndependentVerificationError("AUTHORIZATION_INVALID")
+
+        publish = mock.Mock()
+        with (
+            mock.patch.object(
+                independent.sys,
+                "flags",
+                mock.Mock(isolated=True, dont_write_bytecode=True),
+            ),
+            mock.patch.object(independent.sys, "dont_write_bytecode", True),
+            mock.patch.dict(independent.os.environ, {"PYTHONPATH": ""}),
+            mock.patch.object(
+                independent, "independent_load_plan", return_value=self.independent_plan
+            ),
+            mock.patch.object(independent, "independent_lineage", return_value=({}, {})),
+            mock.patch.object(
+                independent,
+                "independent_runtime_lineage",
+                return_value=({}, DIGEST, candidate),
+            ),
+            mock.patch.object(
+                independent, "_load_verifier_controls", return_value={}
+            ),
+            mock.patch.object(independent, "independent_require_full_surface_checkpoint"),
+            mock.patch.object(
+                independent,
+                "IndependentExecutingCodeIdentity",
+                return_value=identity,
+            ),
+            mock.patch.object(independent.os, "getpid", return_value=1234),
+            mock.patch.object(independent, "_process_creation", side_effect=creation),
+            mock.patch.object(independent, "_utc_now", side_effect=clock),
+            mock.patch.object(independent, "_verifier_claim", side_effect=claim_builder),
+            mock.patch.object(independent, "_publish", publish),
+            self.assertRaises(independent.IndependentVerificationError),
+        ):
+            independent.execute_independent_verifier(
+                REPOSITORY,
+                execution_claim_id="r2r9-verifier-claim",
+                launch_id="r2r9-verifier-launch",
+                now_ns=gate.parse_utc_ns("2026-08-07T13:16:59Z"),
+            )
+        self.assertEqual(
+            events, ["creation", "claimed", "current", "builder"]
+        )
+        publish.assert_not_called()
+
+    def test_temporal_predicate_and_receipt_reconstruction_are_unchanged(
+        self,
+    ) -> None:
+        preflight, authorization, verdict, _ = control_chain(
+            self.plan, "extraction"
+        )
+        common = {
+            "plan": self.plan,
+            "authorization": authorization,
+            "preflight": preflight,
+            "verdict": verdict,
+            "scope": "extraction",
+            "execution_claim_id": "r2r9-equality-claim",
+            "launch_id": "r2r9-equality-launch",
+            "claimed_at_utc": "2026-08-01T00:05:00Z",
+            "owner_hostname": "test-host",
+            "owner_pid": 1234,
+            "owner_process_creation_time_utc": "2026-08-01T00:05:00Z",
+            "git_head_at_claim": SOURCE_COMMIT,
+            "executing_code_identity_surface_sha256": DIGEST,
+            "preflight_file_sha256": "5" * 64,
+            "authorization_file_sha256": "6" * 64,
+            "verdict_file_sha256": "9" * 64,
+            "now_ns": gate.parse_utc_ns("2026-08-01T00:05:00Z"),
+        }
+        claim = gate.build_execution_claim_payload(**common)
+        rebuilt = gate.validate_execution_claim_payload(
+            self.plan,
+            claim,
+            authorization,
+            preflight,
+            verdict,
+            scope="extraction",
+            preflight_file_sha256="5" * 64,
+            authorization_file_sha256="6" * 64,
+            verdict_file_sha256="9" * 64,
+            now_ns=gate.parse_utc_ns("2026-08-01T00:05:00Z"),
+        )
+        self.assertEqual(rebuilt, claim)
+        for creation, claimed, current in (
+            (
+                "2026-08-01T00:05:00.0000001Z",
+                "2026-08-01T00:05:00Z",
+                "2026-08-01T00:05:00Z",
+            ),
+            (
+                "2026-08-01T00:05:00Z",
+                "2026-08-01T00:05:00.0000001Z",
+                "2026-08-01T00:05:00Z",
+            ),
+        ):
+            attacked = dict(common)
+            attacked["owner_process_creation_time_utc"] = creation
+            attacked["claimed_at_utc"] = claimed
+            attacked["now_ns"] = gate.parse_utc_ns(current)
+            with self.subTest(creation=creation, claimed=claimed, current=current):
+                with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                    gate.build_execution_claim_payload(**attacked)
+
+    def test_temporal_rejection_publishes_no_claim(self) -> None:
+        preflight, authorization, verdict, _ = control_chain(
+            self.plan, "extraction"
+        )
+        candidate = {"source_commit": SOURCE_COMMIT}
+        identity = self._identity()
+        publish = mock.Mock()
+        with (
+            mock.patch.object(extraction_runner, "_runtime_isolated"),
+            mock.patch.object(
+                extraction_runner.gate, "load_active_plan", return_value=self.plan
+            ),
+            mock.patch.object(extraction_runner.gate, "read_exact_bytes"),
+            mock.patch.object(extraction_runner.gate, "validate_formal_design_pass"),
+            mock.patch.object(extraction_runner.gate, "validate_upstream_authority"),
+            mock.patch.object(
+                extraction_runner.gate,
+                "validate_original_input_lineage",
+                return_value={},
+            ),
+            mock.patch.object(
+                extraction_runner,
+                "_load_controls",
+                return_value=(
+                    {},
+                    DIGEST,
+                    preflight,
+                    "5" * 64,
+                    authorization,
+                    "6" * 64,
+                    verdict,
+                    "9" * 64,
+                    candidate,
+                ),
+            ),
+            mock.patch.object(
+                extraction_runner.gate, "require_full_surface_checkpoint"
+            ),
+            mock.patch.object(
+                extraction_runner.gate,
+                "ExecutingCodeIdentity",
+                return_value=identity,
+            ),
+            mock.patch.object(extraction_runner.gate, "install_executing_code_identity"),
+            mock.patch.object(extraction_runner.os, "getpid", return_value=1234),
+            mock.patch.object(
+                extraction_runner.gate,
+                "query_process_creation_time_utc",
+                return_value="2026-08-01T00:05:00.0000001Z",
+            ),
+            mock.patch.object(
+                extraction_runner.gate,
+                "utc_now_text",
+                return_value="2026-08-01T00:05:00Z",
+            ),
+            mock.patch.object(extraction_runner.gate, "publish_role", publish),
+            self.assertRaises(gate.Gate12C2OriginalBaselineError),
+        ):
+            extraction_runner.execute(
+                REPOSITORY,
+                execution_claim_id="r2r9-rejected-claim",
+                launch_id="r2r9-rejected-launch",
+                now_ns=gate.parse_utc_ns("2026-08-01T00:05:00Z"),
+            )
+        publish.assert_not_called()
+
+        v_preflight, v_authorization, v_verdict, _ = control_chain(
+            self.independent_plan, "verifier"
+        )
+        v_controls = {
+            "preflight": v_preflight,
+            "preflight_file_hash": "5" * 64,
+            "authorization": v_authorization,
+            "authorization_file_hash": "6" * 64,
+            "verdict": v_verdict,
+            "verdict_file_hash": "9" * 64,
+        }
+        verifier_publish = mock.Mock()
+        with (
+            mock.patch.object(
+                independent.sys,
+                "flags",
+                mock.Mock(isolated=True, dont_write_bytecode=True),
+            ),
+            mock.patch.object(independent.sys, "dont_write_bytecode", True),
+            mock.patch.dict(independent.os.environ, {"PYTHONPATH": ""}),
+            mock.patch.object(
+                independent, "independent_load_plan", return_value=self.independent_plan
+            ),
+            mock.patch.object(independent, "independent_lineage", return_value=({}, {})),
+            mock.patch.object(
+                independent,
+                "independent_runtime_lineage",
+                return_value=({}, DIGEST, candidate),
+            ),
+            mock.patch.object(
+                independent, "_load_verifier_controls", return_value=v_controls
+            ),
+            mock.patch.object(independent, "independent_require_full_surface_checkpoint"),
+            mock.patch.object(
+                independent,
+                "IndependentExecutingCodeIdentity",
+                return_value=self._identity(),
+            ),
+            mock.patch.object(independent.os, "getpid", return_value=1234),
+            mock.patch.object(
+                independent,
+                "_process_creation",
+                return_value="2026-08-01T00:05:00Z",
+            ),
+            mock.patch.object(
+                independent,
+                "_utc_now",
+                side_effect=[
+                    "2026-08-01T00:05:00.000001Z",
+                    "2026-08-01T00:05:00Z",
+                ],
+            ),
+            mock.patch.object(independent, "_publish", verifier_publish),
+            self.assertRaises(independent.IndependentVerificationError),
+        ):
+            independent.execute_independent_verifier(
+                REPOSITORY,
+                execution_claim_id="r2r9-rejected-verifier-claim",
+                launch_id="r2r9-rejected-verifier-launch",
+                now_ns=gate.parse_utc_ns("2026-08-01T00:04:00Z"),
+            )
+        verifier_publish.assert_not_called()
+
+    def test_r2r8_controls_are_exact_retired_and_r2r9_is_disjoint(self) -> None:
+        control = self.plan["r2r2_portability_control"]
+        historical = control["historical_r2r8_preclaim_stop"]
+        core = gate.validate_r2r9_historical_preclaim_stop(
+            historical, self.plan["artifact_path_surface"]
+        )
+        standalone = independent._independent_validate_r2r9_preclaim_stop(
+            self.independent_plan["r2r2_portability_control"][
+                "historical_r2r8_preclaim_stop"
+            ],
+            self.independent_plan["artifact_path_surface"],
+        )
+        self.assertEqual(core, standalone)
+        for row in core["occupied_controls"]:
+            self.assertEqual(
+                gate.sha256_bytes(Path(row["path"]).read_bytes()),
+                row["file_sha256"],
+            )
+        historical_paths = {
+            path
+            for row in core["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        current_paths = {
+            path
+            for row in self.plan["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        self.assertFalse(historical_paths & current_paths)
+        self.assertTrue(
+            all("R2R9_20260807" in Path(path).name for path in current_paths)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
