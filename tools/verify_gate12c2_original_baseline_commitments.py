@@ -72,10 +72,10 @@ R2R4_REMEDIATION_GRANDPARENT_COMMIT = (
 R2R5_REMEDIATION_GRANDPARENT_COMMIT = (
     "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 )
-R2R7_REMEDIATION_GRANDPARENT_COMMIT = (
-    "716f906ba0e3a3a46c97ed37a3a95937aa13335e"
+R2R8_REMEDIATION_GRANDPARENT_COMMIT = (
+    "f3ba0e14ec3dedd4698293399dc04a297df99ea6"
 )
-R2R2_BASE_COMMIT = "f3ba0e14ec3dedd4698293399dc04a297df99ea6"
+R2R2_BASE_COMMIT = "53e6c92f41c990a42832768603f39034caf930a3"
 R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -92,7 +92,7 @@ R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
 )
 R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R7_20260807"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R8_20260807"
 R2R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -100,9 +100,9 @@ R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
     r"\gate12c2_original_baseline_r2r2_portability_plan.json"
 )
-R2R2_PLAN_FILE_SHA256 = "2792fa250348fa1613d69e82448e1f6a8a16bfaf3e734f5287785c02e00cc854"
-R2R2_PLAN_PAYLOAD_SHA256 = "8e65af4a1c41d6ba313d8121a74af2c8d18ae21914a0e4769e169df491a5343a"
-R2R2_ARTIFACT_SURFACE_SHA256 = "cc52553396d21b2f103600cc58851fbc07b935b5a2a4cd8c1c6b5a041f4e8e9d"
+R2R2_PLAN_FILE_SHA256 = "d99f29ff5ac2dde291d20ec266a93f0ed2a3e997a00b83ce7708a2ebe543652d"
+R2R2_PLAN_PAYLOAD_SHA256 = "3f3853bd7f89db83ee6bb314a1c16126d353150f059d2ddf45a4135681e0a2da"
+R2R2_ARTIFACT_SURFACE_SHA256 = "3db04bbe7c65ef68a84a58e5bf62ada0c84c47466d31ebd728d7095e8ef215b9"
 R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
     "3ca482e642f28757faee308e6ea0002bc294710b08a1fa5124fbd374c5c5d992"
 )
@@ -111,7 +111,7 @@ R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "5a454fc47d699e32dc15cb81cd0f09c48c827d395de06452ecdf437030f117d1"
+    "89ccd0d62c75e50a8881a9c0abe21c57179d559b8e7c1c6a9dcfca217b07021f"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256 = (
@@ -3638,10 +3638,10 @@ def _independent_load_r2r2_plan(
         )
         != R2R2_PLAN_PAYLOAD_SHA256
         or overlay.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.6"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.7"
         or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or overlay.get("state")
-        != "R2R7_MP_MAIN_ALIAS_REMEDIATION_FROZEN"
+        != "R2R8_FORMAL_DESIGN_INPUT_MIRROR_REMEDIATION_FROZEN"
         or overlay.get("remediation_plan_relative_path")
         != R2R2_PLAN_RELATIVE_PATH
         or overlay.get("artifact_path_surface_sha256")
@@ -3658,7 +3658,7 @@ def _independent_load_r2r2_plan(
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R7_REMEDIATION_GRANDPARENT_COMMIT,
+            "remediation_grandparent": R2R8_REMEDIATION_GRANDPARENT_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or overlay.get("preserved_identities")

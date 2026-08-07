@@ -23,6 +23,7 @@ from typing import Any, Iterator, Mapping, Sequence
 from unittest import mock
 
 import build_gate12c2_original_baseline_implementation_binding as binding_builder
+import build_gate12c2_original_baseline_reviewed_authority as authority_builder
 import gate12c2_original_baseline_commitments as gate
 import issue_gate12c2_original_baseline_preflight as preflight_issuer
 import test_gate12c2_original_baseline_commitments as primary
@@ -6638,6 +6639,63 @@ class R2R4OriginalInputLineageTests(unittest.TestCase):
         self.assertTrue(all(not path.exists() for path in paths))
 
 
+class R2R8FormalDesignInputMirrorTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
+
+    def test_core_uses_the_active_formal_design_input_mirror(self) -> None:
+        expected_path = Path(
+            self.plan["implementation_binding_contract"][
+                "formal_design_review_path"
+            ]
+        )
+        self.assertNotEqual(expected_path, gate.FORMAL_DESIGN_REVIEW_PATH)
+        source = gate.read_canonical_receipt(
+            gate.FORMAL_DESIGN_REVIEW_PATH,
+            expected_file_sha256=gate.FORMAL_DESIGN_REVIEW_FILE_SHA256,
+            hash_field="formal_design_review_payload_sha256",
+            expected_payload_sha256=(
+                gate.FORMAL_DESIGN_REVIEW_PAYLOAD_SHA256
+            ),
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        with mock.patch.object(
+            gate, "read_canonical_receipt", return_value=source
+        ) as reader:
+            self.assertEqual(gate.validate_formal_design_pass(self.plan), source)
+        self.assertEqual(reader.call_args.args[0], expected_path)
+
+    def test_authority_builder_stops_before_candidate_on_missing_mirror(
+        self,
+    ) -> None:
+        attacked = copy.deepcopy(self.plan)
+        with tempfile.TemporaryDirectory() as directory:
+            missing = str(Path(directory) / "missing-formal-input.json")
+            attacked["implementation_binding_contract"][
+                "formal_design_review_path"
+            ] = missing
+            attacked["review_receipt_schemas"][
+                "formal_design_review_verdict"
+            ]["artifact_path"] = missing
+            with (
+                mock.patch.object(
+                    authority_builder.gate,
+                    "load_active_plan",
+                    return_value=attacked,
+                ),
+                mock.patch.object(
+                    authority_builder.gate, "read_exact_bytes"
+                ),
+                mock.patch.object(
+                    authority_builder.gate, "read_schema_receipt"
+                ) as receipt_reader,
+            ):
+                with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                    authority_builder.build_authority(REPOSITORY)
+            receipt_reader.assert_not_called()
+
+
 class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -6783,7 +6841,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     def test_exact_runtime_loads_plan_under_i_b(self) -> None:
         completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "R2R7_20260807\n")
+        self.assertEqual(completed.stdout, "R2R8_20260807\n")
         self.assertEqual(completed.stderr, "")
 
     def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
@@ -6797,7 +6855,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             with self.subTest(executable=str(executable)):
                 completed = self._run_isolated(executable)
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertNotIn("R2R7_20260807", completed.stdout)
+                self.assertNotIn("R2R8_20260807", completed.stdout)
 
     def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
         pythonpath = self._run_isolated(
@@ -6967,7 +7025,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
         self.assertFalse(current & r2r4)
         self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all("R2R7_20260807" in Path(path).name for path in current)
+            all("R2R8_20260807" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -6989,11 +7047,11 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R7_20260807",
+            "R2R8_20260807",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R7_20260807",
+            "R2R8_20260807",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))
