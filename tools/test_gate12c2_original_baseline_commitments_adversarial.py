@@ -1546,6 +1546,36 @@ class ExecutingCodeIdentityAdversarialTests(unittest.TestCase):
             with self.subTest(family=family):
                 self.assertEqual(covered, expected)
 
+    def test_mp_main_same_object_alias_only_on_both_production_paths(self) -> None:
+        for family in ("extractor", "verifier"):
+            error = (
+                gate.Gate12C2OriginalBaselineError
+                if family == "extractor"
+                else independent.IndependentVerificationError
+            )
+            with self.subTest(family=family, case="same_object"):
+                with tempfile.TemporaryDirectory() as temporary:
+                    identity, registry = self._identity(family, Path(temporary))
+                    try:
+                        registry["__mp_main__"] = registry["__main__"]
+                        result = identity.checkpoint(identity.checkpoints[0])
+                        self.assertEqual(result["git_head"], SOURCE_COMMIT)
+                    finally:
+                        identity.close()
+            with self.subTest(family=family, case="different_object"):
+                with tempfile.TemporaryDirectory() as temporary:
+                    identity, registry = self._identity(family, Path(temporary))
+                    try:
+                        entry = registry["__main__"]
+                        alias = types.ModuleType("__mp_main__")
+                        alias.__file__ = entry.__file__
+                        alias.__spec__ = entry.__spec__
+                        registry["__mp_main__"] = alias
+                        with self.assertRaises(error):
+                            identity.checkpoint(identity.checkpoints[0])
+                    finally:
+                        identity.close()
+
     def test_production_entries_bootstrap_before_unauthorized_checkout_use(
         self,
     ) -> None:
@@ -6753,7 +6783,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     def test_exact_runtime_loads_plan_under_i_b(self) -> None:
         completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "R2R6_20260807\n")
+        self.assertEqual(completed.stdout, "R2R7_20260807\n")
         self.assertEqual(completed.stderr, "")
 
     def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
@@ -6767,7 +6797,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             with self.subTest(executable=str(executable)):
                 completed = self._run_isolated(executable)
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertNotIn("R2R6_20260807", completed.stdout)
+                self.assertNotIn("R2R7_20260807", completed.stdout)
 
     def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
         pythonpath = self._run_isolated(
@@ -6937,7 +6967,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
         self.assertFalse(current & r2r4)
         self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all("R2R6_20260807" in Path(path).name for path in current)
+            all("R2R7_20260807" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -6959,11 +6989,11 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R6_20260807",
+            "R2R7_20260807",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R6_20260807",
+            "R2R7_20260807",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))

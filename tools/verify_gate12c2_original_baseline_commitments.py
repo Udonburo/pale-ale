@@ -72,10 +72,10 @@ R2R4_REMEDIATION_GRANDPARENT_COMMIT = (
 R2R5_REMEDIATION_GRANDPARENT_COMMIT = (
     "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 )
-R2R6_REMEDIATION_GRANDPARENT_COMMIT = (
-    "c8cb816577f52fb55d573c95828708c36b4359c5"
+R2R7_REMEDIATION_GRANDPARENT_COMMIT = (
+    "716f906ba0e3a3a46c97ed37a3a95937aa13335e"
 )
-R2R2_BASE_COMMIT = "716f906ba0e3a3a46c97ed37a3a95937aa13335e"
+R2R2_BASE_COMMIT = "f3ba0e14ec3dedd4698293399dc04a297df99ea6"
 R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -92,7 +92,7 @@ R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
 )
 R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R6_20260807"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R7_20260807"
 R2R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -100,9 +100,9 @@ R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
     r"\gate12c2_original_baseline_r2r2_portability_plan.json"
 )
-R2R2_PLAN_FILE_SHA256 = "a6f5e0b9e47956e8f7d6f3b35a7cf4dc6dea68d4e42c47657df6ad325159edd1"
-R2R2_PLAN_PAYLOAD_SHA256 = "902731ba65e1e50c6a89e4be91e6dc3ac29169df50aa641d6d3fc953af044d69"
-R2R2_ARTIFACT_SURFACE_SHA256 = "41e9b76c019c88c94cfe91069b44e993db26c410b65d3610d58433767bc5743a"
+R2R2_PLAN_FILE_SHA256 = "2792fa250348fa1613d69e82448e1f6a8a16bfaf3e734f5287785c02e00cc854"
+R2R2_PLAN_PAYLOAD_SHA256 = "8e65af4a1c41d6ba313d8121a74af2c8d18ae21914a0e4769e169df491a5343a"
+R2R2_ARTIFACT_SURFACE_SHA256 = "cc52553396d21b2f103600cc58851fbc07b935b5a2a4cd8c1c6b5a041f4e8e9d"
 R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
     "3ca482e642f28757faee308e6ea0002bc294710b08a1fa5124fbd374c5c5d992"
 )
@@ -111,7 +111,7 @@ R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "5209366bb316bf08bece76e06088e42301b4cc66f50e05ed3f5c33334cb4131e"
+    "5a454fc47d699e32dc15cb81cd0f09c48c827d395de06452ecdf437030f117d1"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256 = (
@@ -1687,13 +1687,18 @@ class IndependentExecutingCodeIdentity:
                 for relative in rows
                 if self._same_path(module_file, self.root / relative)
             ]
-            if matches and (
-                len(matches) != 1
-                or name != "__main__"
-                or module is not self.entry_module
-                or matches[0] != self.entry_row["relative_path"]
-            ):
-                _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+            if matches:
+                exact_entry = (
+                    len(matches) == 1
+                    and module is self.entry_module
+                    and matches[0] == self.entry_row["relative_path"]
+                )
+                if name == "__mp_main__":
+                    if exact_entry and self.registry.get("__main__") is module:
+                        continue
+                    _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
+                if name != "__main__" or not exact_entry:
+                    _fail("IMPLEMENTATION_BYTE_IDENTITY_MISMATCH")
 
     def _initialize(self) -> None:
         if (
@@ -3633,10 +3638,10 @@ def _independent_load_r2r2_plan(
         )
         != R2R2_PLAN_PAYLOAD_SHA256
         or overlay.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.5"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.6"
         or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or overlay.get("state")
-        != "R2R6_ISOLATED_RUNTIME_REMEDIATION_FROZEN"
+        != "R2R7_MP_MAIN_ALIAS_REMEDIATION_FROZEN"
         or overlay.get("remediation_plan_relative_path")
         != R2R2_PLAN_RELATIVE_PATH
         or overlay.get("artifact_path_surface_sha256")
@@ -3653,7 +3658,7 @@ def _independent_load_r2r2_plan(
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R6_REMEDIATION_GRANDPARENT_COMMIT,
+            "remediation_grandparent": R2R7_REMEDIATION_GRANDPARENT_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or overlay.get("preserved_identities")
