@@ -13,6 +13,7 @@ import copy
 import ctypes
 import ctypes.wintypes
 import hashlib
+import importlib.metadata
 import importlib.util
 import io
 import json
@@ -20,6 +21,7 @@ import math
 import os
 import re
 import socket
+import site
 import stat
 import subprocess
 import sys
@@ -102,7 +104,10 @@ R2R4_REMEDIATION_GRANDPARENT_COMMIT = (
 R2R5_REMEDIATION_GRANDPARENT_COMMIT = (
     "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 )
-R2R2_BASE_COMMIT = "c8cb816577f52fb55d573c95828708c36b4359c5"
+R2R6_REMEDIATION_GRANDPARENT_COMMIT = (
+    "c8cb816577f52fb55d573c95828708c36b4359c5"
+)
+R2R2_BASE_COMMIT = "716f906ba0e3a3a46c97ed37a3a95937aa13335e"
 R2_ACTIVATION_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -123,7 +128,7 @@ R2R1_REMEDIATION_PLAN_HISTORICAL_DECLARED_PATH = Path(
 R2R1_REMEDIATION_PLAN_BASE_BLOB_OID = (
     "be34a081f52916d8ad9f5ed80758562143b7031c"
 )
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R5_20260807"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R6_20260807"
 R2R2_PORTABILITY_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -134,12 +139,15 @@ R2R2_PORTABILITY_PLAN_HISTORICAL_DECLARED_PATH = Path(
 # Frozen after the final focused collection; updated exactly once before the
 # bounded candidate commit is created.
 R2R2_PORTABILITY_PLAN_FILE_SHA256 = (
-    "b3e573d322b47a6f6d9de87bbdc2f6571a2c536d1c95fa0b6f8db22c36717c69"
+    "a6f5e0b9e47956e8f7d6f3b35a7cf4dc6dea68d4e42c47657df6ad325159edd1"
 )
 R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256 = (
-    "d3b88230fab9f87496c37b273c9364b9e39d84882286e8a8ded9e69ea6ab38a2"
+    "902731ba65e1e50c6a89e4be91e6dc3ac29169df50aa641d6d3fc953af044d69"
 )
 R2R2_ARTIFACT_PATH_SURFACE_SHA256 = (
+    "41e9b76c019c88c94cfe91069b44e993db26c410b65d3610d58433767bc5743a"
+)
+R2R5_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256 = (
     "3ca482e642f28757faee308e6ea0002bc294710b08a1fa5124fbd374c5c5d992"
 )
 R2R4_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256 = (
@@ -149,7 +157,7 @@ R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = (
     "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 )
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "62ca71975147c6c927482b40fe49fd1159893f09260f6ce75bbb5923a562f8e1"
+    "5209366bb316bf08bece76e06088e42301b4cc66f50e05ed3f5c33334cb4131e"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = (
     "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
@@ -173,6 +181,24 @@ R2R5_RUNNER_RELATIVE_PATH = (
 )
 R2R5_RUNNER_FILE_SHA256 = (
     "2dcb3acc117b641997573c860fdd27b09e5d7dec3d91aadec04b980a7b8832fc"
+)
+R2R6_RUNTIME_PREFIX = Path(
+    r"C:\Users\aoika\Documents\Research\pale-ale-local\research-program"
+    r"\runtimes\R2R6_20260807"
+)
+R2R6_PYTHON_EXECUTABLE = R2R6_RUNTIME_PREFIX / "python.exe"
+R2R6_PYTHON_EXECUTABLE_FILE_SHA256 = (
+    "6965927a96b81d1717c1d2186de7feb9b29ebf8775464020ebc2f25de6ef8ee0"
+)
+R2R6_PYTHON_EXECUTABLE_SIZE_BYTES = 104208
+R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256 = (
+    "a9eebcb8a80676bb7463a0f49b2d6c23cb0aa937330e922113af95fdc6dcf1ae"
+)
+R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256 = (
+    "ed69867808d9ae9b3ec7b57b9d5efa05ed2eaab104190aabb5eebff46c319924"
+)
+R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256 = (
+    "cd03bf6f1d5c296bd225f06297d2ddfc8285be3774e145ec8b5461c35dd36385"
 )
 CONFIGURATION_SURFACE_SHA256 = (
     "a564c25f28e42860f0a1e8f51d4a311b4eae2b771f02dc3f62504547799f19cf"
@@ -2166,6 +2192,313 @@ def _validate_r2r2_occupied_r2r1(
 
 
 
+def _r2r6_expected_runtime_observation() -> dict[str, Any]:
+    prefix = str(R2R6_RUNTIME_PREFIX)
+    site_root = str(R2R6_RUNTIME_PREFIX / "Lib" / "site-packages")
+    packages = [
+        {
+            "direct_url_file_sha256": "3c9913ebc30ea378647e9c3c20a26408dc23c4c000be2c09079dc195cfdcf76a",
+            "direct_url_path": str(
+                R2R6_RUNTIME_PREFIX
+                / "Lib"
+                / "site-packages"
+                / "numpy-1.26.4.dist-info"
+                / "direct_url.json"
+            ),
+            "distribution_root": site_root,
+            "editable": False,
+            "file_count": 808,
+            "file_manifest_sha256": "8de1cdb7693d41e83573b7107741f0d1d0c0afd202b069664b739ab1433bfd19",
+            "import_root": str(R2R6_RUNTIME_PREFIX / "Lib" / "site-packages" / "numpy"),
+            "metadata_name": "numpy",
+            "metadata_version": "1.26.4",
+            "module_file": str(
+                R2R6_RUNTIME_PREFIX
+                / "Lib"
+                / "site-packages"
+                / "numpy"
+                / "__init__.py"
+            ),
+            "name": "numpy",
+            "total_size_bytes": 18827234,
+            "version": "1.26.4",
+        },
+        {
+            "direct_url_file_sha256": "4d35f025bfdd8f3093ccdf2f720f18b84c02d813eb550a1193010faa10b0a4e1",
+            "direct_url_path": str(
+                R2R6_RUNTIME_PREFIX
+                / "Lib"
+                / "site-packages"
+                / "threadpoolctl-3.5.0.dist-info"
+                / "direct_url.json"
+            ),
+            "distribution_root": site_root,
+            "editable": False,
+            "file_count": 8,
+            "file_manifest_sha256": "34b3acba20a65563b87f587c7f1eca9dd3665a131dbe78c815ab12cded1ca8cd",
+            "import_root": str(
+                R2R6_RUNTIME_PREFIX / "Lib" / "site-packages" / "threadpoolctl.py"
+            ),
+            "metadata_name": "threadpoolctl",
+            "metadata_version": "3.5.0",
+            "module_file": str(
+                R2R6_RUNTIME_PREFIX / "Lib" / "site-packages" / "threadpoolctl.py"
+            ),
+            "name": "threadpoolctl",
+            "total_size_bytes": 66291,
+            "version": "3.5.0",
+        },
+    ]
+    return {
+        "dependency_surface_sha256": R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256,
+        "dont_write_bytecode": True,
+        "egg_link_paths": [],
+        "enable_user_site": False,
+        "isolated": True,
+        "packages": packages,
+        "pth_files": [
+            {
+                "relative_path": "distutils-precedence.pth",
+                "sha256": "ab406aa05439fe87070cde36180433193568432f11d04f0f762f374b8a9302f5",
+                "size_bytes": 152,
+            }
+        ],
+        "pth_surface_sha256": "3ceee19aa71c6a2be8c5b741004136962d4e2c803884e04d31f9096a2fcbfb72",
+        "python_executable_file_sha256": R2R6_PYTHON_EXECUTABLE_FILE_SHA256,
+        "python_executable_path": str(R2R6_PYTHON_EXECUTABLE),
+        "python_executable_size_bytes": R2R6_PYTHON_EXECUTABLE_SIZE_BYTES,
+        "python_version": (
+            "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, "
+            "13:17:27) [MSC v.1929 64 bit (AMD64)]"
+        ),
+        "python_version_info": [3, 12, 7, "final", 0],
+        "pythonpath_present": False,
+        "site_packages_root": site_root,
+        "sys_base_prefix": prefix,
+        "sys_path": [
+            str(R2R6_RUNTIME_PREFIX / "python312.zip"),
+            str(R2R6_RUNTIME_PREFIX / "DLLs"),
+            str(R2R6_RUNTIME_PREFIX / "Lib"),
+            prefix,
+            site_root,
+        ],
+        "sys_prefix": prefix,
+        "user_site_path": str(
+            Path(r"C:\Users\aoika\AppData\Roaming\Python\Python312\site-packages")
+        ),
+    }
+
+
+def _r2r6_observe_package(name: str) -> dict[str, Any]:
+    try:
+        module = importlib.import_module(name)
+        distribution = importlib.metadata.distribution(name)
+        distribution_root = Path(distribution.locate_file("")).resolve()
+    except Exception:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    rows: list[dict[str, Any]] = []
+    for entry in distribution.files or ():
+        relative = str(entry).replace("\\", "/")
+        lowered = relative.casefold()
+        if "__pycache__" in lowered or lowered.endswith((".pyc", ".pyo")):
+            continue
+        if name == "numpy":
+            included = lowered.startswith("numpy/") or (
+                lowered.startswith("numpy-") and ".dist-info/" in lowered
+            )
+        else:
+            included = lowered == "threadpoolctl.py" or (
+                lowered.startswith("threadpoolctl-") and ".dist-info/" in lowered
+            )
+        if not included:
+            continue
+        path = Path(distribution.locate_file(entry)).resolve()
+        if path.is_file():
+            raw = path.read_bytes()
+            rows.append(
+                {
+                    "relative_path": relative,
+                    "size_bytes": len(raw),
+                    "sha256": sha256_bytes(raw),
+                }
+            )
+    rows.sort(key=lambda row: row["relative_path"])
+    direct_urls = list(
+        distribution_root.glob(
+            name.replace("-", "_") + "-*.dist-info/direct_url.json"
+        )
+    )
+    if len(direct_urls) != 1:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    direct_raw = direct_urls[0].read_bytes()
+    try:
+        direct_payload = json.loads(direct_raw)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if bool(direct_payload.get("dir_info", {}).get("editable", False)):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    module_file = Path(str(getattr(module, "__file__", ""))).resolve()
+    return {
+        "direct_url_file_sha256": sha256_bytes(direct_raw),
+        "direct_url_path": str(direct_urls[0].resolve()),
+        "distribution_root": str(distribution_root),
+        "editable": False,
+        "file_count": len(rows),
+        "file_manifest_sha256": sha256_bytes(canonical_json_bytes(rows)),
+        "import_root": str(module_file.parent if name == "numpy" else module_file),
+        "metadata_name": distribution.metadata.get("Name"),
+        "metadata_version": distribution.metadata.get("Version"),
+        "module_file": str(module_file),
+        "name": name,
+        "total_size_bytes": sum(row["size_bytes"] for row in rows),
+        "version": distribution.version,
+    }
+
+
+def _r2r6_observe_current_runtime() -> dict[str, Any]:
+    executable_raw = Path(sys.executable).read_bytes()
+    site_root = Path(sys.prefix).resolve() / "Lib" / "site-packages"
+    pth_rows: list[dict[str, Any]] = []
+    for path in sorted(site_root.glob("*.pth"), key=lambda value: value.name.casefold()):
+        raw = path.read_bytes()
+        pth_rows.append(
+            {
+                "relative_path": path.name,
+                "sha256": sha256_bytes(raw),
+                "size_bytes": len(raw),
+            }
+        )
+    packages = [_r2r6_observe_package("numpy"), _r2r6_observe_package("threadpoolctl")]
+    return {
+        "dependency_surface_sha256": sha256_bytes(canonical_json_bytes(packages)),
+        "dont_write_bytecode": bool(sys.dont_write_bytecode),
+        "egg_link_paths": [
+            str(path.resolve())
+            for path in sorted(site_root.glob("*.egg-link"), key=lambda value: value.name.casefold())
+        ],
+        "enable_user_site": bool(site.ENABLE_USER_SITE),
+        "isolated": bool(sys.flags.isolated),
+        "packages": packages,
+        "pth_files": pth_rows,
+        "pth_surface_sha256": sha256_bytes(canonical_json_bytes(pth_rows)),
+        "python_executable_file_sha256": sha256_bytes(executable_raw),
+        "python_executable_path": sys.executable,
+        "python_executable_size_bytes": len(executable_raw),
+        "python_version": sys.version,
+        "python_version_info": list(sys.version_info[:5]),
+        "pythonpath_present": os.environ.get("PYTHONPATH") is not None,
+        "site_packages_root": str(site_root),
+        "sys_base_prefix": sys.base_prefix,
+        "sys_path": list(sys.path),
+        "sys_prefix": sys.prefix,
+        "user_site_path": site.getusersitepackages(),
+    }
+
+
+def _r2r6_probe_selected_runtime(repository_root: Path | None = None) -> dict[str, Any]:
+    root = explicit_repository_root(repository_root)
+    module_path = Path(__file__).resolve()
+    probe_name = "_gate12c2_r2r6_core_runtime_probe"
+    source = (
+        "import importlib.util,sys;"
+        f"p={str(module_path)!r};n={probe_name!r};"
+        "s=importlib.util.spec_from_file_location(n,p);"
+        "m=importlib.util.module_from_spec(s);sys.modules[n]=m;"
+        "s.loader.exec_module(m);"
+        "sys.stdout.buffer.write(m.canonical_json_bytes("
+        "m._r2r6_observe_current_runtime())+b'\\n')"
+    )
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        completed = subprocess.run(
+            [str(R2R6_PYTHON_EXECUTABLE), "-I", "-B", "-c", source],
+            cwd=root,
+            env=environment,
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    if (
+        completed.returncode != 0
+        or completed.stderr != b""
+        or not completed.stdout.endswith(b"\n")
+        or completed.stdout.endswith(b"\n\n")
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    observed = require_mapping(
+        strict_json_loads(completed.stdout[:-1], canonical=True),
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if canonical_receipt_bytes(observed) != completed.stdout:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    return dict(observed)
+
+
+def _r2r6_expected_launch_contract() -> dict[str, Any]:
+    repository = AUTHORIZED_IMPLEMENTATION_REPOSITORY
+    runner = repository.joinpath(*PurePosixPath(R2R5_RUNNER_RELATIVE_PATH).parts)
+    return {
+        "argv_prefix": [str(R2R6_PYTHON_EXECUTABLE), "-I", "-B", str(runner)],
+        "child_environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "MUST_BE_ABSENT",
+        },
+        "cwd": str(repository),
+        "runner_file_sha256": R2R5_RUNNER_FILE_SHA256,
+        "runner_relative_path": R2R5_RUNNER_RELATIVE_PATH,
+        "runtime_observation": _r2r6_expected_runtime_observation(),
+        "stderr_protocol": ["gate12c2-original-baseline:ERROR:<SANITIZED_CODE>"],
+        "stdin": "DEVNULL",
+        "stdout_protocol": ["gate12c2-original-baseline:PASS"],
+    }
+
+
+def enforce_r2r6_current_runtime_preload() -> None:
+    if not sys.flags.isolated:
+        return
+    if _r2r6_observe_current_runtime() != _r2r6_expected_runtime_observation():
+        _raise("INPUT_LINEAGE_MISMATCH")
+
+
+def validate_r2r6_extraction_launch_contract(
+    value: object,
+    *,
+    repository_root: Path | None = None,
+) -> dict[str, Any]:
+    contract = dict(require_mapping(value, code="INPUT_LINEAGE_MISMATCH"))
+    expected = _r2r6_expected_launch_contract()
+    if (
+        contract != expected
+        or sha256_bytes(canonical_json_bytes(contract))
+        != R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256
+        or contract["runtime_observation"]["dependency_surface_sha256"]
+        != R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    observed = (
+        _r2r6_observe_current_runtime()
+        if sys.flags.isolated
+        else _r2r6_probe_selected_runtime(repository_root)
+    )
+    if observed != contract["runtime_observation"]:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    validate_repository_local_artifact(
+        repository_root,
+        historical_declared_path=contract["argv_prefix"][3],
+        expected_historical_declared_path=Path(contract["argv_prefix"][3]),
+        canonical_repository_relative_path=R2R5_RUNNER_RELATIVE_PATH,
+        expected_file_sha256=R2R5_RUNNER_FILE_SHA256,
+        bound_commit=R2R2_BASE_COMMIT,
+        expected_git_blob_oid="ca49cd0850202e718d8f028a8d74b3cb0bb64c15",
+    )
+    return contract
+
 def _r2r5_expected_launch_contract() -> dict[str, Any]:
     repository = AUTHORIZED_IMPLEMENTATION_REPOSITORY
     runner = repository.joinpath(*PurePosixPath(R2R5_RUNNER_RELATIVE_PATH).parts)
@@ -2426,6 +2759,204 @@ def validate_r2r5_historical_preclaim_stop(
             _raise("INPUT_LINEAGE_MISMATCH")
     return historical
 
+def _r2r6_historical_control_specs() -> dict[str, dict[str, str]]:
+    return {
+        "extraction_authorization": {
+            "file_sha256": (
+                "6ca24c225313f868a6a4692612c1d1e74d20c372eadd653318882f294c1c66fe"
+            ),
+            "payload_sha256": (
+                "7044bc67fd9f7b3d0e78a54166d642c4f441bdd5f7d39769ab12e9129092ee6b"
+            ),
+            "schema_version": (
+                "gate12c2_original_baseline_extraction_authorization_v0.9"
+            ),
+            "self_hash_field": "authorization_payload_sha256",
+            "state": "EXTRACTION_AUTHORIZED_UNVERIFIED",
+        },
+        "extraction_authorization_verdict": {
+            "file_sha256": (
+                "8114fd18bcdef9a37ef7977303951b054d962e7919ad87b9b20d5d8a4fce662f"
+            ),
+            "payload_sha256": (
+                "d3b34b68f24eae033d7829abae7a1da05b24a91d7460c6a1dfb87f36011727d7"
+            ),
+            "schema_version": (
+                "gate12c2_original_baseline_extraction_authorization_verdict_v0.9"
+            ),
+            "self_hash_field": "authorization_verdict_payload_sha256",
+            "state": "EXTRACTION_AUTHORIZATION_VERIFIED_PASS",
+        },
+        "extraction_preflight": {
+            "file_sha256": (
+                "de200ee8faf79811216e314edacb648af951c208a21428327cce994c4196927d"
+            ),
+            "payload_sha256": (
+                "fef9930e15994545345f0ebac073e88beb711b09456455fb1da1bb2e419a1f45"
+            ),
+            "schema_version": (
+                "gate12c2_original_baseline_extraction_preflight_v0.9"
+            ),
+            "self_hash_field": "preflight_payload_sha256",
+            "state": "EXTRACTION_PREFLIGHT_PASS",
+        },
+        "reviewed_implementation_authority": {
+            "file_sha256": (
+                "99bea4bb46b2d4b92caa0e2f551f8ad0add7f2e47e021ddbf06c68eb7657c316"
+            ),
+            "payload_sha256": (
+                "3c692ba6439be7ffede0701919cb297554b48e07212930b9141b722906731fdb"
+            ),
+            "schema_version": (
+                "gate12c2_original_baseline_r2r5_"
+                "reviewed_implementation_authority_v0.1"
+            ),
+            "self_hash_field": (
+                "reviewed_implementation_authority_payload_sha256"
+            ),
+            "state": "REVIEWED_IMPLEMENTATION_AUTHORITY_PUBLISHED",
+        },
+    }
+
+
+def validate_r2r6_historical_preclaim_stop(
+    value: object,
+    active_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    historical = dict(require_mapping(value, code="INPUT_LINEAGE_MISMATCH"))
+    require_exact_keys(
+        historical,
+        {
+            "artifact_path_surface",
+            "artifact_path_surface_sha256",
+            "attempted_argv_prefix",
+            "authority_namespace_id",
+            "execution_status",
+            "launch_failure_code",
+            "occupied_controls",
+            "required_absent_final_roles",
+            "required_absent_pending_roles",
+        },
+        code="INPUT_LINEAGE_MISMATCH",
+    )
+    if (
+        sha256_bytes(canonical_json_bytes(historical))
+        != R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256
+        or historical.get("authority_namespace_id") != "R2R5_20260807"
+        or historical.get("artifact_path_surface_sha256")
+        != R2R5_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256
+        or historical.get("attempted_argv_prefix") != [str(R2R5_PYTHON_EXECUTABLE), "-I", "-B", str(AUTHORIZED_IMPLEMENTATION_REPOSITORY.joinpath(*PurePosixPath(R2R5_RUNNER_RELATIVE_PATH).parts))]
+        or historical.get("launch_failure_code") != "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH"
+        or historical.get("execution_status")
+        != (
+            "HISTORICALLY_VALID_CONTROLS_OPERATIONALLY_RETIRED_AFTER_"
+            "PRECLAIM_ISOLATED_RUNTIME_DEPENDENCY_FAILURE"
+        )
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    rows = historical.get("artifact_path_surface")
+    current_roles = {row.get("role") for row in active_rows}
+    if (
+        not isinstance(rows, list)
+        or len(rows) != 18
+        or rows != sorted(rows, key=lambda row: row.get("role", ""))
+        or {row.get("role") for row in rows} != current_roles
+        or sha256_bytes(canonical_json_bytes(rows))
+        != R2R5_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    historical_by_role = {row["role"]: row for row in rows}
+    historical_paths = {
+        path
+        for row in rows
+        for path in (row["final_path"], row["pending_path"])
+    }
+    current_paths = {
+        path
+        for row in active_rows
+        for path in (row["final_path"], row["pending_path"])
+    }
+    if historical_paths & current_paths:
+        _raise("INPUT_LINEAGE_MISMATCH")
+    expected_absent = sorted(
+        [
+            "extraction_execution_claim",
+            "extraction_failure",
+            "extraction_success",
+            "extraction_terminal",
+            "verifier_authorization",
+            "verifier_authorization_verdict",
+            "verifier_execution_claim",
+            "verifier_failure",
+            "verifier_preflight",
+            "verifier_success",
+            "verifier_terminal",
+        ]
+    )
+    if (
+        historical.get("required_absent_final_roles") != expected_absent
+        or historical.get("required_absent_pending_roles")
+        != sorted(historical_by_role)
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    for role in expected_absent:
+        if Path(historical_by_role[role]["final_path"]).exists():
+            _raise("UNEXPECTED_ARTIFACT")
+    for row in rows:
+        if Path(row["pending_path"]).exists():
+            _raise("UNEXPECTED_ARTIFACT")
+    controls = historical.get("occupied_controls")
+    specs = _r2r6_historical_control_specs()
+    if (
+        not isinstance(controls, list)
+        or controls != sorted(controls, key=lambda row: row.get("role", ""))
+        or {row.get("role") for row in controls} != set(specs)
+    ):
+        _raise("INPUT_LINEAGE_MISMATCH")
+    for row_value in controls:
+        row = require_mapping(row_value, code="INPUT_LINEAGE_MISMATCH")
+        role = row.get("role")
+        spec = specs.get(role)
+        if spec is None or row != {
+            "file_sha256": spec["file_sha256"],
+            "path": historical_by_role[role]["final_path"],
+            "payload_sha256": spec["payload_sha256"],
+            "role": role,
+            "schema_version": spec["schema_version"],
+            "self_hash_field": spec["self_hash_field"],
+            "state": spec["state"],
+        }:
+            _raise("INPUT_LINEAGE_MISMATCH")
+        raw = read_exact_bytes(
+            Path(row["path"]),
+            spec["file_sha256"],
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        if (
+            not raw.endswith(b"\n")
+            or raw.endswith((b"\r\n", b"\n\n"))
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+        payload = require_mapping(
+            strict_json_loads(raw[:-1], canonical=True),
+            code="INPUT_LINEAGE_MISMATCH",
+        )
+        unhashed = dict(payload)
+        try:
+            supplied_hash = unhashed.pop(spec["self_hash_field"])
+        except KeyError:
+            _raise("INPUT_LINEAGE_MISMATCH")
+        if (
+            canonical_receipt_bytes(payload) != raw
+            or payload.get("schema_version") != spec["schema_version"]
+            or payload.get("state") != spec["state"]
+            or supplied_hash != spec["payload_sha256"]
+            or sha256_bytes(canonical_json_bytes(unhashed))
+            != spec["payload_sha256"]
+        ):
+            _raise("INPUT_LINEAGE_MISMATCH")
+    return historical
+
 def validate_r2r2_portability_plan(
     r2r1_active_plan: Mapping[str, Any],
     portability_plan: Mapping[str, Any],
@@ -2449,6 +2980,9 @@ def validate_r2r2_portability_plan(
             "historical_r2r3_authority",
             "historical_r2r4_preclaim_stop",
             "historical_r2r4_preclaim_surface_sha256",
+            "historical_r2r5_preclaim_stop",
+            "historical_r2r5_preclaim_surface_sha256",
+            "isolated_runtime_dependency_surface_sha256",
             "extraction_launch_contract",
             "extraction_launch_contract_sha256",
             "implementation_binding_contract_overlay",
@@ -2486,10 +3020,10 @@ def validate_r2r2_portability_plan(
         supplied["r2r2_portability_plan_payload_sha256"]
         != R2R2_PORTABILITY_PLAN_PAYLOAD_SHA256
         or supplied.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.4"
+        != "gate12c2_original_baseline_r2r2_portability_plan_v0.5"
         or supplied.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or supplied.get("state")
-        != "R2R5_LAUNCH_RETRY_FROZEN"
+        != "R2R6_ISOLATED_RUNTIME_REMEDIATION_FROZEN"
         or supplied.get("remediation_plan_relative_path")
         != R2R2_PORTABILITY_PLAN_RELATIVE_PATH
         or supplied.get("artifact_path_surface_sha256")
@@ -2506,7 +3040,7 @@ def validate_r2r2_portability_plan(
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R5_REMEDIATION_GRANDPARENT_COMMIT,
+            "remediation_grandparent": R2R6_REMEDIATION_GRANDPARENT_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or supplied.get("preserved_identities")
@@ -2684,11 +3218,15 @@ def validate_r2r2_portability_plan(
     if (
         supplied.get("historical_r2r4_preclaim_surface_sha256")
         != R2R5_HISTORICAL_R2R4_PRECLAIM_SURFACE_SHA256
+        or supplied.get("historical_r2r5_preclaim_surface_sha256")
+        != R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256
+        or supplied.get("isolated_runtime_dependency_surface_sha256")
+        != R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
         or supplied.get("extraction_launch_contract_sha256")
-        != R2R5_EXTRACTION_LAUNCH_CONTRACT_SHA256
+        != R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256
     ):
         _raise("INPUT_LINEAGE_MISMATCH")
-    validate_r2r5_extraction_launch_contract(
+    validate_r2r6_extraction_launch_contract(
         supplied.get("extraction_launch_contract"),
         repository_root=repository_root,
     )
@@ -2769,6 +3307,9 @@ def validate_r2r2_portability_plan(
     validate_r2r5_historical_preclaim_stop(
         supplied.get("historical_r2r4_preclaim_stop"), rows
     )
+    validate_r2r6_historical_preclaim_stop(
+        supplied.get("historical_r2r5_preclaim_stop"), rows
+    )
     old_paths = {
         value
         for row in old_rows.values()
@@ -2841,6 +3382,8 @@ def validate_r2r2_portability_plan(
         seen.update((final_path, pending_path))
     static_tail = [
         "historical_r2r4_preclaim_surface_sha256",
+        "historical_r2r5_preclaim_surface_sha256",
+        "isolated_runtime_dependency_surface_sha256",
         "extraction_launch_contract_sha256",
     ]
     for name in (
@@ -2858,7 +3401,7 @@ def validate_r2r2_portability_plan(
         ).get("exact_top_level_fields")
         if (
             not isinstance(fields, list)
-            or fields[-3:-1] != static_tail
+            or fields[-5:-1] != static_tail
             or any(fields.count(field) != 1 for field in static_tail)
         ):
             _raise("INPUT_LINEAGE_MISMATCH")
@@ -3080,11 +3623,20 @@ def build_r2r2_active_plan(
         "historical_r2r4_preclaim_surface_sha256": (
             R2R5_HISTORICAL_R2R4_PRECLAIM_SURFACE_SHA256
         ),
+        "historical_r2r5_preclaim_stop": copy.deepcopy(
+            overlay["historical_r2r5_preclaim_stop"]
+        ),
+        "historical_r2r5_preclaim_surface_sha256": (
+            R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256
+        ),
+        "isolated_runtime_dependency_surface_sha256": (
+            R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
+        ),
         "extraction_launch_contract": copy.deepcopy(
             overlay["extraction_launch_contract"]
         ),
         "extraction_launch_contract_sha256": (
-            R2R5_EXTRACTION_LAUNCH_CONTRACT_SHA256
+            R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256
         ),
     }
     if (
@@ -3104,8 +3656,10 @@ def build_r2r2_active_plan(
         or set(nested)
         != {
             R2R2_ARTIFACT_PATH_SURFACE_SHA256,
+            R2R5_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256,
             R2R4_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256,
         }
+        or nested.count(R2R5_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256) != 1
         or nested.count(R2R4_HISTORICAL_ARTIFACT_PATH_SURFACE_SHA256) != 1
     ):
         _raise("INPUT_LINEAGE_MISMATCH")
@@ -3114,6 +3668,7 @@ def build_r2r2_active_plan(
 def load_active_plan(
     *, repository_root: Path | None = None
 ) -> dict[str, Any]:
+    enforce_r2r6_current_runtime_preload()
     root = explicit_repository_root(repository_root)
     r2_active = load_r2_active_plan(repository_root=root)
     remediation = load_r2r1_remediation_plan(
@@ -6925,8 +7480,14 @@ def active_remediation_identity(
                 "historical_r2r4_preclaim_surface_sha256": (
                     R2R5_HISTORICAL_R2R4_PRECLAIM_SURFACE_SHA256
                 ),
+                "historical_r2r5_preclaim_surface_sha256": (
+                    R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256
+                ),
+                "isolated_runtime_dependency_surface_sha256": (
+                    R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
+                ),
                 "extraction_launch_contract_sha256": (
-                    R2R5_EXTRACTION_LAUNCH_CONTRACT_SHA256
+                    R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256
                 ),
             }
         )

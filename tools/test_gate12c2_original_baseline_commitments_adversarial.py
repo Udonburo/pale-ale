@@ -6608,7 +6608,7 @@ class R2R4OriginalInputLineageTests(unittest.TestCase):
         self.assertTrue(all(not path.exists() for path in paths))
 
 
-class R2R5LaunchRetryTests(unittest.TestCase):
+class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
@@ -6616,7 +6616,7 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             repository_root=REPOSITORY
         )
         cls.control = cls.plan["r2r2_portability_control"]
-        cls.historical = cls.control["historical_r2r4_preclaim_stop"]
+        cls.historical = cls.control["historical_r2r5_preclaim_stop"]
         cls.current_by_role = {
             row["role"]: row for row in cls.plan["artifact_path_surface"]
         }
@@ -6625,24 +6625,31 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             for row in cls.historical["artifact_path_surface"]
         }
 
-    def _runner_command(self, *flags: str) -> list[str]:
-        contract = self.control["extraction_launch_contract"]
-        return [
-            contract["python_executable_path"],
-            *flags,
-            contract["argv_prefix"][3],
-            "--repository",
-            str(REPOSITORY),
-            "--execution-claim-id",
-            "r2r5-focused-preclaim",
-            "--launch-id",
-            "r2r5-focused-preclaim",
-            "--claimed-at-utc",
-            "2026-08-07T00:00:00Z",
-        ]
+    @staticmethod
+    def _isolated_module_source(*, inject_path: bool = False) -> str:
+        injection = (
+            f"sys.path.insert(0,{str(REPOSITORY)!r});"
+            if inject_path
+            else ""
+        )
+        return (
+            "import importlib.util,sys;"
+            + injection
+            + f"p={str(REPOSITORY / gate.R2R2_PORTABILITY_PLAN_RELATIVE_PATH)!r};"
+            + f"m_path={str(REPOSITORY / 'tools' / 'gate12c2_original_baseline_commitments.py')!r};"
+            + "s=importlib.util.spec_from_file_location('r2r6_runtime_test',m_path);"
+            + "m=importlib.util.module_from_spec(s);sys.modules[s.name]=m;"
+            + "s.loader.exec_module(m);"
+            + "m.load_active_plan(repository_root=m.AUTHORIZED_IMPLEMENTATION_REPOSITORY);"
+            + "print(m.R2R2_AUTHORITY_NAMESPACE_ID)"
+        )
 
-    def _run_runner(
-        self, *flags: str, pythonpath: str | None = None
+    @staticmethod
+    def _run_isolated(
+        executable: Path,
+        *,
+        pythonpath: str | None = None,
+        inject_path: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         environment = dict(os.environ)
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -6651,7 +6658,15 @@ class R2R5LaunchRetryTests(unittest.TestCase):
         else:
             environment["PYTHONPATH"] = pythonpath
         return subprocess.run(
-            self._runner_command(*flags),
+            [
+                str(executable),
+                "-I",
+                "-B",
+                "-c",
+                R2R6IsolatedRuntimeRemediationTests._isolated_module_source(
+                    inject_path=inject_path
+                ),
+            ],
             cwd=REPOSITORY,
             env=environment,
             stdin=subprocess.DEVNULL,
@@ -6659,11 +6674,11 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
-            timeout=30,
+            timeout=60,
             check=False,
         )
 
-    def _assert_no_r2r5_runtime(self) -> None:
+    def _assert_no_r2r6_runtime(self) -> None:
         runtime = {
             "extraction_execution_claim",
             "extraction_failure",
@@ -6682,74 +6697,167 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             self.assertFalse(Path(row["final_path"]).exists(), role)
             self.assertFalse(Path(row["pending_path"]).exists(), role)
 
-    def test_exact_launch_contract_and_isolation_guard_order(self) -> None:
-        core = gate.validate_r2r5_extraction_launch_contract(
+    def test_exact_runtime_contract_matches_independent_rederivation(self) -> None:
+        core = gate.validate_r2r6_extraction_launch_contract(
             self.control["extraction_launch_contract"],
             repository_root=REPOSITORY,
         )
-        standalone = independent._independent_validate_r2r5_launch_contract(
-            self.independent_plan["r2r2_portability_control"][
-                "extraction_launch_contract"
-            ],
-            repository_root=REPOSITORY,
+        standalone = (
+            independent._independent_validate_r2r6_extraction_launch_contract(
+                self.independent_plan["r2r2_portability_control"][
+                    "extraction_launch_contract"
+                ],
+                repository_root=REPOSITORY,
+            )
         )
         self.assertEqual(core, standalone)
         self.assertEqual(
             gate.sha256_bytes(gate.canonical_json_bytes(core)),
-            gate.R2R5_EXTRACTION_LAUNCH_CONTRACT_SHA256,
+            gate.R2R6_EXTRACTION_LAUNCH_CONTRACT_SHA256,
         )
         self.assertEqual(core["argv_prefix"][1:3], ["-I", "-B"])
         self.assertEqual(core["cwd"], str(REPOSITORY))
         self.assertEqual(core["stdin"], "DEVNULL")
+        self.assertEqual(core["child_environment"]["PYTHONPATH"], "MUST_BE_ABSENT")
         self.assertEqual(
             gate.sha256_bytes(
                 (REPOSITORY / core["runner_relative_path"]).read_bytes()
             ),
             gate.R2R5_RUNNER_FILE_SHA256,
         )
-        source = inspect.getsource(extraction_runner.execute)
-        self.assertLess(source.index("_runtime_isolated()"), source.index("load_active_plan"))
-        self.assertLess(source.index("_runtime_isolated()"), source.index("publish_role"))
 
-    def test_nonisolated_and_pythonpath_reject_before_claim(self) -> None:
-        self._assert_no_r2r5_runtime()
-        nonisolated = self._run_runner("-B")
-        self.assertEqual(nonisolated.returncode, 2)
-        self.assertEqual(nonisolated.stdout, "")
+    def test_isolated_runtime_imports_and_path_surface_are_frozen(self) -> None:
+        expected = gate._r2r6_expected_runtime_observation()
+        observed = gate._r2r6_probe_selected_runtime(REPOSITORY)
+        standalone = independent._independent_r2r6_probe_selected_runtime(
+            REPOSITORY
+        )
+        self.assertEqual(observed, expected)
+        self.assertEqual(standalone, expected)
+        self.assertTrue(observed["isolated"])
+        self.assertTrue(observed["dont_write_bytecode"])
+        self.assertFalse(observed["enable_user_site"])
+        self.assertFalse(observed["pythonpath_present"])
+        self.assertEqual(observed["egg_link_paths"], [])
+        self.assertNotIn(observed["user_site_path"], observed["sys_path"])
         self.assertEqual(
-            nonisolated.stderr,
-            "gate12c2-original-baseline:ERROR:AUTHORIZATION_INVALID\n",
+            [row["name"] for row in observed["packages"]],
+            ["numpy", "threadpoolctl"],
         )
-        with_pythonpath = self._run_runner(
-            "-I", "-B", pythonpath=str(REPOSITORY)
-        )
-        self.assertEqual(with_pythonpath.returncode, 2)
-        self.assertEqual(with_pythonpath.stdout, "")
+        self.assertTrue(all(not row["editable"] for row in observed["packages"]))
         self.assertEqual(
-            with_pythonpath.stderr,
-            "gate12c2-original-baseline:ERROR:AUTHORIZATION_INVALID\n",
+            observed["dependency_surface_sha256"],
+            gate.R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256,
         )
-        self._assert_no_r2r5_runtime()
 
-    def test_isolated_launch_passes_guard_and_stops_on_absent_controls(self) -> None:
-        self._assert_no_r2r5_runtime()
-        isolated = self._run_runner("-I", "-B")
-        self.assertEqual(isolated.returncode, 2)
-        self.assertEqual(isolated.stdout, "")
-        self.assertEqual(
-            isolated.stderr,
-            "gate12c2-original-baseline:ERROR:INPUT_LINEAGE_MISMATCH\n",
-        )
-        self.assertNotIn("AUTHORIZATION_INVALID", isolated.stderr)
-        self._assert_no_r2r5_runtime()
+    def test_exact_runtime_loads_plan_under_i_b(self) -> None:
+        completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.stdout, "R2R6_20260807\n")
+        self.assertEqual(completed.stderr, "")
 
-    def test_historical_controls_are_exact_retired_and_runtime_absent(self) -> None:
-        core = gate.validate_r2r5_historical_preclaim_stop(
+    def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
+        candidates = [
+            Path(r"C:\Program Files\Python311\python.exe"),
+            REPOSITORY / ".venv" / "Scripts" / "python.exe",
+        ]
+        for executable in candidates:
+            if not executable.exists():
+                continue
+            with self.subTest(executable=str(executable)):
+                completed = self._run_isolated(executable)
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertNotIn("R2R6_20260807", completed.stdout)
+
+    def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
+        pythonpath = self._run_isolated(
+            gate.R2R6_PYTHON_EXECUTABLE,
+            pythonpath=str(REPOSITORY),
+        )
+        self.assertNotEqual(pythonpath.returncode, 0)
+        injected = self._run_isolated(
+            gate.R2R6_PYTHON_EXECUTABLE,
+            inject_path=True,
+        )
+        self.assertNotEqual(injected.returncode, 0)
+
+    def test_runtime_resolution_contract_attacks_fail_both_validators(self) -> None:
+        base = self.control["extraction_launch_contract"]
+        mutations = []
+
+        alternate = copy.deepcopy(base)
+        alternate["argv_prefix"][0] = r"C:\Program Files\Python311\python.exe"
+        mutations.append(alternate)
+
+        path_injection = copy.deepcopy(base)
+        path_injection["runtime_observation"]["sys_path"].insert(
+            0, str(REPOSITORY)
+        )
+        mutations.append(path_injection)
+
+        user_site = copy.deepcopy(base)
+        user_site["runtime_observation"]["enable_user_site"] = True
+        mutations.append(user_site)
+
+        editable = copy.deepcopy(base)
+        editable["runtime_observation"]["packages"][0]["editable"] = True
+        mutations.append(editable)
+
+        substitution = copy.deepcopy(base)
+        substitution["runtime_observation"]["packages"][1]["version"] = "3.4.0"
+        mutations.append(substitution)
+
+        missing = copy.deepcopy(base)
+        missing["runtime_observation"]["packages"].pop()
+        mutations.append(missing)
+
+        pth = copy.deepcopy(base)
+        pth["runtime_observation"]["pth_files"].append(
+            {"relative_path": "injected.pth", "sha256": DIGEST, "size_bytes": 1}
+        )
+        mutations.append(pth)
+
+        for attacked in mutations:
+            with self.subTest(attacked=attacked):
+                with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                    gate.validate_r2r6_extraction_launch_contract(
+                        attacked, repository_root=REPOSITORY
+                    )
+                with self.assertRaises(
+                    independent.IndependentVerificationError
+                ):
+                    independent._independent_validate_r2r6_extraction_launch_contract(
+                        attacked, repository_root=REPOSITORY
+                    )
+
+    def test_observed_package_substitution_is_rejected(self) -> None:
+        contract = self.control["extraction_launch_contract"]
+        attacked = copy.deepcopy(contract["runtime_observation"])
+        attacked["packages"][0]["file_manifest_sha256"] = OTHER_DIGEST
+        with mock.patch.object(
+            gate, "_r2r6_probe_selected_runtime", return_value=attacked
+        ):
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r6_extraction_launch_contract(
+                    contract, repository_root=REPOSITORY
+                )
+        with mock.patch.object(
+            independent,
+            "_independent_r2r6_probe_selected_runtime",
+            return_value=attacked,
+        ):
+            with self.assertRaises(independent.IndependentVerificationError):
+                independent._independent_validate_r2r6_extraction_launch_contract(
+                    contract, repository_root=REPOSITORY
+                )
+
+    def test_r2r5_controls_are_exact_retired_and_runtime_absent(self) -> None:
+        core = gate.validate_r2r6_historical_preclaim_stop(
             self.historical, self.plan["artifact_path_surface"]
         )
-        standalone = independent._independent_validate_r2r5_preclaim_stop(
+        standalone = independent._independent_validate_r2r6_preclaim_stop(
             self.independent_plan["r2r2_portability_control"][
-                "historical_r2r4_preclaim_stop"
+                "historical_r2r5_preclaim_stop"
             ],
             self.independent_plan["artifact_path_surface"],
         )
@@ -6757,13 +6865,16 @@ class R2R5LaunchRetryTests(unittest.TestCase):
         self.assertEqual(
             core["execution_status"],
             "HISTORICALLY_VALID_CONTROLS_OPERATIONALLY_RETIRED_AFTER_"
-            "PRECLAIM_LAUNCH_CONTRACT_MISMATCH",
+            "PRECLAIM_ISOLATED_RUNTIME_DEPENDENCY_FAILURE",
         )
-        self.assertEqual(core["launch_failure_code"], "AUTHORIZATION_INVALID")
+        self.assertEqual(
+            core["launch_failure_code"],
+            "IMPLEMENTATION_BYTE_IDENTITY_MISMATCH",
+        )
         for row in core["occupied_controls"]:
             raw = Path(row["path"]).read_bytes()
             self.assertEqual(gate.sha256_bytes(raw), row["file_sha256"])
-        self._assert_no_r2r5_runtime()
+        self._assert_no_r2r6_runtime()
 
     def test_tampered_historical_control_and_present_leaf_are_rejected(self) -> None:
         target = Path(self.historical["occupied_controls"][0]["path"])
@@ -6775,11 +6886,11 @@ class R2R5LaunchRetryTests(unittest.TestCase):
 
         with mock.patch.object(Path, "read_bytes", tampered_read):
             with self.assertRaises(gate.Gate12C2OriginalBaselineError):
-                gate.validate_r2r5_historical_preclaim_stop(
+                gate.validate_r2r6_historical_preclaim_stop(
                     self.historical, self.plan["artifact_path_surface"]
                 )
             with self.assertRaises(independent.IndependentVerificationError):
-                independent._independent_validate_r2r5_preclaim_stop(
+                independent._independent_validate_r2r6_preclaim_stop(
                     self.historical,
                     self.independent_plan["artifact_path_surface"],
                 )
@@ -6794,31 +6905,39 @@ class R2R5LaunchRetryTests(unittest.TestCase):
 
         with mock.patch.object(Path, "exists", injected_exists):
             with self.assertRaises(gate.Gate12C2OriginalBaselineError):
-                gate.validate_r2r5_historical_preclaim_stop(
+                gate.validate_r2r6_historical_preclaim_stop(
                     self.historical, self.plan["artifact_path_surface"]
                 )
             with self.assertRaises(independent.IndependentVerificationError):
-                independent._independent_validate_r2r5_preclaim_stop(
+                independent._independent_validate_r2r6_preclaim_stop(
                     self.historical,
                     self.independent_plan["artifact_path_surface"],
                 )
 
-    def test_r2r5_surface_is_disjoint_from_every_historical_path(self) -> None:
+    def test_r2r6_surface_is_disjoint_from_r2r5_and_r2r4(self) -> None:
         current = {
             path
             for row in self.plan["artifact_path_surface"]
             for path in (row["final_path"], row["pending_path"])
         }
-        historical = {
+        r2r5 = {
             path
             for row in self.historical["artifact_path_surface"]
             for path in (row["final_path"], row["pending_path"])
         }
+        r2r4 = {
+            path
+            for row in self.control["historical_r2r4_preclaim_stop"][
+                "artifact_path_surface"
+            ]
+            for path in (row["final_path"], row["pending_path"])
+        }
         self.assertEqual(len(current), 36)
-        self.assertEqual(len(historical), 36)
-        self.assertFalse(current & historical)
+        self.assertFalse(current & r2r5)
+        self.assertFalse(current & r2r4)
+        self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all(gate.R2R2_AUTHORITY_NAMESPACE_ID in Path(path).name for path in current)
+            all("R2R6_20260807" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -6829,7 +6948,7 @@ class R2R5LaunchRetryTests(unittest.TestCase):
         def guarded(path: Path) -> bytes:
             normalized = str(path).casefold()
             if normalized.startswith(protected):
-                raise AssertionError("protected root read during R2R5 Phase A")
+                raise AssertionError("protected root read during R2R6 Phase A")
             reads.append(normalized)
             return original_read(path)
 
@@ -6840,23 +6959,42 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R5_20260807",
+            "R2R6_20260807",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R5_20260807",
+            "R2R6_20260807",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))
 
-    def test_launch_contract_and_historical_surface_rehash_attacks_fail(self) -> None:
+    def test_runner_is_byte_identical_and_isolation_guard_precedes_reads(self) -> None:
+        self.assertEqual(
+            gate.sha256_bytes(
+                (REPOSITORY / gate.R2R5_RUNNER_RELATIVE_PATH).read_bytes()
+            ),
+            gate.R2R5_RUNNER_FILE_SHA256,
+        )
+        source = inspect.getsource(extraction_runner.execute)
+        self.assertLess(
+            source.index("_runtime_isolated()"),
+            source.index("load_active_plan"),
+        )
+        self.assertLess(
+            source.index("_runtime_isolated()"),
+            source.index("publish_role"),
+        )
+        self._assert_no_r2r6_runtime()
+
+    def test_launch_and_historical_rehash_attacks_fail(self) -> None:
         overlay = gate.load_r2r2_portability_plan(
             repository_root=REPOSITORY,
             check_r2r1_occupancy=True,
         )
-        attacks = []
         launch = copy.deepcopy(overlay)
-        launch["extraction_launch_contract"]["argv_prefix"][1] = "-B"
+        launch["extraction_launch_contract"]["runtime_observation"][
+            "pythonpath_present"
+        ] = True
         launch["extraction_launch_contract_sha256"] = gate.sha256_bytes(
             gate.canonical_json_bytes(launch["extraction_launch_contract"])
         )
@@ -6868,15 +7006,15 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             },
             "r2r2_portability_plan_payload_sha256",
         )
-        attacks.append(launch)
+
         historical = copy.deepcopy(overlay)
-        historical["historical_r2r4_preclaim_stop"][
+        historical["historical_r2r5_preclaim_stop"][
             "required_absent_final_roles"
         ].pop()
-        historical["historical_r2r4_preclaim_surface_sha256"] = (
+        historical["historical_r2r5_preclaim_surface_sha256"] = (
             gate.sha256_bytes(
                 gate.canonical_json_bytes(
-                    historical["historical_r2r4_preclaim_stop"]
+                    historical["historical_r2r5_preclaim_stop"]
                 )
             )
         )
@@ -6888,7 +7026,7 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             },
             "r2r2_portability_plan_payload_sha256",
         )
-        attacks.append(historical)
+
         r2r1 = gate.build_r2r1_active_plan(
             gate.load_r2_active_plan(repository_root=REPOSITORY),
             gate.load_r2r1_remediation_plan(
@@ -6897,15 +7035,14 @@ class R2R5LaunchRetryTests(unittest.TestCase):
             ),
             repository_root=REPOSITORY,
         )
-        for attacked in attacks:
-            with self.subTest(attack=attacked["state"]):
-                with self.assertRaises(gate.Gate12C2OriginalBaselineError):
-                    gate.validate_r2r2_portability_plan(
-                        r2r1,
-                        attacked,
-                        repository_root=REPOSITORY,
-                        check_r2r1_occupancy=True,
-                    )
+        for attacked in (launch, historical):
+            with self.assertRaises(gate.Gate12C2OriginalBaselineError):
+                gate.validate_r2r2_portability_plan(
+                    r2r1,
+                    attacked,
+                    repository_root=REPOSITORY,
+                    check_r2r1_occupancy=True,
+                )
 
 if __name__ == "__main__":
     unittest.main()
