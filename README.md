@@ -33,6 +33,20 @@ classifier, model-quality score, deception detector, or claim about model
 internals. It is a first-contact demo, not a replacement for the bounded
 Gate12A/Gate12B reports.
 
+## Gate12C-2 Development Checkpoint
+
+The August 2026 Gate12C-2 checkpoint is a development-only measurement and
+calibration surface. It includes graph-constrained synthetic controls, a
+jointly realizable primary null candidate, deterministic outer-experiment
+infrastructure, and an independently verified baseline commitment over the
+existing 768-outer development payload.
+
+- [Read the Gate12C-2 development checkpoint](docs/public-facing/gate12c2-development-checkpoint-2026-08-08.md)
+
+This is not a citable scientific result. Draw-count selection, development
+calibration, replacement resource qualification, real held-out evaluation,
+and multi-agent empirical validation remain pending.
+
 ## Current Citable Releases
 
 | Surface | DOI | Role | When to cite |
