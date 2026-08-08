@@ -6841,7 +6841,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     def test_exact_runtime_loads_plan_under_i_b(self) -> None:
         completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "R2R10_20260808\n")
+        self.assertEqual(completed.stdout, "R2R11_20260808\n")
         self.assertEqual(completed.stderr, "")
 
     def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
@@ -6855,7 +6855,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             with self.subTest(executable=str(executable)):
                 completed = self._run_isolated(executable)
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertNotIn("R2R10_20260808", completed.stdout)
+                self.assertNotIn("R2R11_20260808", completed.stdout)
 
     def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
         pythonpath = self._run_isolated(
@@ -7025,7 +7025,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
         self.assertFalse(current & r2r4)
         self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all("R2R10_20260808" in Path(path).name for path in current)
+            all("R2R11_20260808" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -7047,11 +7047,11 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R10_20260808",
+            "R2R11_20260808",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R10_20260808",
+            "R2R11_20260808",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))
@@ -7162,6 +7162,49 @@ class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
             binding_required["remediation_base_parent"],
             identity["grandparent_commit"],
         )
+
+    def test_independent_publication_uses_active_namespace(self) -> None:
+        row = independent._artifact_rows(self.independent_plan)[
+            "verifier_execution_claim"
+        ]
+        with mock.patch.object(
+            independent.os,
+            "open",
+            side_effect=OSError("no-write probe"),
+        ) as open_mock:
+            with self.assertRaises(
+                independent.IndependentVerificationError
+            ) as caught:
+                independent._publish(
+                    self.independent_plan,
+                    "verifier_execution_claim",
+                    {},
+                )
+        self.assertEqual(caught.exception.code, "OUTPUT_PUBLICATION_FAILED")
+        self.assertEqual(Path(open_mock.call_args.args[0]), Path(row["pending_path"]))
+
+        attacked = copy.deepcopy(self.independent_plan)
+        attacked_row = independent._artifact_rows(attacked)[
+            "verifier_execution_claim"
+        ]
+        attacked_row["pending_path"] = attacked_row["pending_path"].replace(
+            "R2R11_20260808",
+            "R2R10_20260808",
+        )
+        for surface_row in attacked["artifact_path_surface"]:
+            if surface_row["role"] == "verifier_execution_claim":
+                surface_row["pending_path"] = attacked_row["pending_path"]
+        with mock.patch.object(independent.os, "open") as open_mock:
+            with self.assertRaises(
+                independent.IndependentVerificationError
+            ) as caught:
+                independent._publish(
+                    attacked,
+                    "verifier_execution_claim",
+                    {},
+                )
+        self.assertEqual(caught.exception.code, "UNEXPECTED_ARTIFACT")
+        open_mock.assert_not_called()
 
     def test_historical_subplan_is_not_rebuilt_in_current_runtime(self) -> None:
         frozen_shards = mock.Mock()
@@ -7623,7 +7666,7 @@ class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
         }
         self.assertFalse(historical_paths & current_paths)
         self.assertTrue(
-            all("R2R10_20260808" in Path(path).name for path in current_paths)
+            all("R2R11_20260808" in Path(path).name for path in current_paths)
         )
 
     def test_r2r9_failure_terminal_is_exact_retired_and_disjoint(self) -> None:

@@ -73,9 +73,9 @@ R2R5_REMEDIATION_GRANDPARENT_COMMIT = (
     "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 )
 R2R10_REMEDIATION_GRANDPARENT_COMMIT = (
-    "8500645309e98561b31a9bc2e63be342297a2043"
+    "cb54ed9f475b437d2eb22e7dcb0f8c963c61e466"
 )
-R2R2_BASE_COMMIT = "cb54ed9f475b437d2eb22e7dcb0f8c963c61e466"
+R2R2_BASE_COMMIT = "5e0fcac3a46d38c2e29708e4c46a4e9b515345ee"
 R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -92,7 +92,7 @@ R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
 )
 R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R10_20260808"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R11_20260808"
 R2R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -100,9 +100,9 @@ R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
     r"\gate12c2_original_baseline_r2r2_portability_plan.json"
 )
-R2R2_PLAN_FILE_SHA256 = "f8a59d4c4a62277cb6110f2ab93ede84b39c8e26f0a2d2ef133d4d9dd7036699"
-R2R2_PLAN_PAYLOAD_SHA256 = "c1ad073471a6b17840510f6c2cfa304a8c5cb47b5d450902fceec6d5868e1188"
-R2R2_ARTIFACT_SURFACE_SHA256 = "239ffc47f8718c4ab55500c21ebcc32eaabe8a72f073722157c6b98141a6ecbb"
+R2R2_PLAN_FILE_SHA256 = "09ecaaf18d92fbf2fe9ca3cc2cc9dce80d37a253524385c5a433ba22c9c49386"
+R2R2_PLAN_PAYLOAD_SHA256 = "6bcf60cc50165e3e922857f4ab271b41b8827d149d73f0b6b4e52e4df18ab638"
+R2R2_ARTIFACT_SURFACE_SHA256 = "bcc77da20e39372d7011be2de29b275429e7f3295f58802277f7f65b56629f58"
 R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
     "3ca482e642f28757faee308e6ea0002bc294710b08a1fa5124fbd374c5c5d992"
 )
@@ -111,7 +111,7 @@ R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "ba8915361406c28ed97c432d1a4c9fd5b9f2140b9713b80bf7e33b7c1a126be0"
+    "d65a44015bbb2b2ae5befdd0e940ee9ae7eaae24c2d4557e6550fdcae98f3375"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256 = (
@@ -3995,10 +3995,10 @@ def _independent_load_r2r2_plan(
         )
         != R2R2_PLAN_PAYLOAD_SHA256
         or overlay.get("schema_version")
-        != "gate12c2_original_baseline_r2r10_historical_plan_validation_v0.1"
+        != "gate12c2_original_baseline_r2r11_historical_plan_validation_v0.1"
         or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or overlay.get("state")
-        != "R2R10_HISTORICAL_SUBPLAN_VALIDATION_REMEDIATION_FROZEN"
+        != "R2R11_HISTORICAL_SUBPLAN_VALIDATION_REMEDIATION_FROZEN"
         or overlay.get("remediation_plan_relative_path")
         != R2R2_PLAN_RELATIVE_PATH
         or overlay.get("artifact_path_surface_sha256")
@@ -7311,10 +7311,18 @@ def _publish(
     pending = Path(row["pending_path"])
     raw = verifier_canonical_bytes(dict(payload)) + b"\n"
     r2_active = "r2_activation_control" in plan
+    active_control = _independent_active_control(plan)
+    active_namespace = (
+        active_control.get("authority_namespace_id")
+        if active_control is not None
+        else R2_AUTHORITY_NAMESPACE_ID
+    )
+    if r2_active and (
+        type(active_namespace) is not str or not active_namespace
+    ):
+        _fail("UNEXPECTED_ARTIFACT")
     expected_suffix = (
-        ".pending-" + R2_AUTHORITY_NAMESPACE_ID
-        if r2_active
-        else ".pending-v0.9"
+        ".pending-" + active_namespace if r2_active else ".pending-v0.9"
     )
     if (
         final.parent != pending.parent
@@ -7323,8 +7331,8 @@ def _publish(
             r2_active
             and (
                 role == "formal_design_review_verdict"
-                or R2_AUTHORITY_NAMESPACE_ID not in final.name
-                or R2_AUTHORITY_NAMESPACE_ID not in pending.name
+                or active_namespace not in final.name
+                or active_namespace not in pending.name
             )
         )
         or final.exists()
