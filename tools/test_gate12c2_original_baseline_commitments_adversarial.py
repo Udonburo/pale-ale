@@ -7133,6 +7133,36 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
                 )
 
 class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
+    def test_active_candidate_contract_lineage_matches_parent_lineage(
+        self,
+    ) -> None:
+        plan = gate.load_active_plan(repository_root=REPOSITORY)
+        control = gate.active_remediation_control(plan)
+        identity = gate.active_remediation_identity(plan)
+        self.assertIsNotNone(control)
+        selection_required = control["candidate_selection_contract"][
+            "required_values"
+        ]
+        binding_required = plan["implementation_binding_contract"][
+            "required_values"
+        ]
+        self.assertEqual(
+            selection_required["exact_parent_commit"],
+            identity["parent_commit"],
+        )
+        self.assertEqual(
+            selection_required["exact_grandparent_commit"],
+            identity["grandparent_commit"],
+        )
+        self.assertEqual(
+            binding_required["remediation_base_commit"],
+            identity["parent_commit"],
+        )
+        self.assertEqual(
+            binding_required["remediation_base_parent"],
+            identity["grandparent_commit"],
+        )
+
     def test_historical_subplan_is_not_rebuilt_in_current_runtime(self) -> None:
         frozen_shards = mock.Mock()
         frozen_shards._verified_plan.side_effect = AssertionError(
