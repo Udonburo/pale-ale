@@ -72,10 +72,10 @@ R2R4_REMEDIATION_GRANDPARENT_COMMIT = (
 R2R5_REMEDIATION_GRANDPARENT_COMMIT = (
     "789e7a95985376f6ad445c4a57dc8454161cdb8f"
 )
-R2R9_REMEDIATION_GRANDPARENT_COMMIT = (
-    "53e6c92f41c990a42832768603f39034caf930a3"
+R2R10_REMEDIATION_GRANDPARENT_COMMIT = (
+    "5107dbde180f0a3e435dd0003e401e3e085bb5e5"
 )
-R2R2_BASE_COMMIT = "5107dbde180f0a3e435dd0003e401e3e085bb5e5"
+R2R2_BASE_COMMIT = "8500645309e98561b31a9bc2e63be342297a2043"
 R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2_activation_plan.json"
 )
@@ -92,7 +92,7 @@ R2R1_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"\gate12c2_original_baseline_r2r1_remediation_plan.json"
 )
 R2R1_PLAN_BASE_BLOB_OID = "be34a081f52916d8ad9f5ed80758562143b7031c"
-R2R2_AUTHORITY_NAMESPACE_ID = "R2R9_20260807"
+R2R2_AUTHORITY_NAMESPACE_ID = "R2R10_20260808"
 R2R2_PLAN_RELATIVE_PATH = (
     "tools/gate12c2_original_baseline_r2r2_portability_plan.json"
 )
@@ -100,9 +100,9 @@ R2R2_PLAN_HISTORICAL_DECLARED_PATH = Path(
     r"C:\Users\aoika\Documents\GitHub\pale-ale\tools"
     r"\gate12c2_original_baseline_r2r2_portability_plan.json"
 )
-R2R2_PLAN_FILE_SHA256 = "0ad34df273ea35ca04836381869cc57ddc255082a5662d0f6376bb10d7ae1cb3"
-R2R2_PLAN_PAYLOAD_SHA256 = "9f54b0cd20c2acd75248e82abe749dae7be530a6e78f2d761eb9ef373731a8c4"
-R2R2_ARTIFACT_SURFACE_SHA256 = "ac7a29eeace22a285ff1fcd93fbe805d702004b00e295330e4101cfb9640ddb7"
+R2R2_PLAN_FILE_SHA256 = "fd5ef51a65d4f8c1726f702f37f3e12494ca322e01e952aa71e771b73e55e1f0"
+R2R2_PLAN_PAYLOAD_SHA256 = "186fc5320c99e9ba1ab97147d7535cc7d6ee78911405f216bc87d32abf04a21a"
+R2R2_ARTIFACT_SURFACE_SHA256 = "239ffc47f8718c4ab55500c21ebcc32eaabe8a72f073722157c6b98141a6ecbb"
 R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
     "3ca482e642f28757faee308e6ea0002bc294710b08a1fa5124fbd374c5c5d992"
 )
@@ -111,7 +111,7 @@ R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
 )
 R2R2_OCCUPIED_R2R1_SURFACE_SHA256 = "bb67a1f98feda109f7243bc4a7a1a4d9b03244f74a005471bdad09a0526d6621"
 R2R2_REPOSITORY_LOCAL_SURFACE_SHA256 = (
-    "961df774e40e4dab55403a4b68f18d07d24b0347a96f5a6f4be39a2e9909205f"
+    "c444669ee9afca81d6ec0d58f57d0c0e8ad0b6270566f14899dca2f2e8311a71"
 )
 R2R2_UPSTREAM_FRAMING_SURFACE_SHA256 = "c88d2a6618b5a9c1e4fd38e9c4143da955d1dcd7a7aaf0a76cffe746a2feac4b"
 R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256 = (
@@ -157,6 +157,12 @@ R2R8_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
 )
 R2R9_HISTORICAL_R2R8_PRECLAIM_SURFACE_SHA256 = (
     "8dfcc5d4c7491ba196d34db51e4e0e1c443ea8b3a09ef4e5a64ad1e0b63f1e59"
+)
+R2R9_HISTORICAL_ARTIFACT_SURFACE_SHA256 = (
+    "ac7a29eeace22a285ff1fcd93fbe805d702004b00e295330e4101cfb9640ddb7"
+)
+R2R10_HISTORICAL_R2R9_FAILURE_SURFACE_SHA256 = (
+    "976b9d70baf82ca92c1518641fe90c4dc296c1f361dcb26f748a003756c87280"
 )
 FORMAL_DESIGN_REVIEW_FILE_SHA256 = (
     "5a0ba0d6ad6b5b79df819e73d7ab15831c081ad5e4e44ca6b8195e59bc97cc1e"
@@ -3123,7 +3129,7 @@ def _independent_validate_r2r6_extraction_launch_contract(
         canonical_repository_relative_path=R2R5_RUNNER_RELATIVE_PATH,
         expected_file_sha256=R2R5_RUNNER_FILE_SHA256,
         bound_commit=R2R2_BASE_COMMIT,
-        expected_git_blob_oid="ca49cd0850202e718d8f028a8d74b3cb0bb64c15",
+        expected_git_blob_oid="4b1de7299c81daa652305fb5c6db4657ee25e524",
     )
     return contract
 
@@ -3771,6 +3777,148 @@ def _independent_validate_r2r9_preclaim_stop(
             _fail("INPUT_LINEAGE_MISMATCH")
     return dict(value)
 
+
+def _independent_validate_r2r10_failure_stop(
+    value: object,
+    active_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    exact_keys = {
+        "artifact_path_surface",
+        "artifact_path_surface_sha256",
+        "authority_namespace_id",
+        "execution_status",
+        "failure_code",
+        "failure_phase",
+        "occupied_controls",
+        "required_absent_final_roles",
+        "required_absent_pending_roles",
+        "scientific_values_emitted",
+        "terminal_outcome_kind",
+    }
+    if (
+        type(value) is not dict
+        or set(value) != exact_keys
+        or _digest(value) != R2R10_HISTORICAL_R2R9_FAILURE_SURFACE_SHA256
+        or value.get("authority_namespace_id") != "R2R9_20260807"
+        or value.get("artifact_path_surface_sha256")
+        != R2R9_HISTORICAL_ARTIFACT_SURFACE_SHA256
+        or value.get("execution_status")
+        != "HISTORICAL_EXTRACTION_FAILURE_TERMINAL_RETIRED"
+        or value.get("failure_code") != "INPUT_SCHEMA_INVALID"
+        or value.get("failure_phase") != "semantic_verification"
+        or value.get("scientific_values_emitted") is not False
+        or value.get("terminal_outcome_kind") != "failure"
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    rows = value.get("artifact_path_surface")
+    current_roles = {row.get("role") for row in active_rows}
+    if (
+        type(rows) is not list
+        or len(rows) != 18
+        or rows != sorted(rows, key=lambda row: row.get("role", ""))
+        or {row.get("role") for row in rows} != current_roles
+        or _digest(rows) != R2R9_HISTORICAL_ARTIFACT_SURFACE_SHA256
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    historical_by_role = {row["role"]: row for row in rows}
+    historical_paths = {
+        path
+        for row in rows
+        for path in (row["final_path"], row["pending_path"])
+    }
+    active_paths = {
+        path
+        for row in active_rows
+        for path in (row["final_path"], row["pending_path"])
+    }
+    if historical_paths & active_paths:
+        _fail("INPUT_LINEAGE_MISMATCH")
+    occupied = value.get("occupied_controls")
+    if (
+        type(occupied) is not list
+        or occupied != sorted(occupied, key=lambda row: row.get("role", ""))
+        or len(occupied) != 10
+        or len({row.get("role") for row in occupied if type(row) is dict})
+        != len(occupied)
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    occupied_roles = {row["role"] for row in occupied}
+    absent_roles = sorted(current_roles - occupied_roles)
+    if (
+        value.get("required_absent_final_roles") != absent_roles
+        or value.get("required_absent_pending_roles") != sorted(current_roles)
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    for role in absent_roles:
+        if Path(historical_by_role[role]["final_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+    for row in rows:
+        if Path(row["pending_path"]).exists():
+            _fail("UNEXPECTED_ARTIFACT")
+    parsed: dict[str, dict[str, Any]] = {}
+    required_row_keys = {
+        "file_sha256",
+        "path",
+        "payload_sha256",
+        "role",
+        "schema_version",
+        "self_hash_field",
+        "state",
+    }
+    for row in occupied:
+        if type(row) is not dict or set(row) != required_row_keys:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        role = row.get("role")
+        if (
+            role not in historical_by_role
+            or row.get("path") != historical_by_role[role]["final_path"]
+            or type(row.get("file_sha256")) is not str
+            or SHA_RE.fullmatch(row["file_sha256"]) is None
+            or type(row.get("payload_sha256")) is not str
+            or SHA_RE.fullmatch(row["payload_sha256"]) is None
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        try:
+            raw = Path(row["path"]).read_bytes()
+        except OSError:
+            _fail("INPUT_LINEAGE_MISMATCH")
+        if (
+            verifier_sha256(raw) != row["file_sha256"]
+            or not raw.endswith(b"\n")
+            or raw.endswith((b"\r\n", b"\n\n"))
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        payload = verifier_json(raw[:-1])
+        unhashed = dict(payload)
+        try:
+            supplied_hash = unhashed.pop(row["self_hash_field"])
+        except (KeyError, TypeError):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        if (
+            verifier_canonical_bytes(payload) + b"\n" != raw
+            or payload.get("schema_version") != row["schema_version"]
+            or payload.get("state") != row["state"]
+            or supplied_hash != row["payload_sha256"]
+            or verifier_sha256(verifier_canonical_bytes(unhashed))
+            != row["payload_sha256"]
+        ):
+            _fail("INPUT_LINEAGE_MISMATCH")
+        parsed[role] = payload
+    failure = parsed.get("extraction_failure")
+    terminal = parsed.get("extraction_terminal")
+    if (
+        failure is None
+        or terminal is None
+        or failure.get("failure_code") != value["failure_code"]
+        or failure.get("failure_phase") != value["failure_phase"]
+        or failure.get("scientific_values_emitted") is not False
+        or terminal.get("outcome_kind") != value["terminal_outcome_kind"]
+        or terminal.get("leaf_exact_payload") != failure
+    ):
+        _fail("INPUT_LINEAGE_MISMATCH")
+    return dict(value)
+
+
 def _independent_load_r2r2_plan(
     r2r1_active: Mapping[str, Any],
     *,
@@ -3808,6 +3956,9 @@ def _independent_load_r2r2_plan(
         "historical_r2r5_preclaim_surface_sha256",
         "historical_r2r8_preclaim_stop",
         "historical_r2r8_preclaim_surface_sha256",
+        "historical_r2r9_failure_stop",
+        "historical_r2r9_failure_surface_sha256",
+        "historical_subplan_validation",
         "isolated_runtime_dependency_surface_sha256",
         "extraction_launch_contract",
         "extraction_launch_contract_sha256",
@@ -3844,10 +3995,10 @@ def _independent_load_r2r2_plan(
         )
         != R2R2_PLAN_PAYLOAD_SHA256
         or overlay.get("schema_version")
-        != "gate12c2_original_baseline_r2r2_portability_plan_v0.8"
+        != "gate12c2_original_baseline_r2r10_historical_plan_validation_v0.1"
         or overlay.get("namespace_id") != R2R2_AUTHORITY_NAMESPACE_ID
         or overlay.get("state")
-        != "R2R9_CHILD_CLAIM_TIME_OWNERSHIP_REMEDIATION_FROZEN"
+        != "R2R10_HISTORICAL_SUBPLAN_VALIDATION_REMEDIATION_FROZEN"
         or overlay.get("remediation_plan_relative_path")
         != R2R2_PLAN_RELATIVE_PATH
         or overlay.get("artifact_path_surface_sha256")
@@ -3862,11 +4013,13 @@ def _independent_load_r2r2_plan(
         != R2R4_ORIGINAL_INPUT_FRAMING_SURFACE_SHA256
         or overlay.get("historical_r2r8_preclaim_surface_sha256")
         != R2R9_HISTORICAL_R2R8_PRECLAIM_SURFACE_SHA256
+        or overlay.get("historical_r2r9_failure_surface_sha256")
+        != R2R10_HISTORICAL_R2R9_FAILURE_SURFACE_SHA256
         or overlay.get("parent_lineage")
         != {
             "remediation_parent": R2R2_BASE_COMMIT,
             "remediation_parent_count": 1,
-            "remediation_grandparent": R2R9_REMEDIATION_GRANDPARENT_COMMIT,
+            "remediation_grandparent": R2R10_REMEDIATION_GRANDPARENT_COMMIT,
             "remediation_grandparent_count": 1,
         }
         or overlay.get("preserved_identities")
@@ -3927,6 +4080,16 @@ def _independent_load_r2r2_plan(
         },
     }:
         _fail("INPUT_LINEAGE_MISMATCH")
+    if overlay.get("historical_subplan_validation") != {
+        "current_runtime_plan_rebuild_allowed": False,
+        "historical_subplan_identity_source": (
+            "original_input_lineage_exact_canonical_bytes_self_hash_git_blob_"
+            "and_configuration_surface"
+        ),
+        "source_result_validator_input": "exact_historical_subplan",
+        "verifier_independent_historical_plan_consumption_preserved": True,
+    }:
+        _fail("INPUT_LINEAGE_MISMATCH")
     if overlay.get("publication_policy") != {
         "active_role_count": 18,
         "active_role_publication_mode": (
@@ -3971,7 +4134,7 @@ def _independent_load_r2r2_plan(
     allowed = overlay.get("allowed_changed_paths")
     if (
         type(allowed) is not list
-        or len(allowed) != 5
+        or len(allowed) != 4
         or allowed != sorted(allowed)
         or len(allowed) != len(set(allowed))
         or R2R2_PLAN_RELATIVE_PATH not in allowed
@@ -4080,6 +4243,8 @@ def _independent_load_r2r2_plan(
         != R2R6_HISTORICAL_R2R5_PRECLAIM_SURFACE_SHA256
         or overlay.get("historical_r2r8_preclaim_surface_sha256")
         != R2R9_HISTORICAL_R2R8_PRECLAIM_SURFACE_SHA256
+        or overlay.get("historical_r2r9_failure_surface_sha256")
+        != R2R10_HISTORICAL_R2R9_FAILURE_SURFACE_SHA256
         or overlay.get("isolated_runtime_dependency_surface_sha256")
         != R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
         or overlay.get("extraction_launch_contract_sha256")
@@ -4166,6 +4331,9 @@ def _independent_load_r2r2_plan(
     )
     _independent_validate_r2r9_preclaim_stop(
         overlay.get("historical_r2r8_preclaim_stop"), rows
+    )
+    _independent_validate_r2r10_failure_stop(
+        overlay.get("historical_r2r9_failure_stop"), rows
     )
     old_paths = {
         path
@@ -4422,6 +4590,15 @@ def _independent_build_r2r2_active(
         "historical_r2r8_preclaim_surface_sha256": (
             R2R9_HISTORICAL_R2R8_PRECLAIM_SURFACE_SHA256
         ),
+        "historical_r2r9_failure_stop": copy.deepcopy(
+            overlay["historical_r2r9_failure_stop"]
+        ),
+        "historical_r2r9_failure_surface_sha256": (
+            R2R10_HISTORICAL_R2R9_FAILURE_SURFACE_SHA256
+        ),
+        "historical_subplan_validation": copy.deepcopy(
+            overlay["historical_subplan_validation"]
+        ),
         "isolated_runtime_dependency_surface_sha256": (
             R2R6_RUNTIME_DEPENDENCY_SURFACE_SHA256
         ),
@@ -4448,10 +4625,12 @@ def _independent_build_r2r2_active(
             R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256,
             R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256,
             R2R8_HISTORICAL_ARTIFACT_SURFACE_SHA256,
+            R2R9_HISTORICAL_ARTIFACT_SURFACE_SHA256,
         }
         or nested.count(R2R5_HISTORICAL_ARTIFACT_SURFACE_SHA256) != 1
         or nested.count(R2R4_HISTORICAL_ARTIFACT_SURFACE_SHA256) != 1
         or nested.count(R2R8_HISTORICAL_ARTIFACT_SURFACE_SHA256) != 1
+        or nested.count(R2R9_HISTORICAL_ARTIFACT_SURFACE_SHA256) != 1
     ):
         _fail("INPUT_LINEAGE_MISMATCH")
     return active

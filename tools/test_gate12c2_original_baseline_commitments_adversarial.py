@@ -5391,7 +5391,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                             gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
                         ),
                         gate.R2R5_RUNNER_RELATIVE_PATH: (
-                            "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                            "4b1de7299c81daa652305fb5c6db4657ee25e524"
                         ),
                     }[relative]
 
@@ -5406,7 +5406,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                             independent.R2R1_PLAN_BASE_BLOB_OID
                         ),
                         independent.R2R5_RUNNER_RELATIVE_PATH: (
-                            "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                            "4b1de7299c81daa652305fb5c6db4657ee25e524"
                         ),
                     }[relative]
 
@@ -5474,7 +5474,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                         gate.R2R1_REMEDIATION_PLAN_BASE_BLOB_OID
                     ),
                     gate.R2R5_RUNNER_RELATIVE_PATH: (
-                        "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                        "4b1de7299c81daa652305fb5c6db4657ee25e524"
                     ),
                 }[relative]
 
@@ -5489,7 +5489,7 @@ class R2R2PortabilityAndFramingAdversarialTests(unittest.TestCase):
                         independent.R2R1_PLAN_BASE_BLOB_OID
                     ),
                     independent.R2R5_RUNNER_RELATIVE_PATH: (
-                        "ca49cd0850202e718d8f028a8d74b3cb0bb64c15"
+                        "4b1de7299c81daa652305fb5c6db4657ee25e524"
                     ),
                 }[relative]
 
@@ -6841,7 +6841,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
     def test_exact_runtime_loads_plan_under_i_b(self) -> None:
         completed = self._run_isolated(gate.R2R6_PYTHON_EXECUTABLE)
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout, "R2R9_20260807\n")
+        self.assertEqual(completed.stdout, "R2R10_20260808\n")
         self.assertEqual(completed.stderr, "")
 
     def test_alternate_interpreters_fail_before_plan_acceptance(self) -> None:
@@ -6855,7 +6855,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             with self.subTest(executable=str(executable)):
                 completed = self._run_isolated(executable)
                 self.assertNotEqual(completed.returncode, 0)
-                self.assertNotIn("R2R9_20260807", completed.stdout)
+                self.assertNotIn("R2R10_20260808", completed.stdout)
 
     def test_pythonpath_and_mutable_path_injection_are_rejected(self) -> None:
         pythonpath = self._run_isolated(
@@ -7025,7 +7025,7 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
         self.assertFalse(current & r2r4)
         self.assertFalse(r2r5 & r2r4)
         self.assertTrue(
-            all("R2R9_20260807" in Path(path).name for path in current)
+            all("R2R10_20260808" in Path(path).name for path in current)
         )
 
     def test_phase_a_plan_load_reads_zero_protected_bytes(self) -> None:
@@ -7047,11 +7047,11 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
             )
         self.assertEqual(
             core["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R9_20260807",
+            "R2R10_20260808",
         )
         self.assertEqual(
             standalone["r2r2_portability_control"]["authority_namespace_id"],
-            "R2R9_20260807",
+            "R2R10_20260808",
         )
         self.assertTrue(reads)
         self.assertFalse(any(path.startswith(protected) for path in reads))
@@ -7133,6 +7133,45 @@ class R2R6IsolatedRuntimeRemediationTests(unittest.TestCase):
                 )
 
 class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
+    def test_historical_subplan_is_not_rebuilt_in_current_runtime(self) -> None:
+        frozen_shards = mock.Mock()
+        frozen_shards._verified_plan.side_effect = AssertionError(
+            "historical plan must not be rebuilt"
+        )
+        subplan = {"plan_payload_sha256": "1" * 64}
+        result = {"schema_version": gate.OUTER_EXPERIMENT_SCHEMA}
+
+        gate.validate_historical_result_with_frozen_source(
+            frozen_shards,
+            subplan,
+            result,
+            outer_index=7,
+        )
+
+        frozen_shards._verified_plan.assert_not_called()
+        frozen_shards._verify_result_against_plan.assert_called_once_with(
+            subplan,
+            result,
+            outer_experiment_index=7,
+        )
+
+    def test_historical_source_rejection_remains_sanitized(self) -> None:
+        frozen_shards = mock.Mock()
+        frozen_shards._verify_result_against_plan.side_effect = RuntimeError(
+            "synthetic_sensitive_marker"
+        )
+        with self.assertRaises(
+            gate.Gate12C2OriginalBaselineError
+        ) as caught:
+            gate.validate_historical_result_with_frozen_source(
+                frozen_shards,
+                {},
+                {},
+                outer_index=0,
+            )
+        self.assertEqual(caught.exception.code, "INPUT_SCHEMA_INVALID")
+        self.assertNotIn("synthetic_sensitive_marker", str(caught.exception))
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.plan = gate.load_active_plan(repository_root=REPOSITORY)
@@ -7554,8 +7593,42 @@ class R2R9ChildClaimTimeOwnershipTests(unittest.TestCase):
         }
         self.assertFalse(historical_paths & current_paths)
         self.assertTrue(
-            all("R2R9_20260807" in Path(path).name for path in current_paths)
+            all("R2R10_20260808" in Path(path).name for path in current_paths)
         )
+
+    def test_r2r9_failure_terminal_is_exact_retired_and_disjoint(self) -> None:
+        control = self.plan["r2r2_portability_control"]
+        historical = control["historical_r2r9_failure_stop"]
+        core = gate.validate_r2r10_historical_failure_stop(
+            historical,
+            self.plan["artifact_path_surface"],
+        )
+        standalone = independent._independent_validate_r2r10_failure_stop(
+            self.independent_plan["r2r2_portability_control"][
+                "historical_r2r9_failure_stop"
+            ],
+            self.independent_plan["artifact_path_surface"],
+        )
+        self.assertEqual(core, standalone)
+        self.assertEqual(core["authority_namespace_id"], "R2R9_20260807")
+        self.assertEqual(core["failure_code"], "INPUT_SCHEMA_INVALID")
+        self.assertEqual(core["terminal_outcome_kind"], "failure")
+        for row in core["occupied_controls"]:
+            self.assertEqual(
+                gate.sha256_bytes(Path(row["path"]).read_bytes()),
+                row["file_sha256"],
+            )
+        historical_paths = {
+            path
+            for row in core["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        current_paths = {
+            path
+            for row in self.plan["artifact_path_surface"]
+            for path in (row["final_path"], row["pending_path"])
+        }
+        self.assertFalse(historical_paths & current_paths)
 
 
 if __name__ == "__main__":
