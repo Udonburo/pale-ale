@@ -1,0 +1,43 @@
+{
+  "schema_version": "gate12c2_minimal_study_v0.1",
+  "study_id": "gate12c2-minimal-development-smoke-v0.1",
+  "epistemic_status": "synthetic_development_smoke_only",
+  "seed_namespace": "gate12c2-minimal-fresh-2026-08-12-v0.1",
+  "alternative": "observed_smaller_than_null",
+  "q_values": [1, 2],
+  "epsilon": 1e-12,
+  "spectral_gap_tolerance": 1e-10,
+  "numerical_tolerance": 1e-9,
+  "outer_count": 2,
+  "cohort_size": 12,
+  "inner_draws": 5,
+  "stressor_trials": 8,
+  "s1": {
+    "effect_strength": 0.35,
+    "observed_mismatch": 0.01
+  },
+  "smoke_acceptance": {
+    "holm_alpha": 0.05,
+    "zero_tolerance": 1e-6,
+    "s0_max_supported_endpoints": 0,
+    "s1_min_directional_endpoint_fraction": 0.8,
+    "s2_min_log_inflation": 0.05,
+    "s2_min_inflation_endpoint_fraction": 0.8,
+    "s2_min_channel_fraction": 0.5
+  },
+  "cases": [
+    {"case_id": "case-00", "model": "model-a", "family": "family-1", "ambient_dim": 7, "local_rank": 3, "s0_frame_noise": 0.25, "s2_frame_noise": 0.20},
+    {"case_id": "case-01", "model": "model-a", "family": "family-2", "ambient_dim": 8, "local_rank": 3, "s0_frame_noise": 0.30, "s2_frame_noise": 0.22},
+    {"case_id": "case-02", "model": "model-a", "family": "family-3", "ambient_dim": 9, "local_rank": 3, "s0_frame_noise": 0.35, "s2_frame_noise": 0.24},
+    {"case_id": "case-03", "model": "model-a", "family": "family-4", "ambient_dim": 10, "local_rank": 3, "s0_frame_noise": 0.40, "s2_frame_noise": 0.26},
+    {"case_id": "case-04", "model": "model-b", "family": "family-1", "ambient_dim": 8, "local_rank": 3, "s0_frame_noise": 0.28, "s2_frame_noise": 0.21},
+    {"case_id": "case-05", "model": "model-b", "family": "family-2", "ambient_dim": 9, "local_rank": 3, "s0_frame_noise": 0.33, "s2_frame_noise": 0.23},
+    {"case_id": "case-06", "model": "model-b", "family": "family-3", "ambient_dim": 10, "local_rank": 3, "s0_frame_noise": 0.38, "s2_frame_noise": 0.25},
+    {"case_id": "case-07", "model": "model-b", "family": "family-4", "ambient_dim": 11, "local_rank": 3, "s0_frame_noise": 0.43, "s2_frame_noise": 0.27},
+    {"case_id": "case-08", "model": "model-c", "family": "family-1", "ambient_dim": 9, "local_rank": 3, "s0_frame_noise": 0.31, "s2_frame_noise": 0.22},
+    {"case_id": "case-09", "model": "model-c", "family": "family-2", "ambient_dim": 10, "local_rank": 3, "s0_frame_noise": 0.36, "s2_frame_noise": 0.24},
+    {"case_id": "case-10", "model": "model-c", "family": "family-3", "ambient_dim": 11, "local_rank": 3, "s0_frame_noise": 0.41, "s2_frame_noise": 0.26},
+    {"case_id": "case-11", "model": "model-c", "family": "family-4", "ambient_dim": 12, "local_rank": 3, "s0_frame_noise": 0.46, "s2_frame_noise": 0.28}
+  ]
+}
+

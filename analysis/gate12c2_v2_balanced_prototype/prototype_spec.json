@@ -1,0 +1,44 @@
+{
+  "schema_version": "gate12c2_v2_balanced_prototype_spec_v0.1",
+  "study_id": "gate12c2-v2-balanced-sequential-development-v0.1",
+  "epistemic_status": "post_locked_synthetic_development_only",
+  "seed_namespace": "gate12c2-v2-balanced-development-2026-08-12-v0.1",
+  "source_locked_study_sha256": "f8586e10fece74472a7d327f6fd13a9ed0b6d813c5582873443bf01936e00262",
+  "configs": ["S0", "S1_PRIMARY", "S2"],
+  "case_ids": [
+    "ambient7-separated",
+    "ambient7-moderate",
+    "ambient9-mild",
+    "ambient9-strong",
+    "ambient11-separated",
+    "ambient11-strong"
+  ],
+  "dataset_count": 12,
+  "cohort_size": 12,
+  "draw_count": 44,
+  "checkpoints": [11, 22, 44],
+  "schedules": ["iid", "balanced"],
+  "q_values": [1, 2],
+  "bootstrap_repeats": 256,
+  "decision_margins": {
+    "S0_equivalence_half_width": 0.05,
+    "S1_upper_limit": 0.0,
+    "S2_lower_limit": 0.05
+  },
+  "prototype_criteria": {
+    "half_draw_count_for_reproducibility": 22,
+    "max_balanced_to_iid_median_disjoint_error_ratio": 0.8,
+    "min_configs_with_reproducibility_gain": 2,
+    "min_k44_decision_clear_fraction": 0.75,
+    "max_s0_balanced_minus_iid_quantile_difference": 0.04,
+    "max_s0_balanced_minus_iid_correlation_difference": 0.1,
+    "max_absolute_pair_collision_rate_difference": 0.02,
+    "max_absolute_triple_collision_rate_difference": 0.005,
+    "max_balanced_exposure_cv": 1e-12
+  },
+  "resource_cap": {
+    "max_wall_seconds": 900,
+    "max_output_bytes": 120000000,
+    "max_shards": 216
+  }
+}

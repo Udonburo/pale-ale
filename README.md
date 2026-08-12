@@ -101,6 +101,18 @@ replay-artifact-graph endpoints.
 [Report DOI](https://doi.org/10.5281/zenodo.21355572) |
 [release bundle](zenodo/gate12c1-parenthesization-defects/README.txt)
 
+### Gate12C-2: closed synthetic development track
+
+The graph-constrained N1 candidate failed its predeclared quantitative
+stability gate, and a bounded balanced-donor prototype did not provide a
+sufficient repair. No real held-out surface was opened. Final status:
+`LOCKED_FAIL / CLOSED / REAL_NOT_AUTHORIZED`.
+
+[sunset boundary](docs/reference/gate12c2_control_plane_sunset.md) |
+[frozen minimal implementation](tools/gate12c2_minimal/README.md) |
+[statistical adequacy audit](analysis/gate12c2_v2_statistical_adequacy/README.md) |
+[balanced-prototype negative report](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md)
+
 The earlier replication checkpoint remains available as a
 [historical release surface](https://doi.org/10.5281/zenodo.19340221).
 Repository-level citation metadata is in [`CITATION.cff`](CITATION.cff).
