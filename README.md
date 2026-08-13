@@ -131,8 +131,8 @@ traces and bundled synthetic cases.
 
 | Amber overview | Evidence review |
 | --- | --- |
-| [![Amber landing page with its local-first review framing and claim boundaries](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/) | [![Amber Studio showing an evidence-linked review queue for a bundled synthetic trace](docs/assets/amber-studio.png)](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
-| **Start with the boundaries.** The landing page states the prototype's scope and non-claims. | **Inspect the evidence.** Studio keeps declared relations, source constraints, and human disposition visible together. |
+| [![Amber landing page showing its evidence-divergence review path](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/) | [![Amber Studio showing an evidence-linked review queue for a bundled synthetic trace](docs/assets/amber-studio.png)](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
+| **Start with the evidence path.** The landing page shows how a source constraint, changed artifact, and downstream output stay connected. | **Inspect the evidence.** Studio keeps declared relations, source constraints, and human disposition visible together. |
 
 **[Open Amber](https://amber-oversight.vercel.app/)**
 
