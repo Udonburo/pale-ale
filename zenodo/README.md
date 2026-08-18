@@ -9,7 +9,7 @@ its own manifest, checksums, licensing, and provenance records.
 | Release | DOI | GitHub release | Capsule |
 | --- | --- | --- | --- |
 | Gate12C-1: Compression-Interleaved Parenthesization Defects | [10.5281/zenodo.21355572](https://doi.org/10.5281/zenodo.21355572) | [`gate12c1-parenthesization-defects-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/gate12c1-parenthesization-defects-v1.0.0) | [`gate12c1-parenthesization-defects/`](gate12c1-parenthesization-defects/README.txt) |
-| Local Mapping Without Iterative Closure | [10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852) | — | [`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.txt) |
+| Local Mapping Without Iterative Closure | [10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852) | [`local-mapping-without-iterative-closure-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0) | [`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.txt) |
 
 New capsules should use `zenodo/<release-slug>/` rather than adding another
 top-level `zenodo-release-*` directory.

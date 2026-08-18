@@ -5,6 +5,12 @@ copies of the files published at
 [Zenodo DOI 10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852).
 Their published SHA-256 inventory is `CHECKSUMS-SHA256.txt`.
 
+The matching
+[GitHub Release `local-mapping-without-iterative-closure-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0)
+is anchored to `main` commit
+`d5f5399c084e3089b6959eb5fe78d6b9ed66382b` and carries the same twelve
+publication assets.
+
 For direct source review on GitHub, the repository additionally expands the
 public-safe members of `reproducibility-capsule.zip` under:
 
