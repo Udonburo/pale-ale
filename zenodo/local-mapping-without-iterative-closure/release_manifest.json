@@ -1,0 +1,49 @@
+{
+  "schema_version": "local_mapping_without_iterative_closure_release_capsule_v1",
+  "status": "zenodo_published_minor_file_correction",
+  "title": "Local Mapping Without Iterative Closure: Zero-Shot and Input-Output-Only In-Context Graph-XOR Capability Boundaries in Qwen3",
+  "author": "Aoi Kawasaki",
+  "package_date": "2026-08-18",
+  "repository": "https://github.com/Udonburo/pale-ale",
+  "doi": "10.5281/zenodo.21992852",
+  "version": "1.0.0",
+  "resource_type": "publication-technicalnote",
+  "review_status": "not_peer_reviewed",
+  "license_map": {
+    "non_code_publication_materials": {
+      "spdx_id": "CC-BY-4.0",
+      "applies_to": "report, TeX source, figure, README, metadata, public result summaries, and release records",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "source_code": {
+      "spdx_id": "MPL-2.0",
+      "applies_to": "code/ inside reproducibility-capsule.zip",
+      "url": "https://www.mozilla.org/MPL/2.0/"
+    }
+  },
+  "publication_boundary": "This package is bound to the published Zenodo version DOI. The correction removes an internal project codename from the public export without changing frozen local branch artifacts or scientific results.",
+  "reported_result": {
+    "primary": "Correct input-output demonstrations made a two-input XOR mapping behaviorally available in Qwen3-4B and Qwen3-8B, but no correct-demonstration P3 cell met the predeclared score-signal criterion on the frozen ledgers at 4, 16, or 64 demonstrations.",
+    "qwen3_4b_joint_formation_point_shots": 16,
+    "qwen3_8b_joint_formation_point_shots": 4,
+    "zero_shot_highest_behavioral_surface": "one-edge relation in Qwen3-8B",
+    "icl_p5_opened": false,
+    "a2_m_opened": false,
+    "decorated_theta_b_opened": false,
+    "activation_analysis_opened": false
+  },
+  "canonical_counts": {
+    "r1_v1_forwards_including_timing": 1132,
+    "r1_1_forwards": 1952,
+    "r1_2_qwen3_4b_saved_records": 288,
+    "r1_2_qwen3_8b_saved_records": 288,
+    "excluded_unrecorded_qwen3_8b_attempts": 24
+  },
+  "bindings": {
+    "report_source_sha256": "6de189386f74a71242a7f2a1252cd5f8cd941bff79e37905413a15b61d80ebdc",
+    "report_pdf_sha256": "1be441dd7eecf3f8ebde1447954e10d18741e8026494e17206e0761d49817129",
+    "capability_matrix_sha256": "a7a255737e62b9f2891f2629a12fd0e67352f3c0831f1f4e07ff57d0d2e7f32c",
+    "reproducibility_capsule_sha256": "9ddd3ceab9605fcc708bf404fbe83ee147cb14e00398aad9240310c2282fc909"
+  },
+  "scope_note": "This record closes only the tested Qwen3 0.6B-8B zero-shot official non-thinking and bounded input-output-only ICL graph-XOR route. It does not test hidden-state accessibility, thinking mode, fine-tuning, larger or other model families, naturality, causal use, or broader hypotheses about latent global-obstruction representations."
+}

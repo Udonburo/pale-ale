@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "model_revisions": {
+    "Qwen/Qwen3-0.6B": "c1899de289a04d12100db370d81485cdf75e47ca",
+    "Qwen/Qwen3-1.7B": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+    "Qwen/Qwen3-4B": "1cfa9a7208912126459214e8b04321603b3df60c",
+    "Qwen/Qwen3-8B": "b968826d9c46dd6066d109eabc6255188de91218"
+  },
+  "tokenizer_policy": {
+    "revision": "same pinned commit as each model",
+    "use_fast": true,
+    "enable_thinking": false,
+    "add_generation_prompt": true,
+    "readout": "raw next-token forced-choice logits at the exact rendered prefix end",
+    "generate": false
+  },
+  "fresh_scout_runtime": {
+    "gpu": "NVIDIA L40S",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "cuda_runtime": "12.6",
+    "nvidia_driver": "580.95.05"
+  },
+  "historical_local_artifact_sha256": {
+    "r1_v1_spec": "fa6afd7502da3d4edd348fb626b9585344ee276cb8b3cef3d5b059e143a27e87",
+    "r1_1_plan": "579e10615bf0244d447cafa9a11179b7d011927a84cec5c42a948435bfc6d62b",
+    "r1_1_runner": "6034b778e50926aeedf377e8402f0e571614d6985ffef924cd89095b65454324",
+    "r1_1_result": "b33a9940dc24b0610aca66641eb2e3d8f292f4247ca25f809a6962dc4f38f1c0",
+    "r1_2_4b_plan": "d749b4b20a6d0d2978a82bef72e1905eecda1a316a5337f88ee4c0c87929b83b",
+    "r1_2_4b_runner": "62c464dcfd44029467cf33db7207c1f223c19707cf633b5dd394eb40582e56f1",
+    "r1_2_4b_result": "48979444b3a984de608a8c5c038932aa567390be7372b2ba1b8b8dc5ea66dc8d",
+    "r1_2_8b_plan": "32bcabe2f3c4ffbdbd5d66e6145b8093a8b10aeaa53012718a5f777f013944df",
+    "r1_2_8b_runner": "51a7d8e78bad69dd9980152a9c50ccdfe4568203553163a5d3f760487b8a182d",
+    "r1_2_8b_result": "5abe2fa66e3ede70f5444ef165ed028006192bb936f3b24ee5fa8bacfa03cf66",
+    "r1_2_8b_matrix": "9c10379c7cc2658624aa438aeb2a78cc70b721733646dcb9651edf0059292afd"
+  },
+  "b0_validation": {
+    "python_baseline_tests": 33,
+    "canonical_vectors_positive": 30,
+    "canonical_vectors_negative": 6,
+    "rust_tests": 14,
+    "python_to_rust_cases": 167,
+    "rust_to_python_cases": 128,
+    "differential_mismatches": 0,
+    "python_baseline_sha256": "35be548c852e6a03b0e80ca6a6c899100907a308f5830eecaa637e3e8baa09cc",
+    "canonical_vector_corpus_sha256": "40c4a090c3ffbd40d302b9c930f5f8d2ecaf4306f963ab80b0152e50b625c763",
+    "rust_source_tree_sha256": "626b9fd2c79401f08f66c223e09b123709a67d45b711c9737c2a7f0a488dc557",
+    "dual_package_sha256": "a8df19e8154f83ce609b9517ac8df02d0e683877a265440b1a8f9960a81ee6d8d"
+  }
+}

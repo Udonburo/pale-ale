@@ -1,0 +1,37 @@
+{
+  "schema_version": "local_mapping_without_iterative_closure_pdf_build_receipt_v1",
+  "built_at_local_date": "2026-08-18",
+  "source_file": "local-mapping-without-iterative-closure.tex",
+  "source_sha256": "6de189386f74a71242a7f2a1252cd5f8cd941bff79e37905413a15b61d80ebdc",
+  "output_file": "local-mapping-without-iterative-closure.pdf",
+  "output_sha256": "1be441dd7eecf3f8ebde1447954e10d18741e8026494e17206e0761d49817129",
+  "page_count": 7,
+  "page_size_points": "595.28 x 841.89 (A4)",
+  "engine": {
+    "name": "Tectonic",
+    "version": "0.17.0"
+  },
+  "render_qa": {
+    "renderer": "Poppler pdftoppm",
+    "render_resolution_dpi": 120,
+    "rendered_page_count": 7,
+    "visual_review": "all pages reviewed after DOI insertion and public-codename removal",
+    "checks": [
+      "DOI-bearing title page and abstract",
+      "PDF title, author, subject, and keyword metadata",
+      "capability ladder and decision rules",
+      "integrated capability matrix and legend",
+      "ICL metric tables and control-instability paragraph",
+      "branch record and excluded-attempt disclosure",
+      "references and appendix tables",
+      "minimal reproducibility binding and license footer"
+    ]
+  },
+  "final_log_status": {
+    "overfull_boxes": 0,
+    "underfull_boxes": 4,
+    "unresolved_references": 0,
+    "unresolved_citations": 0,
+    "note": "The four underfull-box warnings arise in the compact branch-record table; visual inspection found no clipping, overlap, or malformed text."
+  }
+}
