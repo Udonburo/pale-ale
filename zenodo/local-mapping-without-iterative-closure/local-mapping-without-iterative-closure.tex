@@ -1,0 +1,352 @@
+% Classical source for the integrated technical report.
+% Build:
+%   tectonic -X compile local-mapping-without-iterative-closure.tex
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[a4paper,top=22mm,bottom=23mm,left=23mm,right=23mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{adjustbox}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{seqsplit}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\definecolor{LinkBlue}{HTML}{254F72}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=LinkBlue,
+  citecolor=LinkBlue,
+  urlcolor=LinkBlue,
+  pdftitle={Local Mapping Without Iterative Closure},
+  pdfauthor={Aoi Kawasaki},
+  pdfsubject={Zero-shot and input-output-only in-context graph-XOR capability boundaries in Qwen3},
+  pdfkeywords={Qwen3, graph-XOR, parity, in-context learning, capability boundary}
+}
+
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.10}
+\setlist[itemize]{leftmargin=5mm,itemsep=1pt,topsep=2pt}
+\setlist[enumerate]{leftmargin=6mm,itemsep=1pt,topsep=2pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\itshape Local Mapping Without Iterative Closure}
+\fancyhead[R]{\footnotesize Aoi Kawasaki}
+\fancyfoot[C]{\footnotesize \thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0pt}
+\setlength{\headheight}{13pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\footnotesize \thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+\title{\textbf{Local Mapping Without Iterative Closure}\\[4pt]
+\large Zero-Shot and Input-Output-Only In-Context\\
+Graph-XOR Capability Boundaries in Qwen3}
+\author{Aoi Kawasaki}
+\date{18 August 2026\\
+\small DOI: \href{https://doi.org/10.5281/zenodo.21992852}{10.5281/zenodo.21992852}\\
+\small Not peer reviewed.}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We evaluated zero-shot and input-output-only in-context graph-XOR capabilities in Qwen3 models from 0.6B to 8B under prospectively frozen, bounded protocols. In official non-thinking mode, zero-shot behavioral capability reached a one-edge relation in Qwen3-8B, but no tested model achieved a behavioral pass on two-input XOR. Ordered and shuffled relational-cycle surfaces were also evaluated in the zero-shot scout and showed no detected signal. Under in-context learning (ICL), the prospectively frozen joint correct-versus-label-shuffled formation criterion was met on the two-input mapping surface in both models, first at 16 demonstrations for Qwen3-4B and at 4 demonstrations for Qwen3-8B. No correct-demonstration P3 cell met the predeclared score-signal criterion on the frozen ordered length-8 parity ledgers. Because that parity surface did not qualify, relational-cycle surfaces remained unopened in the ICL branches. The multi-cycle obstruction task and all activation analyses remained unopened throughout. The observed ICL boundary therefore lies between context-conditioned local mapping and iterative composition. The result neither establishes acquisition of a reusable XOR algorithm nor supports claims about hidden mechanisms or their absence.
+\end{abstract}
+
+\section{Introduction}
+
+The motivating research program asks whether a frozen pretrained transformer makes an externally defined global obstruction class accessible, transforms it naturally under changes of presentation, and causally uses it across held-out graph and semantic families. Graph-XOR provides exact external semantics for such a study: local edge relations induce path parities and a quotient obstruction class, while satisfiability and counterfactual answers can be computed without reference to the model. This framing is related to treatments of constraint satisfaction as global-section existence and to cohomological obstructions to global solutions~\cite{oconghaile2022}.
+
+That mechanism question requires a prior behavioral capability gate. The complete R1 v1.0 task failed at this gate. Separate prospective scouts then localized the behavioral boundary before any activation extraction: first with a zero-shot direct-semantic ladder across Qwen3 0.6B--8B, and then with bounded input-output-only ICL in Qwen3-4B and Qwen3-8B. These scouts neither amend nor rescue the v1.0 result.
+
+The principal finding is a positive--negative boundary. Correct demonstrations made a two-input mapping behaviorally available in both ICL models, but no correct-demonstration P3 cell met the predeclared score-signal criterion on the frozen ledgers at any tested demonstration count up to 64. Because two-input XOR has only four possible rows, the positive result is compatible with truth-table retrieval or context-dependent pattern-to-label inference. The report therefore uses the term \emph{two-input mapping} rather than claiming acquisition of a reusable XOR algorithm.
+
+\paragraph{Scope.}
+The tested conditions were Qwen3 0.6B, 1.7B, 4B, and 8B; official non-thinking mode; single-forward forced-choice readout; zero-shot direct-semantic tasks; and 4-, 16-, and 64-shot input-output-only ICL with correct and label-shuffled demonstrations. Generated reasoning, scratchpads, fine-tuning, other model families, models above 8B, hidden-state accessibility, naturality, causal intervention, and semantic transfer were not tested.
+
+\section{Protocol}
+
+\subsection{Capability ladder}
+
+The direct-semantic ladder separated output behavior from increasingly compositional tasks (Table~\ref{tab:ladder}). P2-to-P3 is not a single-factor intervention: it jointly changes input arity, sequence length, and problem family. It therefore localizes an observational task boundary rather than causally isolating iteration. P3, P4, and P5 used related problem families, but their differences are likewise not pure causal contrasts. In particular, P3-to-P4 jointly changes lexical presentation, entity binding, sequence length, and serialization burden. P4-to-P5 is narrower: the underlying graph and relation statements are held fixed while the constraint-line order is shuffled.
+
+\begin{table}[H]
+\centering
+\caption{Capability surfaces used across the prospective scouts.}
+\label{tab:ladder}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{10mm}p{43mm}Y@{}}
+\toprule
+ID & Surface & Intended diagnostic role \\
+\midrule
+P0 & Explicit bit echo & Direct output surface \\
+P1 & One-edge relation & Interpretation of one binary relation \\
+P2 & Two-input XOR mapping & Context-dependent local mapping over four truth-table rows \\
+P3 & Ordered length-8 parity & Repeated composition across eight input bits \\
+P4 & Ordered relational cycle & Relational presentation and entity-binding burden \\
+P5 & Shuffled relational cycle & Additional serialization-order and reconstruction burden \\
+B  & Decorated marked theta & Rank-2 multi-cycle query behavior required before mechanism analysis \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Decision rules}
+
+Each opened cell was assigned one of three predeclared states; a fourth state recorded surfaces that were not opened:
+
+\begin{itemize}
+\item \textbf{Behavior pass}: semantic accuracy at least 0.75, paired directional consistency at least 0.75, every applicable frozen stratum at least 0.625, and no predeclared collapse detector firing.
+\item \textbf{Score signal only}: no behavioral pass, but semantic-score AUC or paired directional consistency at least 0.75.
+\item \textbf{No detected signal/formation}: neither condition was met.
+\item \textbf{Unopened}: an upstream gate failed; the surface was not measured and is not a negative result.
+\end{itemize}
+
+Raw forced-choice accuracy remained primary. No dummy-prompt or post-hoc logit calibration could authorize progression. AUC and paired directional consistency were retained as diagnostics robust to a fixed score offset, but could not rescue a behavioral failure.
+
+For ICL, cell classification and surface-level formation were separate. At a given shot count, a formation pass required the correct-demonstration cell to be a behavior pass, its matched label-shuffled control not to be a behavior pass, correct-minus-control accuracy of at least 0.125, and correct-minus-control paired consistency of at least 0.125. A surface passed if any predeclared shot count satisfied all four conditions, with the smallest passing shot count retained as the formation point. Score-only structure in a shuffled control did not qualify as formation.
+
+The label-shuffled control preserved the demonstration inputs and their order while applying a blockwise balanced output permutation. In each four-example block it preserved output-label counts, changed exactly half the labels, and was neither the correct sequence nor its complement; prompt length and token multiset were therefore preserved while the exact input-output mapping was destroyed. Target instances, target order, and target labels were identical across shot counts and controls. Demonstration and target rendered instances were disjoint. For P2, the four truth-table assignments necessarily recurred, so the held-out unit was the rendered relational instance rather than a novel truth-table row. Plans, thresholds, and stopping rules were hash-bound before execution; no external preregistration service was used.
+
+\subsection{Conditional execution and branch separation}
+
+In the zero-shot capability-localization scout, ordered and shuffled relational-cycle surfaces (P4 and P5) were evaluated and showed no detected signal. In the ICL formation branches, P5 remained unopened because P3 did not qualify. Direct A2-M, the multi-cycle obstruction surface B, and all activation analyses remained unopened across every branch. Thus, \emph{unopened} has different provenance from \emph{no detected signal} and is kept distinct throughout.
+
+\section{Results}
+
+\subsection{Integrated capability boundary}
+
+Figure~\ref{fig:matrix} summarizes all canonical branches. In zero-shot evaluation, increased model size extended reliable behavior from bit echo toward a one-edge relation, but no model achieved a behavioral pass on two-input XOR. Qwen3-4B showed score-level signal at P2; Qwen3-8B did not. P4 and P5 showed no detected signal in all zero-shot models.
+
+In the ICL branches, the same positive--negative boundary appeared in both tested Qwen3 sizes. Correct-demonstration P2 cells achieved behavioral passes at 16 and 64 shots in Qwen3-4B and at 4, 16, and 64 shots in Qwen3-8B. Under the joint correct-versus-shuffled formation rule, the earliest qualifying shot count was 16 for 4B and 4 for 8B; the corresponding 16- and 64-shot correct-versus-shuffled contrasts in 8B did not satisfy the joint formation criterion. P3 did not qualify for the predeclared score-signal category through 64 demonstrations, so P5 and B were not opened in ICL.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{capability-matrix-publication.png}
+\caption{Cross-branch capability matrix. In the zero-shot rows, green denotes a cell-level behavioral pass. In the ICL rows, green denotes surface-level formation under the joint correct-versus-shuffled criterion; the earliest qualifying shot count was 16 for Qwen3-4B and 4 for Qwen3-8B. Correct-demonstration cell-level classifications at every shot count are reported in Table~\ref{tab:primaryicl}. Amber denotes score-only signal, red no detected signal or formation, and gray a surface left unopened by the stopping rule fixed before evaluation. Zero-shot P4/P5 cells were measured; ICL P5 and all B cells were unopened.}
+\label{fig:matrix}
+\end{figure}
+
+\subsection{Input-output-only ICL metrics}
+
+Each cell contained 24 target records. Correct demonstrations were evaluated against label-shuffled controls with the same shot ladder. Cell-level metrics are descriptive over the 24 frozen target records in each ledger and are not presented as population-level estimates. Table~\ref{tab:primaryicl} reports the primary correct-demonstration cells; all 24 cells are given in Appendix~\ref{app:metrics}.
+
+\begin{table}[H]
+\centering
+\caption{Primary correct-demonstration ICL cells. ``Pair'' is paired directional consistency and ``Min.'' is minimum frozen-stratum accuracy. ``Frozen class'' is the cell-level classification of the correct-demonstration condition. Surface-level formation was assessed separately against the matched label-shuffled control under the joint rule in Section~2.2.}
+\label{tab:primaryicl}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llrrrrrl}
+\toprule
+Model & Surface & Shots & Accuracy & AUC & Pair & Min. & Frozen class \\
+\midrule
+4B & P2 & 4  & 79.2\% & 1.00 & 1.00 & 58.3\% & Signal only \\
+4B & P2 & 16 & 100\%  & 1.00 & 1.00 & 100\%  & Pass \\
+4B & P2 & 64 & 100\%  & 1.00 & 1.00 & 100\%  & Pass \\
+4B & P3 & 4  & 56.3\% & 0.55 & 0.58 & 37.5\% & No signal \\
+4B & P3 & 16 & 50.0\% & 0.59 & 0.58 & 0.0\%  & No signal \\
+4B & P3 & 64 & 50.0\% & 0.45 & 0.58 & 0.0\%  & No signal \\
+8B & P2 & 4  & 100\%  & 1.00 & 1.00 & 100\%  & Pass \\
+8B & P2 & 16 & 100\%  & 1.00 & 1.00 & 100\%  & Pass \\
+8B & P2 & 64 & 100\%  & 1.00 & 1.00 & 100\%  & Pass \\
+8B & P3 & 4  & 60.4\% & 0.63 & 0.58 & 20.8\% & No signal \\
+8B & P3 & 16 & 43.8\% & 0.63 & 0.58 & 12.5\% & No signal \\
+8B & P3 & 64 & 50.0\% & 0.55 & 0.58 & 0.0\%  & No signal \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+The 8B 16-shot label-shuffled P3 control reached 75\% raw accuracy but did not qualify as a behavior pass because paired consistency (0.67) and minimum-stratum accuracy (58.3\%) remained below the frozen thresholds. The matched correct-demonstration cell scored 43.8\%; the surface therefore did not qualify as formation and is reported as control instability.
+
+Several label-shuffled P2 cells exhibited score-level ordering, but no shuffled P2 cell met the full behavioral-pass criterion. The positive result is therefore a label-sensitive behavioral boundary under correct demonstrations, not evidence that shuffled controls contained no score structure.
+
+\section{Interpretation}
+
+\subsection{Supported conclusion}
+
+Under the tested protocols, the observational ICL boundary lies between context-conditioned local mapping and iterative composition. Correct demonstrations changed P2 behavior in Qwen3-4B and Qwen3-8B, while no corresponding P3 cell met the predeclared score-signal criterion through 64 examples. This narrows the complete-task failure: randomized codebook readout was not the sole bottleneck, and neither more demonstrations within the frozen range nor the move from 4B to 8B bridged the tested P2-to-P3 transition.
+
+The result should not be described as an internal mechanism finding. P2 has a four-row input space, so truth-table retrieval remains a complete alternative explanation. P3 requires repeated application or an equivalent computation, but the experiment observes only behavior. The phrase \emph{iterative closure} in the title names the task-level transition that was not observed; it does not assert that a particular recurrent state was absent.
+
+\subsection{Claim boundary}
+
+The study does not show that Qwen3 learned a reusable XOR algorithm at P2, identify an internal iterative state, or establish the absence of hidden task information. Each ICL branch used one prospectively fixed demonstration bank and order, with nested 4-, 16-, and 64-shot prefixes; bank-to-bank and order-to-order variance were not assessed. The study does not test graph reconstruction under ICL, multi-cycle obstruction, naturality, causal use, thinking mode, explicit intermediate supervision, fine-tuning, other model families, or larger models. It does not evaluate broader hypotheses about latent global-obstruction representations. The closed route is limited to Qwen3 0.6B--8B under the tested zero-shot and bounded input-output-only ICL protocols.
+
+\subsection{Why unopened surfaces matter}
+
+In the ICL branches, running P5 after P3 failed would have conflated iterative parity, relational encoding, serialization order, entity binding, and graph reconstruction. Similarly, opening B without an upstream behavioral substrate would not have yielded an interpretable obstruction result. Conditional stopping is therefore part of the evidential design rather than missing data. Separately, the measured zero-shot P4/P5 failures show only that these composite surfaces produced no detected signal under that zero-shot protocol.
+
+\section{Implementation and branch record}
+
+R1.1 and both R1.2 scouts used official Qwen3 non-thinking mode~\cite{yang2025}, BF16 inference on one NVIDIA L40S, Python 3.11.2, PyTorch 2.7.1+cu126, Transformers 5.15.0, tokenizers 0.22.2, CUDA runtime 12.6, and NVIDIA driver 580.95.05. No quantization, generated reasoning, activation extraction, or model-weight update was used. R1 v1.0 used its separately frozen FP32 execution surface and is reported historically rather than pooled numerically with the fresh scout series. The model sizes are separately trained checkpoints; cross-size differences are descriptive and do not isolate parameter count as a causal variable.
+
+The exact graph-XOR core had been independently implemented in Python and Rust before model execution. The frozen B0 package retained a 33-test Python baseline, 30 positive and 6 negative canonical vectors, 14 Rust tests, and zero mismatches across 167 Python-to-Rust and 128 Rust-to-Python differential cases.
+
+\begin{table}[H]
+\centering
+\caption{Canonical branch record. Forward counts exclude unrecorded attempts.}
+\label{tab:branches}
+\begin{tabularx}{\textwidth}{@{}p{18mm}p{37mm}p{42mm}Y@{}}
+\toprule
+Branch & Condition & Highest reached & Stop \\
+\midrule
+R1 v1.0 & 0.6B/1.7B; complete zero-shot codebook task & S0 selection; 1,132 forwards including timing & No configuration qualified for confirmation \\
+R1.1 & 0.6B--8B; zero-shot direct-semantic ladder & One-edge pass at 8B; 1,952 forwards & No two-input XOR behavioral pass \\
+R1.2, 4B & 4/16/64-shot input-output-only ICL & P2 formation point 16; 288 canonical records & No P3 formation; operational closeout after canonical cells were saved \\
+R1.2, 8B & Fresh 4/16/64-shot input-output-only ICL & P2 formation point 4; 288 canonical records & No P3 formation; terminal closeout \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The 4B branch contains 288 canonical saved records. A subsequent set of 24 attempted 8B forwards was not durably recorded before the operational guard stopped the campaign and is excluded from every analysis. The published 8B result comes from a separately frozen fresh branch. Thus, the canonical record count and the number of attempted forwards are not conflated.
+
+\section{Related work}
+
+Parity is a demanding algorithmic substrate. Transformers can compute it under particular constructions, depth assumptions, or intermediate supervision~\cite{kim2025,kozachinskiy2026}; these results do not imply that an arbitrary pretrained chat model will express iterative parity under a zero-shot or input-output-only non-thinking prompt. Many-shot ICL can override some pretraining biases on difficult tasks~\cite{agarwal2024}, but the present bounded ladder did not produce length-8 parity formation in either tested model.
+
+Recent work evaluated Qwen3 Base models from 0.6B to 14B on 8-bit in-context program-induction tasks, including parity-based transformations, over 1--128 demonstrations~\cite{breslow2025}. That study used base models, 8-bit-to-8-bit transformations, and a broad program suite. The present study instead isolates a prospectively frozen local-mapping-to-iterative-parity boundary in instruction-tuned Qwen3 under official non-thinking mode.
+
+This report does not claim the first evidence that language models struggle with parity, nor the first Qwen3 parity evaluation. Its contribution is the frozen conditional boundary: a two-input mapping became behaviorally available under correct demonstrations in two Qwen3 sizes; ordered length-8 parity did not reach the predeclared capability criterion; and downstream ICL graph and obstruction surfaces were left unopened according to the stopping rule.
+
+\section{Conclusion}
+
+Under the prospectively frozen protocols, Qwen3 models up to 8B did not reach the length-8 iterative-parity capability required to open the downstream ICL graph-XOR surfaces. Correct demonstrations satisfied the joint formation criterion on the two-input mapping surface in Qwen3-4B and Qwen3-8B, but no P3 cell met the predeclared score-signal criterion even with 64 demonstrations. The observed ICL boundary therefore lies between context-conditioned local mapping and iterative composition.
+
+The ICL formation boundary was reached before relational-cycle evaluation; the zero-shot scouts separately found no detected signal on ordered or shuffled relational-cycle surfaces. Multi-cycle global obstruction and hidden-state mechanisms remained unevaluated. The result is therefore a bounded capability-boundary report, not a claim of mechanistic absence.
+
+\begin{thebibliography}{9}
+\small
+\setlength{\itemsep}{0.45em}
+\setlength{\parskip}{0pt}
+
+\bibitem{kim2025}
+J. Kim and T. Suzuki.
+\newblock Transformers provably solve parity efficiently with chain of thought.
+\newblock In \emph{International Conference on Learning Representations}, 2025. Oral presentation. \href{https://arxiv.org/abs/2410.08633}{arXiv:2410.08633}.
+
+\bibitem{agarwal2024}
+R. Agarwal et al.
+\newblock Many-shot in-context learning.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2024. Spotlight. \href{https://arxiv.org/abs/2404.11018}{arXiv:2404.11018}.
+
+\bibitem{kozachinskiy2026}
+A. Kozachinskiy, T. Steifer, and P. Wa\l{}\k{e}ga.
+\newblock Parity, sensitivity, and transformers.
+\newblock 2026. \href{https://arxiv.org/abs/2602.05896}{arXiv:2602.05896}.
+
+\bibitem{yang2025}
+A. Yang et al.
+\newblock Qwen3 technical report.
+\newblock 2025. \href{https://arxiv.org/abs/2505.09388}{arXiv:2505.09388}.
+
+\bibitem{oconghaile2022}
+A. \'O Conghaile.
+\newblock Cohomology in constraint satisfaction and structure isomorphism.
+\newblock 2022. \href{https://arxiv.org/abs/2206.15253}{arXiv:2206.15253}.
+
+\bibitem{breslow2025}
+N. Breslow, A. Mishra, M. Revsine, M. C. Schatz, A. Liu, and D. Khashabi.
+\newblock Genomic next-token predictors are in-context learners.
+\newblock 2025. \href{https://arxiv.org/abs/2511.12797}{arXiv:2511.12797}.
+
+\end{thebibliography}
+
+\clearpage
+\appendix
+
+\section{Full ICL cell metrics}
+\label{app:metrics}
+
+Each cell contains 24 target records. ``Pass'' denotes a cell-level behavior pass, ``Signal'' score signal only, and ``None'' no detected signal. Surface-level formation is assessed jointly against the matched shuffled control as specified in Section~2.2.
+
+\begin{table}[H]
+\centering
+\caption{Qwen3-4B ICL cells.}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lllrrrrl}
+\toprule
+Surface & Shots & Demonstrations & Acc. & AUC & Pair & Min. & Class \\
+\midrule
+P2 & 4  & Correct  & .792 & 1.000 & 1.000 & .583 & Signal \\
+P2 & 4  & Shuffled & .500 & .625 & .750 & .000 & Signal \\
+P2 & 16 & Correct  & 1.000 & 1.000 & 1.000 & 1.000 & Pass \\
+P2 & 16 & Shuffled & .375 & .500 & .500 & .250 & None \\
+P2 & 64 & Correct  & 1.000 & 1.000 & 1.000 & 1.000 & Pass \\
+P2 & 64 & Shuffled & .667 & .774 & .750 & .417 & Signal \\
+P3 & 4  & Correct  & .563 & .545 & .583 & .375 & None \\
+P3 & 4  & Shuffled & .500 & .372 & .458 & .000 & None \\
+P3 & 16 & Correct  & .500 & .590 & .583 & .000 & None \\
+P3 & 16 & Shuffled & .500 & .552 & .625 & .000 & None \\
+P3 & 64 & Correct  & .500 & .451 & .583 & .000 & None \\
+P3 & 64 & Shuffled & .500 & .559 & .583 & .000 & None \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Qwen3-8B ICL cells.}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lllrrrrl}
+\toprule
+Surface & Shots & Demonstrations & Acc. & AUC & Pair & Min. & Class \\
+\midrule
+P2 & 4  & Correct  & 1.000 & 1.000 & 1.000 & 1.000 & Pass \\
+P2 & 4  & Shuffled & .500 & .500 & .500 & .000 & None \\
+P2 & 16 & Correct  & 1.000 & 1.000 & 1.000 & 1.000 & Pass \\
+P2 & 16 & Shuffled & .625 & .802 & 1.000 & .500 & Signal \\
+P2 & 64 & Correct  & 1.000 & 1.000 & 1.000 & 1.000 & Pass \\
+P2 & 64 & Shuffled & .563 & .701 & .917 & .458 & Signal \\
+P3 & 4  & Correct  & .604 & .625 & .583 & .208 & None \\
+P3 & 4  & Shuffled & .500 & .583 & .583 & .000 & None \\
+P3 & 16 & Correct  & .438 & .625 & .583 & .125 & None \\
+P3 & 16 & Shuffled & .750 & .691 & .667 & .583 & None \\
+P3 & 64 & Correct  & .500 & .549 & .583 & .000 & None \\
+P3 & 64 & Shuffled & .500 & .635 & .667 & .000 & None \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\section{Minimal reproducibility binding}
+
+The frozen R1 v1.0 specification has SHA-256
+\texttt{\seqsplit{fa6afd7502da3d4edd348fb626b9585344ee276cb8b3cef3d5b059e143a27e87}}.
+The exact model revisions were:
+
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Model & Exact revision \\
+\midrule
+Qwen3-0.6B & \texttt{c1899de289a04d12100db370d81485cdf75e47ca} \\
+Qwen3-1.7B & \texttt{70d244cc86ccca08cf5af4e1e306ecf908b1ad5e} \\
+Qwen3-4B & \texttt{1cfa9a7208912126459214e8b04321603b3df60c} \\
+Qwen3-8B & \texttt{b968826d9c46dd6066d109eabc6255188de91218} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The public capsule contains audit hashes, result summaries, matrix data, and runtime bindings; private paths, credentials, signed URLs, account identifiers, caches, and model weights are excluded. The PDF is absent from the capsule-internal frozen checksum inventory but included in the accompanying top-level inventory.
+
+\begin{center}
+\footnotesize \textcopyright{} 2026 Aoi Kawasaki. Text and figures are licensed under CC BY 4.0. Bundled code retains the license stated in the reproducibility capsule.
+\end{center}
+
+\end{document}

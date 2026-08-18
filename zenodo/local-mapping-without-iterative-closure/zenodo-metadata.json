@@ -1,0 +1,55 @@
+{
+  "record_status": "ZENODO_PUBLISHED_MINOR_FILE_CORRECTION",
+  "resource_type": "publication-technicalnote",
+  "title": "Local Mapping Without Iterative Closure: Zero-Shot and Input-Output-Only In-Context Graph-XOR Capability Boundaries in Qwen3",
+  "creators": [
+    {
+      "name": "Kawasaki, Aoi"
+    }
+  ],
+  "publication_date": "2026-08-18",
+  "version": "1.0.0",
+  "language": "eng",
+  "license": "cc-by-4.0",
+  "access_right": "open",
+  "keywords": [
+    "graph-XOR",
+    "parity",
+    "in-context learning",
+    "Qwen3",
+    "capability boundary",
+    "frozen protocol",
+    "negative result",
+    "algorithmic reasoning"
+  ],
+  "notes": "Technical report; not peer reviewed. The report and figure are CC BY 4.0. Code in the reproducibility capsule remains MPL-2.0. Model weights are not redistributed.",
+  "related_identifiers": [
+    {
+      "identifier": "https://doi.org/10.5281/zenodo.19483162",
+      "relation": "isRelatedTo",
+      "resource_type": "publication-technicalnote"
+    },
+    {
+      "identifier": "https://doi.org/10.5281/zenodo.19569052",
+      "relation": "isRelatedTo",
+      "resource_type": "publication-technicalnote"
+    },
+    {
+      "identifier": "https://doi.org/10.5281/zenodo.20080003",
+      "relation": "isRelatedTo",
+      "resource_type": "publication-technicalnote"
+    },
+    {
+      "identifier": "https://doi.org/10.5281/zenodo.21355572",
+      "relation": "isRelatedTo",
+      "resource_type": "publication-preprint"
+    },
+    {
+      "identifier": "https://github.com/Udonburo/pale-ale",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ],
+  "doi": "10.5281/zenodo.21992852",
+  "description_source": "zenodo-description.md"
+}

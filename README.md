@@ -7,6 +7,7 @@ consistency, and learned-system artifacts.**
 [![Telemetry DOI](https://img.shields.io/badge/Telemetry-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.19569052)
 [![Gate12B DOI](https://img.shields.io/badge/Gate12B-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.20080003)
 [![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21355572)
+[![Graph-XOR DOI](https://img.shields.io/badge/Graph--XOR-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21992852)
 
 [![Amber](https://img.shields.io/badge/Amber-live-D99716?style=flat-square)](https://amber-oversight.vercel.app/)
 [![CI](https://img.shields.io/github/actions/workflow/status/Udonburo/pale-ale/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Udonburo/pale-ale/actions/workflows/ci.yml)
@@ -32,7 +33,7 @@ checkpoint was reached.
 
 | Research evidence | Interactive companion |
 | --- | --- |
-| **Gate12A / Gate12B / Gate12C-1.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
+| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR capability boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
 
 ## Research Focus
 
@@ -100,6 +101,17 @@ replay-artifact-graph endpoints.
 
 [Report DOI](https://doi.org/10.5281/zenodo.21355572) |
 [release bundle](zenodo/gate12c1-parenthesization-defects/README.txt)
+
+### Local mapping without iterative closure
+
+A prospectively frozen capability-boundary study across Qwen3 models from
+0.6B to 8B. Correct input-output demonstrations met the joint formation rule
+on a two-input mapping surface in Qwen3-4B and Qwen3-8B, while no
+correct-demonstration P3 cell met the predeclared score-signal criterion on
+the frozen ordered length-8 parity ledgers at up to 64 demonstrations.
+
+[Report DOI](https://doi.org/10.5281/zenodo.21992852) |
+[release bundle](zenodo/local-mapping-without-iterative-closure/README.txt)
 
 ### Gate12C-2: closed synthetic development track
 

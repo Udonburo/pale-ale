@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "program": "Graph-XOR capability-boundary pilot",
+  "primary_public_result": "Correct input-output demonstrations made a two-input XOR mapping behaviorally available in Qwen3-4B and Qwen3-8B, but no correct-demonstration P3 cell met the predeclared score-signal criterion on the frozen ledgers at 4, 16, or 64 demonstrations.",
+  "branches": [
+    {
+      "branch": "R1 v1.0",
+      "status": "CLOSED_AT_C0 / S0_SELECTION_FAIL / IMMUTABLE",
+      "models": ["Qwen3-0.6B", "Qwen3-1.7B"],
+      "protocol": "Frozen zero-shot complete randomized-codebook graph-XOR task",
+      "forwards_completed_including_timing": 1132,
+      "highest_reached": "S0 selection surface executed",
+      "stop_reason": "No configuration qualified for capability confirmation",
+      "confirmation_opened": false,
+      "activations_opened": false
+    },
+    {
+      "branch": "R1.1",
+      "status": "SCOUT_CLOSE_NO_DIRECT_B_THROUGH_8B / IMMUTABLE",
+      "models": ["Qwen3-0.6B", "Qwen3-1.7B", "Qwen3-4B", "Qwen3-8B"],
+      "protocol": "Zero-shot official non-thinking direct-semantic capability ladder",
+      "forwards_completed": 1952,
+      "highest_reached": "One-edge relation behavior in Qwen3-8B",
+      "stop_reason": "No direct two-input XOR behavioral pass through Qwen3-8B",
+      "direct_B_opened": false,
+      "activations_opened": false
+    },
+    {
+      "branch": "R1.2 — Qwen3-4B",
+      "status": "VALID P2/P3 PARTIAL RESULT / OPERATIONAL_ABORT_OA1_FINAL / IMMUTABLE",
+      "models": ["Qwen3-4B"],
+      "protocol": "4/16/64-shot input-output-only ICL with correct and label-shuffled demonstrations",
+      "forwards_completed": 288,
+      "highest_reached": "P2 surface formation; earliest qualifying shot count 16",
+      "correct_cell_behavior_pass_shots": [16, 64],
+      "joint_formation_pass_shots": [16, 64],
+      "formation_point": 16,
+      "stop_reason": "No detected P3 formation",
+      "operational_note": "All predeclared P2 and P3 cells were saved before the exact-resume safeguard produced the final operational abort.",
+      "P5_opened": false,
+      "global_B_opened": false,
+      "activations_opened": false
+    },
+    {
+      "branch": "R1.2 — fresh Qwen3-8B follow-up",
+      "status": "SCOUT_CLOSE_NO_8B_ICL_P3_FORMATION / IMMUTABLE",
+      "models": ["Qwen3-8B"],
+      "protocol": "Fresh 4/16/64-shot input-output-only ICL with correct and label-shuffled demonstrations",
+      "forwards_completed": 288,
+      "highest_reached": "P2 surface formation; earliest qualifying shot count 4",
+      "correct_cell_behavior_pass_shots": [4, 16, 64],
+      "joint_formation_pass_shots": [4],
+      "formation_point": 4,
+      "stop_reason": "No detected P3 formation at 4, 16, or 64 demonstrations",
+      "P5_opened": false,
+      "global_B_opened": false,
+      "activations_opened": false
+    }
+  ],
+  "route_closeout": "CLOSED_UNDER_TESTED_QWEN3_ZERO_SHOT_AND_BOUNDED_INPUT_OUTPUT_ONLY_ICL_PROTOCOLS",
+  "not_implied": [
+    "absence of hidden-state information",
+    "failure under thinking mode or generated reasoning",
+    "failure under explicit intermediate supervision or fine-tuning",
+    "failure in other model families or larger models",
+    "refutation of broader latent global-obstruction hypotheses"
+  ]
+}

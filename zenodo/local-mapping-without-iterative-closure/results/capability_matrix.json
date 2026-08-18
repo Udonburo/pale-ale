@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.1",
+  "title": "Graph-XOR capability boundary in Qwen3",
+  "states": ["PASS", "FORMATION PASS", "SCORE SIGNAL", "NO SIGNAL", "NO FORMATION", "UNOPENED"],
+  "rows": [
+    {
+      "condition": "Qwen3-0.6B zero-shot",
+      "bit_echo": "SCORE SIGNAL",
+      "one_edge": "NO SIGNAL",
+      "two_input_xor": "NO SIGNAL",
+      "parity_8": "NO SIGNAL",
+      "ordered_cycle": "NO SIGNAL",
+      "shuffled_cycle": "NO SIGNAL",
+      "global_b": "UNOPENED",
+      "boundary": "Before one-edge relation"
+    },
+    {
+      "condition": "Qwen3-1.7B zero-shot",
+      "bit_echo": "PASS",
+      "one_edge": "SCORE SIGNAL",
+      "two_input_xor": "NO SIGNAL",
+      "parity_8": "NO SIGNAL",
+      "ordered_cycle": "NO SIGNAL",
+      "shuffled_cycle": "NO SIGNAL",
+      "global_b": "UNOPENED",
+      "boundary": "Before two-input XOR"
+    },
+    {
+      "condition": "Qwen3-4B zero-shot",
+      "bit_echo": "PASS",
+      "one_edge": "SCORE SIGNAL",
+      "two_input_xor": "SCORE SIGNAL",
+      "parity_8": "NO SIGNAL",
+      "ordered_cycle": "NO SIGNAL",
+      "shuffled_cycle": "NO SIGNAL",
+      "global_b": "UNOPENED",
+      "boundary": "No behavioral XOR pass"
+    },
+    {
+      "condition": "Qwen3-8B zero-shot",
+      "bit_echo": "PASS",
+      "one_edge": "PASS",
+      "two_input_xor": "NO SIGNAL",
+      "parity_8": "NO SIGNAL",
+      "ordered_cycle": "NO SIGNAL",
+      "shuffled_cycle": "NO SIGNAL",
+      "global_b": "UNOPENED",
+      "boundary": "Between one-edge and XOR"
+    },
+    {
+      "condition": "Qwen3-4B ICL (4/16/64)",
+      "bit_echo": "UNOPENED",
+      "one_edge": "UNOPENED",
+      "two_input_xor": "FORMATION PASS",
+      "correct_cell_behavior_pass_shots": [16, 64],
+      "joint_formation_pass_shots": [16, 64],
+      "formation_point": 16,
+      "parity_8": "NO FORMATION",
+      "ordered_cycle": "UNOPENED",
+      "shuffled_cycle": "UNOPENED",
+      "global_b": "UNOPENED",
+      "boundary": "Between local mapping and parity"
+    },
+    {
+      "condition": "Qwen3-8B ICL (4/16/64)",
+      "bit_echo": "UNOPENED",
+      "one_edge": "UNOPENED",
+      "two_input_xor": "FORMATION PASS",
+      "correct_cell_behavior_pass_shots": [4, 16, 64],
+      "joint_formation_pass_shots": [4],
+      "formation_point": 4,
+      "parity_8": "NO FORMATION",
+      "ordered_cycle": "UNOPENED",
+      "shuffled_cycle": "UNOPENED",
+      "global_b": "UNOPENED",
+      "boundary": "Between local mapping and parity"
+    }
+  ]
+}
