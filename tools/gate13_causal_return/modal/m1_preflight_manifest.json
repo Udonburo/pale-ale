@@ -1,0 +1,55 @@
+{
+  "schema_version": "gate13_track_a_m1_preflight_manifest_v1",
+  "selection_rule": "one prospectively frozen existing A0 case from each structured parser surface S/O/E/N; maximum sequence length 12, earliest deterministic base/case ID within surface",
+  "scientific_case_additions": 0,
+  "scientific_forward_additions": 0,
+  "case_count": 4,
+  "cases": [
+    {
+      "ordinal": 1,
+      "stage": "A0",
+      "case_id": "a0-l12-y0-early-r0-S",
+      "condition": "S",
+      "case_sha256": "bfe5a9e922bd0d1bb589ba20dc4907a38cfd19b418d73c706120ac3911ef1b19",
+      "prompt_sha256": "3eadff30ee28a1c3ac08e7ea8817b25393aa581de9069a7d1c2af1b8c2b8df7a",
+      "expected_text_sha256": "c342b3fbd3ae2a66ece4c03575857e02f7dc8c90a8700e352ba7f6a2a42c10d2",
+      "max_new_tokens": 84,
+      "reuse_in_a0": true
+    },
+    {
+      "ordinal": 2,
+      "stage": "A0",
+      "case_id": "a0-l12-y0-early-r0-O",
+      "condition": "O",
+      "case_sha256": "cfd688a32d8edf3578a32de878dbece2a435f0e9fc23aac314fc0a7841209e74",
+      "prompt_sha256": "14c492644559b2d0bb5922913e53828b73330dc1d5b10004829c99f69ccc4ef7",
+      "expected_text_sha256": "3bc981f5aa685709cdbf4226aa38b2c2be742f14048746b05c1d3eb3876c67c4",
+      "max_new_tokens": 77,
+      "reuse_in_a0": true
+    },
+    {
+      "ordinal": 3,
+      "stage": "A0",
+      "case_id": "a0-l12-y0-early-r0-E",
+      "condition": "E",
+      "case_sha256": "5f7485c4c9a146fd94a220610f4468d1a58b9f80e1f4865dbea2c3c65f4258a6",
+      "prompt_sha256": "dff09909c09ed61a0eca0861d3dcbb307ad8df8ba21449033a0311be1c763e50",
+      "expected_text_sha256": "2459593ecc879657e1279c2e7a0282864f63cdbd6de8a08a6575acd98bd6c896",
+      "max_new_tokens": 77,
+      "reuse_in_a0": true
+    },
+    {
+      "ordinal": 4,
+      "stage": "A0",
+      "case_id": "a0-l12-y0-early-r0-N",
+      "condition": "N",
+      "case_sha256": "35fa8c35813438234ac0b8fa7347ebb205249ed7d2dfd4bdb729d7e43e49062b",
+      "prompt_sha256": "cb1f7fea626f3b912ef2df07f904f847f25a2c18c6d14ddd04cec997649cfa80",
+      "expected_text_sha256": "3bc981f5aa685709cdbf4226aa38b2c2be742f14048746b05c1d3eb3876c67c4",
+      "max_new_tokens": 77,
+      "reuse_in_a0": true
+    }
+  ],
+  "manifest_sha256": "724cdcb6b2185c47ea3d33abde9f43d33e9c90b7ceb2bf85eada6265803164d1"
+}
+
