@@ -1,9 +1,9 @@
 {
   "schema_version": "gate13_phase2_dual_authorization_v1",
   "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
-  "phase2_code_commit": "edab77f3ef9fc3db961979c0007a7668d0e53354",
-  "phase2_a_lock_sha256": "79939204cd8637dc1a7abebf3277493fdbddd2b42e0715ddf214a0f74f186038",
-  "phase2_b2a_lock_sha256": "26a6c646f3b226bfcfc067ba6f6ddab2043651e5e6fbc10bc52917755524a6cb",
+  "phase2_code_commit": "259884d5dc146877bb95428c987697a17a6fbd22",
+  "phase2_a_lock_sha256": "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa",
+  "phase2_b2a_lock_sha256": "58317d5a608a6b6717e189c142cfafce47fdb42d63ace734f5e32e50ef27d714",
   "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
   "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
   "track_a_forward_ceiling": 600,
@@ -27,7 +27,7 @@
     "analysis/gate13_causal_return/phase2/track_a_a1_manifest.json",
     "analysis/gate13_causal_return/phase2/track_a_a2_manifest.json"
   ],
-  "authorization_timestamp": "2026-08-19T21:49:53.0918531+09:00",
+  "authorization_timestamp": "2026-08-19T21:59:18.4327482+09:00",
   "scientific_outputs_observed_before_lock": false,
   "dual_lock_status": "FROZEN",
   "conditional_execution_status": "BLOCKED_PREREQUISITES",

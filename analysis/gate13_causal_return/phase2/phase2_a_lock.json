@@ -2,7 +2,7 @@
   "schema_version": "gate13_phase2_a_lock_v1",
   "authority_status": "CONDITIONALLY_AUTHORIZED_AFTER_DUAL_LOCK",
   "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
-  "phase2_code_commit": "edab77f3ef9fc3db961979c0007a7668d0e53354",
+  "phase2_code_commit": "259884d5dc146877bb95428c987697a17a6fbd22",
   "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
   "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
   "runtime_binding": {
