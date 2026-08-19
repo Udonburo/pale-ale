@@ -1,0 +1,156 @@
+{
+  "schema_version": "gate13_phase2_a_modal_realization_plan_v1",
+  "status": "PLAN_ONLY_NOT_EXECUTED",
+  "prepared_at": "2026-08-19T23:11:57.8462778+09:00",
+  "planning_base_commit": "5245ff00fd06730f71e2239ef0f30aee3e79d0e1",
+  "frozen_authority": {
+    "phase2_a_lock_path": "analysis/gate13_causal_return/phase2/phase2_a_lock.json",
+    "phase2_a_lock_sha256": "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa",
+    "phase2_a_lock_modified_by_this_plan": false,
+    "phase2_code_commit": "259884d5dc146877bb95428c987697a17a6fbd22",
+    "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
+    "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
+    "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20"
+  },
+  "provider": "Modal",
+  "gpu": {
+    "request": "L40S",
+    "exact_required_type": "NVIDIA L40S",
+    "minimum_memory_bytes": 42949672960,
+    "substitution_allowed": false
+  },
+  "model_and_tokenizer": {
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_use_fast": true,
+    "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "official_non_thinking_mode": {
+      "enable_thinking": false,
+      "add_generation_prompt": true,
+      "chat_roles": [
+        "user"
+      ]
+    },
+    "trust_remote_code": false,
+    "scientific_run_local_files_only": true
+  },
+  "lock_defined_runtime": {
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "nvidia_driver": "580.95.05",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "huggingface_hub": "1.27.0",
+    "jinja2": "3.1.6",
+    "accelerate": "1.14.0",
+    "safetensors": "0.8.0",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "attention": "sdpa",
+    "tf32": false
+  },
+  "weight_prefetch_plan": {
+    "destination": "Modal Volume content-addressed cache",
+    "repository": "Qwen/Qwen3-8B",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "prefetch_before_scientific_runner": true,
+    "record_exact_snapshot_and_file_hashes": true,
+    "allow_floating_revision": false,
+    "allow_download_during_scientific_runner": false,
+    "volume_created_in_this_preparation": false,
+    "model_downloaded_in_this_preparation": false
+  },
+  "thin_adapter_plan": {
+    "implementation_status": "PLANNED_NOT_CREATED",
+    "role": "Modal lifecycle, mount, forward-0 validation, and invocation of the unchanged scientific runner only",
+    "wrapped_runner": "tools.gate13_causal_return.track_a.phase2_runner",
+    "duplicate_prompt_logic": false,
+    "duplicate_parser_logic": false,
+    "duplicate_oracle_logic": false,
+    "duplicate_metric_logic": false,
+    "modify_scientific_runner": false,
+    "write_scientific_outputs_to_volume": true,
+    "activation_extraction": false
+  },
+  "modal_host_runtime_forward_0": {
+    "stage": "M0_FORWARD_ZERO",
+    "model_forward_count": 0,
+    "must_validate": [
+      "phase2_a_lock SHA-256",
+      "unchanged phase2 code commit",
+      "clean Git state",
+      "Python exact version",
+      "torch exact version",
+      "CUDA exact runtime",
+      "NVIDIA driver exact version",
+      "NVIDIA L40S exact GPU type",
+      "minimum GPU memory",
+      "Transformers exact version",
+      "tokenizers exact version",
+      "remaining lock-defined package versions",
+      "exact model and tokenizer snapshot availability in mounted Volume",
+      "chat template SHA-256",
+      "case manifest SHA-256 bindings",
+      "forward ceiling"
+    ],
+    "model_weight_load_allowed": false,
+    "scientific_output_allowed": false,
+    "mismatch_action": "STOP_AT_FORWARD_0"
+  },
+  "execution_ladder": [
+    {
+      "stage": "M0_FORWARD_ZERO",
+      "next_on_pass": "M1_FROZEN_REALIZATION",
+      "on_fail": "STOP_AT_FORWARD_0"
+    },
+    {
+      "stage": "M1_FROZEN_REALIZATION",
+      "action": "freeze the Modal image identity, Volume snapshot identity, exact model snapshot, adapter hash, code commit, and phase2_a_lock hash before scientific execution",
+      "next_on_pass": "A0",
+      "on_fail": "STOP_AT_FORWARD_0"
+    },
+    {
+      "stage": "A0",
+      "on_pass": "A1",
+      "on_fail": "MANDATORY_STOP_A1_A2_UNOPENED"
+    },
+    {
+      "stage": "A1",
+      "on_pass": "A2",
+      "on_fail": "MANDATORY_STOP_A2_UNOPENED"
+    },
+    {
+      "stage": "A2",
+      "on_complete": "MANDATORY_STOP_A3_CLOSED"
+    }
+  ],
+  "forward_budget": {
+    "ceiling_from_existing_lock": 600,
+    "ceiling_modified": false,
+    "frozen_projected_maximum": 552,
+    "m0_forwards": 0
+  },
+  "future_execution_preconditions": {
+    "separate_external_compute_authorization_required": true,
+    "current_dual_execution_authorization": false,
+    "current_track_a_state": "READY_FOR_EXTERNAL_EXECUTION",
+    "all_mismatches_fail_closed_before_model_load": true
+  },
+  "this_preparation_observation_counts": {
+    "modal_api_calls": 0,
+    "modal_volumes_created": 0,
+    "model_downloads": 0,
+    "gpu_allocations": 0,
+    "model_forwards": 0,
+    "modal_credit_used": false
+  },
+  "closed_surfaces": {
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "ACTIVATION_EXTRACTION": "CLOSED"
+  }
+}
