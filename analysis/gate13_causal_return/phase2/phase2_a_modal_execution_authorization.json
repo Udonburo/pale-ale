@@ -1,10 +1,10 @@
 {
   "schema_version": "gate13_track_a_modal_execution_authorization_v1",
-  "authorization_created_at": "2026-08-19T18:33:15.7890251Z",
+  "authorization_created_at": "2026-08-19T18:37:35.0613282Z",
   "execution_authorized": true,
   "operational_scope": "TRACK_A_ONLY",
   "starting_commit": "a5a83ec5456da9f964d09130a9c7ffabf6545cfa",
-  "adapter_commit": "90e5125eba95c726a943e36c5451e25164442176",
+  "adapter_commit": "88caf2c4706ad0e93c0baca108a9c5963430020d",
   "phase2_a_lock_sha256": "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa",
   "phase2_b2a_lock_sha256": "58317d5a608a6b6717e189c142cfafce47fdb42d63ace734f5e32e50ef27d714",
   "phase2_dual_authorization_sha256": "150717d4922b5a471393faf49353d0775898e762a03e6025a7e1bf6166f14d5c",
@@ -15,8 +15,8 @@
   "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
   "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
   "modal_app_name": "gate13-track-a-frozen-a5a83ec",
-  "modal_image_object_id": "im-404a7FavUaohmZP5VKPOLz",
-  "modal_image_definition_sha256": "805be3c327bf1513bc7935fef5c4b3b71994ab36c420a2292516241f5b6f3d81",
+  "modal_image_object_id": "im-OLUM62Cvgg0OnypTRGbiYA",
+  "modal_image_definition_sha256": "89fb513ddefc144960c599ca30e08e0103775f0cb294df932c4b3051492cb4a2",
   "base_image_manifest_digest": "sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
   "base_image_linux_amd64_digest": "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1",
   "modal_image_definition": {
@@ -85,7 +85,8 @@
     "workdir": "/opt/gate13",
     "copied_roots": [
       "tools/gate13_causal_return",
-      "analysis/gate13_causal_return/phase2"
+      "analysis/gate13_causal_return/phase2",
+      "tools/gate13_causal_return/modal/modal_track_a.py -> /opt/gate13/modal_track_a.py"
     ],
     "excluded_from_image": [
       "**/__pycache__/**",
@@ -100,7 +101,7 @@
   "modal_automatic_retries": 0,
   "maximum_active_gpu_containers": 1,
   "one_container_one_gpu": true,
-  "execution_identity": "8e52cdd4-8dd6-4c29-89b7-40f8d907f813",
+  "execution_identity": "aca4b3c1-de70-4d75-a715-16d351f3f6da",
   "model_volume": {
     "name": "gate13-track-a-qwen3-8b-b968826-model",
     "object_id": "vo-qcBxnmomu5avCRoacF7eKW",
@@ -150,5 +151,24 @@
     "gpu_allocated": false,
     "model_forward_count": 0
   },
+  "pre_forward_operational_corrections": [
+    {
+      "failure": "WINDOWS_PATH_SERIALIZED_INTO_MODAL_IMAGE_RECIPE",
+      "scientific_output_observed": false,
+      "model_downloaded": false,
+      "gpu_allocated": false,
+      "model_forward_count": 0,
+      "corrected_adapter_commit": "90e5125eba95c726a943e36c5451e25164442176"
+    },
+    {
+      "failure": "REMOTE_TOP_LEVEL_ADAPTER_MODULE_NOT_PACKAGED",
+      "superseded_execution_identity": "8e52cdd4-8dd6-4c29-89b7-40f8d907f813",
+      "scientific_output_observed": false,
+      "model_downloaded": false,
+      "gpu_allocated": false,
+      "model_forward_count": 0,
+      "corrected_adapter_commit": "88caf2c4706ad0e93c0baca108a9c5963430020d"
+    }
+  ],
   "push_authorized": false
 }
