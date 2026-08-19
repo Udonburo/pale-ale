@@ -159,21 +159,28 @@ def _load_exact_model(lock: Mapping[str, Any]) -> tuple[Any, Any, Any]:
 
 
 def _generate_one(torch: Any, tokenizer: Any, model: Any, prompt: str, max_tokens: int) -> str:
-    inputs = tokenizer.apply_chat_template(
+    encoded = tokenizer.apply_chat_template(
         [{"role": "user", "content": prompt}],
         tokenize=True,
         add_generation_prompt=True,
         enable_thinking=False,
         return_tensors="pt",
     ).to("cuda:0")
-    with torch.inference_mode():
-        output = model.generate(
-            inputs,
-            do_sample=False,
-            max_new_tokens=max_tokens,
-            pad_token_id=tokenizer.eos_token_id,
+    model_inputs = dict(encoded)
+    generation_kwargs = {
+        "do_sample": False,
+        "max_new_tokens": max_tokens,
+        "pad_token_id": tokenizer.eos_token_id,
+    }
+    collisions = set(model_inputs).intersection(generation_kwargs)
+    if collisions:
+        raise TrackARuntimeError(
+            "model inputs and frozen generation kwargs collide: "
+            + ", ".join(sorted(collisions))
         )
-    continuation = output[0, inputs.shape[-1] :]
+    with torch.inference_mode():
+        output = model.generate(**model_inputs, **generation_kwargs)
+    continuation = output[0, model_inputs["input_ids"].shape[-1] :]
     return tokenizer.decode(continuation, skip_special_tokens=True)
 
 
