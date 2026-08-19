@@ -18,7 +18,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Mapping, Sequence
 
 try:  # Keep model-free local tests runnable without installing the Modal client.
@@ -67,13 +67,13 @@ BASE_IMAGE_LINUX_AMD64_DIGEST = (
     "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1"
 )
 PYTORCH_INDEX_URL = "https://download.pytorch.org/whl/cu126"
-REMOTE_ROOT = Path("/opt/gate13")
+REMOTE_ROOT = PurePosixPath("/opt/gate13")
 REMOTE_PHASE2_DIR = REMOTE_ROOT / "analysis/gate13_causal_return/phase2"
 REMOTE_M1_MANIFEST = (
     REMOTE_ROOT / "tools/gate13_causal_return/modal/m1_preflight_manifest.json"
 )
-MODEL_MOUNT = Path("/model")
-RESULT_MOUNT = Path("/results")
+MODEL_MOUNT = PurePosixPath("/model")
+RESULT_MOUNT = PurePosixPath("/results")
 HF_HOME = MODEL_MOUNT / "hf_home"
 HF_CACHE = HF_HOME / "hub"
 MODEL_ACQUISITION_REPORT = MODEL_MOUNT / "gate13_model_acquisition.json"
@@ -682,8 +682,9 @@ if modal is not None:
         )
         if auth["model_volume"]["name"] != MODEL_VOLUME_NAME:
             raise ModalTrackAError("authorized model Volume name mismatch")
-        if MODEL_ACQUISITION_REPORT.exists():
-            existing = read_json(MODEL_ACQUISITION_REPORT)
+        model_report_path = Path(MODEL_ACQUISITION_REPORT.as_posix())
+        if model_report_path.exists():
+            existing = read_json(model_report_path)
             verified = _verify_model_report(existing, rehash=True)
             return {
                 **existing,
@@ -721,10 +722,10 @@ if modal is not None:
             "model_identity": identity,
             "volume_commit_status": "REQUESTED",
         }
-        _atomic_write_json(MODEL_ACQUISITION_REPORT, report)
+        _atomic_write_json(model_report_path, report)
         model_volume.commit()
         report["volume_commit_status"] = "PASS"
-        _atomic_write_json(MODEL_ACQUISITION_REPORT, report)
+        _atomic_write_json(model_report_path, report)
         model_volume.commit()
         return report
 
@@ -763,7 +764,12 @@ if modal is not None:
         )
         if auth["result_volume"]["name"] != RESULT_VOLUME_NAME:
             raise ModalTrackAError("authorized result Volume name mismatch")
-        output_dir = RESULT_MOUNT / "executions" / str(auth["execution_identity"])
+        model_report_path = Path(MODEL_ACQUISITION_REPORT.as_posix())
+        output_dir = (
+            Path(RESULT_MOUNT.as_posix())
+            / "executions"
+            / str(auth["execution_identity"])
+        )
         output_dir.mkdir(parents=True, exist_ok=True)
         terminal_path = output_dir / "terminal_state.json"
         if terminal_path.exists():
@@ -774,10 +780,10 @@ if modal is not None:
         lock = read_json(REMOTE_PHASE2_DIR / "phase2_a_lock.json")
 
         try:
-            model_report = read_json(MODEL_ACQUISITION_REPORT)
+            model_report = read_json(model_report_path)
             model_identity = _verify_model_report(model_report, rehash=True)
             shutil.copy2(
-                MODEL_ACQUISITION_REPORT, output_dir / "model_acquisition_report.json"
+                model_report_path, output_dir / "model_acquisition_report.json"
             )
             m0 = validate_modal_runtime(lock)
             m0["model_volume_identity"] = model_identity
