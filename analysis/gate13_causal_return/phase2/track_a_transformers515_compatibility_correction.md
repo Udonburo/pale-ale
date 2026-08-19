@@ -46,10 +46,14 @@ runtime binding are unchanged.
 
 Local tests pass for keyword-only dispatch, tensor object/shape/dtype/device/
 content identity, fail-closed kwargs collision, and the unchanged prompt,
-template, and decode contract. The exact-package tiny Qwen3 integration and the
-first-M1 forward-zero preparation are intentionally recorded as pending until
-they run in the pinned CPU Modal image; no scientific weights or scientific
-case output may be used by that regression.
+template, and decode contract. The exact-package CPU Modal regression also
+passes in Python 3.11.2, torch 2.7.1+cu126, Transformers 5.15.0, and tokenizers
+0.22.2. A randomly initialized tiny local Qwen3 model completed
+`model.generate(**batch_encoding, max_new_tokens=1)` through GenerationMixin;
+the input tensors were unchanged. No scientific weights, scientific case
+output, GPU, model download, or scientific forward was used. The ignored local
+receipt SHA-256 is
+`e99c3864831a079ba5beef42b7a36a43e93f8bb48dd92a0de35a4ccb98e6e263`.
 
 For the first M1 case `a0-l12-y0-early-r0-S`, the frozen manifest provides only
 the raw prompt SHA-256
@@ -57,7 +61,17 @@ the raw prompt SHA-256
 It does not provide prior hashes for the rendered prompt, `input_ids`,
 `attention_mask`, or generation kwargs. Those comparisons are therefore
 explicit authority gaps; the new observed hashes will not be represented as
-historical matches.
+historical matches. Forward-zero preparation observed:
+
+- rendered prompt: `f44090ad5ecb0a8f99380aef285bf3d573aacd351f3e6374534a3a41a57477e0`
+- `input_ids`: `cb1980990e91f8bbe71037b67b390718f98a4ee60c84b99cc8f9c7aadc5f1064`
+- `attention_mask`: `feb75c4d5648e76e10adc86194238b6eaeaaa52036a3f79799a677cd6353447e`
+- generation kwargs: `24f7000ea348e9202091e5429d81b6a20f8da588452ffb64220944ebe32b8bc3`
+
+The exact model Volume was rehashed as the same 15-file,
+16,397,461,266-byte directory identity
+`935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14`;
+no download was attempted.
 
 The cumulative prior forward count is 1. The remaining frozen-program ceiling
 is 599 of 600. A fresh execution requires a separate v2 authorization, fresh

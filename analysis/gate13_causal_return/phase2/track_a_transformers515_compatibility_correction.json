@@ -1,6 +1,7 @@
 {
   "schema_version": "gate13_track_a_transformers515_compatibility_correction_v1",
   "recorded_at": "2026-08-19T20:11:50.5552267Z",
+  "exact_regression_completed_at": "2026-08-19T20:22:20.0790915Z",
   "SCIENTIFIC_RESULT": "NONE",
   "CORRECTION_CLASS": "INTERFACE_COMPATIBILITY_ONLY",
   "prior_execution": {
@@ -67,8 +68,60 @@
     "tensor_identity": "PASS_LOCAL",
     "model_input_generation_kwarg_collision": "PASS_LOCAL_FAIL_CLOSED",
     "prompt_template_decode_contract": "PASS_LOCAL",
-    "exact_package_tiny_qwen3_generation_mixin": "PENDING_CPU_MODAL_EXACT_ENVIRONMENT",
-    "first_m1_forward_zero_preparation": "PENDING_CPU_MODAL_EXACT_ENVIRONMENT"
+    "exact_package_tiny_qwen3_generation_mixin": "PASS_EXACT_CPU_MODAL",
+    "first_m1_forward_zero_preparation": "PASS_FORWARD_ZERO_WITH_AUTHORITY_GAPS_REPORTED"
+  },
+  "exact_regression_result": {
+    "modal_image_object_id": "im-jkU0btCJf30BpDpH8jhceq",
+    "image_role": "PREAUTHORIZATION_CPU_REGRESSION_IMAGE",
+    "local_receipt_path": "workstream/local/gate13_causal_return_outputs/phase2/modal_track_a_transformers515_v2/preflight/exact_regression.json",
+    "local_receipt_sha256": "e99c3864831a079ba5beef42b7a36a43e93f8bb48dd92a0de35a4ccb98e6e263",
+    "exact_packages": {
+      "python": "3.11.2",
+      "torch": "2.7.1+cu126",
+      "transformers": "5.15.0",
+      "tokenizers": "0.22.2"
+    },
+    "tiny_qwen3": {
+      "model": "RANDOMLY_INITIALIZED_TINY_LOCAL_QWEN3",
+      "generate_interface": "model.generate(**batch_encoding, max_new_tokens=1)",
+      "output_shape": [
+        1,
+        4
+      ],
+      "input_tensors_unchanged": true,
+      "scientific_weights_loaded": false,
+      "scientific_case_output_generated": false,
+      "scientific_forward_count": 0,
+      "status": "PASS"
+    },
+    "first_m1_forward_zero": {
+      "case_id": "a0-l12-y0-early-r0-S",
+      "raw_prompt_sha256": "3eadff30ee28a1c3ac08e7ea8817b25393aa581de9069a7d1c2af1b8c2b8df7a",
+      "raw_prompt_comparison": "MATCH_FROZEN_M1_MANIFEST",
+      "rendered_prompt_sha256": "f44090ad5ecb0a8f99380aef285bf3d573aacd351f3e6374534a3a41a57477e0",
+      "input_ids_sha256": "cb1980990e91f8bbe71037b67b390718f98a4ee60c84b99cc8f9c7aadc5f1064",
+      "attention_mask_sha256": "feb75c4d5648e76e10adc86194238b6eaeaaa52036a3f79799a677cd6353447e",
+      "generation_kwargs_sha256": "24f7000ea348e9202091e5429d81b6a20f8da588452ffb64220944ebe32b8bc3",
+      "input_shape": [
+        1,
+        103
+      ],
+      "input_dtype": "torch.int64",
+      "preparation_device": "cpu",
+      "generate_invoked": false,
+      "scientific_weights_loaded": false,
+      "scientific_forward_count": 0,
+      "status": "PASS_FORWARD_ZERO"
+    },
+    "model_volume_verification": {
+      "name": "gate13-track-a-qwen3-8b-b968826-model",
+      "object_id": "vo-qcBxnmomu5avCRoacF7eKW",
+      "file_count": 15,
+      "total_bytes": 16397461266,
+      "model_directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+      "status": "PASS_REHASHED_NO_DOWNLOAD"
+    }
   },
   "first_m1_comparison_authority": {
     "case_id": "a0-l12-y0-early-r0-S",
