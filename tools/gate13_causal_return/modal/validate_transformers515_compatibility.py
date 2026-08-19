@@ -7,16 +7,13 @@ import platform
 from pathlib import Path
 from typing import Any, Mapping
 
-from tools.gate13_causal_return.modal.modal_track_a import (
-    MODEL_REVISION,
-    _all_frozen_cases,
-    _validate_m1_cases,
-)
 from tools.gate13_causal_return.phase2_common import (
     read_json,
     sha256_bytes,
     sha256_json,
 )
+from tools.gate13_causal_return.track_a.compile_phase2_cases import compile_cases
+from tools.gate13_causal_return.track_a.compile_register_cases import compile_ledger
 
 
 EXPECTED_EXACT_PACKAGES = {
@@ -26,6 +23,7 @@ EXPECTED_EXACT_PACKAGES = {
     "tokenizers": "0.22.2",
 }
 FIRST_M1_CASE_ID = "a0-l12-y0-early-r0-S"
+MODEL_REVISION = "b968826d9c46dd6066d109eabc6255188de91218"
 
 
 class Transformers515CompatibilityError(RuntimeError):
@@ -123,13 +121,18 @@ def prepare_first_m1_case_forward_zero(
         repo_root / "tools/gate13_causal_return/modal/m1_preflight_manifest.json"
     )
     manifest = read_json(manifest_path)
-    stages, cases_by_id = _all_frozen_cases()
-    selected = _validate_m1_cases(manifest, cases_by_id)
-    case = selected[0]
+    compiled = compile_cases()
+    a0_cases = list(compile_ledger()["cases"]) + list(compiled["A0_EXTENSION"])
+    cases_by_id = {str(row["case_id"]): row for row in a0_cases}
+    case = cases_by_id[FIRST_M1_CASE_ID]
     if case["case_id"] != FIRST_M1_CASE_ID:
         raise Transformers515CompatibilityError("first frozen M1 case identity drifted")
 
     binding = manifest["cases"][0]
+    if binding.get("case_id") != FIRST_M1_CASE_ID:
+        raise Transformers515CompatibilityError("first M1 manifest binding drifted")
+    if sha256_json(case) != binding.get("case_sha256"):
+        raise Transformers515CompatibilityError("first M1 frozen case SHA drifted")
     prompt = str(case["prompt"])
     raw_prompt_sha = sha256_bytes(prompt.encode("utf-8"))
     if raw_prompt_sha != binding["prompt_sha256"]:
@@ -201,7 +204,7 @@ def prepare_first_m1_case_forward_zero(
         "scientific_weights_loaded": False,
         "scientific_case_output_generated": False,
         "scientific_forward_count": 0,
-        "frozen_a0_case_count": len(stages["A0"]),
+        "frozen_a0_case_count": len(a0_cases),
     }
 
 

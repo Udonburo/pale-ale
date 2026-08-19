@@ -40,20 +40,28 @@ from tools.gate13_causal_return.phase2_common import (
     sha256_json,
     write_json,
 )
-from tools.gate13_causal_return.modal.validate_modal_execution_authority import (
-    MAX_GPU_WALL_SECONDS,
-    MAX_SPEND_USD,
+from tools.gate13_causal_return.modal.validate_modal_execution_authority_v2 import (
+    CUMULATIVE_GPU_WALL_CEILING_SECONDS,
+    CUMULATIVE_MODAL_SPEND_CEILING_USD,
+    EXPECTED_MODEL_IDENTITY,
     MODEL_REVISION,
-    validate_modal_execution_authority,
+    MODEL_VOLUME_OBJECT_ID,
+    NEW_GPU_WALL_CEILING_SECONDS,
+    NEW_MAXIMUM_FORWARDS,
+    NEW_MODAL_SPEND_CEILING_USD,
+    PRIOR_FORWARD_COUNT,
+    PRIOR_GPU_WALL_SECONDS,
+    PRIOR_MODAL_SPEND_USD,
+    validate_modal_execution_authority_v2,
 )
 from tools.gate13_causal_return.modal.validate_modal_runtime import (
     validate_modal_runtime,
 )
 
 
-APP_NAME = "gate13-track-a-frozen-a5a83ec"
+APP_NAME = "gate13-track-a-transformers515-v2"
 MODEL_VOLUME_NAME = "gate13-track-a-qwen3-8b-b968826-model"
-RESULT_VOLUME_NAME = "gate13-track-a-a5a83ec-results"
+RESULT_VOLUME_NAME = "gate13-track-a-transformers515-v2-results"
 MODEL_REPOSITORY = "Qwen/Qwen3-8B"
 TOKENIZER_REVISION = MODEL_REVISION
 BASE_IMAGE = (
@@ -82,7 +90,7 @@ GPU_REQUEST = "L40S"
 GPU_EXACT_NAME = "NVIDIA L40S"
 GPU_CPU_CORES = 4.0
 GPU_MEMORY_MIB = 32_768
-GPU_TIMEOUT_SECONDS = MAX_GPU_WALL_SECONDS
+GPU_TIMEOUT_SECONDS = int(NEW_GPU_WALL_CEILING_SECONDS)
 GPU_MAX_CONTAINERS = 1
 GPU_RETRIES = 0
 
@@ -205,6 +213,7 @@ def image_definition_payload() -> dict[str, Any]:
             "**/__pycache__/**",
             "**/*.pyc",
             "phase2_a_modal_execution_authorization.json",
+            "phase2_a_modal_execution_authorization_v2.json",
         ],
     }
 
@@ -239,7 +248,14 @@ def forecast_after_m1(
     checks = {
         "projected_gpu_with_contingency_le_9_5h": projected_with_contingency
         <= M1_MAX_PROJECTED_GPU_SECONDS_WITH_CONTINGENCY,
-        "projected_modal_usage_le_usd_25": projected_spend <= MAX_SPEND_USD,
+        "projected_new_modal_usage_within_remaining_usd": projected_spend
+        <= NEW_MODAL_SPEND_CEILING_USD,
+        "projected_cumulative_modal_usage_le_usd_25": projected_spend
+        + PRIOR_MODAL_SPEND_USD
+        <= CUMULATIVE_MODAL_SPEND_CEILING_USD,
+        "projected_cumulative_gpu_wall_le_10h": projected_with_contingency
+        + PRIOR_GPU_WALL_SECONDS
+        <= CUMULATIVE_GPU_WALL_CEILING_SECONDS,
         "forward_forecast_le_lock_ceiling": TOTAL_FROZEN_CASE_COUNT
         <= forward_ceiling,
     }
@@ -254,6 +270,12 @@ def forecast_after_m1(
         "contingency_multiplier": M1_CONTINGENCY_MULTIPLIER,
         "projected_gpu_seconds_with_25_percent_contingency": projected_with_contingency,
         "projected_modal_usage_usd_with_non_gpu_reserve": projected_spend,
+        "prior_modal_usage_usd": PRIOR_MODAL_SPEND_USD,
+        "projected_cumulative_modal_usage_usd": projected_spend
+        + PRIOR_MODAL_SPEND_USD,
+        "prior_gpu_wall_seconds": PRIOR_GPU_WALL_SECONDS,
+        "projected_cumulative_gpu_wall_seconds": projected_with_contingency
+        + PRIOR_GPU_WALL_SECONDS,
         "modal_rate_assumptions": {
             "L40S_usd_per_second": L40S_RATE_USD_PER_SECOND,
             "cpu_core_usd_per_second": CPU_RATE_USD_PER_CORE_SECOND,
@@ -283,6 +305,9 @@ def terminal_state(
         "TRACK_A_A1": a1,
         "TRACK_A_A2": a2,
         "MODEL_FORWARD_COUNT": int(forward_count),
+        "NEW_EXECUTION_MODEL_FORWARD_COUNT": int(forward_count),
+        "CUMULATIVE_MODEL_FORWARD_COUNT": PRIOR_FORWARD_COUNT + int(forward_count),
+        "PRIOR_MODEL_FORWARD_COUNT": PRIOR_FORWARD_COUNT,
         "ACTIVATION_EXTRACTION_COUNT": 0,
         **EXPECTED_CLOSED_STATE,
         "OPERATIONAL_FAILURES_OR_RESTARTS": [dict(row) for row in operational_failures],
@@ -294,7 +319,7 @@ def _authorization_from_text(text: str, expected_sha256: str) -> tuple[Path, dic
     actual_sha = sha256_bytes(text.encode("utf-8"))
     if actual_sha != expected_sha256:
         raise ModalTrackAError("transmitted authorization byte SHA-256 mismatch")
-    path = Path("/tmp/phase2_a_modal_execution_authorization.json")
+    path = Path("/tmp/phase2_a_modal_execution_authorization_v2.json")
     path.write_text(text, encoding="utf-8", newline="\n")
     value = read_json(path)
     if value.get("modal_image_definition_sha256") != image_definition_sha256():
@@ -306,7 +331,7 @@ def _validate_remote_authority(
     authorization_text: str, authorization_sha256: str
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     auth_path, auth = _authorization_from_text(authorization_text, authorization_sha256)
-    validation = validate_modal_execution_authority(
+    validation = validate_modal_execution_authority_v2(
         authorization_path=auth_path,
         phase2_dir=REMOTE_PHASE2_DIR,
         m1_manifest_path=REMOTE_M1_MANIFEST,
@@ -376,6 +401,10 @@ def _model_identity(snapshot_dir: Path) -> dict[str, Any]:
 
 
 def _verify_model_report(report: Mapping[str, Any], *, rehash: bool) -> dict[str, Any]:
+    if report.get("model_volume_name") != MODEL_VOLUME_NAME:
+        raise ModalTrackAError("model acquisition Volume name mismatch")
+    if report.get("model_volume_object_id") != MODEL_VOLUME_OBJECT_ID:
+        raise ModalTrackAError("model acquisition Volume object ID mismatch")
     identity = report.get("model_identity") or {}
     if identity.get("model_repository") != MODEL_REPOSITORY:
         raise ModalTrackAError("model acquisition repository mismatch")
@@ -386,10 +415,32 @@ def _verify_model_report(report: Mapping[str, Any], *, rehash: bool) -> dict[str
         raise ModalTrackAError("exact acquired model snapshot is unavailable")
     if rehash:
         actual = _model_identity(snapshot_dir)
-        if actual["model_directory_identity_sha256"] != identity.get(
-            "model_directory_identity_sha256"
-        ):
-            raise ModalTrackAError("model Volume content identity mismatch")
+        observed = {
+            "file_count": actual["file_count"],
+            "total_bytes": actual["total_bytes"],
+            "model_directory_identity_sha256": actual[
+                "model_directory_identity_sha256"
+            ],
+            "config_sha256": actual["config_sha256"],
+            "tokenizer_config_sha256": actual["tokenizer_config_sha256"],
+            "tokenizer_json_sha256": _named_sha(
+                actual["complete_file_inventory"], "tokenizer.json"
+            ),
+            "weight_index_sha256": actual["weight_index_sha256"],
+        }
+        if observed != EXPECTED_MODEL_IDENTITY:
+            raise ModalTrackAError("model Volume exact identity mismatch")
+        for field, expected in EXPECTED_MODEL_IDENTITY.items():
+            if field == "tokenizer_json_sha256":
+                prior_observed = _named_sha(
+                    identity.get("complete_file_inventory") or [], "tokenizer.json"
+                )
+            else:
+                prior_observed = identity.get(field)
+            if prior_observed != expected:
+                raise ModalTrackAError(
+                    f"model acquisition report identity mismatch: {field}"
+                )
     return {"status": "PASS", "snapshot_directory": str(snapshot_dir), **dict(identity)}
 
 
@@ -650,6 +701,7 @@ if modal is not None:
             copy=True,
             ignore=[
                 "phase2_a_modal_execution_authorization.json",
+                "phase2_a_modal_execution_authorization_v2.json",
                 "**/__pycache__/**",
                 "**/*.pyc",
             ],
@@ -664,7 +716,7 @@ if modal is not None:
     )
     app = modal.App(APP_NAME)
     model_volume = modal.Volume.from_name(
-        MODEL_VOLUME_NAME, create_if_missing=True, version=2
+        MODEL_VOLUME_NAME, create_if_missing=False, version=2
     )
     result_volume = modal.Volume.from_name(
         RESULT_VOLUME_NAME, create_if_missing=True, version=2
@@ -680,63 +732,74 @@ if modal is not None:
         max_containers=1,
         single_use_containers=True,
         include_source=False,
-        name="acquire_exact_model_cpu_only",
+        block_network=True,
+        name="verify_existing_exact_model_cpu_only",
     )
-    def acquire_exact_model_cpu_only(
+    def verify_existing_exact_model_cpu_only(
         authorization_text: str, authorization_sha256: str
     ) -> dict[str, Any]:
-        """Populate and commit the exact content-addressed model snapshot."""
+        """Rehash the immutable existing model Volume without downloading."""
         auth, validation = _validate_remote_authority(
             authorization_text, authorization_sha256
         )
         if auth["model_volume"]["name"] != MODEL_VOLUME_NAME:
             raise ModalTrackAError("authorized model Volume name mismatch")
         model_report_path = Path(MODEL_ACQUISITION_REPORT.as_posix())
-        if model_report_path.exists():
-            existing = read_json(model_report_path)
-            verified = _verify_model_report(existing, rehash=True)
-            return {
-                **existing,
-                "status": "PASS_REUSED_VERIFIED_EXACT_SNAPSHOT",
-                "verified_at": utc_now(),
-                "verification": verified,
-            }
-
-        from huggingface_hub import snapshot_download
-
-        started = time.monotonic()
-        snapshot = Path(
-            snapshot_download(
-                repo_id=MODEL_REPOSITORY,
-                revision=MODEL_REVISION,
-                cache_dir=str(HF_CACHE),
-                local_files_only=False,
-            )
-        )
-        if snapshot.name != MODEL_REVISION:
-            raise ModalTrackAError("snapshot_download did not resolve to the exact commit")
-        identity = _model_identity(snapshot)
-        report = {
-            "schema_version": "gate13_track_a_modal_model_acquisition_v1",
-            "status": "PASS_EXACT_SNAPSHOT_DOWNLOADED",
-            "acquired_at": utc_now(),
-            "elapsed_seconds": time.monotonic() - started,
-            "cpu_only": True,
-            "gpu_allocated": False,
-            "snapshot_download_revision_was_exact": True,
-            "authorization_execution_identity": auth["execution_identity"],
+        if not model_report_path.exists():
+            raise ModalTrackAError("immutable model acquisition report is absent")
+        existing = read_json(model_report_path)
+        verified = _verify_model_report(existing, rehash=True)
+        return {
+            **existing,
+            "status": "PASS_REUSED_VERIFIED_EXACT_SNAPSHOT_NO_DOWNLOAD",
+            "verified_at": utc_now(),
+            "verification": verified,
             "authority_validation": validation,
-            "model_volume_name": MODEL_VOLUME_NAME,
-            "model_volume_object_id": auth["model_volume"]["object_id"],
-            "model_identity": identity,
-            "volume_commit_status": "REQUESTED",
+            "download_attempted": False,
+            "gpu_allocated": False,
         }
-        _atomic_write_json(model_report_path, report)
-        model_volume.commit()
-        report["volume_commit_status"] = "PASS"
-        _atomic_write_json(model_report_path, report)
-        model_volume.commit()
-        return report
+
+    @app.function(
+        image=_image,
+        volumes={str(MODEL_MOUNT): model_volume},
+        env={
+            "HF_HOME": str(HF_HOME),
+            "HF_HUB_CACHE": str(HF_CACHE),
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+        },
+        cpu=2.0,
+        memory=8192,
+        retries=0,
+        timeout=7200,
+        max_containers=1,
+        single_use_containers=True,
+        block_network=True,
+        include_source=False,
+        name="run_exact_transformers515_regression_cpu_only",
+    )
+    def run_exact_transformers515_regression_cpu_only() -> dict[str, Any]:
+        """Run tiny-model and first-case forward-zero checks without a GPU."""
+        from tools.gate13_causal_return.modal.validate_transformers515_compatibility import (
+            run_exact_compatibility_regressions,
+        )
+
+        model_report_path = Path(MODEL_ACQUISITION_REPORT.as_posix())
+        if not model_report_path.exists():
+            raise ModalTrackAError("immutable model acquisition report is absent")
+        verified = _verify_model_report(read_json(model_report_path), rehash=True)
+        regression = run_exact_compatibility_regressions(
+            repo_root=Path(REMOTE_ROOT.as_posix()),
+            model_snapshot=Path(str(verified["snapshot_directory"])),
+        )
+        return {
+            **regression,
+            "model_volume_name": MODEL_VOLUME_NAME,
+            "model_volume_object_id": MODEL_VOLUME_OBJECT_ID,
+            "model_volume_verification": verified,
+            "gpu_allocated": False,
+            "model_download_attempted": False,
+        }
 
     @app.function(
         image=_image,
@@ -789,8 +852,31 @@ if modal is not None:
         lock = read_json(REMOTE_PHASE2_DIR / "phase2_a_lock.json")
 
         try:
-            model_report = read_json(model_report_path)
-            model_identity = _verify_model_report(model_report, rehash=True)
+            try:
+                model_report = read_json(model_report_path)
+                model_identity = _verify_model_report(model_report, rehash=True)
+            except (OSError, ValueError, ModalTrackAError) as exc:
+                mismatch = {
+                    "schema_version": "gate13_track_a_modal_m0_model_volume_mismatch_v1",
+                    "status": "MODAL_RUNTIME_MISMATCH",
+                    "model_forward_count": 0,
+                    "reason": "IMMUTABLE_MODEL_VOLUME_IDENTITY_MISMATCH",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                    "model_volume_name": MODEL_VOLUME_NAME,
+                    "model_volume_object_id": MODEL_VOLUME_OBJECT_ID,
+                }
+                _atomic_write_json(output_dir / "m0_runtime_report.json", mismatch)
+                result_volume.commit()
+                state = terminal_state(
+                    track_a="MODAL_RUNTIME_MISMATCH",
+                    forward_count=0,
+                    operational_failures=operational_failures,
+                )
+                state.update({"M0": "MODAL_RUNTIME_MISMATCH", "M1": "UNOPENED"})
+                return _persist_terminal(
+                    output_dir=output_dir, terminal=state, volume=result_volume
+                )
             shutil.copy2(
                 model_report_path, output_dir / "model_acquisition_report.json"
             )
@@ -900,7 +986,7 @@ if modal is not None:
                     tokenizer=tokenizer,
                     model=model,
                     forward_count=0,
-                    ceiling=int(lock["forward_ceiling"]),
+                    ceiling=NEW_MAXIMUM_FORWARDS,
                 )
                 m1_elapsed = time.monotonic() - m1_started
                 result_volume.commit()
@@ -926,7 +1012,7 @@ if modal is not None:
                     m1_elapsed_seconds=m1_elapsed,
                     m1_case_count=len(m1_cases),
                     completed_forward_count=forward_count,
-                    forward_ceiling=int(lock["forward_ceiling"]),
+                    forward_ceiling=NEW_MAXIMUM_FORWARDS,
                 )
                 m1_checks = {
                     "parser_compatibility": parser_compatible,
@@ -978,6 +1064,8 @@ if modal is not None:
                 runner.model_load_authorized = original_authorized
 
             final_forward_count = int(scientific["model_forward_count"])
+            if final_forward_count > NEW_MAXIMUM_FORWARDS:
+                raise ModalTrackAError("fresh execution exceeded its remaining forward authority")
             a0 = str(scientific["TRACK_A_A0"])
             a1 = str(scientific["TRACK_A_A1"])
             a2 = str(scientific["TRACK_A_A2"])
@@ -1008,6 +1096,10 @@ if modal is not None:
                     "peak_vram_bytes": int(torch.cuda.max_memory_allocated()),
                     "estimated_modal_gpu_function_usage_usd": gpu_elapsed
                     * GPU_TOTAL_RATE_USD_PER_SECOND,
+                    "estimated_cumulative_modal_gpu_function_usage_usd": PRIOR_MODAL_SPEND_USD
+                    + gpu_elapsed * GPU_TOTAL_RATE_USD_PER_SECOND,
+                    "cumulative_gpu_wall_seconds": PRIOR_GPU_WALL_SECONDS
+                    + gpu_elapsed,
                     "provider_actual_usage_status": "PENDING_PROVIDER_BILLING_OBSERVATION",
                 }
             )
@@ -1070,6 +1162,7 @@ if modal is not None:
                     },
                     "gpu_allocated": False,
                     "model_downloaded": False,
+                    "existing_model_volume_reused": True,
                 },
                 ensure_ascii=False,
                 sort_keys=True,
@@ -1077,12 +1170,36 @@ if modal is not None:
         )
 
     @app.local_entrypoint()
+    def run_compatibility_regression(control_output: str) -> None:
+        """Run exact CPU-only regression checks and write their local receipt."""
+        regression = run_exact_transformers515_regression_cpu_only.remote()
+        control = {
+            "schema_version": "gate13_track_a_transformers515_regression_control_v1",
+            "app_name": APP_NAME,
+            "modal_image_object_id": _image.object_id,
+            "modal_image_definition": image_definition_payload(),
+            "modal_image_definition_sha256": image_definition_sha256(),
+            "model_volume": {
+                "name": MODEL_VOLUME_NAME,
+                "object_id": model_volume.object_id,
+            },
+            "result_volume": {
+                "name": RESULT_VOLUME_NAME,
+                "object_id": result_volume.object_id,
+            },
+            "regression": regression,
+        }
+        control_path = Path(control_output).resolve()
+        _atomic_write_json(control_path, control)
+        print(json.dumps(control, ensure_ascii=False, sort_keys=True))
+
+    @app.local_entrypoint()
     def run_authorized(authorization: str, control_output: str) -> None:
-        """Validate clean local authority, acquire exact weights, then run one ladder."""
+        """Validate clean v2 authority, verify exact weights, then run one ladder."""
         authorization_path = Path(authorization).resolve()
         auth_text = authorization_path.read_text(encoding="utf-8")
         auth_sha = sha256_bytes(auth_text.encode("utf-8"))
-        validate_modal_execution_authority(
+        validate_modal_execution_authority_v2(
             authorization_path=authorization_path,
             phase2_dir=local_repo_root() / "analysis/gate13_causal_return/phase2",
             m1_manifest_path=local_repo_root()
@@ -1090,7 +1207,7 @@ if modal is not None:
             repo_root=local_repo_root(),
             verify_git=True,
         )
-        acquisition = acquire_exact_model_cpu_only.remote(auth_text, auth_sha)
+        acquisition = verify_existing_exact_model_cpu_only.remote(auth_text, auth_sha)
         execution = execute_one_frozen_track_a.remote(auth_text, auth_sha)
         control = {
             "schema_version": "gate13_track_a_modal_local_control_result_v1",

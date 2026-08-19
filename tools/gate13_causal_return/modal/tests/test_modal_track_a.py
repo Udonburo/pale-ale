@@ -11,6 +11,7 @@ from tools.gate13_causal_return.modal.modal_track_a import (
     BASE_IMAGE_MANIFEST_DIGEST,
     EXPECTED_CLOSED_STATE,
     MODEL_REVISION,
+    RESULT_VOLUME_NAME,
     VolumeCheckpointJournal,
     _all_frozen_cases,
     _validate_m1_cases,
@@ -31,6 +32,16 @@ from tools.gate13_causal_return.modal.validate_modal_runtime import (
     EXPECTED_RUNTIME,
     ModalRuntimeValidationError,
     validate_modal_runtime,
+)
+from tools.gate13_causal_return.modal.validate_modal_execution_authority_v2 import (
+    CUMULATIVE_GPU_WALL_CEILING_SECONDS,
+    CUMULATIVE_MODAL_SPEND_CEILING_USD,
+    NEW_GPU_WALL_CEILING_SECONDS,
+    NEW_MAXIMUM_FORWARDS,
+    NEW_MODAL_SPEND_CEILING_USD,
+    PRIOR_FORWARD_COUNT,
+    PRIOR_GPU_WALL_SECONDS,
+    PRIOR_MODAL_SPEND_USD,
 )
 from tools.gate13_causal_return.phase2_common import read_json, sha256_file, write_json
 from tools.gate13_causal_return.track_a import phase2_runner
@@ -198,6 +209,7 @@ class AdapterSemanticsTests(unittest.TestCase):
         self.assertEqual(blocked["status"], "BLOCK")
         state = terminal_state(track_a="MODAL_RUNTIME_MISMATCH")
         self.assertEqual(state["MODEL_FORWARD_COUNT"], 0)
+        self.assertEqual(state["CUMULATIVE_MODEL_FORWARD_COUNT"], PRIOR_FORWARD_COUNT)
         self.assertEqual(state["FINAL_STOP"], "MANDATORY_STOP")
         for field, expected in EXPECTED_CLOSED_STATE.items():
             self.assertEqual(state[field], expected)
@@ -260,6 +272,27 @@ class AdapterSemanticsTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(image_definition_sha256()), 64)
         self.assertTrue(all("==" in requirement for requirement in first["requirements"]))
+        self.assertIn("phase2_a_modal_execution_authorization.json", first["excluded_from_image"])
+        self.assertIn("phase2_a_modal_execution_authorization_v2.json", first["excluded_from_image"])
+
+    def test_v2_cumulative_limits_and_no_download_path_are_bounded(self) -> None:
+        self.assertEqual(PRIOR_FORWARD_COUNT + NEW_MAXIMUM_FORWARDS, 600)
+        self.assertAlmostEqual(
+            PRIOR_MODAL_SPEND_USD + NEW_MODAL_SPEND_CEILING_USD,
+            CUMULATIVE_MODAL_SPEND_CEILING_USD,
+        )
+        self.assertAlmostEqual(
+            PRIOR_GPU_WALL_SECONDS + NEW_GPU_WALL_CEILING_SECONDS,
+            CUMULATIVE_GPU_WALL_CEILING_SECONDS,
+        )
+        self.assertEqual(RESULT_VOLUME_NAME, "gate13-track-a-transformers515-v2-results")
+        adapter_source = (
+            REPO_ROOT / "tools/gate13_causal_return/modal/modal_track_a.py"
+        ).read_text(encoding="utf-8")
+        verification_source = adapter_source.split(
+            "def verify_existing_exact_model_cpu_only", 1
+        )[1].split("@app.function", 1)[0]
+        self.assertNotIn("snapshot_download", verification_source)
 
 
 if __name__ == "__main__":
