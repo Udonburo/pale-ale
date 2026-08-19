@@ -178,6 +178,9 @@ def utc_now() -> str:
 
 
 def local_repo_root() -> Path:
+    remote = Path("/opt/gate13")
+    if (remote / "tools/gate13_causal_return").is_dir():
+        return remote
     return Path(__file__).resolve().parents[3]
 
 
@@ -196,6 +199,7 @@ def image_definition_payload() -> dict[str, Any]:
         "copied_roots": [
             "tools/gate13_causal_return",
             "analysis/gate13_causal_return/phase2",
+            "tools/gate13_causal_return/modal/modal_track_a.py -> /opt/gate13/modal_track_a.py",
         ],
         "excluded_from_image": [
             "**/__pycache__/**",
@@ -649,6 +653,11 @@ if modal is not None:
                 "**/__pycache__/**",
                 "**/*.pyc",
             ],
+        )
+        .add_local_file(
+            _repo_root / "tools/gate13_causal_return/modal/modal_track_a.py",
+            "/opt/gate13/modal_track_a.py",
+            copy=True,
         )
         .workdir(REMOTE_ROOT)
         .env({"PYTHONPATH": str(REMOTE_ROOT), "PYTHONUNBUFFERED": "1"})
