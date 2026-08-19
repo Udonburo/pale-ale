@@ -1,0 +1,242 @@
+{
+  "schema_version": "gate13_phase2_a_lock_v1",
+  "authority_status": "CONDITIONALLY_AUTHORIZED_AFTER_DUAL_LOCK",
+  "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
+  "phase2_code_commit": "edab77f3ef9fc3db961979c0007a7668d0e53354",
+  "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
+  "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
+  "runtime_binding": {
+    "status": "BOUND_FROM_FROZEN_LOCAL_MAPPING_SOURCES",
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_use_fast": true,
+    "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "official_non_thinking_mode": {
+      "enable_thinking": false,
+      "add_generation_prompt": true,
+      "chat_roles": [
+        "user"
+      ]
+    },
+    "dtype": "bfloat16",
+    "quantization": false,
+    "python": "3.11.2",
+    "pytorch": "2.7.1+cu126",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "huggingface_hub": "1.27.0",
+    "jinja2": "3.1.6",
+    "accelerate": "1.14.0",
+    "safetensors": "0.8.0",
+    "cuda": "12.6",
+    "driver": "580.95.05",
+    "gpu": "NVIDIA L40S",
+    "minimum_gpu_memory_bytes": 42949672960,
+    "attention": "sdpa",
+    "tf32": false,
+    "weights": "frozen",
+    "local_files_only": true,
+    "trust_remote_code": false,
+    "source_bindings": [
+      {
+        "path": "zenodo/local-mapping-without-iterative-closure/README.txt",
+        "sha256": "2fb2ae6aeae59b04a822560e5817ed9c3d328b51ee91e175f52ee9f7fb662af6"
+      },
+      {
+        "path": "zenodo/local-mapping-without-iterative-closure/bindings/runtime-and-models.json",
+        "sha256": "2cd82cb9915c68d950f81a66559205af31dc7c59d55c6a1fb7b5d61c7c92c5a0"
+      },
+      {
+        "path": "zenodo/local-mapping-without-iterative-closure/plans/R1_2_ICL_FORMATION.md",
+        "sha256": "c6a7c4c512808ca8af8bffb514462d7a093aaa9e2a7d21319ae4ef1550901a19"
+      }
+    ]
+  },
+  "runtime_availability_at_lock": {
+    "status": "BLOCKED_EXACT_RUNTIME_UNAVAILABLE",
+    "track_a_state": "READY_FOR_EXTERNAL_EXECUTION",
+    "observed": {
+      "python": "3.11.2",
+      "pytorch": "2.7.1+cpu",
+      "transformers": "4.57.3",
+      "tokenizers": "0.22.1",
+      "cuda_available": false,
+      "cuda": null,
+      "driver": "UNAVAILABLE",
+      "gpu": "NONE"
+    },
+    "substitution_forbidden": true
+  },
+  "prompt_and_scoring": {
+    "historical_local_mapping_readout_rechecked": "raw next-token forced-choice logits; generate=false",
+    "gate13_task_readout": "deterministic greedy structured generation required by the register-trace instrument",
+    "do_sample": false,
+    "free_form_chain_of_thought": false,
+    "activation_extraction": false,
+    "strict_parser": true,
+    "malformed_output": "score_as_incorrect_without_retry",
+    "prompt_binding": "UTF-8 byte SHA-256 per case plus deterministic compiler commit",
+    "case_level_model_call_counting": true,
+    "scientific_retry": "forbidden",
+    "S_pair_zero_eligible": "undefined",
+    "S_pair_progression_gate": false,
+    "token_count_status": "BLOCKED_UNTIL_EXACT_EXTERNAL_RUNTIME_PREFLIGHT"
+  },
+  "case_inventory": {
+    "A0": {
+      "review1_conditions": [
+        "A0-D",
+        "A0-S",
+        "A0-O",
+        "A0-F",
+        "A0-C",
+        "A0-E"
+      ],
+      "review1_case_count": 216,
+      "marker_only_no_overwrite_case_count": 36,
+      "total_case_count": 252,
+      "A0_E_evidence_role": "development_diagnostic_not_A2_evidence"
+    },
+    "A1": {
+      "shot_counts": [
+        4,
+        16,
+        64
+      ],
+      "controls": [
+        "correct_trace_demonstrations",
+        "matched_corrupted_trace_demonstrations",
+        "matched_shuffled_trace_demonstrations"
+      ],
+      "fixed_target_count": 18,
+      "case_count": 162,
+      "rendered_demo_target_disjoint": true,
+      "explicit_XOR_rule": false
+    },
+    "A2": {
+      "shot_count": 64,
+      "fixed_target_count": 18,
+      "conditions": [
+        "ICL_formed_base",
+        "visible_register_flip",
+        "matched_marker_only_no_overwrite",
+        "undeclared_corrupt",
+        "filler"
+      ],
+      "case_count": 90,
+      "fixed_edit_step_strata": [
+        "early",
+        "middle",
+        "late"
+      ],
+      "fixed_sequence_length_strata": [
+        4,
+        8,
+        12
+      ]
+    }
+  },
+  "case_manifests": {
+    "A0_REVIEW1": {
+      "source": "deterministic Review 1 compiler at the review1 snapshot commit",
+      "internal_ledger_sha256": "2e746d8d1cc1089e671a75a5f5585334953874e9979552eb6d3ba24ba30387fe",
+      "local_file_sha256_at_lock": "e045b8fa584c7afd74a6d979467f618f86f9664d4c170384cdc2a4c363235c88",
+      "case_count": 216
+    },
+    "A0_EXTENSION": {
+      "path": "track_a_a0_extension_manifest.json",
+      "sha256": "7f99a653b4a96c4d6fbbf2a61d640c9a3971c45344b52b6bbeaf81b829ebe7f4",
+      "internal_manifest_sha256": "749b28271b7090c8c25fa27792116304f15ae7b1eeb22b14d7c515cf9057b4cf",
+      "case_count": 36
+    },
+    "A1": {
+      "path": "track_a_a1_manifest.json",
+      "sha256": "eae8f1abd328c2df27aa1fb80a9b1f0d98683546149964f4d6825da29a93b400",
+      "internal_manifest_sha256": "0e6d0e8e802da2996869eb17febdfce9d1336fe990bf78d8469defe18699223f",
+      "case_count": 162
+    },
+    "A2": {
+      "path": "track_a_a2_manifest.json",
+      "sha256": "70a011e9e7629e5ad5dc3adff31c5304bc8791396220c04b96f1827a1dd440b5",
+      "internal_manifest_sha256": "ea4640b18deb69e49ce973544959f08ee4eab75807ad0b7809ad69c4156b41b9",
+      "case_count": 90
+    }
+  },
+  "metrics": {
+    "primary": [
+      "A_step",
+      "A_final",
+      "A_CF_oracle",
+      "A_final_CF"
+    ],
+    "diagnostic": "S_pair",
+    "S_pair_eligible_rule": "base tail must be exactly oracle-correct",
+    "S_pair_empty_rule": "undefined"
+  },
+  "gates": {
+    "A0": {
+      "structured_step_accuracy_min": 0.8,
+      "structured_final_accuracy_min": 0.8,
+      "structured_minus_filler_final_min": 0.2,
+      "structured_minus_corrupted_final_min": 0.2,
+      "oracle_prefix_continuation_min": 0.8,
+      "oracle_visible_CF_accuracy_min": 0.75,
+      "oracle_edited_final_accuracy_min": 0.75,
+      "marker_only_no_overwrite": "required_matched_diagnostic_not_an_added_progression_threshold"
+    },
+    "A1": {
+      "prospective_rule": "smallest shot count passing every condition",
+      "correct_A_step_min": 0.8,
+      "correct_A_final_min": 0.8,
+      "correct_minus_corrupted_final_min": 0.2,
+      "correct_minus_shuffled_final_min": 0.2
+    },
+    "A2": {
+      "base_oracle_tail_accuracy_min": 0.8,
+      "base_final_accuracy_min": 0.8,
+      "oracle_visible_CF_accuracy_min": 0.75,
+      "oracle_edited_final_accuracy_min": 0.75,
+      "marker_only_base_tail_accuracy_min": 0.75,
+      "undeclared_corrupt_edited_oracle_rate_max_exclusive": 0.5,
+      "filler_edited_oracle_rate_max_exclusive": 0.5,
+      "S_pair_progression_gate": false
+    }
+  },
+  "conditional_execution_ladder": {
+    "A0_FAIL": "STOP; A1_UNOPENED; A2_UNOPENED",
+    "A0_PASS": "EXECUTE_A1",
+    "A1_FAIL": "STOP; A2_UNOPENED",
+    "A1_PASS": "EXECUTE_A2",
+    "A2_COMPLETES": "MANDATORY_STOP; A3_CLOSED"
+  },
+  "forward_ceiling": 600,
+  "forward_forecast": {
+    "A0_review1": 216,
+    "A0_marker_only_no_overwrite": 36,
+    "A1": 162,
+    "A2": 90,
+    "timing_preflight_retry_reserve": 48,
+    "projected_maximum": 552
+  },
+  "resume_safety": {
+    "one_attempt_per_case": true,
+    "attempt_journal_written_before_model_call": true,
+    "incomplete_attempt": "OPERATIONAL_ABORT_NO_RETRY",
+    "unknown_or_duplicate_case_id": "REJECT",
+    "post_result_runner_change": "FORBIDDEN_UNTIL_FRESH_REVIEW"
+  },
+  "generated_output_directory": "workstream/local/gate13_causal_return_outputs/phase2/track_a",
+  "generated_outputs_committed": false,
+  "closed_surfaces": {
+    "FORMAL_GATE13_OPENING": "CLOSED",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "ACTIVATION_EXTRACTION": "CLOSED",
+    "HIDDEN_STATE_INTERVENTION": "CLOSED",
+    "ALIGNMENT_SEARCH": "CLOSED",
+    "AMBER_INTEGRATION": "CLOSED",
+    "GENERAL_CYCLE_SPACE": "UNRESOLVED",
+    "PUBLIC_README_OR_GATE_MAP_EDITS": "FORBIDDEN"
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "gate13_phase2_dual_authorization_v1",
+  "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
+  "phase2_code_commit": "edab77f3ef9fc3db961979c0007a7668d0e53354",
+  "phase2_a_lock_sha256": "79939204cd8637dc1a7abebf3277493fdbddd2b42e0715ddf214a0f74f186038",
+  "phase2_b2a_lock_sha256": "26a6c646f3b226bfcfc067ba6f6ddab2043651e5e6fbc10bc52917755524a6cb",
+  "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
+  "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
+  "track_a_forward_ceiling": 600,
+  "track_b2a_source_runs": [
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_transcript_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_briefing_200r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_0_5b_archive_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_transcript_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_briefing_200r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen2_5_3b_instruct_archive_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_transcript_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_briefing_200r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_meta_llama_llama_3_2_3b_instruct_archive_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_transcript_128r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_briefing_200r_gate9k",
+    "gate12a_discrete_connection_recheck_from_gate12a_upstream_gate8cm_qwen_qwen3_4b_archive_128r_gate9k"
+  ],
+  "phase2_code_paths": [
+    "tools/gate13_causal_return",
+    "analysis/gate13_causal_return/phase2/track_a_a0_extension_manifest.json",
+    "analysis/gate13_causal_return/phase2/track_a_a1_manifest.json",
+    "analysis/gate13_causal_return/phase2/track_a_a2_manifest.json"
+  ],
+  "authorization_timestamp": "2026-08-19T21:49:53.0918531+09:00",
+  "scientific_outputs_observed_before_lock": false,
+  "dual_lock_status": "FROZEN",
+  "conditional_execution_status": "BLOCKED_PREREQUISITES",
+  "execution_authorized": false,
+  "preconditions": {
+    "review1_snapshot_committed": true,
+    "phase2_code_committed": true,
+    "both_lock_shas_bound": true,
+    "scientific_outputs_observed_before_lock": false,
+    "track_a_exact_runtime_available": false,
+    "track_a_state": "READY_FOR_EXTERNAL_EXECUTION",
+    "b2a_split_half_source_sufficiency": "SPLIT_HALF_SOURCE_UNAVAILABLE",
+    "b2a_state": "NOT_EXECUTED",
+    "git_clean_required_after_lock_commit": true
+  },
+  "A3_enabled": false,
+  "track_c_enabled": false,
+  "closed_surfaces": {
+    "FORMAL_GATE13_OPENING": "CLOSED",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "ACTIVATION_EXTRACTION": "CLOSED",
+    "HIDDEN_STATE_INTERVENTION": "CLOSED",
+    "ALIGNMENT_SEARCH": "CLOSED",
+    "AMBER_INTEGRATION": "CLOSED",
+    "GENERAL_CYCLE_SPACE": "UNRESOLVED",
+    "PUBLIC_README_OR_GATE_MAP_EDITS": "FORBIDDEN"
+  }
+}
