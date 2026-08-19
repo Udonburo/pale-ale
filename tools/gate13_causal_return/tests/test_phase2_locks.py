@@ -28,6 +28,7 @@ def valid_documents() -> tuple[dict, dict, dict]:
         "review1_report_sha256": H,
         "runtime_binding": {"model_repository": "Qwen/Qwen3-8B"},
         "case_manifests": {
+            "A0_EXTENSION": {"path": "a0_extension.json", "sha256": H, "case_count": 1},
             "A1": {"path": "a1.json", "sha256": H, "case_count": 1},
             "A2": {"path": "a2.json", "sha256": H, "case_count": 1},
         },
@@ -144,8 +145,10 @@ class LockDocumentTests(unittest.TestCase):
         a, b, d = valid_documents()
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
+            (root / "a0_extension.json").write_text("{}\n", encoding="utf-8")
             (root / "a1.json").write_text("{}\n", encoding="utf-8")
             (root / "a2.json").write_text("{}\n", encoding="utf-8")
+            a["case_manifests"]["A0_EXTENSION"]["sha256"] = sha256_file(root / "a0_extension.json")
             a["case_manifests"]["A1"]["sha256"] = sha256_file(root / "a1.json")
             a["case_manifests"]["A2"]["sha256"] = sha256_file(root / "a2.json")
             (root / "phase2_a_lock.json").write_text(json.dumps(a), encoding="utf-8")

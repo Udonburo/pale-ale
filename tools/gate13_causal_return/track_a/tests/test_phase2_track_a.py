@@ -10,6 +10,7 @@ from tools.gate13_causal_return.track_a.compile_phase2_cases import (
     FORWARD_CEILING,
     INTERVENTION_MARKER,
     PROJECTED_FORWARD_MAXIMUM,
+    compile_a0_extension_manifest,
     compile_cases,
     compile_manifests,
     validate_manifests,
@@ -34,6 +35,8 @@ class Phase2CompilerTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASS_MODEL_FREE_PHASE2_MANIFEST_VALIDATION")
         self.assertEqual(report["a1_case_count"], 162)
         self.assertEqual(report["a2_case_count"], 90)
+        self.assertEqual(report["a0_marker_only_case_count"], 36)
+        self.assertEqual(compile_a0_extension_manifest(), compile_a0_extension_manifest())
         self.assertEqual(report["target_count"], 18)
         self.assertLessEqual(PROJECTED_FORWARD_MAXIMUM, FORWARD_CEILING)
 
@@ -69,7 +72,7 @@ class Phase2CompilerTests(unittest.TestCase):
 class Phase2ParserAndMetricsTests(unittest.TestCase):
     def test_all_expected_outputs_parse_and_malformed_output_fails(self) -> None:
         compiled = compile_cases()
-        for stage in ("A1", "A2"):
+        for stage in ("A0_EXTENSION", "A1", "A2"):
             for case in compiled[stage]:
                 parsed = parse_phase2_output(case, case["expected_text"])
                 self.assertIn(parsed.final_prediction, (0, 1))

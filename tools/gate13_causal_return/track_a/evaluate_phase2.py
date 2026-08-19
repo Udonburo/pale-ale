@@ -39,8 +39,11 @@ def evaluate_a0(
     for case in cases:
         record = record_by_id[str(case["case_id"])]
         try:
-            parsed = parse_register_output(case, str(record.get("response") or ""))
-        except OutputParseError:
+            if str(case["condition"]) == "N":
+                parsed = parse_phase2_output(case, str(record.get("response") or ""))
+            else:
+                parsed = parse_register_output(case, str(record.get("response") or ""))
+        except (OutputParseError, Phase2OutputParseError):
             parsed = None
             malformed += 1
         grouped[str(case["base_id"])][str(case["condition"])] = (case, parsed)
@@ -52,6 +55,7 @@ def evaluate_a0(
     oracle_prefix: list[bool] = []
     oracle_cf: list[bool] = []
     edited_final: list[bool] = []
+    marker_only_tail: list[bool] = []
     pair_flags: list[bool] = []
     pair_ineligible = 0
     for rows in grouped.values():
@@ -85,6 +89,11 @@ def evaluate_a0(
         edited_final.append(
             e_parsed is not None and e_parsed.final_prediction == edited_oracle[-1]
         )
+        n_parsed = rows["N"][1]
+        marker_only_tail.append(
+            n_parsed is not None
+            and tuple(n_parsed.values) == base_oracle[step + 1 :]
+        )
         if s_parsed is None or e_parsed is None:
             pair_ineligible += 1
         else:
@@ -107,6 +116,7 @@ def evaluate_a0(
         "oracle_prefix_continuation": _mean(oracle_prefix),
         "A_CF_oracle": _mean(oracle_cf),
         "A_final_CF": _mean(edited_final),
+        "marker_only_no_overwrite_accuracy": _mean(marker_only_tail),
         "S_pair": _mean(pair_flags) if pair_flags else None,
         "S_pair_eligible": len(pair_flags),
         "S_pair_ineligible": pair_ineligible,

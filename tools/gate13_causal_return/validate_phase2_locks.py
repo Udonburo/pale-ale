@@ -123,7 +123,7 @@ def _validate_documents(
     )
     manifests = a_lock["case_manifests"]
     _require(isinstance(manifests, Mapping), "case_manifests must be an object")
-    for stage in ("A1", "A2"):
+    for stage in ("A0_EXTENSION", "A1", "A2"):
         _require(stage in manifests, f"missing {stage} manifest")
         require_fields(manifests[stage], ("path", "sha256", "case_count"), context=stage)
         require_sha256(manifests[stage]["sha256"], field=f"{stage}.sha256")
@@ -255,7 +255,7 @@ def validate_phase2_locks(
         sha256_file(b_path) == dual["phase2_b2a_lock_sha256"],
         "phase2_b2a_lock SHA mismatch",
     )
-    for stage in ("A1", "A2"):
+    for stage in ("A0_EXTENSION", "A1", "A2"):
         binding = a_lock["case_manifests"][stage]
         path = phase2_dir / str(binding["path"])
         _require(path.is_file(), f"missing {stage} manifest file")

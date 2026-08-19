@@ -14,9 +14,16 @@ from tools.gate13_causal_return.phase2_common import sha256_bytes, sha256_json, 
 from .compile_register_cases import (
     DEFAULT_SEED as A0_SEED,
     base_cases as a0_base_cases,
+    compile_ledger,
 )
 from .oracle import edited_trace, parity_trace
-from .render_register_cases import OUTPUT_CONTRACT, bits_text, trace_lines
+from .render_register_cases import (
+    INTERVENTION_MARKER as A0_INTERVENTION_MARKER,
+    OUTPUT_CONTRACT,
+    RULE_TEXT,
+    bits_text,
+    trace_lines,
+)
 
 
 SCHEMA_VERSION = "gate13_phase2_track_a_case_manifest_v1"
@@ -27,7 +34,9 @@ EDIT_STRATA = ("early", "middle", "late")
 A1_CONTROLS = ("correct", "corrupted", "shuffled")
 A2_CONDITIONS = ("base", "edit", "marker_only", "undeclared_corrupt", "filler")
 TARGET_COUNT = len(LENGTHS) * 2 * len(EDIT_STRATA)
-A0_FORWARD_COUNT = 216
+A0_REVIEW1_FORWARD_COUNT = 216
+A0_MARKER_ONLY_FORWARD_COUNT = 36
+A0_FORWARD_COUNT = A0_REVIEW1_FORWARD_COUNT + A0_MARKER_ONLY_FORWARD_COUNT
 A1_FORWARD_COUNT = TARGET_COUNT * len(SHOT_COUNTS) * len(A1_CONTROLS)
 A2_FORWARD_COUNT = TARGET_COUNT * len(A2_CONDITIONS)
 TIMING_PREFLIGHT_RESERVE = 48
@@ -259,6 +268,40 @@ def _expected_a2(target: Mapping[str, Any], condition: str) -> str:
     return trace_lines(trace, start=step + 1) + f"\nanswer = {trace[-1]}"
 
 
+def _a0_marker_only_cases() -> list[dict[str, Any]]:
+    cases: list[dict[str, Any]] = []
+    for base in a0_base_cases(A0_SEED):
+        bits = tuple(int(bit) for bit in base["bits"])
+        trace = parity_trace(bits)
+        step = int(base["edit_step"])
+        prompt = (
+            f"{RULE_TEXT}\n\nInput bits:\n{bits_text(bits)}\n"
+            f"\nThe base trace was correct through step {step - 1}:\n"
+            + trace_lines(trace[:step])
+            + f"\n\n{A0_INTERVENTION_MARKER}\n"
+            + f"r{step} = {trace[step]}\n\n"
+            + f"Continue with r{step + 1} through r{len(bits)}, then answer = r{len(bits)}.\n"
+            + OUTPUT_CONTRACT
+            + "\n\nCONTINUE:"
+        )
+        expected = trace_lines(trace, start=step + 1) + f"\nanswer = {trace[-1]}"
+        cases.append(
+            {
+                **base,
+                "stage": "A0",
+                "case_id": f"{base['base_id']}-N",
+                "target_id": base["base_id"],
+                "shots": 0,
+                "condition": "N",
+                "prompt": prompt,
+                "expected_text": expected,
+                "expected_steps": list(range(step + 1, len(bits) + 1)),
+                "matched_to_case_id": f"{base['base_id']}-E",
+            }
+        )
+    return cases
+
+
 def compile_cases() -> dict[str, Any]:
     targets = target_ledger()
     bank = demonstration_bank(targets)
@@ -300,7 +343,13 @@ def compile_cases() -> dict[str, Any]:
                     ),
                 }
             )
-    return {"targets": targets, "demonstrations": bank, "A1": a1_cases, "A2": a2_cases}
+    return {
+        "targets": targets,
+        "demonstrations": bank,
+        "A0_EXTENSION": _a0_marker_only_cases(),
+        "A1": a1_cases,
+        "A2": a2_cases,
+    }
 
 
 def _case_binding(case: Mapping[str, Any]) -> dict[str, Any]:
@@ -375,12 +424,41 @@ def compile_manifests() -> tuple[dict[str, Any], dict[str, Any]]:
     return a1, a2
 
 
-def validate_manifests(a1: Mapping[str, Any], a2: Mapping[str, Any]) -> dict[str, Any]:
+def compile_a0_extension_manifest() -> dict[str, Any]:
+    cases = compile_cases()["A0_EXTENSION"]
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "compiler_seed": SEED,
+        "stage": "A0_EXTENSION",
+        "condition": "marker_only_no_overwrite",
+        "matched_review1_condition": "E",
+        "case_count": len(cases),
+        "intervention_marker": A0_INTERVENTION_MARKER,
+        "cases": [
+            {
+                **_case_binding(case),
+                "matched_to_case_id": case["matched_to_case_id"],
+            }
+            for case in cases
+        ],
+    }
+    manifest["manifest_sha256"] = sha256_json(manifest)
+    return manifest
+
+
+def validate_manifests(
+    a1: Mapping[str, Any],
+    a2: Mapping[str, Any],
+    a0_extension: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     expected_a1, expected_a2 = compile_manifests()
     if dict(a1) != expected_a1:
         raise ValueError("A1 manifest differs from deterministic compiler output")
     if dict(a2) != expected_a2:
         raise ValueError("A2 manifest differs from deterministic compiler output")
+    expected_a0_extension = compile_a0_extension_manifest()
+    if a0_extension is not None and dict(a0_extension) != expected_a0_extension:
+        raise ValueError("A0 extension manifest differs from deterministic compiler output")
 
     compiled = compile_cases()
     case_ids = [case["case_id"] for stage in ("A1", "A2") for case in compiled[stage]]
@@ -426,12 +504,27 @@ def validate_manifests(a1: Mapping[str, Any], a2: Mapping[str, Any]) -> dict[str
             if not all(edited[index] == (base[index] ^ 1) for index in range(step, len(base))):
                 raise ValueError(f"counterfactual intervention property failed: {case['case_id']}")
 
+    review1_e_by_base = {
+        str(row["base_id"]): row
+        for row in compile_ledger()["cases"]
+        if row["condition"] == "E"
+    }
+    for case in compiled["A0_EXTENSION"]:
+        matched = review1_e_by_base[str(case["base_id"])]
+        if len(str(case["prompt"]).encode("utf-8")) != len(
+            str(matched["prompt"]).encode("utf-8")
+        ):
+            raise ValueError(f"A0 marker-only prompt is not byte-length matched: {case['case_id']}")
+        if A0_INTERVENTION_MARKER not in str(case["prompt"]):
+            raise ValueError(f"A0 marker-only control lacks the frozen marker: {case['case_id']}")
+
     if PROJECTED_FORWARD_MAXIMUM > FORWARD_CEILING:
         raise ValueError("forward forecast exceeds ceiling")
     return {
         "status": "PASS_MODEL_FREE_PHASE2_MANIFEST_VALIDATION",
         "a1_case_count": len(compiled["A1"]),
         "a2_case_count": len(compiled["A2"]),
+        "a0_marker_only_case_count": len(compiled["A0_EXTENSION"]),
         "target_count": len(compiled["targets"]),
         "demonstration_count": len(compiled["demonstrations"]),
         "projected_forward_maximum": PROJECTED_FORWARD_MAXIMUM,
@@ -447,7 +540,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     a1, a2 = compile_manifests()
-    validate_manifests(a1, a2)
+    a0_extension = compile_a0_extension_manifest()
+    validate_manifests(a1, a2, a0_extension)
+    write_json(args.out_dir / "track_a_a0_extension_manifest.json", a0_extension)
     write_json(args.out_dir / "track_a_a1_manifest.json", a1)
     write_json(args.out_dir / "track_a_a2_manifest.json", a2)
     print(
@@ -455,6 +550,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "status": "PASS_MODEL_FREE_PHASE2_COMPILE",
             "a1_cases": a1["case_count"],
             "a2_cases": a2["case_count"],
+            "a0_marker_only_cases": a0_extension["case_count"],
         }
     )
     return 0

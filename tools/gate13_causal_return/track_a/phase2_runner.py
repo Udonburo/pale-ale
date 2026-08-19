@@ -237,9 +237,12 @@ def run_track_a(
     if validation["status"] != "PASS":
         raise TrackARuntimeError("dual-lock validation did not pass")
     lock = read_json(phase2_dir / "phase2_a_lock.json")
+    a0_extension_manifest = read_json(
+        phase2_dir / lock["case_manifests"]["A0_EXTENSION"]["path"]
+    )
     a1_manifest = read_json(phase2_dir / lock["case_manifests"]["A1"]["path"])
     a2_manifest = read_json(phase2_dir / lock["case_manifests"]["A2"]["path"])
-    validate_manifests(a1_manifest, a2_manifest)
+    validate_manifests(a1_manifest, a2_manifest, a0_extension_manifest)
     probe = runtime_probe(lock)
     if probe["status"] != "PASS":
         result = {
@@ -260,7 +263,7 @@ def run_track_a(
 
     torch, tokenizer, model = _load_exact_model(lock)
     compiled = compile_cases()
-    a0_cases = list(compile_ledger()["cases"])
+    a0_cases = list(compile_ledger()["cases"]) + list(compiled["A0_EXTENSION"])
     forward_count = 0
     a0_records, forward_count = _execute_stage(
         stage="A0",
