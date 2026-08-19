@@ -23,6 +23,7 @@ from tools.gate13_causal_return.track_a.parse_phase2_output import (
 from tools.gate13_causal_return.track_a.phase2_runner import (
     TrackARuntimeError,
     _load_completed,
+    model_load_authorized,
 )
 
 
@@ -117,6 +118,30 @@ class Phase2ParserAndMetricsTests(unittest.TestCase):
             path.write_text(json.dumps({"case_id": "unknown"}) + "\n", encoding="utf-8")
             with self.assertRaises(TrackARuntimeError):
                 _load_completed(path, {"known"})
+
+    def test_model_load_requires_runtime_and_dual_authorization(self) -> None:
+        self.assertTrue(
+            model_load_authorized(
+                {"execution_authorized": True}, {"status": "PASS"}, probe_only=False
+            )
+        )
+        self.assertFalse(
+            model_load_authorized(
+                {"execution_authorized": False}, {"status": "PASS"}, probe_only=False
+            )
+        )
+        self.assertFalse(
+            model_load_authorized(
+                {"execution_authorized": True},
+                {"status": "BLOCKED_EXACT_RUNTIME_UNAVAILABLE"},
+                probe_only=False,
+            )
+        )
+        self.assertFalse(
+            model_load_authorized(
+                {"execution_authorized": True}, {"status": "PASS"}, probe_only=True
+            )
+        )
 
 
 if __name__ == "__main__":

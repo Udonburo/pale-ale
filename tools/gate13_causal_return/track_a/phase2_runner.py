@@ -22,6 +22,15 @@ class TrackARuntimeError(RuntimeError):
     """Fail-closed runtime or execution error."""
 
 
+def model_load_authorized(
+    validation: Mapping[str, Any], probe: Mapping[str, Any], *, probe_only: bool
+) -> bool:
+    """Return true only when both the dual authorization and exact runtime pass."""
+    if probe_only:
+        return False
+    return bool(validation.get("execution_authorized")) and probe.get("status") == "PASS"
+
+
 def runtime_probe(lock: Mapping[str, Any]) -> dict[str, Any]:
     required = lock["runtime_binding"]
     versions: dict[str, str] = {}
@@ -255,11 +264,27 @@ def run_track_a(
             "TRACK_A_A2": "UNOPENED",
             "model_forward_count": 0,
             "activation_extraction_count": 0,
+            "dual_execution_authorized": bool(validation["execution_authorized"]),
         }
         write_json(output_dir / "track_a_result.json", result)
         return result
     if probe_only:
         return {"status": "PASS_EXACT_RUNTIME_AVAILABLE", "runtime_probe": probe}
+    if not model_load_authorized(validation, probe, probe_only=False):
+        result = {
+            "schema_version": "gate13_phase2_track_a_result_v1",
+            "status": "NOT_EXECUTED_DUAL_AUTHORIZATION_BLOCKED",
+            "runtime_binding_status": "PASS_EXACT_RUNTIME_AVAILABLE",
+            "runtime_probe": probe,
+            "TRACK_A_A0": "UNOPENED",
+            "TRACK_A_A1": "UNOPENED",
+            "TRACK_A_A2": "UNOPENED",
+            "model_forward_count": 0,
+            "activation_extraction_count": 0,
+            "dual_execution_authorized": False,
+        }
+        write_json(output_dir / "track_a_result.json", result)
+        return result
 
     torch, tokenizer, model = _load_exact_model(lock)
     compiled = compile_cases()
