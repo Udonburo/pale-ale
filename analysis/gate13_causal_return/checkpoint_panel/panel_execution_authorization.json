@@ -4,11 +4,12 @@
   "checkpoint_executions": {
     "qwen3_14b": {
       "automatic_retries": 0,
-      "execution_identity": "5dab890c-077e-5257-9a11-726c9e051c51",
+      "execution_identity": "0b8f4d0d-017d-5024-beaa-0004bcc64e25",
       "maximum_active_gpu_containers": 1,
       "model_volume_name": "gate13-panel-qwen3-14b-40c0698-model",
+      "operational_attempt": 2,
       "repo_id": "Qwen/Qwen3-14B",
-      "result_volume_name": "gate13-panel-qwen3-14b-5dab890c-results",
+      "result_volume_name": "gate13-panel-qwen3-14b-0b8f4d0d-results",
       "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18"
     },
     "qwen3_5_27b": {
@@ -16,6 +17,7 @@
       "execution_identity": "4940bf4d-2c17-547d-aaa3-12934f58af64",
       "maximum_active_gpu_containers": 1,
       "model_volume_name": "gate13-panel-qwen3-5-27b-fc05dae-model",
+      "operational_attempt": 1,
       "repo_id": "Qwen/Qwen3.5-27B",
       "result_volume_name": "gate13-panel-qwen3-5-27b-4940bf4d-results",
       "revision": "fc05daec18b0a78c049392ed2e771dde82bdf654"
@@ -25,6 +27,7 @@
       "execution_identity": "b786d648-8ea6-564b-a1cd-0f797c614a00",
       "maximum_active_gpu_containers": 1,
       "model_volume_name": "gate13-panel-qwen3-6-27b-6a9e13b-model",
+      "operational_attempt": 1,
       "repo_id": "Qwen/Qwen3.6-27B",
       "result_volume_name": "gate13-panel-qwen3-6-27b-b786d648-results",
       "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9"
@@ -34,6 +37,7 @@
       "execution_identity": "99a78b50-891f-5c27-8183-29f5f1496d6f",
       "maximum_active_gpu_containers": 1,
       "model_volume_name": "gate13-panel-qwen3-8-27b-1d4bf0f-model",
+      "operational_attempt": 1,
       "repo_id": "Qwen/Qwen3.8-27B",
       "result_volume_name": "gate13-panel-qwen3-8-27b-99a78b50-results",
       "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
@@ -111,7 +115,7 @@
       "sha256": "d7340a8788a62860d7b23bc2b6f8345e02e978ed3052cfb41c263e89780b573f"
     }
   },
-  "implementation_commit": "14425847e469d559738f0eab3e8667f3f4130267",
+  "implementation_commit": "60c0fa2731822fed0ce3944c3be43d13e123e587",
   "maximum_active_gpu_containers": 1,
   "maximum_fresh_operator_executions": 1,
   "new_model_and_result_volumes": "DELETE_AFTER_HASH_VERIFIED_RETRIEVAL",
