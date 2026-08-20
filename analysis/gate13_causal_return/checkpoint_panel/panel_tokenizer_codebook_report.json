@@ -1,0 +1,6375 @@
+{
+  "Panel_G": {
+    "common_transfer_labels": [
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 16,
+        "label": " Akron",
+        "token_ids": {
+          "qwen3_5_27b": 91520,
+          "qwen3_6_27b": 91520,
+          "qwen3_8_27b": 91520
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 17,
+        "label": " Apex",
+        "token_ids": {
+          "qwen3_5_27b": 80480,
+          "qwen3_6_27b": 80480,
+          "qwen3_8_27b": 80480
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 18,
+        "label": " Baz",
+        "token_ids": {
+          "qwen3_5_27b": 88548,
+          "qwen3_6_27b": 88548,
+          "qwen3_8_27b": 88548
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 19,
+        "label": " Bij",
+        "token_ids": {
+          "qwen3_5_27b": 76826,
+          "qwen3_6_27b": 76826,
+          "qwen3_8_27b": 76826
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 20,
+        "label": " Byz",
+        "token_ids": {
+          "qwen3_5_27b": 78844,
+          "qwen3_6_27b": 78844,
+          "qwen3_8_27b": 78844
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 21,
+        "label": " Caj",
+        "token_ids": {
+          "qwen3_5_27b": 92466,
+          "qwen3_6_27b": 92466,
+          "qwen3_8_27b": 92466
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 22,
+        "label": " Cav",
+        "token_ids": {
+          "qwen3_5_27b": 49347,
+          "qwen3_6_27b": 49347,
+          "qwen3_8_27b": 49347
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 23,
+        "label": " Dek",
+        "token_ids": {
+          "qwen3_5_27b": 71929,
+          "qwen3_6_27b": 71929,
+          "qwen3_8_27b": 71929
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 24,
+        "label": " Dix",
+        "token_ids": {
+          "qwen3_5_27b": 72582,
+          "qwen3_6_27b": 72582,
+          "qwen3_8_27b": 72582
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 25,
+        "label": " Dok",
+        "token_ids": {
+          "qwen3_5_27b": 64592,
+          "qwen3_6_27b": 64592,
+          "qwen3_8_27b": 64592
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 26,
+        "label": " Eck",
+        "token_ids": {
+          "qwen3_5_27b": 78825,
+          "qwen3_6_27b": 78825,
+          "qwen3_8_27b": 78825
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 27,
+        "label": " Elk",
+        "token_ids": {
+          "qwen3_5_27b": 84586,
+          "qwen3_6_27b": 84586,
+          "qwen3_8_27b": 84586
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 28,
+        "label": " Esk",
+        "token_ids": {
+          "qwen3_5_27b": 56404,
+          "qwen3_6_27b": 56404,
+          "qwen3_8_27b": 56404
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 29,
+        "label": " Evo",
+        "token_ids": {
+          "qwen3_5_27b": 94493,
+          "qwen3_6_27b": 94493,
+          "qwen3_8_27b": 94493
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 30,
+        "label": " Ezra",
+        "token_ids": {
+          "qwen3_5_27b": 81407,
+          "qwen3_6_27b": 81407,
+          "qwen3_8_27b": 81407
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 31,
+        "label": " Fitz",
+        "token_ids": {
+          "qwen3_5_27b": 35462,
+          "qwen3_6_27b": 35462,
+          "qwen3_8_27b": 35462
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 32,
+        "label": " Fuj",
+        "token_ids": {
+          "qwen3_5_27b": 60172,
+          "qwen3_6_27b": 60172,
+          "qwen3_8_27b": 60172
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 33,
+        "label": " Gaz",
+        "token_ids": {
+          "qwen3_5_27b": 41862,
+          "qwen3_6_27b": 41862,
+          "qwen3_8_27b": 41862
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 34,
+        "label": " Giz",
+        "token_ids": {
+          "qwen3_5_27b": 64051,
+          "qwen3_6_27b": 64051,
+          "qwen3_8_27b": 64051
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 35,
+        "label": " Haj",
+        "token_ids": {
+          "qwen3_5_27b": 80549,
+          "qwen3_6_27b": 80549,
+          "qwen3_8_27b": 80549
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 36,
+        "label": " Hak",
+        "token_ids": {
+          "qwen3_5_27b": 68879,
+          "qwen3_6_27b": 68879,
+          "qwen3_8_27b": 68879
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 37,
+        "label": " Haz",
+        "token_ids": {
+          "qwen3_5_27b": 30458,
+          "qwen3_6_27b": 30458,
+          "qwen3_8_27b": 30458
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 38,
+        "label": " Hex",
+        "token_ids": {
+          "qwen3_5_27b": 26350,
+          "qwen3_6_27b": 26350,
+          "qwen3_8_27b": 26350
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 39,
+        "label": " Hij",
+        "token_ids": {
+          "qwen3_5_27b": 65695,
+          "qwen3_6_27b": 65695,
+          "qwen3_8_27b": 65695
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 40,
+        "label": " Ivy",
+        "token_ids": {
+          "qwen3_5_27b": 54976,
+          "qwen3_6_27b": 54976,
+          "qwen3_8_27b": 54976
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 41,
+        "label": " Jab",
+        "token_ids": {
+          "qwen3_5_27b": 51203,
+          "qwen3_6_27b": 51203,
+          "qwen3_8_27b": 51203
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 42,
+        "label": " Jad",
+        "token_ids": {
+          "qwen3_5_27b": 70252,
+          "qwen3_6_27b": 70252,
+          "qwen3_8_27b": 70252
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 43,
+        "label": " Jag",
+        "token_ids": {
+          "qwen3_5_27b": 28451,
+          "qwen3_6_27b": 28451,
+          "qwen3_8_27b": 28451
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 44,
+        "label": " Jed",
+        "token_ids": {
+          "qwen3_5_27b": 62933,
+          "qwen3_6_27b": 62933,
+          "qwen3_8_27b": 62933
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 45,
+        "label": " Joi",
+        "token_ids": {
+          "qwen3_5_27b": 39808,
+          "qwen3_6_27b": 39808,
+          "qwen3_8_27b": 39808
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 46,
+        "label": " Jou",
+        "token_ids": {
+          "qwen3_5_27b": 92728,
+          "qwen3_6_27b": 92728,
+          "qwen3_8_27b": 92728
+        }
+      },
+      {
+        "banks": [
+          "qualification"
+        ],
+        "index": 47,
+        "label": " Kab",
+        "token_ids": {
+          "qwen3_5_27b": 39098,
+          "qwen3_6_27b": 39098,
+          "qwen3_8_27b": 39098
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 48,
+        "label": " Kad",
+        "token_ids": {
+          "qwen3_5_27b": 71171,
+          "qwen3_6_27b": 71171,
+          "qwen3_8_27b": 71171
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 49,
+        "label": " Kag",
+        "token_ids": {
+          "qwen3_5_27b": 73390,
+          "qwen3_6_27b": 73390,
+          "qwen3_8_27b": 73390
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 50,
+        "label": " Kah",
+        "token_ids": {
+          "qwen3_5_27b": 81111,
+          "qwen3_6_27b": 81111,
+          "qwen3_8_27b": 81111
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 51,
+        "label": " Kak",
+        "token_ids": {
+          "qwen3_5_27b": 71937,
+          "qwen3_6_27b": 71937,
+          "qwen3_8_27b": 71937
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 52,
+        "label": " Kal",
+        "token_ids": {
+          "qwen3_5_27b": 25974,
+          "qwen3_6_27b": 25974,
+          "qwen3_8_27b": 25974
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 53,
+        "label": " Kam",
+        "token_ids": {
+          "qwen3_5_27b": 27519,
+          "qwen3_6_27b": 27519,
+          "qwen3_8_27b": 27519
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 54,
+        "label": " Kan",
+        "token_ids": {
+          "qwen3_5_27b": 29564,
+          "qwen3_6_27b": 29564,
+          "qwen3_8_27b": 29564
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 55,
+        "label": " Kap",
+        "token_ids": {
+          "qwen3_5_27b": 30626,
+          "qwen3_6_27b": 30626,
+          "qwen3_8_27b": 30626
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 56,
+        "label": " Kas",
+        "token_ids": {
+          "qwen3_5_27b": 36299,
+          "qwen3_6_27b": 36299,
+          "qwen3_8_27b": 36299
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 57,
+        "label": " Kaw",
+        "token_ids": {
+          "qwen3_5_27b": 48814,
+          "qwen3_6_27b": 48814,
+          "qwen3_8_27b": 48814
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 58,
+        "label": " Kaz",
+        "token_ids": {
+          "qwen3_5_27b": 33817,
+          "qwen3_6_27b": 33817,
+          "qwen3_8_27b": 33817
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 59,
+        "label": " Kes",
+        "token_ids": {
+          "qwen3_5_27b": 80114,
+          "qwen3_6_27b": 80114,
+          "qwen3_8_27b": 80114
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 60,
+        "label": " Ket",
+        "token_ids": {
+          "qwen3_5_27b": 64817,
+          "qwen3_6_27b": 64817,
+          "qwen3_8_27b": 64817
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 61,
+        "label": " Kia",
+        "token_ids": {
+          "qwen3_5_27b": 77503,
+          "qwen3_6_27b": 77503,
+          "qwen3_8_27b": 77503
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 62,
+        "label": " Kir",
+        "token_ids": {
+          "qwen3_5_27b": 24714,
+          "qwen3_6_27b": 24714,
+          "qwen3_8_27b": 24714
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_1"
+        ],
+        "index": 63,
+        "label": " Kis",
+        "token_ids": {
+          "qwen3_5_27b": 82679,
+          "qwen3_6_27b": 82679,
+          "qwen3_8_27b": 82679
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 64,
+        "label": " Kob",
+        "token_ids": {
+          "qwen3_5_27b": 57148,
+          "qwen3_6_27b": 57148,
+          "qwen3_8_27b": 57148
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 65,
+        "label": " Kod",
+        "token_ids": {
+          "qwen3_5_27b": 65031,
+          "qwen3_6_27b": 65031,
+          "qwen3_8_27b": 65031
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 66,
+        "label": " Koh",
+        "token_ids": {
+          "qwen3_5_27b": 32754,
+          "qwen3_6_27b": 32754,
+          "qwen3_8_27b": 32754
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 67,
+        "label": " Kok",
+        "token_ids": {
+          "qwen3_5_27b": 62526,
+          "qwen3_6_27b": 62526,
+          "qwen3_8_27b": 62526
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 68,
+        "label": " Kol",
+        "token_ids": {
+          "qwen3_5_27b": 43998,
+          "qwen3_6_27b": 43998,
+          "qwen3_8_27b": 43998
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 69,
+        "label": " Kop",
+        "token_ids": {
+          "qwen3_5_27b": 56062,
+          "qwen3_6_27b": 56062,
+          "qwen3_8_27b": 56062
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 70,
+        "label": " Kor",
+        "token_ids": {
+          "qwen3_5_27b": 33910,
+          "qwen3_6_27b": 33910,
+          "qwen3_8_27b": 33910
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 71,
+        "label": " Kos",
+        "token_ids": {
+          "qwen3_5_27b": 35878,
+          "qwen3_6_27b": 35878,
+          "qwen3_8_27b": 35878
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 72,
+        "label": " Kot",
+        "token_ids": {
+          "qwen3_5_27b": 59582,
+          "qwen3_6_27b": 59582,
+          "qwen3_8_27b": 59582
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 73,
+        "label": " Kou",
+        "token_ids": {
+          "qwen3_5_27b": 73274,
+          "qwen3_6_27b": 73274,
+          "qwen3_8_27b": 73274
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 74,
+        "label": " Kov",
+        "token_ids": {
+          "qwen3_5_27b": 89683,
+          "qwen3_6_27b": 89683,
+          "qwen3_8_27b": 89683
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 75,
+        "label": " Kra",
+        "token_ids": {
+          "qwen3_5_27b": 59010,
+          "qwen3_6_27b": 59010,
+          "qwen3_8_27b": 59010
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 76,
+        "label": " Kre",
+        "token_ids": {
+          "qwen3_5_27b": 28651,
+          "qwen3_6_27b": 28651,
+          "qwen3_8_27b": 28651
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 77,
+        "label": " Kro",
+        "token_ids": {
+          "qwen3_5_27b": 65530,
+          "qwen3_6_27b": 65530,
+          "qwen3_8_27b": 65530
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 78,
+        "label": " Kub",
+        "token_ids": {
+          "qwen3_5_27b": 60442,
+          "qwen3_6_27b": 60442,
+          "qwen3_8_27b": 60442
+        }
+      },
+      {
+        "banks": [
+          "track_b_half_2"
+        ],
+        "index": 79,
+        "label": " Kul",
+        "token_ids": {
+          "qwen3_5_27b": 81591,
+          "qwen3_6_27b": 81591,
+          "qwen3_8_27b": 81591
+        }
+      }
+    ],
+    "per_checkpoint_bank_forbidden": true,
+    "priority": 2,
+    "same_literal_labels_one_non_special_token_all_checkpoints": true,
+    "status": "COMMON_LITERAL_CODEBOOK",
+    "tokenizer_assets_all_byte_identical": false,
+    "unused_development_only_incompatibilities": [
+      {
+        "index": 10,
+        "label": " Ksi",
+        "reason": "two tokens in all Panel G tokenizers; outside qualification and operator banks"
+      }
+    ]
+  },
+  "Panel_S": {
+    "same_literal_strings": true,
+    "same_one_token_ids": true,
+    "status": "EXACT_8B_CODEBOOK_REUSED",
+    "tokenizer_assets_byte_identical": true
+  },
+  "campaign_binding_id": "47171e04-dc39-4fda-b28d-24fe0b2f57eb",
+  "candidate_source": "existing deterministic OPAQUE_LABELS ordered tuple",
+  "checkpoints": {
+    "qwen3_14b": {
+      "effective_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+      "labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24648
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95714
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73641
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70321
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41807
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95560
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94555
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96889
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72642
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95165
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            143833
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60588
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96409
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88019
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79612
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41162
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94793
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83355
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91711
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79566
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81660
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95779
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51066
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74463
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75143
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66850
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81640
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            87606
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58369
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            97870
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84318
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36678
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62270
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43292
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66288
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83426
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71298
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31495
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27228
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67990
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            52982
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72724
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29411
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65132
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41168
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96048
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40436
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73676
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75991
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84007
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74471
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26832
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28449
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30563
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31665
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37542
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            50516
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            34974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82977
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67084
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80270
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25527
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            85637
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67302
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33875
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64715
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            45515
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58009
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35070
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37108
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61663
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75865
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92881
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61067
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29618
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62549
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84506
+          ]
+        }
+      ],
+      "repo_id": "Qwen/Qwen3-14B",
+      "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+      "score_slot": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "4eb88326bbc20fe23ae0112e59f574ca357de1287dc295df66fa2c65f8a7f9f1",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 83355
+          },
+          {
+            "label": " Akron",
+            "token_id": 94793
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_14b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "fa64a3d3bc775ceea9ccdf83b64cf36405adf9f9a15118d62135cd8c7d0d7bf5",
+        "input_length": 86,
+        "official_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1584,
+          2383,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 85,
+        "semantic_answer_token_index": 86,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "special_token_ids": [
+        151643,
+        151644,
+        151645,
+        151646,
+        151647,
+        151648,
+        151649,
+        151650,
+        151651,
+        151652,
+        151653,
+        151654,
+        151655,
+        151656
+      ],
+      "tokenizer_config_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+      "tokenizer_json_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "transfer_labels_all_one_non_special_token": true,
+      "vocab_size": 151669
+    },
+    "qwen3_5_27b": {
+      "effective_chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "repo_id": "Qwen/Qwen3.5-27B",
+      "revision": "fc05daec18b0a78c049392ed2e771dde82bdf654",
+      "score_slot": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_5_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "special_token_ids": [
+        248044,
+        248046,
+        248053,
+        248054,
+        248056,
+        248057,
+        248070,
+        248071,
+        248076
+      ],
+      "tokenizer_config_sha256": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+      "tokenizer_json_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "transfer_labels_all_one_non_special_token": true,
+      "vocab_size": 248077
+    },
+    "qwen3_6_27b": {
+      "effective_chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+      "labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "repo_id": "Qwen/Qwen3.6-27B",
+      "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+      "score_slot": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_6_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "special_token_ids": [
+        248044,
+        248046,
+        248053,
+        248054,
+        248056,
+        248057,
+        248070,
+        248071,
+        248076
+      ],
+      "tokenizer_config_sha256": "5186f0defcd7f232382c7f0aebcd2252d073bb921ab240e407b7ae8745d2b29b",
+      "tokenizer_json_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+      "transfer_labels_all_one_non_special_token": true,
+      "vocab_size": 248077
+    },
+    "qwen3_8_27b": {
+      "effective_chat_template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+      "labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "repo_id": "Qwen/Qwen3.8-27B",
+      "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+      "score_slot": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_8_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "special_token_ids": [
+        248044,
+        248046,
+        248053,
+        248054,
+        248056,
+        248057,
+        248070,
+        248071,
+        248076
+      ],
+      "tokenizer_config_sha256": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+      "tokenizer_json_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+      "transfer_labels_all_one_non_special_token": true,
+      "vocab_size": 248077
+    },
+    "qwen3_8b_baseline": {
+      "effective_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+      "labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24648
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95714
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73641
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70321
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41807
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95560
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94555
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96889
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72642
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95165
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            143833
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60588
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96409
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88019
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79612
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41162
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94793
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83355
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91711
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79566
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81660
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95779
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51066
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74463
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75143
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66850
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81640
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            87606
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58369
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            97870
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84318
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36678
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62270
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43292
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66288
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83426
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71298
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31495
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27228
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67990
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            52982
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72724
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29411
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65132
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41168
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96048
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40436
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73676
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75991
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84007
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74471
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26832
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28449
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30563
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31665
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37542
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            50516
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            34974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82977
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67084
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80270
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25527
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            85637
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67302
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33875
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64715
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            45515
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58009
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35070
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37108
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61663
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75865
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92881
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61067
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29618
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62549
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84506
+          ]
+        }
+      ],
+      "repo_id": "Qwen/Qwen3-8B",
+      "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+      "score_slot": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "4eb88326bbc20fe23ae0112e59f574ca357de1287dc295df66fa2c65f8a7f9f1",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 83355
+          },
+          {
+            "label": " Akron",
+            "token_id": 94793
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_8b_baseline",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "fa64a3d3bc775ceea9ccdf83b64cf36405adf9f9a15118d62135cd8c7d0d7bf5",
+        "input_length": 86,
+        "official_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1584,
+          2383,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 85,
+        "semantic_answer_token_index": 86,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "special_token_ids": [
+        151643,
+        151644,
+        151645,
+        151646,
+        151647,
+        151648,
+        151649,
+        151650,
+        151651,
+        151652,
+        151653,
+        151654,
+        151655,
+        151656
+      ],
+      "tokenizer_config_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+      "tokenizer_json_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "transfer_labels_all_one_non_special_token": true,
+      "vocab_size": 151669
+    }
+  },
+  "filter": "indices 16..79 used by qualification and conditionally reserved operator halves; exact one-token, non-special, byte-round-trip",
+  "ordering": "existing tuple order",
+  "report_payload_sha256": "dc0613dcb3545915bf5acb2d662e726bca364ba4e77ec9d8445575fce9f35adf",
+  "schema_version": "gate13_checkpoint_panel_tokenizer_codebook_report_v1",
+  "selection_used_model_outputs": false,
+  "tie_break": "not applicable"
+}

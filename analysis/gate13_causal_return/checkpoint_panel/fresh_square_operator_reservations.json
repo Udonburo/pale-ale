@@ -1,0 +1,245 @@
+{
+  "TRACK_C": "CLOSED",
+  "authority_status": "CONDITIONALLY_AUTHORIZED_AFTER_PANEL_A2_PASS",
+  "broken_square_registry": {
+    "corruption": "one frozen transition demonstration output inverted without changing row count or choice set",
+    "path_p": [
+      "phase0_state0",
+      "phase0_state1",
+      "phase1_state1"
+    ],
+    "path_q": [
+      "phase0_state0",
+      "phase1_state0",
+      "phase1_state1_broken"
+    ]
+  },
+  "campaign_binding_id": "47171e04-dc39-4fda-b28d-24fe0b2f57eb",
+  "edge_condition_ceiling": 1000000.0,
+  "edge_estimator": "PAIRED_RIDGE_LINEAR_MAP_IN_NODE_LOCAL_COORDINATES",
+  "edge_rank_tolerance": 1e-08,
+  "edge_ridge_relative": 0.001,
+  "exact_square_registry": {
+    "external_relation": "J_(t+1) tau = tau J_t",
+    "path_p": [
+      "phase0_state0",
+      "phase0_state1",
+      "phase1_state1"
+    ],
+    "path_q": [
+      "phase0_state0",
+      "phase1_state0",
+      "phase1_state1"
+    ]
+  },
+  "forbidden_pass_conditions": [
+    "nonzero holonomy alone",
+    "operator existence alone",
+    "difference from legacy scalar alone"
+  ],
+  "frame_estimator": "CENTERED_SVD_WITH_DETERMINISTIC_COLUMN_SIGN",
+  "frame_rank": 4,
+  "frame_relative_singular_tolerance": 1e-06,
+  "half_2_alignment": "NODE_WISE_RIGHT_ORTHOGONAL_PROCRUSTES_TO_HALF_1",
+  "historical_B2A": "TERMINATED_SUBSTRATE_INADEQUATE",
+  "inherited_operator_lock_sha256": "f684788571150683eeca57295d53537bc728d7d80e3e229e05d9094010a1530b",
+  "legacy_scalar_fresh_B2B": "RESERVED_NOT_PART_OF_THIS_CAMPAIGN",
+  "maximum_forward_count": 240,
+  "minimum_node_support_per_half": 24,
+  "operator_packet": [
+    "P_p",
+    "P_q",
+    "Delta_pq",
+    "singular spectra",
+    "S_p",
+    "S_q",
+    "H_path where qualified",
+    "H_edge where qualified",
+    "rank and conditioning",
+    "split-half disagreement",
+    "exact-square response",
+    "broken-square response"
+  ],
+  "per_checkpoint": {
+    "qwen3_14b": {
+      "activation_tensor": "language-model residual hidden_states[layer][0,-1]",
+      "actual_hidden_state_indices": [
+        13,
+        27,
+        39
+      ],
+      "independent_nuisance_halves": {
+        "bootstrap": "SECONDARY_ONLY_NOT_A_SUBSTITUTE",
+        "disjoint_demonstration_instances": true,
+        "disjoint_episode_seeds": true,
+        "disjoint_opaque_codebooks": true,
+        "disjoint_templates": true,
+        "half_1_seed_range": [
+          810000,
+          810999
+        ],
+        "half_2_seed_range": [
+          910000,
+          910999
+        ],
+        "samples_per_node_per_half": 24
+      },
+      "layer_derivation": "round_half_up(normalized_depth * num_hidden_layers), clamped to [1,L-1]",
+      "node_conditions": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state0",
+        "phase1_state1",
+        "phase1_state1_broken"
+      ],
+      "normalized_layer_depths": [
+        0.3333333333333333,
+        0.6666666666666666,
+        0.9722222222222222
+      ],
+      "number_of_layers": 40,
+      "repo_id": "Qwen/Qwen3-14B",
+      "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+      "text_token_position": "LAST_PROMPT_TOKEN_BEFORE_FORCED_CHOICE"
+    },
+    "qwen3_5_27b": {
+      "activation_tensor": "language-model residual hidden_states[layer][0,-1]",
+      "actual_hidden_state_indices": [
+        21,
+        43,
+        62
+      ],
+      "independent_nuisance_halves": {
+        "bootstrap": "SECONDARY_ONLY_NOT_A_SUBSTITUTE",
+        "disjoint_demonstration_instances": true,
+        "disjoint_episode_seeds": true,
+        "disjoint_opaque_codebooks": true,
+        "disjoint_templates": true,
+        "half_1_seed_range": [
+          810000,
+          810999
+        ],
+        "half_2_seed_range": [
+          910000,
+          910999
+        ],
+        "samples_per_node_per_half": 24
+      },
+      "layer_derivation": "round_half_up(normalized_depth * num_hidden_layers), clamped to [1,L-1]",
+      "node_conditions": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state0",
+        "phase1_state1",
+        "phase1_state1_broken"
+      ],
+      "normalized_layer_depths": [
+        0.3333333333333333,
+        0.6666666666666666,
+        0.9722222222222222
+      ],
+      "number_of_layers": 64,
+      "repo_id": "Qwen/Qwen3.5-27B",
+      "revision": "fc05daec18b0a78c049392ed2e771dde82bdf654",
+      "text_token_position": "LAST_PROMPT_TOKEN_BEFORE_FORCED_CHOICE"
+    },
+    "qwen3_6_27b": {
+      "activation_tensor": "language-model residual hidden_states[layer][0,-1]",
+      "actual_hidden_state_indices": [
+        21,
+        43,
+        62
+      ],
+      "independent_nuisance_halves": {
+        "bootstrap": "SECONDARY_ONLY_NOT_A_SUBSTITUTE",
+        "disjoint_demonstration_instances": true,
+        "disjoint_episode_seeds": true,
+        "disjoint_opaque_codebooks": true,
+        "disjoint_templates": true,
+        "half_1_seed_range": [
+          810000,
+          810999
+        ],
+        "half_2_seed_range": [
+          910000,
+          910999
+        ],
+        "samples_per_node_per_half": 24
+      },
+      "layer_derivation": "round_half_up(normalized_depth * num_hidden_layers), clamped to [1,L-1]",
+      "node_conditions": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state0",
+        "phase1_state1",
+        "phase1_state1_broken"
+      ],
+      "normalized_layer_depths": [
+        0.3333333333333333,
+        0.6666666666666666,
+        0.9722222222222222
+      ],
+      "number_of_layers": 64,
+      "repo_id": "Qwen/Qwen3.6-27B",
+      "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+      "text_token_position": "LAST_PROMPT_TOKEN_BEFORE_FORCED_CHOICE"
+    },
+    "qwen3_8_27b": {
+      "activation_tensor": "language-model residual hidden_states[layer][0,-1]",
+      "actual_hidden_state_indices": [
+        21,
+        43,
+        62
+      ],
+      "independent_nuisance_halves": {
+        "bootstrap": "SECONDARY_ONLY_NOT_A_SUBSTITUTE",
+        "disjoint_demonstration_instances": true,
+        "disjoint_episode_seeds": true,
+        "disjoint_opaque_codebooks": true,
+        "disjoint_templates": true,
+        "half_1_seed_range": [
+          810000,
+          810999
+        ],
+        "half_2_seed_range": [
+          910000,
+          910999
+        ],
+        "samples_per_node_per_half": 24
+      },
+      "layer_derivation": "round_half_up(normalized_depth * num_hidden_layers), clamped to [1,L-1]",
+      "node_conditions": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state0",
+        "phase1_state1",
+        "phase1_state1_broken"
+      ],
+      "normalized_layer_depths": [
+        0.3333333333333333,
+        0.6666666666666666,
+        0.9722222222222222
+      ],
+      "number_of_layers": 64,
+      "repo_id": "Qwen/Qwen3.8-27B",
+      "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+      "text_token_position": "LAST_PROMPT_TOKEN_BEFORE_FORCED_CHOICE"
+    }
+  },
+  "qualification": {
+    "broken_sensitivity_rule": "minimum broken-square normalized Delta across halves exceeds max(2*split-half floor, floor+0.05, maximum exact-square normalized Delta+0.05)",
+    "fixed_layer_count": 3,
+    "minimum_qualified_layer_count": 2,
+    "split_half_singular_floor_max": 0.2
+  },
+  "schema_version": "gate13_checkpoint_panel_fresh_square_reservations_v1",
+  "scientific_question": "Can the operator packet be re-estimated on independent nuisance halves, with broken-square response above the split-half self-estimation floor?",
+  "selection_priority": [
+    "qwen3_8_27b",
+    "qwen3_6_27b",
+    "qwen3_5_27b",
+    "qwen3_14b"
+  ],
+  "selection_uses_track_a_only_as_resource_gate": true,
+  "track_a_effect_size_or_failure_strata_used_for_surface_selection": false
+}

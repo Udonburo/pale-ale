@@ -1,0 +1,5704 @@
+{
+  "authority_status": "FROZEN_BEFORE_NEW_CHECKPOINT_SCIENTIFIC_RESPONSE",
+  "budget": {
+    "automatic_retries": 0,
+    "credit_reserve_usd": 6.0,
+    "forecast_contingency_multiplier": 1.25,
+    "hard_incremental_modal_spend_ceiling_usd": 22.0,
+    "maximum_active_gpu_containers": 1,
+    "non_preemptible_premium": "FORBIDDEN",
+    "region_premium": "FORBIDDEN",
+    "target_max_spend_preserving_reserve_usd": 16.0
+  },
+  "campaign_binding_id": "47171e04-dc39-4fda-b28d-24fe0b2f57eb",
+  "checkpoint_independence": true,
+  "closed_surfaces": {
+    "A3": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "historical_B2A": "TERMINATED_SUBSTRATE_INADEQUATE",
+    "legacy_scalar_fresh_B2B": "RESERVED_NOT_PART_OF_THIS_CAMPAIGN",
+    "other_model_families_32B_MoE_API": "FORBIDDEN",
+    "public_docs": "UNCHANGED"
+  },
+  "conditional_ladder": [
+    "CHECKPOINT-A0 FAIL -> checkpoint stop; A1/A2 unopened",
+    "CHECKPOINT-A0 PASS -> A1",
+    "CHECKPOINT-A1 FAIL -> checkpoint stop; A2 unopened",
+    "CHECKPOINT-A1 PASS -> A2",
+    "CHECKPOINT-A2 PASS or FAIL -> checkpoint stop"
+  ],
+  "execution_order": [
+    "qwen3_14b",
+    "qwen3_5_27b",
+    "qwen3_6_27b",
+    "qwen3_8_27b"
+  ],
+  "fresh_operator": {
+    "execution_gate": "after all Track A checkpoints; at least one A2 PASS",
+    "maximum_executions": 1,
+    "no_A2_status": "UNOPENED_NO_A2_QUALIFIED_CHECKPOINT",
+    "priority": [
+      "qwen3_8_27b",
+      "qwen3_6_27b",
+      "qwen3_5_27b",
+      "qwen3_14b"
+    ],
+    "reservation_file": "fresh_square_operator_reservations.json"
+  },
+  "gpu_policy": {
+    "Panel_G": {
+      "H100": "FORBIDDEN",
+      "fallback": "H200_ONLY_AFTER_PREFLIGHT_OOM_OR_FROZEN_MARGIN_FAILURE",
+      "primary": "A100-80GB"
+    },
+    "cpu_disk_offload": false,
+    "multi_gpu_tensor_parallel": false,
+    "quantization": false,
+    "qwen3_14b": {
+      "fallback": null,
+      "primary": "L40S"
+    }
+  },
+  "immutable_8B_baseline": {
+    "FRESH_OPERATOR_QUALIFICATION": "UNOPENED",
+    "STREAM-A0": "PASS",
+    "STREAM-A0_MIN_STRATA": "8/8",
+    "STREAM-A0_ONE_STEP": "32/32",
+    "STREAM-A0_SELF_FED_ROLLOUT": "8/8",
+    "STREAM-A1": "FAIL_TO_QUALIFY",
+    "STREAM-A1_CORRECT": "13/16",
+    "STREAM-A1_CORRECT_MINUS_STRONGEST_CONTROL": 0.3125,
+    "STREAM-A1_MINIMUM_STRATUM": "2/4",
+    "STREAM-A2": "UNOPENED_STREAM_A1_FAIL",
+    "execution_identity": "e941e509-ab69-4965-85a2-f48a622d89b7",
+    "failure_localization_commit": "ab047352ff03cb0ce409664470cb633a9ea35ccc",
+    "repo_id": "Qwen/Qwen3-8B",
+    "rerun_or_rejudgment": "FORBIDDEN",
+    "revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "selected_instrument": "natural_rule_v1"
+  },
+  "instrument_transfer": {
+    "canonical_message_content": "UNCHANGED",
+    "checkpoint_specific_tuning": "FORBIDDEN",
+    "controls": [
+      "correct",
+      "label_shuffled",
+      "corrupted",
+      "format_matched",
+      "marker_only"
+    ],
+    "external_binary_state_algebra": "XOR identity/flip",
+    "forward_counts": {
+      "STREAM-A0": 80,
+      "STREAM-A1": 64,
+      "STREAM-A2": 88,
+      "maximum_conditional_total": 232
+    },
+    "full_history_exclusion": true,
+    "generation": false,
+    "output": "raw next-token forced-choice logits",
+    "panel_wide_held_out_claim": "FORBIDDEN",
+    "prompt_contract_sha256": "bc1b04bc819aff5a3358934592256944ab191815576a396fe56a565a11a2f665",
+    "qualification_codebook_bank_sha256": "cc72143cb7d9a9568539a1fbebf4dc326371db85050b09be846df1e81ceddf1c",
+    "qualification_episode_seed_demonstration_control_identities": "UNCHANGED",
+    "qualification_ledger_sha256": "f5e436496b3f607b6e0e51fb9856e04fa5b0beafc6011fb44a5dd0d84a1c898f",
+    "sampling": false,
+    "selected_instrument": "natural_rule_v1",
+    "self_fed_rollout_semantics": "previous forced-choice prediction becomes next current visible state",
+    "stepwise_visible_state_bottleneck": true,
+    "track_b_half_1_codebook_bank_sha256": "d0f5fe9777ee6002ad0138044e3f91e9768e4f50e17395e49e9191ab4148f9f4",
+    "track_b_half_2_codebook_bank_sha256": "c444dbb3b6ca2e89b5ac0e0a538144097c487ee9164ec37909dad41f0e6c9b7b",
+    "transfer_surface_already_observed_on_8B": true
+  },
+  "objective": "Describe checkpoint-level movement of one frozen stepwise visible-state qualification boundary; not an isolated causal effect of size, generation, architecture, or training.",
+  "official_model_registry": [
+    {
+      "asset_sha256": {
+        "chat_template.jinja": null,
+        "config.json": "e73c3664ca09b10a673fef0c22e8a6b456201d49bd4713c9691f775720e8857a",
+        "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+        "model.safetensors.index.json": "62d7ad35757bae5e7baa452cb1483178b7daa50e869e923226b8da10871f7ebc",
+        "preprocessor_config.json": null,
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "video_preprocessor_config.json": null
+      },
+      "checkpoint": "Qwen3-14B",
+      "checkpoint_key": "qwen3_14b",
+      "commit_timestamp": "2025-07-26T03:49:23.000Z",
+      "created_at": "2025-04-27T03:42:45.000Z",
+      "effective_chat_template_bytes": 4168,
+      "effective_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+      "file_count": 18,
+      "file_inventory": [
+        {
+          "bytes": 1570,
+          "git_blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": ".gitattributes"
+        },
+        {
+          "bytes": 11343,
+          "git_blob_id": "6634c8cc3133b3848ec74b9f275acaaa1ea618ab",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "LICENSE"
+        },
+        {
+          "bytes": 16670,
+          "git_blob_id": "3f1eaf4222cee3d84fdb3c6611afd7ff3a11dd8c",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "README.md"
+        },
+        {
+          "bytes": 728,
+          "git_blob_id": "37e7491082573462e8545299cdf6938e8b684e31",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "config.json"
+        },
+        {
+          "bytes": 239,
+          "git_blob_id": "20a8a9156fc8c3f25295ca067f61fdf120d517c5",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "generation_config.json"
+        },
+        {
+          "bytes": 1671853,
+          "git_blob_id": "31349551d90c7606f325fe0f11bbb8bd5fa0d7c7",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "merges.txt"
+        },
+        {
+          "bytes": 3841788544,
+          "git_blob_id": "bf075349c5631d4d123b5195773e80be845006f4",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "e942bdbdf08857d16a8fef7d1dae9fceabeb4e84def6043485fe2f6f085dab0e",
+          "path": "model-00001-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750816,
+          "git_blob_id": "80454a641cc55f0c7a8aa99afaa8df7461b54136",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "f7c9c6eee628f5ad831d2d1d292e120505e5fcadeb38f88b4d3c4cb86306ccf9",
+          "path": "model-00002-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750880,
+          "git_blob_id": "b722023749ee7b6e1af203484157a25974de13aa",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "dfb8c5df9404b41ad6ae74e8b6b367135f017b4467b884cf71b17c71954f18a9",
+          "path": "model-00003-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750880,
+          "git_blob_id": "c1ba8959e0fe9ff5cf2e587c57f867a4b2098ceb",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "eab286fec759e3e59ab228621aefa0fef14ed56039e06f959e67257d5af7604d",
+          "path": "model-00004-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750880,
+          "git_blob_id": "ff4ce681764b7859d25310530107736afcc8f191",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "97f0dc2992e59da95c466eff6f4fd0c8335843bbc36ed5c913a6f5150748c0e6",
+          "path": "model-00005-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750880,
+          "git_blob_id": "34f3d88dbf75c08240a5eca7fb4b584fc25f0cae",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "9e8e76a013cd5e253865b792991e0b410f869b136b3c500079b531b09198e99e",
+          "path": "model-00006-of-00008.safetensors"
+        },
+        {
+          "bytes": 3963750880,
+          "git_blob_id": "40045b81cfaa9f875328b98e65e09ab22b3140a8",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "0aee70ee6e91dc00d818804fb47f124d13ee4ad5b4a64553e09dbf9391cd5750",
+          "path": "model-00007-of-00008.safetensors"
+        },
+        {
+          "bytes": 1912371880,
+          "git_blob_id": "535e13b3d8e05d5fcf16f0388f696ef1ef5d099c",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "0d6b92296e326d39bbbaeb32c3ec454ac606da843d4c8ffa8edf010b62b8c9e0",
+          "path": "model-00008-of-00008.safetensors"
+        },
+        {
+          "bytes": 36514,
+          "git_blob_id": "b4d92f9fec7ec78a89aaf1cf9d740ffc69cb9aac",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 11422654,
+          "git_blob_id": "cd71f61a15a522601badb3dc960d800d9cb3766c",
+          "lfs_pointer_bytes": 133,
+          "lfs_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "path": "tokenizer.json"
+        },
+        {
+          "bytes": 9732,
+          "git_blob_id": "417d038a63fa3de29cfde265caedae14d1a58d92",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "tokenizer_config.json"
+        },
+        {
+          "bytes": 2776833,
+          "git_blob_id": "4783fe10ac3adce15ac8f358ef5462739852c569",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "vocab.json"
+        }
+      ],
+      "hidden_size": 5120,
+      "layer_layout": null,
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "model_class": "Qwen3ForCausalLM",
+      "model_directory_identity_sha256": "9e128254954a07ba837f99c8bb46961028ec01186e93d9f4e6fe68e85417425e",
+      "model_type": "qwen3",
+      "number_of_layers": 40,
+      "opaque_labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24648
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95714
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73641
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70321
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41807
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95560
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94555
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96889
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72642
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95165
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            143833
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60588
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96409
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88019
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79612
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41162
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94793
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83355
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91711
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            79566
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81660
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            95779
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51066
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74463
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75143
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66850
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81640
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            87606
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58369
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            97870
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84318
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36678
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62270
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43292
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            66288
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            83426
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71298
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31495
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27228
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67990
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            52982
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72724
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29411
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65132
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41168
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            96048
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40436
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73676
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75991
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84007
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            74471
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26832
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28449
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30563
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            31665
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37542
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            50516
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            34974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82977
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67084
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80270
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25527
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            85637
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67302
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33875
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64715
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            45515
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58009
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35070
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            37108
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61663
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            75865
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92881
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            61067
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29618
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62549
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84506
+          ]
+        }
+      ],
+      "parameter_metadata": {
+        "parameters": {
+          "BF16": 14768307200
+        },
+        "total": 14768307200
+      },
+      "pipeline_tag": "text-generation",
+      "repo_id": "Qwen/Qwen3-14B",
+      "resolved_revision": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+      "total_file_bytes": 29552613776,
+      "vocab_size_config": 151936,
+      "vocab_size_tokenizer": 151669,
+      "weight_dtype": [
+        "BF16"
+      ]
+    },
+    {
+      "asset_sha256": {
+        "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+        "config.json": "f8d190c5b89c1521220f935d2567a587d6e291ed69066a45a106560b05a2174c",
+        "generation_config.json": "303aba891d66ab63908a7b3cc9163bcb835fdf8b9f6301c73216f3f1eb3992dd",
+        "model.safetensors.index.json": "b3737e9d00bda0e37f0b873629d98bf9b407bef35735b9193c23d9844bcc96a6",
+        "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+        "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8",
+        "video_preprocessor_config.json": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13"
+      },
+      "checkpoint": "Qwen3.5-27B",
+      "checkpoint_key": "qwen3_5_27b",
+      "commit_timestamp": "2026-04-24T02:54:49.000Z",
+      "created_at": "2026-02-24T09:41:56.000Z",
+      "effective_chat_template_bytes": 7756,
+      "effective_chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "file_count": 24,
+      "file_inventory": [
+        {
+          "bytes": 1570,
+          "git_blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": ".gitattributes"
+        },
+        {
+          "bytes": 11343,
+          "git_blob_id": "1d5180a42f1c3383ba7c7bd0a50f0837ef0168df",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "LICENSE"
+        },
+        {
+          "bytes": 92417,
+          "git_blob_id": "a2a72d09e2fbca37dcf9438add912fccabe048e8",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "README.md"
+        },
+        {
+          "bytes": 7756,
+          "git_blob_id": "a585dec894e63da457d9440ec6aa7caa16d20860",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "chat_template.jinja"
+        },
+        {
+          "bytes": 4134,
+          "git_blob_id": "bde2be7f34a16fcdf78b9050319cdb330a15fecd",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "config.json"
+        },
+        {
+          "bytes": 244,
+          "git_blob_id": "85b45ab4f3a24f95a061c5260559471a259187cc",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "generation_config.json"
+        },
+        {
+          "bytes": 3353259,
+          "git_blob_id": "a494e019ca1502219fd0128658b979e5f05ae8e8",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "merges.txt"
+        },
+        {
+          "bytes": 5263851872,
+          "git_blob_id": "3d43db9217ab37dd98ffc864cac0628641633649",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "9019228d172c87d5603266c2d56672d119e838facffa164de803a1ebf0d716d2",
+          "path": "model.safetensors-00001-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741440,
+          "git_blob_id": "2cca8a780a8602f99b58db80f3d34c444cd67a8c",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "890ef00c920b01c1c02755088c8d8ca5cdd6a1faa2a9a729eecd00857648b411",
+          "path": "model.safetensors-00002-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741504,
+          "git_blob_id": "f7c4fe50d44b55058318a0020eb646bab1966e5b",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "8aca03689ad0717fb91455809a6670eecca818bea8c0b6bd3a591a8807cc3223",
+          "path": "model.safetensors-00003-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741504,
+          "git_blob_id": "447d9f5abb31c8c8b9f32dbaa3925a29f3514dc8",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "20f539430c60fa611b3522b8408749a080b63f1fe034e551a6539ef864ca079a",
+          "path": "model.safetensors-00004-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741504,
+          "git_blob_id": "c34f6ff50ffdd8c70572b06e9528b289cb7615af",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "57a0c074c654f05fc2d6b5112eeec387ac04986e928e42f502993e69aa03a49d",
+          "path": "model.safetensors-00005-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741504,
+          "git_blob_id": "930fbf2ed75722779a7a063141cd2e8c8ba856e4",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "cfa4e6fbfc600854ef6c8e5465d0a1e43832a64b5e539f1e880333e3b1086703",
+          "path": "model.safetensors-00006-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347741496,
+          "git_blob_id": "5157a50a2a303023bcee932ae7353dab1dfd6ae1",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "d426963325b2319cb9e1442bc8b89b9a7748a8f7a907aa4041c11531cda6b014",
+          "path": "model.safetensors-00007-of-00011.safetensors"
+        },
+        {
+          "bytes": 5368714128,
+          "git_blob_id": "495a19d935745a822c305c1598cd718e9c4820b2",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "fe60dbb9d25354c4eb2a9a59d9b1afd07741c8bebab5870f5eea6eadb4cf9a06",
+          "path": "model.safetensors-00008-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347745520,
+          "git_blob_id": "9f7839ce1aa5b6e5f5adb8d48d6808ec91507c1b",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "71a153d882242734a1fc7e000734727f00f6ec8ca70b044f5e44fcf97736ef8f",
+          "path": "model.safetensors-00009-of-00011.safetensors"
+        },
+        {
+          "bytes": 5347749200,
+          "git_blob_id": "68c89236caa9f661cddd19e728c0666a029e0a33",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "146745698b9f21940e2982beb1816a0eef3b80d77ab9cd884695b9a08c2697eb",
+          "path": "model.safetensors-00010-of-00011.safetensors"
+        },
+        {
+          "bytes": 2148512760,
+          "git_blob_id": "82c72b2b06aab1ffd1b0e9618afb4b7ee2bfbc0b",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "d947ce7483c4109b55039f1359f4494d22390cf123568100abd89816802f097d",
+          "path": "model.safetensors-00011-of-00011.safetensors"
+        },
+        {
+          "bytes": 126601,
+          "git_blob_id": "a7726bc7355fa586dd0c55f3b4adc410461e9318",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 390,
+          "git_blob_id": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "preprocessor_config.json"
+        },
+        {
+          "bytes": 12807982,
+          "git_blob_id": "a73a846725794819aa6e1c9e97d8dc9671c2006d",
+          "lfs_pointer_bytes": 133,
+          "lfs_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+          "path": "tokenizer.json"
+        },
+        {
+          "bytes": 16710,
+          "git_blob_id": "eda48d3e75a8e59a8479ee4ec8b37f76e711d9c1",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "tokenizer_config.json"
+        },
+        {
+          "bytes": 385,
+          "git_blob_id": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "video_preprocessor_config.json"
+        },
+        {
+          "bytes": 6722759,
+          "git_blob_id": "0aa0ce0658d60ac4a5d609f4eadb0e8e43514176",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "vocab.json"
+        }
+      ],
+      "hidden_size": 5120,
+      "layer_layout": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "model_class": "Qwen3_5ForConditionalGeneration",
+      "model_directory_identity_sha256": "971834425a4adb18ed2acabe472641bedbc708a031a3a79ed44767f8f30d6f74",
+      "model_type": "qwen3_5",
+      "number_of_layers": 64,
+      "opaque_labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "parameter_metadata": {
+        "parameters": {
+          "BF16": 27781419504,
+          "F32": 8448
+        },
+        "total": 27781427952
+      },
+      "pipeline_tag": "image-text-to-text",
+      "repo_id": "Qwen/Qwen3.5-27B",
+      "resolved_revision": "fc05daec18b0a78c049392ed2e771dde82bdf654",
+      "total_file_bytes": 55586167982,
+      "vocab_size_config": 248320,
+      "vocab_size_tokenizer": 248077,
+      "weight_dtype": [
+        "BF16",
+        "F32"
+      ]
+    },
+    {
+      "asset_sha256": {
+        "chat_template.jinja": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+        "config.json": "69db4eb7196bc8190813231b3018ca05d8c2e3abc7b1af19d55c157af44a9d9c",
+        "generation_config.json": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+        "model.safetensors.index.json": "a8ad2c26fb707ff8c245806315b03e3b4b74595528492423af5dae0ce39b4d9b",
+        "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+        "tokenizer_config.json": "5186f0defcd7f232382c7f0aebcd2252d073bb921ab240e407b7ae8745d2b29b",
+        "video_preprocessor_config.json": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13"
+      },
+      "checkpoint": "Qwen3.6-27B",
+      "checkpoint_key": "qwen3_6_27b",
+      "commit_timestamp": "2026-04-24T02:39:16.000Z",
+      "created_at": "2026-04-21T07:50:43.000Z",
+      "effective_chat_template_bytes": 7764,
+      "effective_chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+      "file_count": 29,
+      "file_inventory": [
+        {
+          "bytes": 1570,
+          "git_blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": ".gitattributes"
+        },
+        {
+          "bytes": 11343,
+          "git_blob_id": "1d5180a42f1c3383ba7c7bd0a50f0837ef0168df",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "LICENSE"
+        },
+        {
+          "bytes": 62593,
+          "git_blob_id": "848606ef28b3f03059e072fbb6933e6595b8fd6a",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "README.md"
+        },
+        {
+          "bytes": 7764,
+          "git_blob_id": "a8755d827c0a7b614c246c4060dfd58ab352a8ff",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "chat_template.jinja"
+        },
+        {
+          "bytes": 4308,
+          "git_blob_id": "9f3dd1b1c6d0b43f4b33819dbdd1b60369f9006e",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "config.json"
+        },
+        {
+          "bytes": 51,
+          "git_blob_id": "3a6d425685de8896b2bc8b59b671e41aea1d7bf3",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "configuration.json"
+        },
+        {
+          "bytes": 202,
+          "git_blob_id": "023756cfadf88e5bf69eefeee3e172f38c448d64",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "generation_config.json"
+        },
+        {
+          "bytes": 3353259,
+          "git_blob_id": "a494e019ca1502219fd0128658b979e5f05ae8e8",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "merges.txt"
+        },
+        {
+          "bytes": 3968861352,
+          "git_blob_id": "2a72081053c031ff79a801ca1403c22f7c0a2d53",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "5f21d4e349aef6c74bedef7b3835dc8c11a16dd5ce72f4437e2284f1e83736e9",
+          "path": "model-00001-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677136,
+          "git_blob_id": "d0dd61b9cf53a2f3fc62638fce1204fc0f7ac3e1",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "03de44dc7e933025498d72f8d7ea32d5cde16eb7a85b35ff1fa49a737f4b2242",
+          "path": "model-00002-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677128,
+          "git_blob_id": "cc397459c9c32a37b30d0256fa385332ede153df",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "5c3a68304dabeaa5a0eb70a5e383d2b8134997ef6d5c1e8afdcd236091c847f2",
+          "path": "model-00003-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677128,
+          "git_blob_id": "5b0cce80456b351002d0866cc8785147771dd6d4",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "ba8b0849cb4c4c97e674709bfe56a9c008d7563a68ac57120ceb2855a73a9944",
+          "path": "model-00004-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677112,
+          "git_blob_id": "adeb83924c0ce8d4cb6f67dd1935e2981b736e49",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "a5abc1d5e9583409193e2cd58a671a4ed98467a6eaf883cd4377e3cc02021c22",
+          "path": "model-00005-of-00015.safetensors"
+        },
+        {
+          "bytes": 3900710888,
+          "git_blob_id": "d983f1b15d79737bef917ac72d66bc6a61d906ae",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "160d914e2e4704a401a3eab9e9eec3380e5723a35981c9169bedfb82ea32e6d6",
+          "path": "model-00006-of-00015.safetensors"
+        },
+        {
+          "bytes": 3994391976,
+          "git_blob_id": "9a01ec937f11a69c479e5fc84e7d4efd7a1618e4",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "0bcd0ce28c7d2cc6f5ab2c21902cd032fec0cc5f29e0897e3bb0967add388e47",
+          "path": "model-00007-of-00015.safetensors"
+        },
+        {
+          "bytes": 3879219776,
+          "git_blob_id": "a04a53a3216fa3d993f1fce21538bf95e53fc9fb",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "584a0ed8018d3b19ce8e533d08a460454650027901be6323b50b591da143dca6",
+          "path": "model-00008-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677136,
+          "git_blob_id": "1cc214442072931770d31aa83250f5c1d301c75d",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "e7e3e1a17a2673340eb6bba95c3c6f07b12e7746ee738dde56551cbde27656f5",
+          "path": "model-00009-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677128,
+          "git_blob_id": "61162383225ca250b045bfdb9c2bee422ce378ad",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "e8934789f4742c11da88f937da84bdbb8764c8a7f7ebe9e7b056bcbd41b14285",
+          "path": "model-00010-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677136,
+          "git_blob_id": "c04f45b10f57203e4ff77e619047d46549a0dc88",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "44e8fe06d2d609bf20b16b1d2f42348ca2dc99179721f76035ff50db678f9a8a",
+          "path": "model-00011-of-00015.safetensors"
+        },
+        {
+          "bytes": 3921677136,
+          "git_blob_id": "1c9f6ba0393dccb8e489f6c3f0a3b478e410c714",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "33c5d7d18e1b3f661334dff736fc7d00561f1f1bb9d2970c669b40d2e582974e",
+          "path": "model-00012-of-00015.safetensors"
+        },
+        {
+          "bytes": 3995081848,
+          "git_blob_id": "5c187866d0b63cb4a5a7048c04a39c59b1f43760",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "68db2ebb03231238c2a114f3642df967a970a1d96b029adc427838cb5cf7f27a",
+          "path": "model-00013-of-00015.safetensors"
+        },
+        {
+          "bytes": 3942652952,
+          "git_blob_id": "90fdcef8b8270c2cec12f6e9fb432d78e5b40b56",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "26c114fb6d5d4131ab227552d489d7a97c8c958a9ed94f6d3d1584f6cfe4b9fb",
+          "path": "model-00014-of-00015.safetensors"
+        },
+        {
+          "bytes": 508670568,
+          "git_blob_id": "51d4b89f21c0f93f5eb5f691960f7d8ffc5b99cf",
+          "lfs_pointer_bytes": 134,
+          "lfs_sha256": "b84b5b1315e865c9a19a444045d422a73e3e2e31ce3766797cffd3507c68c9c9",
+          "path": "model-00015-of-00015.safetensors"
+        },
+        {
+          "bytes": 112216,
+          "git_blob_id": "ea32be691d17374c05b277246085e81b70e6ec0f",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 390,
+          "git_blob_id": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "preprocessor_config.json"
+        },
+        {
+          "bytes": 12807982,
+          "git_blob_id": "a73a846725794819aa6e1c9e97d8dc9671c2006d",
+          "lfs_pointer_bytes": 133,
+          "lfs_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+          "path": "tokenizer.json"
+        },
+        {
+          "bytes": 16718,
+          "git_blob_id": "28d96ff303d1d20350185caf4bf037045916ed35",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "tokenizer_config.json"
+        },
+        {
+          "bytes": 385,
+          "git_blob_id": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "video_preprocessor_config.json"
+        },
+        {
+          "bytes": 6722759,
+          "git_blob_id": "0aa0ce0658d60ac4a5d609f4eadb0e8e43514176",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "vocab.json"
+        }
+      ],
+      "hidden_size": 5120,
+      "layer_layout": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "model_class": "Qwen3_5ForConditionalGeneration",
+      "model_directory_identity_sha256": "70abf71fc4b9c8b25c061043023e3d04528585c4d554ad7538ada2145c2c9e4a",
+      "model_type": "qwen3_5",
+      "number_of_layers": 64,
+      "opaque_labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "parameter_metadata": {
+        "parameters": {
+          "BF16": 27781427952
+        },
+        "total": 27781427952
+      },
+      "pipeline_tag": "image-text-to-text",
+      "repo_id": "Qwen/Qwen3.6-27B",
+      "resolved_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+      "total_file_bytes": 55586107940,
+      "vocab_size_config": 248320,
+      "vocab_size_tokenizer": 248077,
+      "weight_dtype": [
+        "BF16"
+      ]
+    },
+    {
+      "asset_sha256": {
+        "chat_template.jinja": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "config.json": "191e0af232104ed8b65258cf3fb2b842e288008baca7633c11b82a1ac7203aab",
+        "generation_config.json": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+        "model.safetensors.index.json": "77042094076611b69791a610065f28b7013b8c621795fa86ddccc8bac7d1b9df",
+        "preprocessor_config.json": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "tokenizer.json": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+        "tokenizer_config.json": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+        "video_preprocessor_config.json": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13"
+      },
+      "checkpoint": "Qwen3.8-27B",
+      "checkpoint_key": "qwen3_8_27b",
+      "commit_timestamp": "2026-08-14T15:00:01.000Z",
+      "created_at": "2026-08-05T08:22:59.000Z",
+      "effective_chat_template_bytes": 8952,
+      "effective_chat_template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+      "file_count": 32,
+      "file_inventory": [
+        {
+          "bytes": 1570,
+          "git_blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": ".gitattributes"
+        },
+        {
+          "bytes": 11544,
+          "git_blob_id": "f938136e3adacfd92be087f6e113b5d6d97f678f",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "LICENSE"
+        },
+        {
+          "bytes": 65012,
+          "git_blob_id": "bc8aa0e396cd029c21cd773cca21830d0ded28ec",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "README.md"
+        },
+        {
+          "bytes": 8952,
+          "git_blob_id": "c0c686f9c38d70d179fb7b5f5aa7530bc913dda3",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "chat_template.jinja"
+        },
+        {
+          "bytes": 4312,
+          "git_blob_id": "706cebd746c4b6f2b1d1f892630867acfdfd3df8",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "config.json"
+        },
+        {
+          "bytes": 238,
+          "git_blob_id": "6de5ee6a0c6596744baee911af0a5cdcb8d99a1e",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "crc32.txt"
+        },
+        {
+          "bytes": 202,
+          "git_blob_id": "023756cfadf88e5bf69eefeee3e172f38c448d64",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "generation_config.json"
+        },
+        {
+          "bytes": 3353259,
+          "git_blob_id": "a494e019ca1502219fd0128658b979e5f05ae8e8",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "merges.txt"
+        },
+        {
+          "bytes": 3966730552,
+          "git_blob_id": "79b73cdd69afeca931d181f5d1e21ad2d73bb7b7",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "ba0ce20aae489ad196733da5064bcdf159a1fe84f53336648196e1ebb7751b1c",
+          "path": "model-00001-of-00018.safetensors"
+        },
+        {
+          "bytes": 3043080328,
+          "git_blob_id": "81cf43545884a227a01351942dfbc72577812316",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "06a148c01bfbe3faa14a5f184a7ff29a706f7ae1c8b2705d2058e26d17a001fb",
+          "path": "model-00002-of-00018.safetensors"
+        },
+        {
+          "bytes": 2542796952,
+          "git_blob_id": "a2da5e6cd6307a6cae13d04820ab0d31b47b48bd",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "2e1bf62cbcd406eaa64b60d10353e1f0ef4039d0976e56f05cabe953454f9968",
+          "path": "model-00003-of-00018.safetensors"
+        },
+        {
+          "bytes": 3988973152,
+          "git_blob_id": "175ddab3f2488ad181f73d789d2d778cf6d4fca6",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "511e34063187882659753c4d93f3859f93c019fd438d8813071921c81d9a3f1a",
+          "path": "model-00004-of-00018.safetensors"
+        },
+        {
+          "bytes": 2099339864,
+          "git_blob_id": "64890208fdd563c3aac0c2f55f69948bcaa1a492",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "635cb53446dc74f219740fc59e18b774f877b803b9722e289ca62575a6efa701",
+          "path": "model-00005-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979553696,
+          "git_blob_id": "3ae29b86e4c773babfe17124dbd10d54d37819ec",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "0bc5214fac607f0e6cc92eec3789d4b8559410ef9fce66621ba8158e8410dae0",
+          "path": "model-00006-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "b7e9c0f038884839f3dad38fef7e75ee3362c24f",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "80b0c49033e9a0d5762562aa12f4acdb7f54da586f3d0110f28c48d91cf07892",
+          "path": "model-00007-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979553696,
+          "git_blob_id": "0b58cbc52714e1c683711be87e7c2e33fb10e7a0",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "7192c5b66185d3592927daabee1cc19e6f6e0ce75988ee20e824b624765fda79",
+          "path": "model-00008-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "4fc0c6b28004d809225d0e115f30e9e11c2345dc",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "af3c48cc37af44f3db6ae0579baf019180d48d9c527caa0a1f03ff85813a56d8",
+          "path": "model-00009-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979553696,
+          "git_blob_id": "9ec693a17c788084116c51b4f34632670df77612",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "163490a76f3bea3a40855b7efc04ce6d27afaf1a34f0bbde495b9491f76457c9",
+          "path": "model-00010-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "3c63baaed16d833432a919647af53ac76bb6b007",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "5f3ae1b948aeee39da77aec558e8236cd65fe4d7cb7686a76bb007acc563c6d8",
+          "path": "model-00011-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979553696,
+          "git_blob_id": "8568b440a4666ed1b4cda0b5d21496378304f326",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "a3de1c7114677a8f5ac5c4892c90e8238ea5c1e2038c80e757dfc87c3902ca55",
+          "path": "model-00012-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "724083995a2257194321a3d00b36fd7d4bb7348d",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "06ab79a41f74c9c5cb734816feb0c7fc364104b227165ee7391231e1155aa02a",
+          "path": "model-00013-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979553696,
+          "git_blob_id": "a60b80b6510d7938d951fbddc76aaadd121c6268",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "4138ed94603065ba884bbcadedb04d7718bb40117e85e6f5c6fc5b9c05b7a85b",
+          "path": "model-00014-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "7d4c34f3d716e1a47acff2f576b65b41a3ec4f3f",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "69224e27b9de4e7dbf6fc936c6eaae08447bda3b80a6c31a871ab451173afd22",
+          "path": "model-00015-of-00018.safetensors"
+        },
+        {
+          "bytes": 3979564040,
+          "git_blob_id": "c67e3e42c9715298fa7f68c6b378bfb1d74290d0",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "73cb9a1089fb6155cb648609478d6633be8a5c7d9ca5a05bc8925ce8a553cefe",
+          "path": "model-00016-of-00018.safetensors"
+        },
+        {
+          "bytes": 2108759344,
+          "git_blob_id": "23dd899179729a4370c655e2c2241cfdbe4ef4ba",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "beb51f01056142ac4984bd800507b0dd0fd18de57f8e9ef6ea41d1a3598983a8",
+          "path": "model-00017-of-00018.safetensors"
+        },
+        {
+          "bytes": 3392197344,
+          "git_blob_id": "a92b4073fc6a58ffc9334ac63360fc8d9cc50d33",
+          "lfs_pointer_bytes": 135,
+          "lfs_sha256": "1d3479509e21494658f9b64d317f5ea8e55c4025d28c702d6c4d0b356ce8ea06",
+          "path": "model-00018-of-00018.safetensors"
+        },
+        {
+          "bytes": 112216,
+          "git_blob_id": "da35e3c564457dface7d138f0b6cac284ff8958c",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "model.safetensors.index.json"
+        },
+        {
+          "bytes": 390,
+          "git_blob_id": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "preprocessor_config.json"
+        },
+        {
+          "bytes": 12809320,
+          "git_blob_id": "9328ce9c41e80f6dd7bc2c66d8ae1fc93bf87440",
+          "lfs_pointer_bytes": 133,
+          "lfs_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+          "path": "tokenizer.json"
+        },
+        {
+          "bytes": 17928,
+          "git_blob_id": "5de744b3fca2129d7186979ae47c06be33903243",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "tokenizer_config.json"
+        },
+        {
+          "bytes": 385,
+          "git_blob_id": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "video_preprocessor_config.json"
+        },
+        {
+          "bytes": 6722759,
+          "git_blob_id": "0aa0ce0658d60ac4a5d609f4eadb0e8e43514176",
+          "lfs_pointer_bytes": null,
+          "lfs_sha256": null,
+          "path": "vocab.json"
+        }
+      ],
+      "hidden_size": 5120,
+      "layer_layout": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "library_name": "transformers",
+      "license": "apache-2.0",
+      "model_class": "Qwen3_5ForConditionalGeneration",
+      "model_directory_identity_sha256": "55e0290c3e0bbe7b6540c268458aec6fd6276e482ef8956a00e201577cdd2f93",
+      "model_type": "qwen3_5",
+      "number_of_layers": 64,
+      "opaque_labels": [
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 0,
+          "label": " Dak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            23871
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 1,
+          "label": " Zub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92402
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 2,
+          "label": " Klo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71138
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 3,
+          "label": " Pax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            67941
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 4,
+          "label": " Rex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            40428
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 5,
+          "label": " Jae",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92256
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 6,
+          "label": " Ook",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91287
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 7,
+          "label": " Bez",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93545
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 8,
+          "label": " Dex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70175
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 9,
+          "label": " Hok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91881
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 10,
+          "label": " Ksi",
+          "non_special": false,
+          "one_token": false,
+          "round_trip": true,
+          "token_ids": [
+            710,
+            6122
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 11,
+          "label": " Qed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            58546
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 12,
+          "label": " Raq",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            93078
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 13,
+          "label": " Zuk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84987
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 14,
+          "label": " Vox",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76868
+          ]
+        },
+        {
+          "banks": [
+            "development"
+          ],
+          "index": 15,
+          "label": " Ajax",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39803
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 16,
+          "label": " Akron",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            91520
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 17,
+          "label": " Apex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80480
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 18,
+          "label": " Baz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            88548
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 19,
+          "label": " Bij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            76826
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 20,
+          "label": " Byz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78844
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 21,
+          "label": " Caj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92466
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 22,
+          "label": " Cav",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            49347
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 23,
+          "label": " Dek",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71929
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 24,
+          "label": " Dix",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            72582
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 25,
+          "label": " Dok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64592
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 26,
+          "label": " Eck",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            78825
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 27,
+          "label": " Elk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            84586
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 28,
+          "label": " Esk",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56404
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 29,
+          "label": " Evo",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            94493
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 30,
+          "label": " Ezra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81407
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 31,
+          "label": " Fitz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35462
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 32,
+          "label": " Fuj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60172
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 33,
+          "label": " Gaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            41862
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 34,
+          "label": " Giz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64051
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 35,
+          "label": " Haj",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80549
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 36,
+          "label": " Hak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            68879
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 37,
+          "label": " Haz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30458
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 38,
+          "label": " Hex",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            26350
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 39,
+          "label": " Hij",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65695
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 40,
+          "label": " Ivy",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            54976
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 41,
+          "label": " Jab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            51203
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 42,
+          "label": " Jad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            70252
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 43,
+          "label": " Jag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28451
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 44,
+          "label": " Jed",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62933
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 45,
+          "label": " Joi",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39808
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 46,
+          "label": " Jou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            92728
+          ]
+        },
+        {
+          "banks": [
+            "qualification"
+          ],
+          "index": 47,
+          "label": " Kab",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            39098
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 48,
+          "label": " Kad",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71171
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 49,
+          "label": " Kag",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73390
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 50,
+          "label": " Kah",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81111
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 51,
+          "label": " Kak",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            71937
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 52,
+          "label": " Kal",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            25974
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 53,
+          "label": " Kam",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            27519
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 54,
+          "label": " Kan",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            29564
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 55,
+          "label": " Kap",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            30626
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 56,
+          "label": " Kas",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            36299
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 57,
+          "label": " Kaw",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            48814
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 58,
+          "label": " Kaz",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 59,
+          "label": " Kes",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            80114
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 60,
+          "label": " Ket",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            64817
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 61,
+          "label": " Kia",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            77503
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 62,
+          "label": " Kir",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            24714
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_1"
+          ],
+          "index": 63,
+          "label": " Kis",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            82679
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 64,
+          "label": " Kob",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            57148
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 65,
+          "label": " Kod",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65031
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 66,
+          "label": " Koh",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            32754
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 67,
+          "label": " Kok",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            62526
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 68,
+          "label": " Kol",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            43998
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 69,
+          "label": " Kop",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            56062
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 70,
+          "label": " Kor",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            33910
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 71,
+          "label": " Kos",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            35878
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 72,
+          "label": " Kot",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59582
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 73,
+          "label": " Kou",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            73274
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 74,
+          "label": " Kov",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            89683
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 75,
+          "label": " Kra",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            59010
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 76,
+          "label": " Kre",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            28651
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 77,
+          "label": " Kro",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            65530
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 78,
+          "label": " Kub",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            60442
+          ]
+        },
+        {
+          "banks": [
+            "track_b_half_2"
+          ],
+          "index": 79,
+          "label": " Kul",
+          "non_special": true,
+          "one_token": true,
+          "round_trip": true,
+          "token_ids": [
+            81591
+          ]
+        }
+      ],
+      "parameter_metadata": {
+        "parameters": {
+          "BF16": 27781427952
+        },
+        "total": 27781427952
+      },
+      "pipeline_tag": "image-text-to-text",
+      "repo_id": "Qwen/Qwen3.8-27B",
+      "resolved_revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0",
+      "total_file_bytes": 55586114863,
+      "vocab_size_config": 248320,
+      "vocab_size_tokenizer": 248077,
+      "weight_dtype": [
+        "BF16"
+      ]
+    }
+  ],
+  "panels": {
+    "Panel_G": {
+      "common_runtime": {
+        "H100_fallback": "FORBIDDEN",
+        "Pillow": "12.1.1",
+        "accelerate": "1.14.0",
+        "automatic_retries": 0,
+        "base_image": "python:3.11.2-slim-bullseye@sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "base_image_linux_amd64_digest": "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1",
+        "base_image_manifest_digest": "sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "batch": 1,
+        "candidate_commits": [
+          {
+            "candidate": 1,
+            "commit": "550d7b3834670483a4df436541272c055dc364bf",
+            "qualification_status": "PENDING_FORWARD_ZERO_MODEL_LOAD_TEXT_ONLY_PROCESSOR_AND_SCORE_SLOT_SMOKE",
+            "release": "v5.15.1",
+            "selected": true,
+            "source": "https://github.com/huggingface/transformers/archive/550d7b3834670483a4df436541272c055dc364bf.tar.gz"
+          },
+          {
+            "candidate": 2,
+            "status": "UNOPENED_FIRST_CANDIDATE_QUALIFIED_FORWARD_ZERO"
+          }
+        ],
+        "candidate_selection_rule": "latest official release commit supporting all three repositories",
+        "conditional_fallback_gpu": "H200",
+        "cpu_offload": false,
+        "cuda_runtime": "12.6",
+        "disk_offload": false,
+        "driver": "580.95.05",
+        "dtype": "bfloat16",
+        "image_video_input": false,
+        "maximum_active_gpu_containers": 1,
+        "maximum_candidate_commits": 2,
+        "minimum_free_vram_margin_mib": 8192,
+        "model_class": "Qwen3_5ForConditionalGeneration",
+        "multi_gpu": false,
+        "panel": "Panel G",
+        "primary_gpu": "A100-80GB",
+        "processor_class": "Qwen3VLProcessor",
+        "python": "3.11.2",
+        "quantization": false,
+        "safetensors": "0.8.0",
+        "schema_version": "gate13_checkpoint_panel_image_definition_v1",
+        "status": "FROZEN_COMMON_RUNTIME_CANDIDATE_1_PENDING_MODAL_M0_M1",
+        "tensor_parallel": false,
+        "text_only": true,
+        "tokenizers": "0.22.2",
+        "torch": "2.7.1+cu126",
+        "torchvision": "0.22.1+cu126",
+        "transformers": "v5.15.1",
+        "transformers_commit": "550d7b3834670483a4df436541272c055dc364bf",
+        "transformers_source": "https://github.com/huggingface/transformers/archive/550d7b3834670483a4df436541272c055dc364bf.tar.gz",
+        "transformers_wheel_sha256": "c164abbdaf11ece3a954f36eeccb413826ce77242c8df7d1c5fddc1e96361f4c"
+      },
+      "conditional_checkpoint": null,
+      "name": "PROSPECTIVE_NEAR_MATCHED_27B_GENERATIONAL_CHECKPOINT_PANEL",
+      "required_checkpoints": [
+        "Qwen/Qwen3.5-27B",
+        "Qwen/Qwen3.6-27B",
+        "Qwen/Qwen3.8-27B"
+      ]
+    },
+    "Panel_S": {
+      "causal_parameter_count_experiment": false,
+      "existing_baseline_no_rerun": "Qwen/Qwen3-8B",
+      "name": "PROSPECTIVE_SAME_GENERATION_NEXT_CHECKPOINT_TRANSFER",
+      "required_new_checkpoints": [
+        "Qwen/Qwen3-14B"
+      ]
+    }
+  },
+  "per_checkpoint_maximum_track_a_forwards": 232,
+  "preflight_forward_count_per_checkpoint": 1,
+  "schema_version": "gate13_checkpoint_transfer_panel_lock_v1",
+  "score_slot_equivalence": {
+    "active_think_prefix": "FORBIDDEN",
+    "forced_assistant_prose": "FORBIDDEN",
+    "per_checkpoint_forward_zero_records": {
+      "qwen3_14b": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "4eb88326bbc20fe23ae0112e59f574ca357de1287dc295df66fa2c65f8a7f9f1",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 83355
+          },
+          {
+            "label": " Akron",
+            "token_id": 94793
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_14b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "fa64a3d3bc775ceea9ccdf83b64cf36405adf9f9a15118d62135cd8c7d0d7bf5",
+        "input_length": 86,
+        "official_chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1584,
+          2383,
+          13,
+          151645,
+          198,
+          151644,
+          77091,
+          198,
+          151667,
+          271,
+          151668,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 85,
+        "semantic_answer_token_index": 86,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "qwen3_5_27b": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_5_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "qwen3_6_27b": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_6_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      },
+      "qwen3_8_27b": {
+        "active_think_prefix_before_score_slot": false,
+        "assistant_generation_prompt_suffix": "n only the next state label.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "attention_mask_sha256": "130502b04b7366bebb77d9ba0bc350f26911a0dea93999713f1d2a2d5e273dab",
+        "candidate_append_is_direct_assistant_answer": true,
+        "candidate_labels": [
+          {
+            "label": " Apex",
+            "token_id": 80480
+          },
+          {
+            "label": " Akron",
+            "token_id": 91520
+          }
+        ],
+        "candidate_labels_one_non_special_token": true,
+        "canonical_message_content_sha256": "e83ef92ff399bb6f20c1b41c6e3e13bf1bba422e6a31611ab62c6628667780a2",
+        "checkpoint": "qwen3_8_27b",
+        "empty_closed_think_protocol_before_slot": true,
+        "forced_assistant_prose_before_score_slot": false,
+        "input_ids_sha256": "3ade8f6252494409d0963d182e24bcebec9b6d2a32a745702eda4a0d4dc0c9a5",
+        "input_length": 93,
+        "official_chat_template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "reasoning_channel_token_at_score_slot": false,
+        "rendered_final_token_suffix": [
+          1528,
+          2306,
+          13,
+          248046,
+          198,
+          248045,
+          74455,
+          198,
+          248068,
+          271,
+          248069,
+          271
+        ],
+        "rendered_prompt_sha256": "f2d25d303f1c8e76a190814d2a06c35ea77ae7ae7c8a25a3491543828f26dbd4",
+        "score_tensor_index": 92,
+        "semantic_answer_token_index": 93,
+        "status": "PASS",
+        "thinking_arguments": {
+          "enable_thinking": false,
+          "preserve_thinking": false,
+          "reasoning_effort": "NOT_APPLICABLE_WHEN_ENABLE_THINKING_FALSE"
+        },
+        "tool_call_prefix": false,
+        "vision_or_video_placeholder": false
+      }
+    },
+    "reasoning_channel_token_at_slot": "FORBIDDEN",
+    "rule": "logits at final prompt tensor index predict the first semantic assistant-answer token after the official closed empty non-thinking protocol boundary",
+    "tool_prefix": "FORBIDDEN",
+    "vision_video_dummy_placeholder": "FORBIDDEN"
+  },
+  "terminal_states": [
+    "PANEL_NO_A1_PASS",
+    "PANEL_A1_PASS_NO_A2_PASS",
+    "PANEL_A2_PASS_B_UNOPENED_BLOCKED",
+    "PANEL_A2_PASS_B_FAIL",
+    "PANEL_A2_AND_B_PASS",
+    "CAMPAIGN_BUDGET_BLOCK_BEFORE_PANEL",
+    "CAMPAIGN_BUDGET_BLOCK_DURING_PANEL",
+    "PANEL_G_COMMON_RUNTIME_BLOCK",
+    "CAMPAIGN_INFRASTRUCTURE_BLOCK"
+  ],
+  "thresholds": {
+    "STREAM-A0": {
+      "minimum_transition_cell_accuracy_min": 0.8,
+      "one_step_accuracy_min": 0.9,
+      "self_fed_rollout_exact_accuracy_min": 0.75
+    },
+    "STREAM-A1": {
+      "correct_demonstration_accuracy_min": 0.85,
+      "correct_minus_strongest_control_min": 0.2,
+      "each_control_independent_qualification_ceiling_exclusive": 0.85,
+      "minimum_correct_transition_cell_accuracy_min": 0.75
+    },
+    "STREAM-A2": {
+      "edited_downstream_step_accuracy_min": 0.75,
+      "edited_immediate_successor_accuracy_min": 0.9,
+      "marker_only_no_change_accuracy_min": 0.9,
+      "paired_final_state_flip_rate_min": 0.8
+    }
+  },
+  "tokenizer_and_codebook": {
+    "Panel_G_status": "COMMON_LITERAL_CODEBOOK",
+    "Panel_S_status": "EXACT_8B_CODEBOOK_REUSED",
+    "model_output_used_for_selection": false,
+    "report_file": "panel_tokenizer_codebook_report.json"
+  }
+}
