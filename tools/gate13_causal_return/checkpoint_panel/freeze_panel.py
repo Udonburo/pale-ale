@@ -208,7 +208,7 @@ def _runtime_manifest(transformers_wheel: Path) -> dict[str, Any]:
             "processor_class": "Qwen2Tokenizer",
         },
         "Panel_G": {
-            "status": "FROZEN_COMMON_RUNTIME",
+            "status": "FROZEN_COMMON_RUNTIME_CANDIDATE_1_PENDING_MODAL_M0_M1",
             "candidate_selection_rule": "latest official release commit supporting all three repositories",
             "candidate_commits": [
                 {
@@ -217,6 +217,7 @@ def _runtime_manifest(transformers_wheel: Path) -> dict[str, Any]:
                     "commit": TRANSFORMERS_COMMIT,
                     "source": TRANSFORMERS_SOURCE,
                     "selected": True,
+                    "qualification_status": "PENDING_FORWARD_ZERO_MODEL_LOAD_TEXT_ONLY_PROCESSOR_AND_SCORE_SLOT_SMOKE",
                 },
                 {"candidate": 2, "status": "UNOPENED_FIRST_CANDIDATE_QUALIFIED_FORWARD_ZERO"},
             ],
@@ -565,6 +566,95 @@ def freeze_authorization(args: argparse.Namespace) -> None:
     print(json.dumps({"panel_execution_authorization.json": sha256_file(output / "panel_execution_authorization.json")}, sort_keys=True))
 
 
+def validate_frozen_artifacts(output: Path, *, require_authorization: bool) -> dict[str, Any]:
+    output = output.resolve()
+    panel = _load_json(output / "checkpoint_transfer_panel_lock.json")
+    runtime = _load_json(output / "panel_g_common_runtime.json")
+    tokenizers = _load_json(output / "panel_tokenizer_codebook_report.json")
+    operator = _load_json(output / "fresh_square_operator_reservations.json")
+    values = (panel, runtime, tokenizers, operator)
+    if any(value.get("campaign_binding_id") != PANEL_BINDING_ID for value in values):
+        raise FreezeCommandError("campaign binding ID mismatch")
+    if panel["execution_order"] != list(EXECUTION_ORDER):
+        raise FreezeCommandError("checkpoint execution order drift")
+    if panel["instrument_transfer"]["qualification_ledger_sha256"] != qualification_contract()[
+        "qualification_ledger_sha256"
+    ]:
+        raise FreezeCommandError("qualification ledger drift")
+    if panel["thresholds"] != QUALIFICATION_THRESHOLDS:
+        raise FreezeCommandError("qualification threshold drift")
+    registry = validate_provider_metadata(
+        {"checkpoints": [{key: value for key, value in row.items() if key != "checkpoint_key"} for row in panel["official_model_registry"]]}
+    )
+    if [row["checkpoint_key"] for row in registry] != list(EXECUTION_ORDER):
+        raise FreezeCommandError("official model registry drift")
+    if runtime["Panel_G"]["transformers_commit"] != TRANSFORMERS_COMMIT:
+        raise FreezeCommandError("Panel G Transformers commit drift")
+    if runtime["Panel_G"]["candidate_commits"][0]["qualification_status"] != (
+        "PENDING_FORWARD_ZERO_MODEL_LOAD_TEXT_ONLY_PROCESSOR_AND_SCORE_SLOT_SMOKE"
+    ):
+        raise FreezeCommandError("Panel G preflight state is not fail-closed")
+    if tokenizers["Panel_S"]["status"] != "EXACT_8B_CODEBOOK_REUSED":
+        raise FreezeCommandError("Panel S tokenizer status drift")
+    if tokenizers["Panel_G"]["status"] != "COMMON_LITERAL_CODEBOOK":
+        raise FreezeCommandError("Panel G common codebook drift")
+    for key in CHECKPOINTS:
+        slot = tokenizers["checkpoints"][key]["score_slot"]
+        if slot["status"] != "PASS" or slot["active_think_prefix_before_score_slot"]:
+            raise FreezeCommandError(f"score-slot drift: {key}")
+        expected_layers = derive_operator_layers(int(CHECKPOINTS[key]["layers"]))
+        if operator["per_checkpoint"][key]["actual_hidden_state_indices"] != expected_layers:
+            raise FreezeCommandError(f"operator layer drift: {key}")
+    hashes = {
+        name: sha256_file(output / name)
+        for name in (
+            "checkpoint_transfer_panel_lock.json",
+            "panel_g_common_runtime.json",
+            "panel_tokenizer_codebook_report.json",
+            "fresh_square_operator_reservations.json",
+        )
+    }
+    if require_authorization:
+        authorization = _load_json(output / "panel_execution_authorization.json")
+        if not authorization.get("execution_authorized"):
+            raise FreezeCommandError("panel execution is not authorized")
+        if authorization["tracked_bindings"] != hashes:
+            raise FreezeCommandError("authorization tracked hash binding mismatch")
+        wheel_sha = runtime["Panel_G"]["transformers_wheel_sha256"]
+        expected_images = {
+            "Panel_S": image_definition_sha256("Panel S"),
+            "Panel_G": image_definition_sha256("Panel G", wheel_sha),
+        }
+        if {
+            name: row["sha256"] for name, row in authorization["image_definitions"].items()
+        } != expected_images:
+            raise FreezeCommandError("authorization image binding mismatch")
+        for key in CHECKPOINTS:
+            entry = authorization["checkpoint_executions"][key]
+            if entry["execution_identity"] != execution_identity(key):
+                raise FreezeCommandError(f"execution identity drift: {key}")
+            if entry["model_volume_name"] != model_volume_name(key):
+                raise FreezeCommandError(f"model Volume drift: {key}")
+            if entry["result_volume_name"] != result_volume_name(key):
+                raise FreezeCommandError(f"result Volume drift: {key}")
+        hashes["panel_execution_authorization.json"] = sha256_file(
+            output / "panel_execution_authorization.json"
+        )
+    return {"status": "PASS", "require_authorization": require_authorization, "sha256": hashes}
+
+
+def validate_command(args: argparse.Namespace) -> None:
+    print(
+        json.dumps(
+            validate_frozen_artifacts(
+                args.output_dir,
+                require_authorization=args.require_authorization,
+            ),
+            sort_keys=True,
+        )
+    )
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser()
     subparsers = value.add_subparsers(dest="command", required=True)
@@ -577,6 +667,9 @@ def parser() -> argparse.ArgumentParser:
     authorization.add_argument("--output-dir", type=Path, required=True)
     authorization.add_argument("--implementation-commit", required=True)
     authorization.add_argument("--freeze-commit", required=True)
+    validate = subparsers.add_parser("validate")
+    validate.add_argument("--output-dir", type=Path, required=True)
+    validate.add_argument("--require-authorization", action="store_true")
     return value
 
 
@@ -584,8 +677,10 @@ def main() -> None:
     args = parser().parse_args()
     if args.command == "locks":
         freeze_locks(args)
-    else:
+    elif args.command == "authorization":
         freeze_authorization(args)
+    else:
+        validate_command(args)
 
 
 if __name__ == "__main__":

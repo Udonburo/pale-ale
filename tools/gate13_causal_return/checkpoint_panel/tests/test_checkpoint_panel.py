@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from tools.gate13_causal_return.checkpoint_panel import panel
+from tools.gate13_causal_return.checkpoint_panel.freeze_panel import validate_frozen_artifacts
 
 
 class FakeTokenizer:
@@ -85,6 +86,14 @@ class CheckpointPanelTests(unittest.TestCase):
         self.assertNotIn("model.generate(", source)
         self.assertNotIn("temperature=", source)
         self.assertIn("retries=0", source)
+
+    def test_generated_freeze_validates_when_present(self):
+        root = Path(__file__).resolve().parents[4]
+        output = root / "analysis/gate13_causal_return/checkpoint_panel"
+        if not (output / "checkpoint_transfer_panel_lock.json").exists():
+            self.skipTest("panel locks have not yet been generated")
+        result = validate_frozen_artifacts(output, require_authorization=False)
+        self.assertEqual(result["status"], "PASS")
 
 
 if __name__ == "__main__":
