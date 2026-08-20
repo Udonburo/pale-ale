@@ -340,6 +340,10 @@ def _development_table(result: Mapping[str, Any]) -> dict[str, Any]:
         "minimum_transition_cell_accuracy": a0["minimum_transition_cell_accuracy"],
         "self_fed_rollout_exact_accuracy": a0["self_fed_rollout_exact_accuracy"],
         "correct_minus_strongest_control": a1["correct_minus_strongest_control"],
+        "correct_demonstration_accuracy": a1["by_condition"]["correct"]["accuracy"],
+        "minimum_correct_transition_cell_accuracy": a1[
+            "minimum_correct_transition_cell_accuracy"
+        ],
         "visible_edit_immediate_successor_accuracy": a2["edited_immediate_successor_accuracy"],
         "marker_only_false_change_rate": a2["marker_only_false_change_rate"],
     }
@@ -620,7 +624,13 @@ if modal is not None:
         block_network=True,
         name="run_stepwise_development",
     )
-    def run_stepwise_development(development_identity: str, implementation_commit: str) -> dict[str, Any]:
+    def run_stepwise_development(
+        development_identity: str,
+        implementation_commit: str,
+        start_variant_index: int = 0,
+        prior_development_forward_count: int = 0,
+        prior_development_spend_usd: float = 0.0,
+    ) -> dict[str, Any]:
         started = time.monotonic()
         output_dir = Path(DEVELOPMENT_MOUNT.as_posix()) / "executions" / development_identity
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -634,6 +644,9 @@ if modal is not None:
                 "starting_commit": STARTING_COMMIT,
                 "prior_execution_identity": PRIOR_EXECUTION_ID,
                 "prior_cumulative_forward_count": PRIOR_CUMULATIVE_FORWARD_COUNT,
+                "start_variant_index": start_variant_index,
+                "prior_development_forward_count": prior_development_forward_count,
+                "prior_development_spend_usd": prior_development_spend_usd,
             },
             development_volume,
         )
@@ -645,8 +658,13 @@ if modal is not None:
             journal = JsonlJournal(output_dir / "development_ledger", probe, development_volume.commit)
             table = []
             selected = None
-            for variant_id in VARIANT_IDS:
-                if journal.total_attempt_count >= DEVELOPMENT_FORWARD_CEILING:
+            if start_variant_index < 0 or start_variant_index >= len(VARIANT_IDS):
+                raise StepwiseModalError("invalid development start variant index")
+            for variant_id in VARIANT_IDS[start_variant_index:]:
+                if (
+                    prior_development_forward_count + journal.total_attempt_count
+                    >= DEVELOPMENT_FORWARD_CEILING
+                ):
                     break
                 result = run_development_variant(journal, variant_id)
                 write_result(output_dir / f"{variant_id}_result.json", result)
@@ -665,20 +683,24 @@ if modal is not None:
                 if result["selection_eligible"]:
                     selected = variant_id
                     break
-            if journal.total_attempt_count > DEVELOPMENT_FORWARD_CEILING:
+            cumulative_forwards = prior_development_forward_count + journal.total_attempt_count
+            if cumulative_forwards > DEVELOPMENT_FORWARD_CEILING:
                 raise StepwiseModalError("development forward ceiling exceeded")
             elapsed = time.monotonic() - started
             estimated = elapsed * GPU_TOTAL_RATE_USD_PER_SECOND
-            if estimated > DEVELOPMENT_SPEND_CEILING_USD:
+            cumulative_estimated = prior_development_spend_usd + estimated
+            if cumulative_estimated > DEVELOPMENT_SPEND_CEILING_USD:
                 raise StepwiseModalError("development spend ceiling exceeded")
             terminal = {
                 "schema_version": "gate13_stepwise_development_terminal_v1",
                 "status": "CANDIDATE_SELECTED" if selected else "NO_QUALIFIED_STEPWISE_SUBSTRATE",
                 "selected_variant": selected,
                 "variants_attempted": [row["variant_id"] for row in table],
-                "development_forward_count": journal.total_attempt_count,
+                "execution_forward_count": journal.total_attempt_count,
+                "development_forward_count": cumulative_forwards,
                 "gpu_elapsed_seconds": elapsed,
-                "estimated_modal_usage_usd": estimated,
+                "execution_estimated_modal_usage_usd": estimated,
+                "estimated_modal_usage_usd": cumulative_estimated,
                 "old_candidate_unchanged": True,
                 "qualification_data_opened": False,
             }
@@ -870,8 +892,21 @@ if modal is not None:
         print(json.dumps(control, sort_keys=True))
 
     @app.local_entrypoint()
-    def run_development(development_identity: str, implementation_commit: str, control_output: str) -> None:
-        result = run_stepwise_development.remote(development_identity, implementation_commit)
+    def run_development(
+        development_identity: str,
+        implementation_commit: str,
+        control_output: str,
+        start_variant_index: int = 0,
+        prior_development_forward_count: int = 0,
+        prior_development_spend_usd: float = 0.0,
+    ) -> None:
+        result = run_stepwise_development.remote(
+            development_identity,
+            implementation_commit,
+            start_variant_index,
+            prior_development_forward_count,
+            prior_development_spend_usd,
+        )
         control = {
             "schema_version": "gate13_stepwise_development_control_v1",
             "modal_image_object_id": image.object_id,

@@ -25,6 +25,10 @@ DEVELOPMENT_THRESHOLDS = {
     "one_step_accuracy_min": 0.90,
     "minimum_transition_cell_accuracy_min": 0.80,
     "correct_minus_strongest_control_min": 0.20,
+    # Prospective continuation criterion adopted after variant 1 met the user
+    # minima but did not reach the already-declared confirmatory A1 floor.
+    "correct_demonstration_accuracy_min": 0.85,
+    "minimum_correct_transition_cell_accuracy_min": 0.75,
     "visible_edit_immediate_successor_accuracy_min": 0.85,
     "marker_only_false_change_rate_max": 0.10,
     # A stricter prospective safeguard permitted by the campaign authority.
@@ -511,6 +515,10 @@ def _development_pass(a0: Mapping[str, Any], a1: Mapping[str, Any], a2: Mapping[
         and m0["minimum_transition_cell_accuracy"] >= t["minimum_transition_cell_accuracy_min"]
         and m0["self_fed_rollout_exact_accuracy"] >= t["self_fed_rollout_exact_accuracy_min"]
         and m1["correct_minus_strongest_control"] >= t["correct_minus_strongest_control_min"]
+        and m1["by_condition"]["correct"]["accuracy"]
+        >= t["correct_demonstration_accuracy_min"]
+        and m1["minimum_correct_transition_cell_accuracy"]
+        >= t["minimum_correct_transition_cell_accuracy_min"]
         and m2["edited_immediate_successor_accuracy"]
         >= t["visible_edit_immediate_successor_accuracy_min"]
         and m2["marker_only_false_change_rate"] <= t["marker_only_false_change_rate_max"]
@@ -643,4 +651,3 @@ def run_track_a_qualification(journal: JsonlJournal, variant_id: str) -> dict[st
 
 def write_result(path: Path, result: Mapping[str, Any]) -> None:
     _atomic_write(path, json.dumps(dict(result), ensure_ascii=False, indent=2, sort_keys=True) + "\n")
-
