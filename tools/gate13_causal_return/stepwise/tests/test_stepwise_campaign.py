@@ -199,6 +199,18 @@ class OperatorQualificationTests(unittest.TestCase):
             self.assertIn("S_p", layer["half_1"]["exact_square"]["path_polar"])
             self.assertTrue(layer["broken_square_sensitive"])
 
+    def test_checkpoint_specific_frozen_layer_indices_do_not_change_metrics(self):
+        first = self._half(41)
+        second = self._half(43)
+        selected = (13, 27, 39)
+        activations = {
+            "half_1": {layer: first for layer in selected},
+            "half_2": {layer: second for layer in selected},
+        }
+        result = qualify_track_b(activations, layer_set=selected)
+        self.assertEqual(result["layer_set"], list(selected))
+        self.assertEqual(len(result["layers"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

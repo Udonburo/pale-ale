@@ -303,11 +303,16 @@ def qualify_layer(
 
 def qualify_track_b(
     activations: Mapping[str, Mapping[int, Mapping[str, Any]]],
+    *,
+    layer_set: Sequence[int] = LAYER_SET,
 ) -> dict[str, Any]:
     if set(activations) != {"half_1", "half_2"}:
         raise OperatorQualificationError("exactly two independent halves are required")
     layer_results = []
-    for layer in LAYER_SET:
+    selected_layers = tuple(int(layer) for layer in layer_set)
+    if len(selected_layers) != 3 or len(set(selected_layers)) != 3:
+        raise OperatorQualificationError("exactly three distinct frozen layers are required")
+    for layer in selected_layers:
         layer_results.append(
             qualify_layer(
                 activations["half_1"][layer],
@@ -325,7 +330,7 @@ def qualify_track_b(
                 "operator packet is independently re-estimable and sensitive to the "
                 "broken-square control above its split-half floor"
             ),
-            "layer_set": list(LAYER_SET),
+            "layer_set": list(selected_layers),
             "token_position": TOKEN_POSITION,
             "activation_representation": ACTIVATION_REPRESENTATION,
             "frame_rank": FRAME_RANK,
@@ -364,4 +369,3 @@ def operator_lock_payload() -> dict[str, Any]:
         "bootstrap_role": "SECONDARY_ONLY_NOT_A_SUBSTITUTE_FOR_INDEPENDENT_HALVES",
         "generic_nonzero_holonomy_as_novelty_or_pass_condition": False,
     }
-
