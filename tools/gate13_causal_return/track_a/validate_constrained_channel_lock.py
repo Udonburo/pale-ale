@@ -23,8 +23,8 @@ from .compile_constrained_channel import (
 
 PARENT_LOCK_SHA256 = "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa"
 DECISION_SHA256 = "636b194088c52bfd2547f885b24c0ab504d2c07c1c9f88ddc604aba6565ccbd2"
-CHANNEL_MANIFEST_SHA256 = "41bb8111d14eb65da1d28b8764bc4c5d9f7032bebda4b073e2d3af2a7a05c52f"
-M1_MANIFEST_SHA256 = "8f5d1cd9888dc929e733d4f40db95875bc049bab0dff2f287498081efcc0dab8"
+CHANNEL_MANIFEST_SHA256 = "d51460e337d10067ae763d0af2b88ab02464978a8ed7126ed6659204092b947f"
+M1_MANIFEST_SHA256 = "e4a7a544c7ee9caec6d1eced59be005c09acaba9d11db39c37fe3d279b958990"
 
 UNCHANGED_SOURCE_HASHES = {
     "compile_register_cases.py": "e858c344dfb6f45cad11bc26fc390b99b1c5ab42a12fd193143a7c5598706b84",
@@ -149,6 +149,11 @@ def validate_constrained_channel_lock(
     _require(channel["method"] == "CANONICAL_TOKEN_FINITE_STATE_PREFIX_CONSTRAINT", "channel method mismatch")
     _require(channel["transformers_interface"] == "prefix_allowed_tokens_fn", "Transformers constraint interface mismatch")
     _require(channel["semantic_slot_policy"].startswith("both exact tokenizer tokens for 0 and 1"), "both semantic branches are not fixed")
+    _require(
+        channel["output_length_policy"]
+        == "exact canonical syntax content token count plus one terminal EOS",
+        "constrained endpoint length policy mismatch",
+    )
     for forbidden in (
         "oracle_access",
         "xor_transition_filtering",

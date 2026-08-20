@@ -55,7 +55,9 @@
     "eos_policy": "EOS is forbidden before the final answer-value slot and is the only allowed token at the declared endpoint",
     "batch_size": 1,
     "do_sample": false,
-    "generation_kwargs_other_than_constraint": "UNCHANGED_FROM_PARENT",
+    "generation_kwargs_other_than_constraint_and_length": "UNCHANGED_FROM_PARENT",
+    "output_length_policy": "exact canonical syntax content token count plus one terminal EOS",
+    "legacy_free_generation_length_heuristic": "recorded for provenance but not reused because it cannot hold the declared syntax endpoint for every frozen case",
     "parser": "UNCHANGED_STRICT_PARENT_PARSER",
     "oracle_access": false,
     "xor_transition_filtering": false,
@@ -95,8 +97,8 @@
   "artifacts": {
     "channel_manifest": {
       "path": "track_a_constrained_channel_manifest.json",
-      "sha256": "41bb8111d14eb65da1d28b8764bc4c5d9f7032bebda4b073e2d3af2a7a05c52f",
-      "internal_manifest_sha256": "a955603115ef8564f4f298fc3447701e7c668e49f82936ec69cfe9e9828bd4a0",
+      "sha256": "d51460e337d10067ae763d0af2b88ab02464978a8ed7126ed6659204092b947f",
+      "internal_manifest_sha256": "038723ffeaf2716b4f2eccd80860285c5f70011a09fb6bfe2560ec738032f8f2",
       "scientific_case_count": 504,
       "grammar_shape_count": 13,
       "maximum_semantic_slot_count": 14
@@ -104,8 +106,8 @@
     "m1_manifest": {
       "path": "../../../tools/gate13_causal_return/modal/m1_constrained_preflight_manifest.json",
       "repository_path": "tools/gate13_causal_return/modal/m1_constrained_preflight_manifest.json",
-      "sha256": "8f5d1cd9888dc929e733d4f40db95875bc049bab0dff2f287498081efcc0dab8",
-      "internal_manifest_sha256": "a9b3edb8d4b4cac95438c326874d5861d215ec943b7804ca3f49274603357e57",
+      "sha256": "e4a7a544c7ee9caec6d1eced59be005c09acaba9d11db39c37fe3d279b958990",
+      "internal_manifest_sha256": "4562479d54ea81feb420637f45b1f81f59a98e9c967b8dad570138229b176870",
       "development_case_count": 4,
       "scientific_metric_contribution_count": 0,
       "reuse_as_a0_checkpoint_count": 0
@@ -122,7 +124,7 @@
       "no answer-equality filtering",
       "EOS only at endpoint",
       "exact decoded serialization",
-      "frozen max_new_tokens capacity"
+      "exact constrained endpoint capacity"
     ]
   },
   "runtime_binding": {

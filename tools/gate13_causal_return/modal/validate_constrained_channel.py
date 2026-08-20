@@ -13,7 +13,7 @@ from tools.gate13_causal_return.phase2_common import read_json, sha256_bytes, sh
 from tools.gate13_causal_return.track_a import constrained_channel
 from tools.gate13_causal_return.track_a.compile_constrained_channel import (
     all_scientific_cases,
-    max_new_tokens_for_case,
+    legacy_free_generation_max_new_tokens_for_case,
     validate_compiled_manifests,
 )
 from tools.gate13_causal_return.track_a.constrained_channel import (
@@ -80,23 +80,29 @@ def prove_exact_token_language(*, tokenizer: Any) -> dict[str, Any]:
     stages = all_scientific_cases()
     all_cases = [case for stage in ("A0", "A1", "A2") for case in stages[stage]]
     capacity_rows = []
+    legacy_shortfall_rows = []
     for case in all_cases:
         automaton = ConstrainedTokenAutomaton(
             tokenizer=tokenizer,
             syntax=syntax_for_case(case),
         )
-        frozen_max = max_new_tokens_for_case(case)
-        if automaton.required_new_token_count > frozen_max:
-            raise ConstrainedValidationError(
-                f"frozen max_new_tokens is too small for {case['case_id']}"
-            )
+        constrained_max = automaton.required_new_token_count
+        legacy_max = legacy_free_generation_max_new_tokens_for_case(case)
         capacity_rows.append(
             (
                 str(case["case_id"]),
                 automaton.required_new_token_count,
-                frozen_max,
+                constrained_max,
             )
         )
+        if automaton.required_new_token_count > legacy_max:
+            legacy_shortfall_rows.append(
+                (
+                    str(case["case_id"]),
+                    automaton.required_new_token_count,
+                    legacy_max,
+                )
+            )
 
     shape_proofs = []
     total_assignments = 0
@@ -186,6 +192,13 @@ def prove_exact_token_language(*, tokenizer: Any) -> dict[str, Any]:
         "status": "PASS",
         "grammar_shape_count": len(shape_proofs),
         "scientific_case_capacity_count": len(capacity_rows),
+        "constrained_output_length_policy": (
+            "exact canonical syntax content token count plus one terminal EOS"
+        ),
+        "legacy_free_generation_shortfall_case_count": len(legacy_shortfall_rows),
+        "legacy_free_generation_shortfall_rows_sha256": sha256_json(
+            legacy_shortfall_rows
+        ),
         "exhaustive_assignment_count": total_assignments,
         "capacity_rows_sha256": sha256_json(capacity_rows),
         "shape_proofs": shape_proofs,

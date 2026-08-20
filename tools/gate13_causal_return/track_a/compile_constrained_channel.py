@@ -27,8 +27,8 @@ M1_CASE_IDS = (
 )
 
 
-def max_new_tokens_for_case(case: Mapping[str, Any]) -> int:
-    """Preserve the already-frozen per-case generation ceiling exactly."""
+def legacy_free_generation_max_new_tokens_for_case(case: Mapping[str, Any]) -> int:
+    """Reproduce the terminated free-generation channel's length heuristic."""
 
     return max(32, len(str(case["expected_text"])) // 2 + 32)
 
@@ -83,7 +83,12 @@ def compile_channel_manifest(*, phase2_dir: Path) -> dict[str, Any]:
                     "prompt_sha256": sha256_bytes(str(case["prompt"]).encode("utf-8")),
                     "grammar_id": syntax.grammar_id,
                     "semantic_slot_count": syntax.semantic_slot_count,
-                    "max_new_tokens": max_new_tokens_for_case(case),
+                    "legacy_free_generation_max_new_tokens": (
+                        legacy_free_generation_max_new_tokens_for_case(case)
+                    ),
+                    "constrained_max_new_tokens_policy": (
+                        "exact canonical syntax content token count plus one terminal EOS"
+                    ),
                 }
             )
     payload: dict[str, Any] = {
@@ -128,7 +133,12 @@ def compile_m1_manifest(channel_manifest: Mapping[str, Any]) -> dict[str, Any]:
                 "source_case_sha256": row["source_case_sha256"],
                 "prompt_sha256": row["prompt_sha256"],
                 "grammar_id": row["grammar_id"],
-                "max_new_tokens": row["max_new_tokens"],
+                "legacy_free_generation_max_new_tokens": row[
+                    "legacy_free_generation_max_new_tokens"
+                ],
+                "constrained_max_new_tokens_policy": row[
+                    "constrained_max_new_tokens_policy"
+                ],
                 "contributes_to_a0_a1_a2_metrics": False,
                 "reused_as_a0_checkpoint": False,
             }

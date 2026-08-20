@@ -13,7 +13,6 @@ from tools.gate13_causal_return.phase2_common import read_json, sha256_bytes, wr
 from .compile_constrained_channel import (
     M1_CASE_IDS,
     all_scientific_cases,
-    max_new_tokens_for_case,
     validate_compiled_manifests,
 )
 from .constrained_channel import (
@@ -83,11 +82,10 @@ class ConstrainedGenerator:
             raise ConstrainedRunnerError("constrained channel requires batch size one")
 
         automaton = self._automaton(case)
-        max_new_tokens = max_new_tokens_for_case(case)
-        if automaton.required_new_token_count > max_new_tokens:
-            raise ConstrainedRunnerError(
-                "frozen max_new_tokens cannot hold the syntax path plus EOS"
-            )
+        # Output length and EOS position are part of the authorized syntax-only
+        # channel.  The exact endpoint is assignment-independent because every
+        # semantic branch is one exact tokenizer token.
+        max_new_tokens = automaton.required_new_token_count
         prompt_ids = [int(value) for value in model_inputs["input_ids"][0].tolist()]
         prefix_constraint = PrefixAllowedTokens(
             automaton=automaton,
@@ -138,7 +136,10 @@ class ConstrainedGenerator:
             "one_token_id": automaton.one_token_id,
             "eos_token_id": automaton.eos_token_id,
             "required_new_token_count": automaton.required_new_token_count,
-            "frozen_max_new_tokens": max_new_tokens,
+            "constrained_max_new_tokens": max_new_tokens,
+            "constrained_output_length_policy": (
+                "exact canonical syntax content token count plus one terminal EOS"
+            ),
             "prompt_token_count": prompt_length,
             "prompt_input_ids_sha256": _tensor_sha256(model_inputs["input_ids"]),
             "attention_mask_sha256": _tensor_sha256(model_inputs["attention_mask"]),

@@ -231,7 +231,7 @@ class FrozenSyntaxTests(unittest.TestCase):
                 0, torch.tensor((7, 8, 10))
             )
 
-    def test_generator_uses_transformers_prefix_constraint_without_changing_kwargs(self) -> None:
+    def test_generator_uses_transformers_prefix_constraint_and_exact_endpoint(self) -> None:
         class FakeTorch:
             @staticmethod
             def inference_mode():
@@ -278,7 +278,11 @@ class FrozenSyntaxTests(unittest.TestCase):
         self.assertFalse(trace["transition_validity_filtered"])
         self.assertFalse(trace["answer_equality_filtered"])
         self.assertFalse(model.kwargs["do_sample"])
-        self.assertEqual(model.kwargs["max_new_tokens"], 32)
+        self.assertEqual(model.kwargs["max_new_tokens"], 2)
+        self.assertEqual(
+            trace["constrained_max_new_tokens"],
+            trace["required_new_token_count"],
+        )
         self.assertEqual(model.kwargs["pad_token_id"], CharacterTokenizer.eos_token_id)
 
 
