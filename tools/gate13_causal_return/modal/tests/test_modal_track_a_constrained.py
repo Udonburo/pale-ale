@@ -15,6 +15,7 @@ from tools.gate13_causal_return.modal.modal_track_a_constrained import (
     _terminal_base,
     image_definition_payload,
     image_definition_sha256,
+    repo_root_for_module_path,
 )
 from tools.gate13_causal_return.modal.validate_constrained_modal_execution_authority import (
     CUMULATIVE_FORWARD_CEILING,
@@ -45,6 +46,19 @@ class FakeVolume:
 
 
 class ConstrainedModalAdapterTests(unittest.TestCase):
+    def test_repo_root_detection_supports_package_and_remote_alias_layouts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "tools/gate13_causal_return/modal").mkdir(parents=True)
+            (root / "analysis/gate13_causal_return/phase2").mkdir(parents=True)
+            package_path = (
+                root
+                / "tools/gate13_causal_return/modal/modal_track_a_constrained.py"
+            )
+            alias_path = root / "modal_track_a_constrained.py"
+            self.assertEqual(repo_root_for_module_path(package_path), root)
+            self.assertEqual(repo_root_for_module_path(alias_path), root)
+
     def test_image_and_resource_limits_are_exact_and_bounded(self) -> None:
         payload = image_definition_payload()
         self.assertEqual(payload, image_definition_payload())

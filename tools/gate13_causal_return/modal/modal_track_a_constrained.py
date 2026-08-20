@@ -90,8 +90,21 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def repo_root_for_module_path(module_path: Path) -> Path:
+    resolved = module_path.resolve()
+    for candidate in (resolved.parent, *resolved.parents):
+        if (
+            (candidate / "tools/gate13_causal_return").is_dir()
+            and (candidate / "analysis/gate13_causal_return/phase2").is_dir()
+        ):
+            return candidate
+    raise ConstrainedModalError(
+        "cannot locate the copied Gate13 repository roots from the adapter path"
+    )
+
+
 def local_repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return repo_root_for_module_path(Path(__file__))
 
 
 def image_definition_payload() -> dict[str, Any]:
