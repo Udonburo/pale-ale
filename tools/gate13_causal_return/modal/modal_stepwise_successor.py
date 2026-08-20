@@ -537,7 +537,7 @@ if modal is not None:
             trust_remote_code=False,
         )
         token_validation = validate_exact_tokenizer(tokenizer)
-        codebook = codebook_lookup("development")[0]
+        codebook = next(iter(codebook_lookup("development").values()))
         prompt = render_step_prompt(
             variant_id=VARIANT_IDS[0],
             surface="STREAM-A0",
