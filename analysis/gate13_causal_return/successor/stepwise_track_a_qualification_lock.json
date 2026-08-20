@@ -1,0 +1,174 @@
+{
+  "schema_version": "gate13_stepwise_track_a_qualification_lock_v1",
+  "authority_status": "FROZEN_CONDITIONALLY_AUTHORIZED",
+  "campaign_binding_id": "94c7f7f7-6e51-46d3-8aa2-6a66a23dfdbd",
+  "counterpart_lock": "fresh_operator_qualification_lock.json",
+  "preserved_candidate": {
+    "failure_localization_commit": "ab047352ff03cb0ce409664470cb633a9ea35ccc",
+    "prior_execution_identity": "e941e509-ab69-4965-85a2-f48a622d89b7",
+    "prior_cumulative_forward_count": 261,
+    "TRACK_A_CONSTRAINED_REGISTER_V1": "CLOSED_A0_FAIL",
+    "primary_failure": "AUTOREGRESSIVE_OR_LENGTH_ACCUMULATION",
+    "A1": "UNOPENED_A0_FAIL",
+    "A2": "UNOPENED_A0_FAIL",
+    "old_candidate_budget_reuse": "FORBIDDEN"
+  },
+  "development_selection": {
+    "selected_variant": "natural_rule_v1",
+    "implementation_commit": "b5a7e80b12aede789ad7733385698f37a99a8f96",
+    "development_forward_count": 62,
+    "estimated_modal_usage_usd": 0.11670221996389338,
+    "qualification_data_opened": false,
+    "attempts": [
+      {
+        "execution_identity": "0554a71b-b0d9-4780-b30d-abb599183bbb",
+        "variant": "compact_table_v1",
+        "forward_count": 31,
+        "initial_user_minimum_eligible": true,
+        "confirmatory_aligned_stricter_selection": false,
+        "result_sha256": "5fbbb79c4a396c1b0b89e1c7d1727923adfd5229f41f016cdd06932c8e6af763",
+        "terminal_state_sha256": "cfc36dc701f1859a90621491fc533e2986ad131208cbcf5b88103644322801b4",
+        "artifact_manifest_sha256": "9aae4d80196ac3efec466c28c61307126e29d2aa8f6ed2d08b49c285211699dc"
+      },
+      {
+        "execution_identity": "0841193e-2ec7-4f54-b56f-ba20a09e5e42",
+        "variant": "natural_rule_v1",
+        "forward_count": 31,
+        "confirmatory_aligned_stricter_selection": true,
+        "result_sha256": "5a7ac1e64d2707f5bd24a15155eccd4225c51c840ed75a9b928495caf4bf7252",
+        "terminal_state_sha256": "9e7ced08e354990f099a86701f9ffb9915ccb2a72e1c5504559ac76cc460f331",
+        "artifact_manifest_sha256": "e7d88140a869a7d451c60d61f01383b5d555d42102087e094b03acf13fd6e4b2"
+      }
+    ],
+    "selection_thresholds": {
+      "one_step_accuracy_min": 0.9,
+      "minimum_transition_cell_accuracy_min": 0.8,
+      "self_fed_rollout_exact_accuracy_min": 0.75,
+      "correct_demonstration_accuracy_min": 0.85,
+      "correct_minus_strongest_control_min": 0.2,
+      "minimum_correct_transition_cell_accuracy_min": 0.75,
+      "visible_edit_immediate_successor_accuracy_min": 0.85,
+      "marker_only_false_change_rate_max": 0.1
+    }
+  },
+  "instrument": {
+    "family": "STEPWISE_VISIBLE_STATE_BOTTLENECK_WITH_OPAQUE_ONE_TOKEN_CODEBOOK",
+    "per_forward_task_relevant_input": [
+      "current visible state",
+      "next input action",
+      "frozen transition context"
+    ],
+    "full_input_history": "EXCLUDED",
+    "self_fed_rule": "previous forced-choice prediction becomes the next current visible state",
+    "external_algebra": "binary state XOR identity/flip action",
+    "phase_indexed_state": true,
+    "exact_square": "J_(t+1) tau = tau J_t",
+    "output_channel": "RAW_NEXT_TOKEN_FORCED_CHOICE_LOGITS",
+    "candidate_count": 2,
+    "both_state_labels_always_allowed": true,
+    "free_generation": false,
+    "sampling": false,
+    "generate_called": false,
+    "prompt_contract_sha256": "bc1b04bc819aff5a3358934592256944ab191815576a396fe56a565a11a2f665",
+    "qualification_codebook_bank_sha256": "cc72143cb7d9a9568539a1fbebf4dc326371db85050b09be846df1e81ceddf1c",
+    "qualification_codebook_count": 8,
+    "exact_token_label_binding_sha256": "58d235877a169345d52c65f3213a8096ac9e8d9418aacec26ea46ae3b3bb6c49"
+  },
+  "runtime_binding": {
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "model_directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+    "model_volume_name": "gate13-track-a-qwen3-8b-b968826-model",
+    "model_volume_object_id": "vo-qcBxnmomu5avCRoacF7eKW",
+    "gpu": "NVIDIA L40S",
+    "driver": "580.95.05",
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "attention": "sdpa",
+    "tf32": false,
+    "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "enable_thinking": false,
+    "add_generation_prompt": true,
+    "local_files_only": true,
+    "offline": true,
+    "exact_cpu_validation_sha256": "da1290c995ceb066a20a51c5e169db5af402b8789883731fc1b6581eeaf45685"
+  },
+  "qualification_surface": {
+    "seed_range": [730000, 730999],
+    "development_seed_overlap": false,
+    "ledger_sha256": "f5e436496b3f607b6e0e51fb9856e04fa5b0beafc6011fb44a5dd0d84a1c898f",
+    "STREAM-A0": {
+      "forward_count": 80,
+      "teacher_forced_one_step_count": 32,
+      "self_fed_rollout_forward_count": 48,
+      "thresholds": {
+        "one_step_accuracy_min": 0.9,
+        "minimum_transition_cell_accuracy_min": 0.8,
+        "self_fed_rollout_exact_accuracy_min": 0.75
+      }
+    },
+    "STREAM-A1": {
+      "forward_count": 64,
+      "conditions": [
+        "correct",
+        "label_shuffled",
+        "corrupted",
+        "format_matched"
+      ],
+      "same_target_ledger": true,
+      "thresholds": {
+        "correct_demonstration_accuracy_min": 0.85,
+        "correct_minus_strongest_control_min": 0.2,
+        "minimum_correct_transition_cell_accuracy_min": 0.75,
+        "each_control_independent_qualification_ceiling_exclusive": 0.85
+      }
+    },
+    "STREAM-A2": {
+      "forward_count": 88,
+      "pair_count": 8,
+      "shared_self_fed_pre_steps_per_pair": 1,
+      "post_edit_steps_per_branch": 5,
+      "edited_and_marker_only_branches": true,
+      "thresholds": {
+        "edited_immediate_successor_accuracy_min": 0.9,
+        "edited_downstream_step_accuracy_min": 0.75,
+        "paired_final_state_flip_rate_min": 0.8,
+        "marker_only_no_change_accuracy_min": 0.9
+      }
+    },
+    "maximum_conditional_forward_count": 232,
+    "conditional_ladder": [
+      "STREAM-A0_FAIL -> T1; STREAM-A1/A2 unopened",
+      "STREAM-A0_PASS -> STREAM-A1",
+      "STREAM-A1_FAIL -> T1; STREAM-A2 unopened",
+      "STREAM-A1_PASS -> STREAM-A2",
+      "STREAM-A2_FAIL -> T1",
+      "STREAM-A2_PASS -> fresh Track B qualification"
+    ]
+  },
+  "budget": {
+    "campaign_new_forward_ceiling": 650,
+    "development_forwards_consumed": 62,
+    "track_a_maximum_additional_forwards": 232,
+    "remaining_before_track_b_if_track_a_completes": 356,
+    "campaign_incremental_modal_spend_ceiling_usd": 12.0,
+    "development_estimated_spend_usd": 0.11670221996389338,
+    "automatic_retries": 0,
+    "maximum_active_gpu_containers": 1
+  },
+  "closed_surfaces": {
+    "old_A0_rescue_or_rerun": "FORBIDDEN",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "hidden_intervention": "CLOSED",
+    "alignment_search": "CLOSED",
+    "public_docs": "UNCHANGED"
+  }
+}
