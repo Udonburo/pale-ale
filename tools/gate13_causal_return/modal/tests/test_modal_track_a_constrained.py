@@ -54,6 +54,13 @@ class ConstrainedModalAdapterTests(unittest.TestCase):
         self.assertIn("transformers==5.15.0", payload["requirements"])
         self.assertIn("tokenizers==0.22.2", payload["requirements"])
         self.assertIn(AUTHORIZATION_FILENAME, payload["excluded_from_image"])
+        self.assertEqual(
+            payload["entrypoint_alias"],
+            {
+                "source": "tools/gate13_causal_return/modal/modal_track_a_constrained.py",
+                "destination": "/opt/gate13/modal_track_a_constrained.py",
+            },
+        )
         self.assertEqual(APP_NAME, "gate13-track-a-constrained-v1")
         self.assertEqual(RESULT_VOLUME_NAME, "gate13-track-a-constrained-v1-results")
         self.assertEqual(GPU_RETRIES, 0)
@@ -130,6 +137,7 @@ class ConstrainedModalAdapterTests(unittest.TestCase):
             / "tools/gate13_causal_return/modal/modal_track_a_constrained.py"
         ).read_text(encoding="utf-8")
         self.assertNotIn("snapshot_download", adapter)
+        self.assertIn('"/opt/gate13/modal_track_a_constrained.py"', adapter)
         runner = (
             REPO_ROOT
             / "tools/gate13_causal_return/track_a/constrained_runner.py"

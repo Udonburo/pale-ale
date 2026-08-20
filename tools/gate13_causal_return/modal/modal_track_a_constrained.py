@@ -108,6 +108,10 @@ def image_definition_payload() -> dict[str, Any]:
             "tools/gate13_causal_return",
             "analysis/gate13_causal_return/phase2",
         ],
+        "entrypoint_alias": {
+            "source": "tools/gate13_causal_return/modal/modal_track_a_constrained.py",
+            "destination": "/opt/gate13/modal_track_a_constrained.py",
+        },
         "excluded_from_image": [
             "**/__pycache__/**",
             "**/*.pyc",
@@ -328,6 +332,12 @@ if modal is not None:
                 "**/__pycache__/**",
                 "**/*.pyc",
             ],
+        )
+        .add_local_file(
+            _repo_root
+            / "tools/gate13_causal_return/modal/modal_track_a_constrained.py",
+            "/opt/gate13/modal_track_a_constrained.py",
+            copy=True,
         )
         .workdir(REMOTE_ROOT)
         .env({"PYTHONPATH": str(REMOTE_ROOT), "PYTHONUNBUFFERED": "1"})
