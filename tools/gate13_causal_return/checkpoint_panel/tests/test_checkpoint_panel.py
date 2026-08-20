@@ -5,6 +5,10 @@ from pathlib import Path
 
 from tools.gate13_causal_return.checkpoint_panel import panel
 from tools.gate13_causal_return.checkpoint_panel.freeze_panel import validate_frozen_artifacts
+from tools.gate13_causal_return.modal.modal_checkpoint_transfer_panel import (
+    CheckpointPanelModalError,
+    validate_mounted_volume_binding,
+)
 
 
 class FakeTokenizer:
@@ -60,6 +64,31 @@ class CheckpointPanelTests(unittest.TestCase):
             len({panel.result_volume_name(key) for key in panel.CHECKPOINTS}),
             4,
         )
+        self.assertEqual(panel.OPERATIONAL_EXECUTION_ATTEMPTS["qwen3_14b"], 2)
+        self.assertTrue(panel.result_volume_name("qwen3_14b").endswith("-results"))
+
+    def test_mounted_volume_binding_uses_object_id_not_nullable_remote_name(self):
+        key = "qwen3_14b"
+        authorization = {
+            "checkpoint_executions": {
+                key: {
+                    "model_volume_name": panel.model_volume_name(key),
+                    "result_volume_name": panel.result_volume_name(key),
+                }
+            }
+        }
+        acquisition = {
+            "model_volume_name": panel.model_volume_name(key),
+            "model_volume_object_id": "vo-model",
+        }
+        result = validate_mounted_volume_binding(
+            key, authorization, acquisition, "vo-model", "vo-results"
+        )
+        self.assertEqual(result["model_volume_object_id"], "vo-model")
+        with self.assertRaises(CheckpointPanelModalError):
+            validate_mounted_volume_binding(
+                key, authorization, acquisition, "vo-other", "vo-results"
+            )
 
     def test_score_slot_is_direct_semantic_choice_after_closed_think_boundary(self):
         result = panel.score_slot_record(FakeTokenizer(), "qwen3_14b")

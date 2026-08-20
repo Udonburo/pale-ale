@@ -22,6 +22,7 @@ from tools.gate13_causal_return.checkpoint_panel.panel import (
     M1_FORWARD_COUNT_PER_CHECKPOINT,
     NORMALIZED_OPERATOR_DEPTHS,
     OPERATOR_PRIORITY,
+    OPERATIONAL_EXECUTION_ATTEMPTS,
     PANEL_BINDING_ID,
     PANEL_CREDIT_RESERVE_USD,
     PANEL_SPEND_CEILING_USD,
@@ -515,6 +516,7 @@ def freeze_authorization(args: argparse.Namespace) -> None:
         identity = execution_identity(key)
         executions[key] = {
             "execution_identity": identity,
+            "operational_attempt": OPERATIONAL_EXECUTION_ATTEMPTS[key],
             "repo_id": spec["repo_id"],
             "revision": spec["revision"],
             "model_volume_name": model_volume_name(key),
@@ -633,6 +635,8 @@ def validate_frozen_artifacts(output: Path, *, require_authorization: bool) -> d
             entry = authorization["checkpoint_executions"][key]
             if entry["execution_identity"] != execution_identity(key):
                 raise FreezeCommandError(f"execution identity drift: {key}")
+            if entry["operational_attempt"] != OPERATIONAL_EXECUTION_ATTEMPTS[key]:
+                raise FreezeCommandError(f"operational attempt drift: {key}")
             if entry["model_volume_name"] != model_volume_name(key):
                 raise FreezeCommandError(f"model Volume drift: {key}")
             if entry["result_volume_name"] != result_volume_name(key):

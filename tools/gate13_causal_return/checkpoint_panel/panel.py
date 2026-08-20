@@ -27,6 +27,16 @@ from tools.gate13_causal_return.stepwise.compiler import (
 
 
 PANEL_BINDING_ID = "47171e04-dc39-4fda-b28d-24fe0b2f57eb"
+# The 14B first operational attempt stopped before M0 and before any model
+# forward because Modal does not preserve a mounted Volume's name property in
+# the remote container.  A fresh result Volume/identity keeps that attempt
+# immutable while leaving every scientific binding unchanged.
+OPERATIONAL_EXECUTION_ATTEMPTS = {
+    "qwen3_14b": 2,
+    "qwen3_5_27b": 1,
+    "qwen3_6_27b": 1,
+    "qwen3_8_27b": 1,
+}
 SELECTED_INSTRUMENT = "natural_rule_v1"
 BASELINE_MODEL = "Qwen/Qwen3-8B"
 BASELINE_REVISION = "b968826d9c46dd6066d109eabc6255188de91218"
@@ -175,7 +185,11 @@ def derive_operator_layers(number_of_layers: int) -> list[int]:
 def execution_identity(checkpoint_key: str) -> str:
     if checkpoint_key not in CHECKPOINTS:
         raise PanelFreezeError(f"unknown checkpoint: {checkpoint_key}")
-    return str(uuid.uuid5(uuid.UUID(PANEL_BINDING_ID), f"checkpoint-transfer:{checkpoint_key}"))
+    attempt = OPERATIONAL_EXECUTION_ATTEMPTS[checkpoint_key]
+    seed = f"checkpoint-transfer:{checkpoint_key}"
+    if attempt > 1:
+        seed = f"{seed}:pre-scientific-operational-attempt:{attempt}"
+    return str(uuid.uuid5(uuid.UUID(PANEL_BINDING_ID), seed))
 
 
 def model_volume_name(checkpoint_key: str) -> str:

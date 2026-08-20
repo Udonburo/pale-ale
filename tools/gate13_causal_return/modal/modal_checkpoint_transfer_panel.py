@@ -230,6 +230,7 @@ def _claim(
     checkpoint_key: str,
     authorization: Mapping[str, Any],
     authorization_sha256: str,
+    model_volume: Any,
     result_volume: Any,
 ) -> dict[str, Any]:
     root = _execution_root(checkpoint_key, authorization)
@@ -242,7 +243,9 @@ def _claim(
         "repo_id": entry["repo_id"],
         "revision": entry["revision"],
         "model_volume_name": entry["model_volume_name"],
+        "model_volume_object_id": model_volume.object_id,
         "result_volume_name": entry["result_volume_name"],
+        "result_volume_object_id": result_volume.object_id,
     }
     if path.exists():
         value = _load_json(path)
@@ -258,6 +261,39 @@ def _claim(
     _atomic_json(path, value)
     result_volume.commit()
     return value
+
+
+def validate_mounted_volume_binding(
+    checkpoint_key: str,
+    authorization: Mapping[str, Any],
+    acquisition_report: Mapping[str, Any],
+    model_volume_object_id: str,
+    result_volume_object_id: str,
+) -> dict[str, str]:
+    """Validate mounted Volumes without relying on Modal's nullable name field."""
+    entry = authorization["checkpoint_executions"][checkpoint_key]
+    expected_model_name = model_volume_name(checkpoint_key)
+    expected_result_name = result_volume_name(checkpoint_key)
+    if entry["model_volume_name"] != expected_model_name:
+        raise CheckpointPanelModalError("authorized model Volume name mismatch")
+    if entry["result_volume_name"] != expected_result_name:
+        raise CheckpointPanelModalError("authorized result Volume name mismatch")
+    if acquisition_report.get("model_volume_name") != expected_model_name:
+        raise CheckpointPanelModalError("acquired model Volume name mismatch")
+    if acquisition_report.get("model_volume_object_id") != model_volume_object_id:
+        raise CheckpointPanelModalError("mounted model Volume object mismatch")
+    if not str(model_volume_object_id).startswith("vo-"):
+        raise CheckpointPanelModalError("invalid model Volume object identity")
+    if not str(result_volume_object_id).startswith("vo-"):
+        raise CheckpointPanelModalError("invalid result Volume object identity")
+    if model_volume_object_id == result_volume_object_id:
+        raise CheckpointPanelModalError("model and result Volumes are not distinct")
+    return {
+        "model_volume_name": expected_model_name,
+        "model_volume_object_id": model_volume_object_id,
+        "result_volume_name": expected_result_name,
+        "result_volume_object_id": result_volume_object_id,
+    }
 
 
 def _mark_stage(
@@ -732,7 +768,21 @@ def _preflight_core(
     result_volume: Any,
 ) -> dict[str, Any]:
     authorization = _authorization(authorization_text, authorization_sha256)
-    _claim(checkpoint_key, authorization, authorization_sha256, result_volume)
+    acquisition_report = _load_json(_model_mount(checkpoint_key) / MODEL_REPORT_NAME)
+    validate_mounted_volume_binding(
+        checkpoint_key,
+        authorization,
+        acquisition_report,
+        model_volume.object_id,
+        result_volume.object_id,
+    )
+    _claim(
+        checkpoint_key,
+        authorization,
+        authorization_sha256,
+        model_volume,
+        result_volume,
+    )
     root = _execution_root(checkpoint_key, authorization)
     report_path = root / f"m1_preflight_{requested_gpu}.json"
     if report_path.exists():
@@ -740,10 +790,6 @@ def _preflight_core(
     started = time.monotonic()
     model_forward_count = 0
     try:
-        if model_volume.name != model_volume_name(checkpoint_key):
-            raise CheckpointPanelModalError("model Volume name mismatch")
-        if result_volume.name != result_volume_name(checkpoint_key):
-            raise CheckpointPanelModalError("result Volume name mismatch")
         if checkpoint_key == "qwen3_14b":
             expected_image_sha = image_definition_sha256("Panel S")
         else:
@@ -868,7 +914,21 @@ def _qualification_core(
     result_volume: Any,
 ) -> dict[str, Any]:
     authorization = _authorization(authorization_text, authorization_sha256)
-    _claim(checkpoint_key, authorization, authorization_sha256, result_volume)
+    acquisition_report = _load_json(_model_mount(checkpoint_key) / MODEL_REPORT_NAME)
+    validate_mounted_volume_binding(
+        checkpoint_key,
+        authorization,
+        acquisition_report,
+        model_volume.object_id,
+        result_volume.object_id,
+    )
+    _claim(
+        checkpoint_key,
+        authorization,
+        authorization_sha256,
+        model_volume,
+        result_volume,
+    )
     root = _execution_root(checkpoint_key, authorization)
     terminal_path = root / "track_a_terminal_state.json"
     if terminal_path.exists():
@@ -1076,6 +1136,21 @@ def _operator_core(
     result_volume: Any,
 ) -> dict[str, Any]:
     authorization = _authorization(authorization_text, authorization_sha256)
+    acquisition_report = _load_json(_model_mount(checkpoint_key) / MODEL_REPORT_NAME)
+    validate_mounted_volume_binding(
+        checkpoint_key,
+        authorization,
+        acquisition_report,
+        model_volume.object_id,
+        result_volume.object_id,
+    )
+    _claim(
+        checkpoint_key,
+        authorization,
+        authorization_sha256,
+        model_volume,
+        result_volume,
+    )
     panel_results = json.loads(panel_results_text)
     if panel_results.get("selected_operator_checkpoint") != checkpoint_key:
         raise CheckpointPanelModalError("fresh operator selection does not match frozen priority gate")
