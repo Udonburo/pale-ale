@@ -1,0 +1,41 @@
+{
+  "schema_version": "gate13_stepwise_successor_campaign_reservation_v1",
+  "starting_state": {
+    "failure_localization_commit": "ab047352ff03cb0ce409664470cb633a9ea35ccc",
+    "prior_constrained_execution": "e941e509-ab69-4965-85a2-f48a622d89b7",
+    "prior_cumulative_forward_count": 261,
+    "TRACK_A_CONSTRAINED_REGISTER_V1": "CLOSED_A0_FAIL",
+    "primary_failure": "AUTOREGRESSIVE_OR_LENGTH_ACCUMULATION",
+    "A1": "UNOPENED_A0_FAIL",
+    "A2": "UNOPENED_A0_FAIL",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED"
+  },
+  "successor_family": "STEPWISE_VISIBLE_STATE_BOTTLENECK_WITH_OPAQUE_ONE_TOKEN_CODEBOOK",
+  "seed_reservations": {
+    "development": [410000, 410999],
+    "track_a_qualification_unopened_during_development": [730000, 730999],
+    "track_b_independent_half_1": [810000, 810999],
+    "track_b_independent_half_2": [910000, 910999]
+  },
+  "budgets": {
+    "maximum_development_variants": 3,
+    "maximum_development_forwards": 96,
+    "maximum_development_modal_spend_usd": 3.0,
+    "maximum_new_campaign_forwards": 650,
+    "maximum_incremental_modal_spend_usd": 12.0,
+    "maximum_active_gpu_containers": 1,
+    "automatic_retries": 0
+  },
+  "terminal_states": [
+    "T1_NO_QUALIFIED_STEPWISE_SUBSTRATE",
+    "T2_TRACK_A_STEPWISE_PASS_TRACK_B_FAIL",
+    "T3_TRACK_A_AND_TRACK_B_QUALIFIED_READY_FOR_TRACK_C_DESIGN",
+    "T4_TERMINAL_INFRASTRUCTURE_BLOCKER"
+  ],
+  "old_candidate_budget_reuse": "FORBIDDEN",
+  "qualification_data_during_development": "UNOPENED",
+  "track_c_execution": "FORBIDDEN",
+  "push": "FORBIDDEN"
+}
