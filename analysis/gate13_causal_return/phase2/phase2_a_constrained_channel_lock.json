@@ -1,0 +1,192 @@
+{
+  "schema_version": "gate13_phase2_a_constrained_channel_lock_v1",
+  "authority_status": "AUTHORIZED_FOR_BOUNDED_REDESIGN_AND_EXECUTION",
+  "state": {
+    "TRACK_A_FREE_GENERATION_CHANNEL": "TERMINATED_INSTRUMENT_CHANNEL_INADEQUATE",
+    "termination_reason": "free-form model outputs did not satisfy the frozen serialization grammar, preventing entry into A0 without supporting a semantic capability judgment",
+    "TRACK_A_SCIENTIFIC_QUESTION": "OPEN",
+    "TRACK_A_CONSTRAINED_REGISTER_CHANNEL": "AUTHORIZED_FOR_BOUNDED_REDESIGN_AND_EXECUTION",
+    "A0": "UNOPENED",
+    "A1": "UNOPENED",
+    "A2": "UNOPENED"
+  },
+  "parent_authority": {
+    "starting_commit": "a5a83ec5456da9f964d09130a9c7ffabf6545cfa",
+    "parent_lock_path": "phase2_a_lock.json",
+    "parent_lock_sha256": "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa",
+    "inheritance_rule": "all parent Track A scientific and runtime authority is inherited except the explicitly replaced output channel"
+  },
+  "decision_record": {
+    "path": "TRACK_A_CONSTRAINED_CHANNEL_DECISION.md",
+    "sha256": "636b194088c52bfd2547f885b24c0ab504d2c07c1c9f88ddc604aba6565ccbd2"
+  },
+  "immutable_prior_executions": [
+    {
+      "execution_identity": "aca4b3c1-de70-4d75-a715-16d351f3f6da",
+      "terminal_status": "SCIENTIFIC_RUNNER_BLOCKER",
+      "case_level_forward_count": 1,
+      "terminal_state_sha256": "857d4311e77e244e45b346eb17f14653eb3a881a6ac1b5f2433c2749eeaa73a0"
+    },
+    {
+      "execution_identity": "86ed7607-b689-4f12-a994-60ae54892c94",
+      "terminal_status": "MODAL_PREFLIGHT_BUDGET_OR_RUNTIME_BLOCK",
+      "case_level_forward_count": 4,
+      "terminal_state_sha256": "ff489ca0c2b001ec244400f772780ecd52a185b1fe54c41b768547fa6e28bb07"
+    }
+  ],
+  "sole_changed_surface": {
+    "from": "FREE_FORM_DETERMINISTIC_GREEDY_STRUCTURED_GENERATION",
+    "to": "SYNTAX_CONSTRAINED_DETERMINISTIC_GREEDY_REGISTER_GENERATION",
+    "scope": [
+      "literal field names",
+      "phase labels",
+      "separators",
+      "whitespace",
+      "newline positions",
+      "output length",
+      "EOS position"
+    ]
+  },
+  "constrained_decoding": {
+    "method": "CANONICAL_TOKEN_FINITE_STATE_PREFIX_CONSTRAINT",
+    "transformers_interface": "prefix_allowed_tokens_fn",
+    "fixed_literal_policy": "each frozen literal is encoded once by the exact tokenizer and emitted through its canonical token path",
+    "semantic_slot_policy": "both exact tokenizer tokens for 0 and 1 are independently allowed at every register and answer slot",
+    "eos_policy": "EOS is forbidden before the final answer-value slot and is the only allowed token at the declared endpoint",
+    "batch_size": 1,
+    "do_sample": false,
+    "generation_kwargs_other_than_constraint": "UNCHANGED_FROM_PARENT",
+    "parser": "UNCHANGED_STRICT_PARENT_PARSER",
+    "oracle_access": false,
+    "xor_transition_filtering": false,
+    "answer_equals_final_register_filtering": false,
+    "internal_consistency_filtering": false,
+    "truth_conditioning": false,
+    "complete_output_reranking": false
+  },
+  "unchanged_scientific_surfaces": {
+    "external_algebra": "running binary register with phase-indexed state and external XOR semantics",
+    "A0_conditions": ["D", "S", "O", "F", "C", "E", "N marker-only extension"],
+    "A1_shot_ladder": [4, 16, 64],
+    "A1_controls": ["correct", "corrupted", "shuffled"],
+    "A2_conditions": ["base", "edit", "marker_only", "undeclared_corrupt", "filler"],
+    "case_semantics": "UNCHANGED",
+    "target_ledgers": "UNCHANGED",
+    "oracle": "UNCHANGED",
+    "metrics": "UNCHANGED",
+    "thresholds": "UNCHANGED",
+    "malformed_semantic_output_disposition": "score_as_incorrect_without_retry",
+    "conditional_ladder": "A0 -> conditional A1 -> conditional A2",
+    "source_hashes": {
+      "compile_register_cases.py": "e858c344dfb6f45cad11bc26fc390b99b1c5ab42a12fd193143a7c5598706b84",
+      "compile_phase2_cases.py": "141d0547949f7aae268f39c548d8c6e19239bda6fda2f32ce3d13990e41b7ebb",
+      "render_register_cases.py": "71f18094608135b97899969c5ae8795ccd7bda8ff04ee391f5b7d9d6a1333ee7",
+      "parse_register_output.py": "d2d826c3d433c2a3ef00aca6bda9a51a8d0f6e5388a5dea282b0c10091ea8686",
+      "parse_phase2_output.py": "87852e4c40d9207a2fc4aba575b0234d2f66cd42f1a181b48a05111877fec726",
+      "oracle.py": "586480644c29a3e55fb2959e27e624bd3a50a82e91eb5043f7448cf56795553b",
+      "evaluate_phase2.py": "fec29862931b8088770534c7af24237075afc85c92d787e8f282d237475aee60"
+    },
+    "manifest_hashes": {
+      "track_a_a0_extension_manifest.json": "7f99a653b4a96c4d6fbbf2a61d640c9a3971c45344b52b6bbeaf81b829ebe7f4",
+      "track_a_a1_manifest.json": "eae8f1abd328c2df27aa1fb80a9b1f0d98683546149964f4d6825da29a93b400",
+      "track_a_a2_manifest.json": "70a011e9e7629e5ad5dc3adff31c5304bc8791396220c04b96f1827a1dd440b5"
+    }
+  },
+  "artifacts": {
+    "channel_manifest": {
+      "path": "track_a_constrained_channel_manifest.json",
+      "sha256": "41bb8111d14eb65da1d28b8764bc4c5d9f7032bebda4b073e2d3af2a7a05c52f",
+      "internal_manifest_sha256": "a955603115ef8564f4f298fc3447701e7c668e49f82936ec69cfe9e9828bd4a0",
+      "scientific_case_count": 504,
+      "grammar_shape_count": 13,
+      "maximum_semantic_slot_count": 14
+    },
+    "m1_manifest": {
+      "path": "../../../tools/gate13_causal_return/modal/m1_constrained_preflight_manifest.json",
+      "repository_path": "tools/gate13_causal_return/modal/m1_constrained_preflight_manifest.json",
+      "sha256": "8f5d1cd9888dc929e733d4f40db95875bc049bab0dff2f287498081efcc0dab8",
+      "internal_manifest_sha256": "a9b3edb8d4b4cac95438c326874d5861d215ec943b7804ca3f49274603357e57",
+      "development_case_count": 4,
+      "scientific_metric_contribution_count": 0,
+      "reuse_as_a0_checkpoint_count": 0
+    }
+  },
+  "mechanical_proof_requirement": {
+    "character_language": "EXHAUSTIVE_ALL_ASSIGNMENTS_FOR_EACH_OF_13_GRAMMAR_SHAPES",
+    "token_language": "EXHAUSTIVE_EXACT_TOKENIZER_PATH_VALIDATION_BEFORE_GPU_EXECUTION",
+    "maximum_assignment_count_per_shape": 16384,
+    "required_properties": [
+      "both 0 and 1 at every semantic slot",
+      "no oracle use",
+      "no transition filtering",
+      "no answer-equality filtering",
+      "EOS only at endpoint",
+      "exact decoded serialization",
+      "frozen max_new_tokens capacity"
+    ]
+  },
+  "runtime_binding": {
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "enable_thinking": false,
+    "add_generation_prompt": true,
+    "python": "3.11.2",
+    "pytorch": "2.7.1+cu126",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "cuda": "12.6",
+    "driver": "580.95.05",
+    "gpu": "NVIDIA L40S",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "local_files_only": true,
+    "trust_remote_code": false
+  },
+  "forward_accounting": {
+    "cumulative_ceiling": 600,
+    "prior_consumed_count": 5,
+    "maximum_additional_count": 595,
+    "m1_development_forecast": 4,
+    "A0_forecast": 252,
+    "A1_forecast": 162,
+    "A2_forecast": 90,
+    "new_variant_maximum_if_all_stages_open": 508,
+    "cumulative_maximum_if_all_stages_open": 513,
+    "ceiling_headroom": 87
+  },
+  "resource_accounting": {
+    "cumulative_modal_spend_ceiling_usd": 25.0,
+    "preexisting_related_usage_conservative_reservation_usd": 0.12,
+    "maximum_new_usage_usd": 24.88,
+    "cumulative_gpu_wall_ceiling_seconds": 36000.0,
+    "preexisting_gpu_wall_conservative_seconds": 143.93,
+    "maximum_new_gpu_wall_seconds": 35856.07,
+    "modal_automatic_retries": 0,
+    "maximum_active_gpu_containers": 1
+  },
+  "scientific_interpretation_boundary": {
+    "A0_PASS": "the model selects correct running-register values under an explicitly scaffolded and syntactically constrained protocol",
+    "A1_PASS": "correct demonstrations induce register-value behavior under the frozen syntactic channel",
+    "A2_PASS": "the model causally uses the visible written register under the declared visible intervention family",
+    "not_established": [
+      "spontaneous structured-output formation",
+      "hidden register formation",
+      "a unique mechanism",
+      "causal naturality",
+      "Track C"
+    ]
+  },
+  "closed_state": {
+    "B2A_HISTORICAL_12RUN": "TERMINATED_SUBSTRATE_INADEQUATE",
+    "TRACK_B_SCIENTIFIC_QUESTION": "OPEN",
+    "B2B_FRESH_SUBSTRATE": "RESERVED_NOT_AUTHORIZED",
+    "B2B_EXECUTION": "NOT_AUTHORIZED",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "ACTIVATION_EXTRACTION": "CLOSED",
+    "PUBLIC_README_OR_GATE_MAP_EDITS": "FORBIDDEN"
+  }
+}
