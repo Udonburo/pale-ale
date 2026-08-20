@@ -18,6 +18,7 @@ from tools.gate13_causal_return.modal.modal_track_a_constrained import (
     repo_root_for_module_path,
 )
 from tools.gate13_causal_return.modal.validate_constrained_modal_execution_authority import (
+    CONSTRAINED_LOCK_SHA256,
     CUMULATIVE_FORWARD_CEILING,
     CUMULATIVE_GPU_WALL_CEILING_SECONDS,
     CUMULATIVE_SPEND_CEILING_USD,
@@ -79,6 +80,10 @@ class ConstrainedModalAdapterTests(unittest.TestCase):
         self.assertEqual(RESULT_VOLUME_NAME, "gate13-track-a-constrained-v1-results")
         self.assertEqual(GPU_RETRIES, 0)
         self.assertEqual(GPU_MAX_CONTAINERS, 1)
+        self.assertEqual(
+            CONSTRAINED_LOCK_SHA256,
+            "2787e1c270405d2dae5cedd5d431500d87a41669175b4ec925c6f49215f0e7dd",
+        )
         self.assertEqual(PRIOR_FORWARD_COUNT + MAXIMUM_ADDITIONAL_FORWARDS, CUMULATIVE_FORWARD_CEILING)
         self.assertAlmostEqual(
             PRIOR_SPEND_RESERVATION_USD + MAXIMUM_NEW_SPEND_USD,

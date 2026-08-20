@@ -22,7 +22,7 @@ from tools.gate13_causal_return.track_a.validate_constrained_channel_lock import
 )
 
 
-CONSTRAINED_LOCK_SHA256 = "413213494e091d6e49826580557f0c1f5415cb738514bd9471f8e1a92e17640e"
+CONSTRAINED_LOCK_SHA256 = "2787e1c270405d2dae5cedd5d431500d87a41669175b4ec925c6f49215f0e7dd"
 MODEL_REVISION = "b968826d9c46dd6066d109eabc6255188de91218"
 MODEL_VOLUME_NAME = "gate13-track-a-qwen3-8b-b968826-model"
 MODEL_VOLUME_OBJECT_ID = "vo-qcBxnmomu5avCRoacF7eKW"
