@@ -1,0 +1,130 @@
+{
+  "automatic_retries": 0,
+  "campaign_binding_id": "47171e04-dc39-4fda-b28d-24fe0b2f57eb",
+  "checkpoint_executions": {
+    "qwen3_14b": {
+      "automatic_retries": 0,
+      "execution_identity": "5dab890c-077e-5257-9a11-726c9e051c51",
+      "maximum_active_gpu_containers": 1,
+      "model_volume_name": "gate13-panel-qwen3-14b-40c0698-model",
+      "repo_id": "Qwen/Qwen3-14B",
+      "result_volume_name": "gate13-panel-qwen3-14b-5dab890c-results",
+      "revision": "40c069824f4251a91eefaf281ebe4c544efd3e18"
+    },
+    "qwen3_5_27b": {
+      "automatic_retries": 0,
+      "execution_identity": "4940bf4d-2c17-547d-aaa3-12934f58af64",
+      "maximum_active_gpu_containers": 1,
+      "model_volume_name": "gate13-panel-qwen3-5-27b-fc05dae-model",
+      "repo_id": "Qwen/Qwen3.5-27B",
+      "result_volume_name": "gate13-panel-qwen3-5-27b-4940bf4d-results",
+      "revision": "fc05daec18b0a78c049392ed2e771dde82bdf654"
+    },
+    "qwen3_6_27b": {
+      "automatic_retries": 0,
+      "execution_identity": "b786d648-8ea6-564b-a1cd-0f797c614a00",
+      "maximum_active_gpu_containers": 1,
+      "model_volume_name": "gate13-panel-qwen3-6-27b-6a9e13b-model",
+      "repo_id": "Qwen/Qwen3.6-27B",
+      "result_volume_name": "gate13-panel-qwen3-6-27b-b786d648-results",
+      "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9"
+    },
+    "qwen3_8_27b": {
+      "automatic_retries": 0,
+      "execution_identity": "99a78b50-891f-5c27-8183-29f5f1496d6f",
+      "maximum_active_gpu_containers": 1,
+      "model_volume_name": "gate13-panel-qwen3-8-27b-1d4bf0f-model",
+      "repo_id": "Qwen/Qwen3.8-27B",
+      "result_volume_name": "gate13-panel-qwen3-8-27b-99a78b50-results",
+      "revision": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
+    }
+  },
+  "closed_surfaces": {
+    "A3": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "historical_B2A": "TERMINATED_SUBSTRATE_INADEQUATE",
+    "legacy_scalar_fresh_B2B": "RESERVED_NOT_PART_OF_THIS_CAMPAIGN"
+  },
+  "credit_reserve_usd": 6.0,
+  "execution_authorized": true,
+  "execution_order": [
+    "qwen3_14b",
+    "qwen3_5_27b",
+    "qwen3_6_27b",
+    "qwen3_8_27b"
+  ],
+  "forecast_contingency_multiplier": 1.25,
+  "freeze_commit": "540f68ad0f3c2de1321a1c3b4534ffbbbe813263",
+  "fresh_operator_priority": [
+    "qwen3_8_27b",
+    "qwen3_6_27b",
+    "qwen3_5_27b",
+    "qwen3_14b"
+  ],
+  "hard_incremental_modal_spend_ceiling_usd": 22.0,
+  "image_definitions": {
+    "Panel_G": {
+      "payload": {
+        "Pillow": "12.1.1",
+        "accelerate": "1.14.0",
+        "automatic_retries": 0,
+        "base_image": "python:3.11.2-slim-bullseye@sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "base_image_linux_amd64_digest": "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1",
+        "base_image_manifest_digest": "sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "conditional_fallback_gpu": "H200",
+        "cuda_runtime": "12.6",
+        "maximum_active_gpu_containers": 1,
+        "panel": "Panel G",
+        "primary_gpu": "A100-80GB",
+        "python": "3.11.2",
+        "safetensors": "0.8.0",
+        "schema_version": "gate13_checkpoint_panel_image_definition_v1",
+        "tokenizers": "0.22.2",
+        "torch": "2.7.1+cu126",
+        "torchvision": "0.22.1+cu126",
+        "transformers": "v5.15.1",
+        "transformers_commit": "550d7b3834670483a4df436541272c055dc364bf",
+        "transformers_source": "https://github.com/huggingface/transformers/archive/550d7b3834670483a4df436541272c055dc364bf.tar.gz",
+        "transformers_wheel_sha256": "c164abbdaf11ece3a954f36eeccb413826ce77242c8df7d1c5fddc1e96361f4c"
+      },
+      "sha256": "61e2bb1ecf850a7e106799f1aa4c0b5447dbc9daf5bcb63175f0d690cd469d31"
+    },
+    "Panel_S": {
+      "payload": {
+        "accelerate": "1.14.0",
+        "automatic_retries": 0,
+        "base_image": "python:3.11.2-slim-bullseye@sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "base_image_linux_amd64_digest": "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1",
+        "base_image_manifest_digest": "sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+        "cuda_runtime": "12.6",
+        "gpu": "L40S",
+        "maximum_active_gpu_containers": 1,
+        "panel": "Panel S",
+        "python": "3.11.2",
+        "safetensors": "0.8.0",
+        "schema_version": "gate13_checkpoint_panel_image_definition_v1",
+        "tokenizers": "0.22.2",
+        "torch": "2.7.1+cu126",
+        "transformers": "5.15.0"
+      },
+      "sha256": "d7340a8788a62860d7b23bc2b6f8345e02e978ed3052cfb41c263e89780b573f"
+    }
+  },
+  "implementation_commit": "14425847e469d559738f0eab3e8667f3f4130267",
+  "maximum_active_gpu_containers": 1,
+  "maximum_fresh_operator_executions": 1,
+  "new_model_and_result_volumes": "DELETE_AFTER_HASH_VERIFIED_RETRIEVAL",
+  "non_preemptible_premium": "FORBIDDEN",
+  "old_8B_model_volume": "PRESERVE_UNCHANGED",
+  "push": false,
+  "region_premium": "FORBIDDEN",
+  "schema_version": "gate13_checkpoint_panel_execution_authorization_v1",
+  "target_max_spend_preserving_reserve_usd": 16.0,
+  "tracked_bindings": {
+    "checkpoint_transfer_panel_lock.json": "27972f4ba4920c45b272fa7ea6360cbae2fb4cc748a1ef9ededa681a5dad8526",
+    "fresh_square_operator_reservations.json": "22f875050a16a0ad0f170539cdf99bc145fc555c5908ba647c632fb4a86d9e24",
+    "panel_g_common_runtime.json": "39192959610f583f07a1f2dbb300d1d07bcda54a13046ff3cbc6e9f25a34d204",
+    "panel_tokenizer_codebook_report.json": "f779bf1fd86f559de246e481835be6169af9dc8f542e20a6e06931a9ce590f86"
+  }
+}
