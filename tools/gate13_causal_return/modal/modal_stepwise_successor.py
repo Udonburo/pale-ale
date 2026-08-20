@@ -160,6 +160,10 @@ def image_definition_payload() -> dict[str, Any]:
             "analysis/gate13_causal_return/phase2",
             "analysis/gate13_causal_return/successor",
         ],
+        "entrypoint_alias": {
+            "source": "tools/gate13_causal_return/modal/modal_stepwise_successor.py",
+            "destination": "/opt/gate13/modal_stepwise_successor.py"
+        },
         "authorization_excluded": AUTHORIZATION_FILENAME,
         "automatic_retries": 0,
         "maximum_active_gpu_containers": 1,
@@ -479,6 +483,11 @@ if modal is not None:
             "/opt/gate13/analysis/gate13_causal_return/successor",
             copy=True,
             ignore=[AUTHORIZATION_FILENAME, "**/__pycache__/**", "**/*.pyc"],
+        )
+        .add_local_file(
+            local_root / "tools/gate13_causal_return/modal/modal_stepwise_successor.py",
+            "/opt/gate13/modal_stepwise_successor.py",
+            copy=True,
         )
         .workdir(REMOTE_ROOT)
         .env({"PYTHONPATH": str(REMOTE_ROOT), "PYTHONUNBUFFERED": "1"})
