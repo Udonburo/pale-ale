@@ -1,0 +1,16 @@
+{
+  "behavior_case_count": 5760,
+  "block_count": 20,
+  "campaign_manifest_sha256": "e51baa54367dc61b01346f24018ec1d3fca775e0718c18d0f263af63049c1040",
+  "map_case_count": 4800,
+  "path_surface_validation": {
+    "input_ledger_sha256": "6900da4573365160ff304a1f70bd7b227831e90884ae7f6536c054a91841a65d",
+    "mismatch_action": "REVIEW2_1_BLOCKED_BEFORE_ANY_FORWARD",
+    "pair_count": 480,
+    "status": "PASS"
+  },
+  "stage_e_order_sha256": "59fa3058632749b820be676c1fac631f40527f89302e2fdbcdac9eb0f43bb366",
+  "stage_m_order_sha256": "4d008cd0dc4b282b05b2f4cabd5fb8b5095d6a5f534cf5cf64646cbc1388b0d0",
+  "status": "PASS",
+  "track_c_authorized": false
+}
