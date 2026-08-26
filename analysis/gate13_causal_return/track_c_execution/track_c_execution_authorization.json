@@ -1,0 +1,111 @@
+{
+  "schema_version": "gate13_track_c_review2_1_execution_authorization_v1",
+  "created_at": "2026-08-26T19:35:58+09:00",
+  "human_authorization": {
+    "review2_1": "ACCEPTED",
+    "track_c": "AUTHORIZED_UNDER_THE_FROZEN_CONDITIONAL_PROTOCOL",
+    "cached_rust_embedding_incident": "TRUTHFULLY_DISCLOSED_SCIENTIFICALLY_IRRELEVANT_HUMAN_CLOSED",
+    "review2_2_or_oa_document": "FORBIDDEN",
+    "source": "USER_MESSAGE_IN_CURRENT_CODEX_TASK"
+  },
+  "execution_authorized": true,
+  "execution_id": "bf41b049-f04b-442e-b0bd-05c8adbd4944",
+  "parent_branch": "codex/gate13-track-c-review2-1",
+  "parent_commit": "f5eeaef8bc8965287794c00dc39e18a817717486",
+  "execution_branch": "codex/gate13-track-c-execution",
+  "runner_commit": "32274d309d3d6642c33323c3abc87ef5c0b2e1cb",
+  "model_repository": "Qwen/Qwen3.6-27B",
+  "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+  "tokenizer_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+  "model_inventory_identity_sha256": "70abf71f118a8c72aedfab6e1e298a82613328b5d29a6c0c38c4a72d788ea75f",
+  "model_inventory_file_count": 29,
+  "model_inventory_total_bytes": 55586107940,
+  "model_volume_name": "gate13-track-c-qwen3-6-27b-6a9e13bd-model",
+  "model_volume_object_id": "vo-LJ2HR3cdLcr4k287kokPym",
+  "result_volume_name": "gate13-track-c-review2-1-bf41b049-results",
+  "result_volume_object_id": "vo-um6ngAeKYhggXfHD5OKsLS",
+  "gpu": "A100-80GB",
+  "dtype": "bfloat16",
+  "quantization": false,
+  "runtime_image_definition_sha256": "61e2bb1ecf850a7e106799f1aa4c0b5447dbc9daf5bcb63175f0d690cd469d31",
+  "runtime": {
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "nvidia_driver": "580.95.05",
+    "transformers": "5.15.1",
+    "transformers_commit": "550d7b3834670483a4df436541272c055dc364bf",
+    "tokenizers": "0.22.2",
+    "accelerate": "1.14.0",
+    "safetensors": "0.8.0",
+    "torchvision": "0.22.1+cu126",
+    "pillow": "12.1.1"
+  },
+  "frozen_artifacts_sha256": {
+    "track_c_campaign_plan.json": "993303645df5e6c4fca174bf8665d78b1386de29fcd40052a43100f39dc50920",
+    "track_c_campaign_manifest.json": "714742a8e898d621362f3d17f5ad4492a86e097fa01b2182489528ce246051ac",
+    "track_c_execution_ledger.json": "9666f3438caeb1f1ad13fe3871ffceaad4e2cc71c7b702c46a860ef124b59996"
+  },
+  "preflight_artifacts_sha256": {
+    "track_c_model_free_preflight.json": "09565a71dffb859d2e802443d542f7335c5af21d5209f44326cd3cf8e816957d",
+    "track_c_preflight_validation.json": "5e7a249e14a3c23cbbce5b5dd5bafab2e03b1fb62efbee9dbfef8316bcf72699"
+  },
+  "runner_sources_sha256": {
+    "tools/gate13_causal_return/track_c/campaign.py": "10b57a7e7cb17a0ac23a9dcaa93b05fbda26d26952f470e45b08e99f9175186e",
+    "tools/gate13_causal_return/modal/modal_track_c.py": "4b522aba699cd1393a3702ff0b661b6bdeb0d429cc509d24ffb8fd611ef76159"
+  },
+  "review2_1_files_sha256": {
+    "analysis/gate13_causal_return/review2_1/TRACK_C_REVIEW2_1_AMENDMENT.md": "1a93be10dd39b42c42039d6e2b594d7999c0987d80c8907b67a02f0d8a5507d9",
+    "analysis/gate13_causal_return/review2_1/track_c_estimand_lock_candidate_v2.json": "d7447f08f599e6305526eec20a9207782443121897bd7547688848e671e72098",
+    "analysis/gate13_causal_return/review2_1/track_c_review2_1_validator.py": "146c436bb2e73be05962966abfba30346a4a4799ab078f5da36fff7dec8760f4",
+    "analysis/gate13_causal_return/review2_1/track_c_null_calibration.json": "680ad94b8184d036314dd106e2ba6fb76f44f940fc4fbd0754b3bf4bf4230b4b",
+    "analysis/gate13_causal_return/review2_1/track_c_credit_staged_execution_plan.md": "36ef8cc266331f969c3bd4f2dd68ed1826394ccc53487adfa3476146f70179b5",
+    "analysis/gate13_causal_return/review2_1/REVIEW2_1_REPORT.md": "9d2c6ad9c0bb28703bfa05fc7ecf49e3431dd4d615ee2693c9e8382b144de867",
+    "analysis/gate13_causal_return/review2_1/tests/test_track_c_review2_1_validator.py": "da18c40f306e3a4831ff30db8d4acb991e7a857ec5a3b84c87724718f4892c33"
+  },
+  "historical_authority_files_sha256": {
+    "analysis/gate13_causal_return/review2/PANEL_CLOSEOUT_BINDING.md": "c650b26d6766e12cb6968f7b851e001eaf0ede6ce7fe1da62bf1c858e756f177",
+    "analysis/gate13_causal_return/review2/TRACK_C_REVIEW2_PROTOCOL.md": "8043ccf7fc053b5bd0089e504469fe33908fe5ae178e4b0e548d85a2a5405a4c",
+    "analysis/gate13_causal_return/review2/track_c_estimand_lock_candidate.json": "d2cc4a17a2be5768857d649f09a3a007f60a13f5edca450b707d47d310884d11",
+    "analysis/gate13_causal_return/review2/track_c_sensitivity_and_cost.json": "cd40fcde024d064d19850a37cb24328c222f450a9362f63e3b3fa7b4be985f63",
+    "analysis/gate13_causal_return/review2/track_c_prior_art_collision_matrix.md": "ab48f2d43f42b59dbbbf39541a419fb5e72e66b0a4e019acd07be2d52f9b4fce",
+    "analysis/gate13_causal_return/review2/track_c_review2_validator.py": "61a5742a794d353bb4a68341c212f1a45a5f55a7473b9e411dbc00b61639b7ce",
+    "analysis/gate13_causal_return/review2/tests/test_track_c_review2_validator.py": "906a7719e69c2acddc03a1f193cdc9ea38b7cf14134bb9bceb45b54fd001499e"
+  },
+  "panel_files_sha256": {
+    "analysis/gate13_causal_return/checkpoint_panel/checkpoint_transfer_panel_lock.json": "27972f4ba4920c45b272fa7ea6360cbae2fb4cc748a1ef9ededa681a5dad8526",
+    "analysis/gate13_causal_return/checkpoint_panel/fresh_square_operator_reservations.json": "22f875050a16a0ad0f170539cdf99bc145fc555c5908ba647c632fb4a86d9e24",
+    "analysis/gate13_causal_return/checkpoint_panel/panel_execution_authorization.json": "ed71079bf9905ce3cec5a1d6ecd7c515cbda0f3464d86e4bbb69db1358a745f5",
+    "analysis/gate13_causal_return/checkpoint_panel/panel_g_common_runtime.json": "39192959610f583f07a1f2dbb300d1d07bcda54a13046ff3cbc6e9f25a34d204",
+    "analysis/gate13_causal_return/checkpoint_panel/panel_tokenizer_codebook_report.json": "f779bf1fd86f559de246e481835be6169af9dc8f542e20a6e06931a9ce590f86"
+  },
+  "credit_observation_before_stage_m": {
+    "observed_at": "2026-08-26T19:33:00+09:00",
+    "source": "MODAL_AUTHENTICATED_DASHBOARD",
+    "billing_period": "2026-08-01_TO_2026-09-01",
+    "credit_left_usd": 25.85,
+    "credit_used_usd": 4.15,
+    "credit_total_usd": 30.0,
+    "workspace_usage_limit_left_usd": 38.35,
+    "workspace_spent_usd": 4.15,
+    "workspace_usage_limit_total_usd": 42.5,
+    "stage_m_forecast_usd": 20.62321418,
+    "stage_m_forecast_with_25_percent_contingency_usd": 25.779017725,
+    "stage_m_credit_gate": "PASS",
+    "stage_e_requires_fresh_balance_check": true
+  },
+  "absolute_campaign_ceiling_usd": 65.0,
+  "expected_campaign_usd": 45.22264586,
+  "campaign_with_25_percent_contingency_usd": 56.528307325,
+  "automatic_retries": 0,
+  "maximum_active_gpu_containers": 1,
+  "stage_m_forwards": 4800,
+  "stage_e_forward_range": [4608, 5760],
+  "accepted_case_ids_unique": true,
+  "exact_resume_missing_ids_only": true,
+  "block_replacement": "FORBIDDEN",
+  "scientific_substitution": "FORBIDDEN",
+  "a3": "CLOSED",
+  "formal_gate13": "CLOSED",
+  "push": "FORBIDDEN"
+}
