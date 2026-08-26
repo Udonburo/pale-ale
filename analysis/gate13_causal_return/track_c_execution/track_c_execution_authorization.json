@@ -1,6 +1,6 @@
 {
-  "schema_version": "gate13_track_c_review2_1_execution_authorization_v3",
-  "created_at": "2026-08-26T19:56:32+09:00",
+  "schema_version": "gate13_track_c_review2_1_execution_authorization_v4",
+  "created_at": "2026-08-26T20:07:45+09:00",
   "human_authorization": {
     "review2_1": "ACCEPTED",
     "track_c": "AUTHORIZED_UNDER_THE_FROZEN_CONDITIONAL_PROTOCOL",
@@ -13,12 +13,12 @@
   "parent_branch": "codex/gate13-track-c-review2-1",
   "parent_commit": "f5eeaef8bc8965287794c00dc39e18a817717486",
   "execution_branch": "codex/gate13-track-c-execution",
-  "runner_commit": "3d499a93476c267207679a57de1d56ff7be9e111",
+  "runner_commit": "cdaea1082c37ed13cd902bafdb23af847e67d5d9",
   "modal_deployment_module": "tools.gate13_causal_return.modal.modal_track_c",
   "model_repository": "Qwen/Qwen3.6-27B",
   "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
   "tokenizer_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
-  "model_inventory_identity_sha256": "70abf71f118a8c72aedfab6e1e298a82613328b5d29a6c0c38c4a72d788ea75f",
+  "model_inventory_identity_sha256": "70abf71fc4b9c8b25c061043023e3d04528585c4d554ad7538ada2145c2c9e4a",
   "model_inventory_file_count": 29,
   "model_inventory_total_bytes": 55586107940,
   "model_volume_name": "gate13-track-c-qwen3-6-27b-6a9e13bd-model",
@@ -44,15 +44,15 @@
   },
   "frozen_artifacts_sha256": {
     "track_c_campaign_plan.json": "993303645df5e6c4fca174bf8665d78b1386de29fcd40052a43100f39dc50920",
-    "track_c_campaign_manifest.json": "714742a8e898d621362f3d17f5ad4492a86e097fa01b2182489528ce246051ac",
+    "track_c_campaign_manifest.json": "8020d3d108087b3cde37a1e18f2df071b8b4d2e7fcc0a4580336a1b7aa27af18",
     "track_c_execution_ledger.json": "9666f3438caeb1f1ad13fe3871ffceaad4e2cc71c7b702c46a860ef124b59996"
   },
   "preflight_artifacts_sha256": {
-    "track_c_model_free_preflight.json": "09565a71dffb859d2e802443d542f7335c5af21d5209f44326cd3cf8e816957d",
-    "track_c_preflight_validation.json": "5e7a249e14a3c23cbbce5b5dd5bafab2e03b1fb62efbee9dbfef8316bcf72699"
+    "track_c_model_free_preflight.json": "d7fdddebb6125183b6634219ec3176b117c6fec70b823ad65a849b662be12197",
+    "track_c_preflight_validation.json": "c6b4c9bd84b7d64b78f0801018ea4e2542155bd3ef7ee98de00d1fa99a848fb7"
   },
   "runner_sources_sha256": {
-    "tools/gate13_causal_return/track_c/campaign.py": "10b57a7e7cb17a0ac23a9dcaa93b05fbda26d26952f470e45b08e99f9175186e",
+    "tools/gate13_causal_return/track_c/campaign.py": "f280d0d21aff5def7871e89d25c4c94bdcb2232f0d14d91eb0bb329f3226773e",
     "tools/gate13_causal_return/modal/modal_track_c.py": "13daace81b6621c27e786c4728d553f19bc7373169c6cdcf65fb2e4e1457e62d"
   },
   "review2_1_files_sha256": {
@@ -108,6 +108,14 @@
     "second_attempt_model_download_started": false,
     "second_attempt_gpu_allocated": false,
     "second_attempt_scientific_model_forward_count": 0
+  },
+  "pre_scientific_model_identity_correction": {
+    "detected_after_cpu_acquisition": true,
+    "incorrect_new_manifest_value": "70abf71f118a8c72aedfab6e1e298a82613328b5d29a6c0c38c4a72d788ea75f",
+    "correct_existing_panel_lock_value": "70abf71fc4b9c8b25c061043023e3d04528585c4d554ad7538ada2145c2c9e4a",
+    "scientific_surface_changed": false,
+    "model_loaded": false,
+    "scientific_model_forward_count": 0
   },
   "absolute_campaign_ceiling_usd": 65.0,
   "expected_campaign_usd": 45.22264586,
