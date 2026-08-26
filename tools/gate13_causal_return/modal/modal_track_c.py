@@ -57,6 +57,7 @@ from tools.gate13_causal_return.track_c.campaign import (
 
 
 APP_NAME = "gate13-track-c-review2-1"
+MODAL_DEPLOYMENT_MODULE = "tools.gate13_causal_return.modal.modal_track_c"
 EXECUTION_ID = "bf41b049-f04b-442e-b0bd-05c8adbd4944"
 MODEL_VOLUME_NAME = "gate13-track-c-qwen3-6-27b-6a9e13bd-model"
 RESULT_VOLUME_NAME = "gate13-track-c-review2-1-bf41b049-results"
@@ -388,36 +389,51 @@ def _stage_m_core(authorization_text: str, authorization_sha256: str) -> dict[st
         result_volume.commit()
         return terminal
     started = time.monotonic()
-    torch, endpoint, tokenizer, probe, memory = _load_probe()
-    map_index, _behavior_index = ledger_indexes(ledger)
-    blocks = _block_index(manifest)
-    representative = []
-    for block in manifest["blocks"]:
-        case = map_index[str(block["map_case_ids"][0])]
-        prompt = render_map_case(case, block)
-        representative.append(
+    try:
+        torch, endpoint, tokenizer, probe, memory = _load_probe()
+        map_index, _behavior_index = ledger_indexes(ledger)
+        blocks = _block_index(manifest)
+        representative = []
+        for block in manifest["blocks"]:
+            case = map_index[str(block["map_case_ids"][0])]
+            prompt = render_map_case(case, block)
+            representative.append(
+                {
+                    "block_id": block["block_id"],
+                    **_validate_prompt_runtime(
+                        endpoint=endpoint,
+                        tokenizer=tokenizer,
+                        prompt=prompt,
+                        candidates=case["candidate_labels"],
+                        binding=case["prompt_binding"],
+                    ),
+                }
+            )
+        atomic_json(
+            EXECUTION_DIR / "m1_forward0_score_slot_preflight.json",
             {
-                "block_id": block["block_id"],
-                **_validate_prompt_runtime(
-                    endpoint=endpoint,
-                    tokenizer=tokenizer,
-                    prompt=prompt,
-                    candidates=case["candidate_labels"],
-                    binding=case["prompt_binding"],
-                ),
-            }
+                "status": "PASS",
+                "model_load": memory,
+                "representative_block_count": len(representative),
+                "representative_bindings": representative,
+                "scientific_model_forward_count": 0,
+            },
         )
-    atomic_json(
-        EXECUTION_DIR / "m1_forward0_score_slot_preflight.json",
-        {
-            "status": "PASS",
-            "model_load": memory,
-            "representative_block_count": len(representative),
-            "representative_bindings": representative,
-            "scientific_model_forward_count": 0,
-        },
-    )
-    result_volume.commit()
+        result_volume.commit()
+    except Exception as exc:
+        terminal = {
+            "terminal_state": "TRACK_C_PREFLIGHT_BLOCKED",
+            "stage": "M0_M1_FORWARD0",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+            "stage_m_scientific_forwards": 0,
+            "elapsed_seconds": time.monotonic() - started,
+            "created_at": utc_now(),
+        }
+        atomic_json(existing_terminal, terminal)
+        result_volume.commit()
+        return terminal
     store = AtomicCaseStore(EXECUTION_DIR, "stage_m")
     accepted_before = store.accepted_ids()
     new_forwards = 0

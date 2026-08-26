@@ -15,6 +15,10 @@ def test_modal_track_c_is_bound_to_one_frozen_execution() -> None:
     assert modal_track_c.MODEL_VOLUME_NAME.startswith("gate13-track-c-qwen3-6-27b-")
     assert modal_track_c.RESULT_VOLUME_NAME.endswith("bf41b049-results")
     assert modal_track_c.CAMPAIGN_SPEND_CEILING_USD == 65.0
+    assert (
+        modal_track_c.MODAL_DEPLOYMENT_MODULE
+        == "tools.gate13_causal_return.modal.modal_track_c"
+    )
 
 
 def test_adapter_has_no_prompt_or_scientific_threshold_literals() -> None:
@@ -39,6 +43,32 @@ def test_modal_execution_policy_is_single_container_zero_retry() -> None:
     assert text.count("max_containers=1") == 3
     assert 'gpu="A100-80GB"' in text
     assert "block_network=True" in text
+
+
+def test_forward0_failures_have_a_persisted_preflight_terminal() -> None:
+    tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+    stage_m = next(
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_stage_m_core"
+    )
+    guarded_load = [
+        node
+        for node in ast.walk(stage_m)
+        if isinstance(node, ast.Try)
+        and any(
+            isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Name)
+            and call.func.id == "_load_probe"
+            for statement in node.body
+            for call in ast.walk(statement)
+        )
+    ]
+    assert len(guarded_load) == 1
+    handler_text = ast.unparse(guarded_load[0].handlers[0])
+    assert "TRACK_C_PREFLIGHT_BLOCKED" in handler_text
+    assert "stage_m_scientific_forwards': 0" in handler_text
 
 
 def test_authorization_validator_fails_closed_on_core_bindings() -> None:
