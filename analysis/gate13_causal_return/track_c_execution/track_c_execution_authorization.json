@@ -1,6 +1,6 @@
 {
-  "schema_version": "gate13_track_c_review2_1_execution_authorization_v2",
-  "created_at": "2026-08-26T19:52:57+09:00",
+  "schema_version": "gate13_track_c_review2_1_execution_authorization_v3",
+  "created_at": "2026-08-26T19:56:32+09:00",
   "human_authorization": {
     "review2_1": "ACCEPTED",
     "track_c": "AUTHORIZED_UNDER_THE_FROZEN_CONDITIONAL_PROTOCOL",
@@ -13,7 +13,7 @@
   "parent_branch": "codex/gate13-track-c-review2-1",
   "parent_commit": "f5eeaef8bc8965287794c00dc39e18a817717486",
   "execution_branch": "codex/gate13-track-c-execution",
-  "runner_commit": "485541957056d3f4c26f74e6f28aea4ca330f56c",
+  "runner_commit": "3d499a93476c267207679a57de1d56ff7be9e111",
   "modal_deployment_module": "tools.gate13_causal_return.modal.modal_track_c",
   "model_repository": "Qwen/Qwen3.6-27B",
   "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
@@ -53,7 +53,7 @@
   },
   "runner_sources_sha256": {
     "tools/gate13_causal_return/track_c/campaign.py": "10b57a7e7cb17a0ac23a9dcaa93b05fbda26d26952f470e45b08e99f9175186e",
-    "tools/gate13_causal_return/modal/modal_track_c.py": "e75643bb5507b4c9a391da8ae635149f13631878ff47322ff7fc18336bd449ab"
+    "tools/gate13_causal_return/modal/modal_track_c.py": "13daace81b6621c27e786c4728d553f19bc7373169c6cdcf65fb2e4e1457e62d"
   },
   "review2_1_files_sha256": {
     "analysis/gate13_causal_return/review2_1/TRACK_C_REVIEW2_1_AMENDMENT.md": "1a93be10dd39b42c42039d6e2b594d7999c0987d80c8907b67a02f0d8a5507d9",
@@ -102,7 +102,12 @@
     "model_download_started": false,
     "gpu_allocated": false,
     "scientific_model_forward_count": 0,
-    "prior_result_volume_written": false
+    "prior_result_volume_written": false,
+    "second_failed_cpu_authorization_check": "result Volume handle was unhydrated in the acquisition function",
+    "second_correction": "mount the already-authorized result Volume in the CPU-only acquisition function",
+    "second_attempt_model_download_started": false,
+    "second_attempt_gpu_allocated": false,
+    "second_attempt_scientific_model_forward_count": 0
   },
   "absolute_campaign_ceiling_usd": 65.0,
   "expected_campaign_usd": 45.22264586,
