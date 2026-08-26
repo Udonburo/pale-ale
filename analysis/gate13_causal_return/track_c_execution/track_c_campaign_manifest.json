@@ -23304,7 +23304,7 @@
   },
   "model": {
     "file_count": 29,
-    "inventory_identity": "70abf71f118a8c72aedfab6e1e298a82613328b5d29a6c0c38c4a72d788ea75f",
+    "inventory_identity": "70abf71fc4b9c8b25c061043023e3d04528585c4d554ad7538ada2145c2c9e4a",
     "repository": "Qwen/Qwen3.6-27B",
     "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
     "tokenizer_repository": "Qwen/Qwen3.6-27B",

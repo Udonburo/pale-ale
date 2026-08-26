@@ -3,7 +3,7 @@
   "manifest_validation": {
     "behavior_case_count": 5760,
     "block_count": 20,
-    "campaign_manifest_sha256": "e51baa54367dc61b01346f24018ec1d3fca775e0718c18d0f263af63049c1040",
+    "campaign_manifest_sha256": "83f943e2c7527ff678129493dd8d8bde10c4c7427a08595e3aff4dd61afd5326",
     "map_case_count": 4800,
     "path_surface_validation": {
       "input_ledger_sha256": "6900da4573365160ff304a1f70bd7b227831e90884ae7f6536c054a91841a65d",

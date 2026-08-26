@@ -43,6 +43,26 @@ def test_complete_frozen_surface(compiled: dict[str, dict]) -> None:
     assert result["path_surface_validation"]["pair_count"] == 480
 
 
+def test_model_inventory_identity_is_inherited_from_the_panel_lock(
+    compiled: dict[str, dict],
+) -> None:
+    panel = json.loads(
+        (
+            REPO_ROOT
+            / "analysis/gate13_causal_return/checkpoint_panel/checkpoint_transfer_panel_lock.json"
+        ).read_text(encoding="utf-8")
+    )
+    registry = next(
+        row
+        for row in panel["official_model_registry"]
+        if row["checkpoint_key"] == "qwen3_6_27b"
+    )
+    assert (
+        compiled["manifest"]["model"]["inventory_identity"]
+        == registry["model_directory_identity_sha256"]
+    )
+
+
 def test_case_ids_and_dynamic_prompt_variants_are_complete(compiled: dict[str, dict]) -> None:
     map_rows, behavior_rows = ledger_indexes(compiled["ledger"])
     assert len(map_rows) == 4_800
