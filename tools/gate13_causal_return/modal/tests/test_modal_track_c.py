@@ -43,6 +43,9 @@ def test_modal_execution_policy_is_single_container_zero_retry() -> None:
     assert text.count("max_containers=1") == 3
     assert 'gpu="A100-80GB"' in text
     assert "block_network=True" in text
+    assert text.count(
+        "volumes={str(MODEL_MOUNT): model_volume, str(RESULT_MOUNT): result_volume}"
+    ) == 3
 
 
 def test_forward0_failures_have_a_persisted_preflight_terminal() -> None:

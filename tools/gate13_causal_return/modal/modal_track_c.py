@@ -791,7 +791,7 @@ if modal is not None:
 
     @app.function(
         image=track_c_image,
-        volumes={str(MODEL_MOUNT): model_volume},
+        volumes={str(MODEL_MOUNT): model_volume, str(RESULT_MOUNT): result_volume},
         cpu=CPU_CORES,
         memory=32_768,
         retries=0,
