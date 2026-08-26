@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 from pathlib import Path
 
 from tools.gate13_causal_return.modal import modal_track_c
@@ -51,3 +52,28 @@ def test_authorization_validator_fails_closed_on_core_bindings() -> None:
         "formal_gate13",
     ):
         assert field in text
+
+
+def test_committed_authorization_verifies_all_local_hashes(monkeypatch) -> None:
+    class FakeVolume:
+        def __init__(self, object_id: str):
+            self.object_id = object_id
+
+    monkeypatch.setattr(
+        modal_track_c,
+        "model_volume",
+        FakeVolume("vo-LJ2HR3cdLcr4k287kokPym"),
+    )
+    monkeypatch.setattr(
+        modal_track_c,
+        "result_volume",
+        FakeVolume("vo-um6ngAeKYhggXfHD5OKsLS"),
+    )
+    authorization_path = (
+        SOURCE.parents[3]
+        / "analysis/gate13_causal_return/track_c_execution/track_c_execution_authorization.json"
+    )
+    text = authorization_path.read_text(encoding="utf-8")
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    result = modal_track_c._authorization(text, digest)
+    assert result["execution_authorized"] is True

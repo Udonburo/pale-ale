@@ -139,10 +139,12 @@ def _authorization(text: str, claimed_sha256: str) -> dict[str, Any]:
     for key, expected in required.items():
         if value.get(key) != expected:
             raise TrackCModalError(f"execution authorization mismatch: {key}")
+    repository_root = _repo_root()
+    local_campaign_dir = repository_root / "analysis/gate13_causal_return/track_c_execution"
     for filename, path in (
-        ("track_c_campaign_plan.json", PLAN_PATH),
-        ("track_c_campaign_manifest.json", MANIFEST_PATH),
-        ("track_c_execution_ledger.json", LEDGER_PATH),
+        ("track_c_campaign_plan.json", local_campaign_dir / "track_c_campaign_plan.json"),
+        ("track_c_campaign_manifest.json", local_campaign_dir / "track_c_campaign_manifest.json"),
+        ("track_c_execution_ledger.json", local_campaign_dir / "track_c_execution_ledger.json"),
     ):
         expected = value.get("frozen_artifacts_sha256", {}).get(filename)
         if not isinstance(expected, str) or sha256_file(path) != expected:
@@ -157,7 +159,7 @@ def _authorization(text: str, claimed_sha256: str) -> dict[str, Any]:
         if not isinstance(bindings, Mapping) or not bindings:
             raise TrackCModalError(f"authorization hash group missing: {group}")
         for relative, expected in bindings.items():
-            path = Path(REMOTE_ROOT.as_posix()) / str(relative)
+            path = repository_root / str(relative)
             if not path.is_file() or sha256_file(path) != expected:
                 raise TrackCModalError(f"authority/source hash mismatch: {relative}")
     if value.get("model_volume_object_id") != model_volume.object_id:
