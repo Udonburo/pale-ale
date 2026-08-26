@@ -147,6 +147,19 @@ def _authorization(text: str, claimed_sha256: str) -> dict[str, Any]:
         expected = value.get("frozen_artifacts_sha256", {}).get(filename)
         if not isinstance(expected, str) or sha256_file(path) != expected:
             raise TrackCModalError(f"frozen execution artifact mismatch: {filename}")
+    for group in (
+        "review2_1_files_sha256",
+        "historical_authority_files_sha256",
+        "panel_files_sha256",
+        "runner_sources_sha256",
+    ):
+        bindings = value.get(group)
+        if not isinstance(bindings, Mapping) or not bindings:
+            raise TrackCModalError(f"authorization hash group missing: {group}")
+        for relative, expected in bindings.items():
+            path = Path(REMOTE_ROOT.as_posix()) / str(relative)
+            if not path.is_file() or sha256_file(path) != expected:
+                raise TrackCModalError(f"authority/source hash mismatch: {relative}")
     if value.get("model_volume_object_id") != model_volume.object_id:
         raise TrackCModalError("model Volume identity mismatch")
     if value.get("result_volume_object_id") != result_volume.object_id:
