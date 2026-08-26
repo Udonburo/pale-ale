@@ -1,6 +1,6 @@
 {
-  "schema_version": "gate13_track_c_review2_1_execution_authorization_v1",
-  "created_at": "2026-08-26T19:35:58+09:00",
+  "schema_version": "gate13_track_c_review2_1_execution_authorization_v2",
+  "created_at": "2026-08-26T19:52:57+09:00",
   "human_authorization": {
     "review2_1": "ACCEPTED",
     "track_c": "AUTHORIZED_UNDER_THE_FROZEN_CONDITIONAL_PROTOCOL",
@@ -13,7 +13,8 @@
   "parent_branch": "codex/gate13-track-c-review2-1",
   "parent_commit": "f5eeaef8bc8965287794c00dc39e18a817717486",
   "execution_branch": "codex/gate13-track-c-execution",
-  "runner_commit": "32274d309d3d6642c33323c3abc87ef5c0b2e1cb",
+  "runner_commit": "485541957056d3f4c26f74e6f28aea4ca330f56c",
+  "modal_deployment_module": "tools.gate13_causal_return.modal.modal_track_c",
   "model_repository": "Qwen/Qwen3.6-27B",
   "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
   "tokenizer_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
@@ -52,7 +53,7 @@
   },
   "runner_sources_sha256": {
     "tools/gate13_causal_return/track_c/campaign.py": "10b57a7e7cb17a0ac23a9dcaa93b05fbda26d26952f470e45b08e99f9175186e",
-    "tools/gate13_causal_return/modal/modal_track_c.py": "4b522aba699cd1393a3702ff0b661b6bdeb0d429cc509d24ffb8fd611ef76159"
+    "tools/gate13_causal_return/modal/modal_track_c.py": "e75643bb5507b4c9a391da8ae635149f13631878ff47322ff7fc18336bd449ab"
   },
   "review2_1_files_sha256": {
     "analysis/gate13_causal_return/review2_1/TRACK_C_REVIEW2_1_AMENDMENT.md": "1a93be10dd39b42c42039d6e2b594d7999c0987d80c8907b67a02f0d8a5507d9",
@@ -93,6 +94,15 @@
     "stage_m_forecast_with_25_percent_contingency_usd": 25.779017725,
     "stage_m_credit_gate": "PASS",
     "stage_e_requires_fresh_balance_check": true
+  },
+  "pre_scientific_packaging_correction": {
+    "failed_cpu_container_import": "modal_track_c",
+    "cause": "file-path deployment registered a top-level module absent from the copied package tree",
+    "correction": "deploy the tracked package by its exact module reference",
+    "model_download_started": false,
+    "gpu_allocated": false,
+    "scientific_model_forward_count": 0,
+    "prior_result_volume_written": false
   },
   "absolute_campaign_ceiling_usd": 65.0,
   "expected_campaign_usd": 45.22264586,
