@@ -1,0 +1,331 @@
+{
+  "schema_version": "gate13_track_c_estimand_lock_candidate_v2",
+  "generated_date": "2026-08-26",
+  "scope": "REVIEW2_1_MODEL_FREE_PROSPECTIVE_AMENDMENT_ONLY",
+  "terminal_review2_1_state": "REVIEW2_1_BLOCKED",
+  "amendment_boundary": {
+    "type": "PROSPECTIVE_AMENDMENT_NOT_SILENT_REWRITE",
+    "last_design_amendment_before_execution_decision": true,
+    "review2_2_rescue": "FORBIDDEN",
+    "graded_cobordism_lane": "NOT_IMPLEMENTED"
+  },
+  "authority": {
+    "track_c_authorized": false,
+    "execution_authorization_created": false,
+    "modal_called": false,
+    "gpu_allocated": false,
+    "model_downloaded": false,
+    "model_loaded": true,
+    "model_forward_performed": true,
+    "activation_collection_performed": false,
+    "track_c_outcome_generated": false,
+    "track_c_outcome_inspected": false,
+    "a3_opened": false,
+    "formal_gate13_opened": false,
+    "hidden_intervention_performed": false,
+    "track_c_qwen3_6_model_loaded": false,
+    "track_c_qwen3_6_forward_performed": false,
+    "validation_incident": {
+      "state": "BLOCKING_TASK_CONTRACT_BREACH",
+      "source": "ABORTED_CARGO_WORKSPACE_INTEGRATION_TEST",
+      "observed_test": "json_embed_vector_invariants_PASS",
+      "model_scope": "UNRELATED_CACHED_RUST_EMBEDDING_MODEL",
+      "download": false,
+      "offline": true,
+      "modal": false,
+      "gpu": false,
+      "track_c_outcome": false,
+      "action": "INTERRUPTED_REMAINING_MODEL_CAPABLE_TESTS_AND_FAIL_CLOSED"
+    }
+  },
+  "immutable_current_state": {
+    "panel_a2_and_b": "PANEL_A2_AND_B_PASS_IMMUTABLE_TERMINAL_PANEL_STATE",
+    "track_c": "CLOSED_PENDING_FRESH_PROTOCOL",
+    "a3": "CLOSED",
+    "formal_gate13": "CLOSED",
+    "visible_state_use_does_not_establish_hidden_causal_register": true
+  },
+  "historical_review2_binding": {
+    "branch": "codex/gate13-track-c-review2",
+    "commit": "4818d0cd313f09e9ae6304bae7c647424dcfcb9f",
+    "terminal_state": "REVIEW2_READY_FOR_HUMAN_AUTHORIZATION",
+    "artifacts_sha256": {
+      "PANEL_CLOSEOUT_BINDING.md": "c650b26d6766e12cb6968f7b851e001eaf0ede6ce7fe1da62bf1c858e756f177",
+      "TRACK_C_REVIEW2_PROTOCOL.md": "8043ccf7fc053b5bd0089e504469fe33908fe5ae178e4b0e548d85a2a5405a4c",
+      "track_c_estimand_lock_candidate.json": "d2cc4a17a2be5768857d649f09a3a007f60a13f5edca450b707d47d310884d11",
+      "track_c_sensitivity_and_cost.json": "cd40fcde024d064d19850a37cb24328c222f450a9362f63e3b3fa7b4be985f63",
+      "track_c_prior_art_collision_matrix.md": "ab48f2d43f42b59dbbbf39541a419fb5e72e66b0a4e019acd07be2d52f9b4fce",
+      "track_c_review2_validator.py": "61a5742a794d353bb4a68341c212f1a45a5f55a7473b9e411dbc00b61639b7ce",
+      "tests/test_track_c_review2_validator.py": "906a7719e69c2acddc03a1f193cdc9ea38b7cf14134bb9bceb45b54fd001499e"
+    }
+  },
+  "panel_closeout_binding": {
+    "checkpoint_transfer_panel_lock.json": "27972f4ba4920c45b272fa7ea6360cbae2fb4cc748a1ef9ededa681a5dad8526",
+    "fresh_square_operator_reservations.json": "22f875050a16a0ad0f170539cdf99bc145fc555c5908ba647c632fb4a86d9e24",
+    "panel_execution_authorization.json": "ed71079bf9905ce3cec5a1d6ecd7c515cbda0f3464d86e4bbb69db1358a745f5",
+    "panel_g_common_runtime.json": "39192959610f583f07a1f2dbb300d1d07bcda54a13046ff3cbc6e9f25a34d204",
+    "planning_note_sha256_read_only": "4677d79cedc9671219c7c8fd693d08188d771d43f1c70b2b3885fd66eec2997a"
+  },
+  "model_target": {
+    "repository": "Qwen/Qwen3.6-27B",
+    "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+    "tokenizer_repository": "Qwen/Qwen3.6-27B",
+    "tokenizer_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+    "layers": [
+      21,
+      43,
+      62
+    ],
+    "revision_or_model_substitution": "FORBIDDEN"
+  },
+  "prospective_design": {
+    "analysis_unit": "ONE_INDEPENDENT_FRESH_NATURALITY_SQUARE_BLOCK",
+    "episodes_are_independent_units": false,
+    "planned_blocks": 20,
+    "rollout_depth_levels": [
+      2,
+      4,
+      6,
+      8
+    ],
+    "planned_blocks_per_depth": 5,
+    "minimum_qualified_blocks": 16,
+    "minimum_qualified_per_depth": 4,
+    "cloud_samples_per_node_per_half": 24,
+    "behavior_episodes_per_block": 24,
+    "template": "natural_rule_v1",
+    "fresh_template_variants": "FORBIDDEN",
+    "difficulty": "ROLLOUT_DEPTH_ONLY",
+    "target_failure_rate_tuning": "FORBIDDEN",
+    "outcome_adaptive_block_addition": "FORBIDDEN",
+    "block_replacement": "FORBIDDEN",
+    "map_and_behavior_ledgers": "FULLY_DISJOINT",
+    "block_codebook_and_demonstration_semantics": "SHARED_ACROSS_MAP_AND_BEHAVIOR_WITHIN_BLOCK_ONLY"
+  },
+  "representation_observable": {
+    "symbol": "R_b",
+    "primary_feature": "SQUARE_ROOT_AMPLITUDE_R_B",
+    "formula": "R_b=sqrt((1/3)*sum_l((1/2)*sum_h tr(Delta_blh Sigma_blh Delta_blh^T)/tr(Sigma_blh)))",
+    "layers": [
+      21,
+      43,
+      62
+    ],
+    "frame_rank": 4,
+    "opposite_half_source_activations_required": true,
+    "delta_and_covariance_coordinate_system": "SAME_TRAINING_HALF_SOURCE_FRAME",
+    "incompatible_half_gauge_multiplication": "FORBIDDEN",
+    "unsquared_energy_components_retained": true,
+    "unsquared_components_role": "DESCRIPTIVE_PACKET_FIELDS_ONLY",
+    "primary_feature_count": 1,
+    "interpretation": "REPRESENTATION_GEOMETRY_NOT_CAUSAL_TRANSITION"
+  },
+  "functional_outcome": {
+    "symbol": "Y_b",
+    "formula": "Y_b=sqrt(mean_e[(m_beP-m_beQ)^2])",
+    "margin": "m_bep=logit(correct)_bep-logit(other)_bep_AT_FROZEN_COMMON_ENDPOINT_PROBE",
+    "episode_count": 24,
+    "episode_ledger_frozen_before_first_forward": true,
+    "episode_level_inference": "FORBIDDEN",
+    "outcome_count": 1
+  },
+  "map_derived_competence": {
+    "symbol": "C_b^M",
+    "formula": "0.5*(mean_exact_map_margin_half_1+mean_exact_map_margin_half_2)",
+    "source_fields": [
+      "target_state",
+      "candidate_logits"
+    ],
+    "exact_nodes_per_half": 4,
+    "samples_per_exact_node_per_half": 24,
+    "required_exact_map_rows_per_block": 192,
+    "behavior_ledger_rows_used": 0,
+    "broken_square_rows_used": 0,
+    "additional_forwards": 0,
+    "separate_competence_ledger_K_b": "NOT_REQUIRED_BECAUSE_EXISTING_MAP_SCHEMA_IS_SEMANTICALLY_VALID"
+  },
+  "analysis": {
+    "nuisance_columns": [
+      "INTERCEPT",
+      "DEPTH_4_INDICATOR",
+      "DEPTH_6_INDICATOR",
+      "DEPTH_8_INDICATOR",
+      "MAP_DERIVED_COMPETENCE_C_b^M"
+    ],
+    "full_additional_column": "REPRESENTATION_AMPLITUDE_R_b",
+    "depth_encoding": "FOUR_LEVEL_CATEGORICAL_REFERENCE_2",
+    "numeric_depth_trend": "FORBIDDEN",
+    "fold_scaling": "FIT_ON_EACH_LOBO_TRAINING_FOLD_ONLY",
+    "primary_statistic": "T_LOBO=1-SSE_full_LOBO/SSE_nuisance_LOBO",
+    "beta_r": "RAW_AMPLITUDE_R_b_COEFFICIENT_FROM_FULL_COHORT_FROZEN_FULL_OLS",
+    "beta_r_refitted_for_every_permutation": true,
+    "positive_rule": "ALL_GATES_PASS_AND_T_LOBO_GT_0_AND_BETA_R_GT_0_AND_ONE_SIDED_P_LTE_0.05",
+    "permutation_procedure": "ROLLOUT_DEPTH_STRATIFIED_FREEDMAN_LANE_COMPLETE_LOBO_REFIT",
+    "directional_permutation_statistic": "T_PERM_IF_REFITTED_BETA_R_GT_ZERO_ELSE_NEGATIVE_INFINITY",
+    "permutations": 99999,
+    "permutation_root_seed": 13602027,
+    "schedule_family_algorithm": "SHA256_ROOT_SEED_AND_ORDERED_QUALIFIED_BLOCK_IDS_V1",
+    "p_value": "(1+count(T_perm_directional>=T_observed))/(1+B)",
+    "alpha": 0.05,
+    "multiplicity": {
+      "primary_representation_features": 1,
+      "primary_outcomes": 1,
+      "primary_tests": 1
+    },
+    "condition_number_ceiling": 1000000.0,
+    "numerical_relative_floor": 1e-12,
+    "leverage_rule": "h_max<=min(0.80,3*p/n)",
+    "terminal_states": [
+      "NO_POSITIVE_INCREMENT",
+      "WRONG_DIRECTION",
+      "NOT_SIGNIFICANT",
+      "NO_OUTCOME_VARIANCE",
+      "NO_REPRESENTATION_FEATURE_VARIANCE",
+      "INSUFFICIENT_QUALIFIED_BLOCKS",
+      "INSUFFICIENT_DEPTH_STRATUM",
+      "RANK_DEFICIENT_DESIGN",
+      "DEGENERATE_NUISANCE_SSE",
+      "EXCESSIVE_LEVERAGE",
+      "INVALID_PERMUTATION_SUPPORT"
+    ]
+  },
+  "predictor_side_stage_m_gates": [
+    "MINIMUM_QUALIFIED_BLOCKS",
+    "MINIMUM_QUALIFIED_PER_DEPTH",
+    "FULL_AND_LOBO_DESIGN_RANK",
+    "LEVERAGE",
+    "PERMUTATION_SUPPORT",
+    "NONDEGENERATE_R_b_VARIATION",
+    "SPLIT_HALF_VALIDITY",
+    "FRAME_RANK",
+    "CONDITIONING",
+    "EXACT_SQUARE_PACKET_REPRODUCIBILITY",
+    "BROKEN_SQUARE_SENSITIVITY",
+    "PATH_SURFACE_VALIDITY",
+    "ARTIFACT_COMPLETENESS"
+  ],
+  "path_surface_contract": {
+    "intended_difference": "OPERATION_ORDER_ONLY",
+    "exact_matching_required": true,
+    "compared_fields": [
+      "CANONICAL_TEMPLATE",
+      "MESSAGE_COUNT",
+      "OPERATION_COUNT",
+      "OPERATION_TOKEN_MULTISET",
+      "CODEBOOK_TOKENS",
+      "SPECIAL_TOKEN_COUNT",
+      "ANSWER_PREFIX",
+      "SCORE_SLOT",
+      "TOTAL_RENDERED_INPUT_TOKEN_COUNT",
+      "NON_OPERATION_TOKEN_SEQUENCE"
+    ],
+    "recorded_fields": [
+      "EXACT_RENDERED_UTF8_BYTES_HEX",
+      "EXACT_TOKEN_IDS",
+      "TOKEN_COUNTS",
+      "HASHES",
+      "MISMATCH_STATUS"
+    ],
+    "broken_square_is_serialization_control": false,
+    "matched_identity_noop_surface_control": "NOT_SELECTED",
+    "failure_action": "REVIEW2_1_BLOCKED_BEFORE_ANY_FORWARD"
+  },
+  "future_campaign_freeze": {
+    "timing": "BEFORE_ANY_STAGE_M_FORWARD",
+    "runtime_image_definition_sha256": "61e2bb1ecf850a7e106799f1aa4c0b5447dbc9daf5bcb63175f0d690cd469d31",
+    "chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+    "tokenizer_json_sha256": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "runtime_versions": {
+      "python": "3.11.2",
+      "torch": "2.7.1+cu126",
+      "transformers": "v5.15.1",
+      "transformers_commit": "550d7b3834670483a4df436541272c055dc364bf",
+      "tokenizers": "0.22.2",
+      "accelerate": "1.14.0",
+      "safetensors": "0.8.0"
+    },
+    "all_20_block_ids": "REQUIRED",
+    "all_4800_map_case_ids": "REQUIRED",
+    "all_5760_possible_behavior_forward_ids": "REQUIRED",
+    "all_480_path_pairs_rendered_and_validated": "REQUIRED",
+    "execution_order_seed": 2026082604,
+    "execution_order_algorithm": "SEEDED_BLOCK_INTERLEAVED_SHUFFLE_V1",
+    "exact_resume_missing_frozen_ids_only": true,
+    "accepted_ids_duplicated_or_replaced": false
+  },
+  "sealed_map_rule": {
+    "stage_e_eligibility_requires_every_predictor_gate": true,
+    "block_replacement": "FORBIDDEN",
+    "wait_state_visible_fields": [
+      "QUALIFICATION_STATE",
+      "QUALIFIED_COUNT_BY_DEPTH",
+      "ARTIFACT_HASHES",
+      "FORWARD_ACCOUNTING",
+      "BILLING_RESUME_STATE"
+    ],
+    "sealed_until_stage_e_complete_or_permanent_termination": [
+      "BLOCK_LEVEL_R_b",
+      "LAYER_SPECIFIC_RETURN_PATTERNS",
+      "DEPTH_WISE_R_b_SUMMARIES",
+      "OPERATOR_SPECTRA",
+      "OPERATOR_PACKET_SUMMARIES",
+      "EXPLORATORY_PREDICTOR_PLOTS"
+    ]
+  },
+  "null_calibration_lock": {
+    "development_seed": 2026082601,
+    "schedule_seed": 2026082602,
+    "final_audit_seed": 2026082603,
+    "final_audit_runs": 1,
+    "datasets_per_eligible_scenario": 2000,
+    "permutations_per_dataset": 999,
+    "nominal_alpha": 0.05,
+    "acceptable_fpr_interval": [
+      0.035,
+      0.065
+    ],
+    "post_audit_algorithm_or_threshold_change": "FORBIDDEN",
+    "failed_audit_replacement": "FORBIDDEN"
+  },
+  "credit_staged_forecast": {
+    "stage_m_forwards": 4800,
+    "stage_m_planning_usd": 20.62321418,
+    "stage_e_forward_range": [
+      4608,
+      5760
+    ],
+    "stage_e_planning_usd_range": [
+      19.679545344,
+      24.59943168
+    ],
+    "full_campaign_forwards": 10560,
+    "expected_full_campaign_usd": 45.22264586,
+    "contingency_full_campaign_usd": 56.528307325,
+    "future_budget_ceiling_usd": 65.0,
+    "forecast_is_charge_credit_or_authority": false,
+    "manual_balance_and_refresh_verification_required": true,
+    "unused_credit_rollover_assumed": false
+  },
+  "operational_states": [
+    "MAP_COMPLETE_NOT_QUALIFIED",
+    "MAP_COMPLETE_AND_QUALIFIED",
+    "SEALED_WAIT_FOR_BILLING_CYCLE",
+    "EXACT_RESUME_BEHAVIOR",
+    "TRACK_C_COMPLETE"
+  ],
+  "secondary_or_validity_only": [
+    "SPECTRA",
+    "S",
+    "H_PATH",
+    "H_EDGE",
+    "BINARY_ACCURACY",
+    "BROKEN_SQUARE_OUTPUTS",
+    "UNSQUARED_LAYER_HALF_ENERGIES"
+  ],
+  "claim_boundary": [
+    "RAW_OVERLAP_IS_REPRESENTATION_GEOMETRY_NOT_A_CAUSAL_TRANSITION",
+    "VISIBLE_STATE_USE_DOES_NOT_ESTABLISH_A_HIDDEN_CAUSAL_REGISTER",
+    "QUALIFICATION_IS_NOT_UNIQUENESS",
+    "NO_FIRST_USE_CLAIM_FOR_NATURALITY_HOLONOMY_OR_INTERMEDIATE_STATE_EDITS"
+  ]
+}

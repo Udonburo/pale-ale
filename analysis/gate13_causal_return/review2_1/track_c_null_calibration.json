@@ -1,0 +1,289 @@
+{
+  "all_required_conditions_pass": true,
+  "audit_mode": "FINAL_AUDIT_RUN_EXACTLY_ONCE",
+  "audit_seed": 2026082603,
+  "datasets_per_eligible_scenario": 2000,
+  "deterministic_reproducibility": {
+    "first_result_sha256": "1de6b82841ded358d1ca58c06227ab484129b4f76eccf9cee065b790f35e9a56",
+    "fixed_seed": 2026082603,
+    "second_result_sha256": "1de6b82841ded358d1ca58c06227ab484129b4f76eccf9cee065b790f35e9a56",
+    "status": "PASS"
+  },
+  "deterministic_terminal_case_checks": {
+    "expected": {
+      "degenerate_nuisance_sse": "DEGENERATE_NUISANCE_SSE",
+      "excessive_leverage": "EXCESSIVE_LEVERAGE",
+      "insufficient_depth_stratum": "INSUFFICIENT_DEPTH_STRATUM",
+      "insufficient_qualified_blocks": "INSUFFICIENT_QUALIFIED_BLOCKS",
+      "invalid_permutation_support": "INVALID_PERMUTATION_SUPPORT",
+      "rank_deficient_design": "RANK_DEFICIENT_DESIGN",
+      "zero_outcome_variance": "NO_OUTCOME_VARIANCE",
+      "zero_representation_variance": "NO_REPRESENTATION_FEATURE_VARIANCE"
+    },
+    "observed": {
+      "degenerate_nuisance_sse": "DEGENERATE_NUISANCE_SSE",
+      "excessive_leverage": "EXCESSIVE_LEVERAGE",
+      "insufficient_depth_stratum": "INSUFFICIENT_DEPTH_STRATUM",
+      "insufficient_qualified_blocks": "INSUFFICIENT_QUALIFIED_BLOCKS",
+      "invalid_permutation_support": "INVALID_PERMUTATION_SUPPORT",
+      "rank_deficient_design": "RANK_DEFICIENT_DESIGN",
+      "zero_outcome_variance": "NO_OUTCOME_VARIANCE",
+      "zero_representation_variance": "NO_REPRESENTATION_FEATURE_VARIANCE"
+    },
+    "status": "PASS"
+  },
+  "eligible_scenarios": [
+    {
+      "acceptance_interval": [
+        0.035,
+        0.065
+      ],
+      "binomial_standard_error": 0.005205465877325487,
+      "datasets": 2000,
+      "empirical_false_positive_rate": 0.0575,
+      "joint_positive_rule_evaluated": true,
+      "maximum_eligible_leverage_observed": 0.4011718218631568,
+      "permutations_per_dataset": 999,
+      "positive_results": 115,
+      "predictor_generator_attempts": 2000,
+      "qualification_depth_count_patterns": {
+        "5/5/5/5": 2000
+      },
+      "qualification_rng_separate_from_outcome_rng": true,
+      "scenario": "BALANCED_20_NUISANCE_CORRELATED",
+      "schedule_family_members_used": 1,
+      "status": "PASS",
+      "terminal_counts": {
+        "NOT_SIGNIFICANT": 68,
+        "NO_POSITIVE_INCREMENT": 1634,
+        "PRIMARY_POSITIVE": 115,
+        "WRONG_DIRECTION": 183
+      }
+    },
+    {
+      "acceptance_interval": [
+        0.035,
+        0.065
+      ],
+      "binomial_standard_error": 0.004873397172404482,
+      "datasets": 2000,
+      "empirical_false_positive_rate": 0.05,
+      "joint_positive_rule_evaluated": true,
+      "maximum_eligible_leverage_observed": 0.6022006227731826,
+      "permutations_per_dataset": 999,
+      "positive_results": 100,
+      "predictor_generator_attempts": 2000,
+      "qualification_depth_count_patterns": {
+        "4/4/4/4": 2000
+      },
+      "qualification_rng_separate_from_outcome_rng": true,
+      "scenario": "BALANCED_16_NUISANCE_CORRELATED",
+      "schedule_family_members_used": 1,
+      "status": "PASS",
+      "terminal_counts": {
+        "NOT_SIGNIFICANT": 88,
+        "NO_POSITIVE_INCREMENT": 1642,
+        "PRIMARY_POSITIVE": 100,
+        "WRONG_DIRECTION": 170
+      }
+    },
+    {
+      "acceptance_interval": [
+        0.035,
+        0.065
+      ],
+      "binomial_standard_error": 0.004610843198374892,
+      "datasets": 2000,
+      "empirical_false_positive_rate": 0.0445,
+      "joint_positive_rule_evaluated": true,
+      "maximum_eligible_leverage_observed": 0.5827781651709307,
+      "permutations_per_dataset": 999,
+      "positive_results": 89,
+      "predictor_generator_attempts": 2000,
+      "qualification_depth_count_patterns": {
+        "4/4/4/4": 114,
+        "4/4/4/5": 98,
+        "4/4/5/4": 129,
+        "4/4/5/5": 112,
+        "4/5/4/4": 121,
+        "4/5/4/5": 126,
+        "4/5/5/4": 113,
+        "4/5/5/5": 124,
+        "5/4/4/4": 119,
+        "5/4/4/5": 115,
+        "5/4/5/4": 140,
+        "5/4/5/5": 140,
+        "5/5/4/4": 139,
+        "5/5/4/5": 131,
+        "5/5/5/4": 119,
+        "5/5/5/5": 160
+      },
+      "qualification_rng_separate_from_outcome_rng": true,
+      "scenario": "INDEPENDENT_ELIGIBLE_QUALIFICATION_MASKS",
+      "schedule_family_members_used": 591,
+      "status": "PASS",
+      "terminal_counts": {
+        "NOT_SIGNIFICANT": 74,
+        "NO_POSITIVE_INCREMENT": 1682,
+        "PRIMARY_POSITIVE": 89,
+        "WRONG_DIRECTION": 155
+      }
+    },
+    {
+      "acceptance_interval": [
+        0.035,
+        0.065
+      ],
+      "binomial_standard_error": 0.00468422885862764,
+      "datasets": 2000,
+      "empirical_false_positive_rate": 0.046,
+      "joint_positive_rule_evaluated": true,
+      "maximum_eligible_leverage_observed": 0.4070665089861909,
+      "permutations_per_dataset": 999,
+      "positive_results": 92,
+      "predictor_generator_attempts": 2000,
+      "qualification_depth_count_patterns": {
+        "5/5/5/5": 2000
+      },
+      "qualification_rng_separate_from_outcome_rng": true,
+      "scenario": "HETEROSKEDASTIC_WITHIN_FROZEN_DEPTH_STRATA",
+      "schedule_family_members_used": 1,
+      "status": "PASS",
+      "terminal_counts": {
+        "NOT_SIGNIFICANT": 72,
+        "NO_POSITIVE_INCREMENT": 1694,
+        "PRIMARY_POSITIVE": 92,
+        "WRONG_DIRECTION": 142
+      }
+    },
+    {
+      "acceptance_interval": [
+        0.035,
+        0.065
+      ],
+      "binomial_standard_error": 0.00518415856238985,
+      "datasets": 2000,
+      "empirical_false_positive_rate": 0.057,
+      "joint_positive_rule_evaluated": true,
+      "maximum_eligible_leverage_observed": 0.7969747444859316,
+      "permutations_per_dataset": 999,
+      "positive_results": 114,
+      "predictor_generator_attempts": 5426,
+      "qualification_depth_count_patterns": {
+        "5/5/5/5": 2000
+      },
+      "qualification_rng_separate_from_outcome_rng": true,
+      "scenario": "LEVERAGE_STRESS_BELOW_FROZEN_GATE",
+      "schedule_family_members_used": 1,
+      "status": "PASS",
+      "terminal_counts": {
+        "NOT_SIGNIFICANT": 90,
+        "NO_POSITIVE_INCREMENT": 1615,
+        "PRIMARY_POSITIVE": 114,
+        "WRONG_DIRECTION": 181
+      }
+    }
+  ],
+  "exact_enumeration_checks": {
+    "cases": [
+      {
+        "all_nonidentity_permutations_enumerated": true,
+        "case": 1,
+        "exact_one_sided_p": 0.33914146894290126,
+        "explicit_refit_matches_linear_operator": true,
+        "status": "PASS",
+        "support_excluding_identity": 331775,
+        "terminal_state": "NO_POSITIVE_INCREMENT"
+      },
+      {
+        "all_nonidentity_permutations_enumerated": true,
+        "case": 2,
+        "exact_one_sided_p": 0.44327498070987653,
+        "explicit_refit_matches_linear_operator": true,
+        "status": "PASS",
+        "support_excluding_identity": 331775,
+        "terminal_state": "NO_POSITIVE_INCREMENT"
+      }
+    ],
+    "minimal_eligible_structure": "16_BLOCKS_EXACTLY_4_PER_DEPTH",
+    "status": "PASS",
+    "support_excluding_identity": 331775
+  },
+  "failure_is_not_replaceable_or_repairable": true,
+  "final_audit_read_only_after_run": true,
+  "frozen_acceptance_interval": [
+    0.035,
+    0.065
+  ],
+  "generator_version": "review2_1_null_generator_v1",
+  "ineligible_mask_audit": {
+    "datasets": 2000,
+    "outcome_generated": false,
+    "primary_tests_run": 0,
+    "status": "PASS",
+    "terminal_counts": {
+      "INSUFFICIENT_DEPTH_STRATUM": 1758,
+      "INSUFFICIENT_QUALIFIED_BLOCKS": 242
+    }
+  },
+  "nominal_alpha": 0.05,
+  "permutations_per_dataset": 999,
+  "qualification_masks_outcome_independent": true,
+  "schema_version": "gate13_track_c_review2_1_null_calibration_v1",
+  "terminal_review2_1_state": "REVIEW2_1_READY_FOR_HUMAN_AUTHORIZATION",
+  "threshold_lock": {
+    "payload": {
+      "calibration_permutation_seed": 2026082602,
+      "condition_ceiling": 1000000.0,
+      "depth_encoding": "FOUR_LEVEL_CATEGORICAL_REFERENCE_2",
+      "development_seed": 2026082601,
+      "directional_permutation_statistic": "T_PERM_IF_REFITTED_BETA_R_GT_ZERO_ELSE_NEGATIVE_INFINITY",
+      "eligible_scenarios": [
+        "BALANCED_20_NUISANCE_CORRELATED",
+        "BALANCED_16_NUISANCE_CORRELATED",
+        "INDEPENDENT_ELIGIBLE_QUALIFICATION_MASKS",
+        "HETEROSKEDASTIC_WITHIN_FROZEN_DEPTH_STRATA",
+        "LEVERAGE_STRESS_BELOW_FROZEN_GATE"
+      ],
+      "final_audit_alpha": 0.05,
+      "final_audit_datasets_per_scenario": 2000,
+      "final_audit_fpr_interval": [
+        0.035,
+        0.065
+      ],
+      "final_audit_permutations": 999,
+      "final_audit_seed": 2026082603,
+      "fold_scaling": "TRAINING_FOLD_ONLY",
+      "full_additional_column": "REPRESENTATION_AMPLITUDE_R_B",
+      "generator_version": "review2_1_null_generator_v1",
+      "leverage_absolute_ceiling": 0.8,
+      "leverage_average_multiplier": 3.0,
+      "minimum_press_denominator": 0.19999999999999996,
+      "minimum_qualified_blocks": 16,
+      "minimum_qualified_per_depth": 4,
+      "nuisance_columns": [
+        "INTERCEPT",
+        "DEPTH_4_INDICATOR",
+        "DEPTH_6_INDICATOR",
+        "DEPTH_8_INDICATOR",
+        "MAP_DERIVED_COMPETENCE"
+      ],
+      "numerical_relative_floor": 1e-12,
+      "terminals": [
+        "DEGENERATE_NUISANCE_SSE",
+        "EXCESSIVE_LEVERAGE",
+        "INSUFFICIENT_DEPTH_STRATUM",
+        "INSUFFICIENT_QUALIFIED_BLOCKS",
+        "INVALID_PERMUTATION_SUPPORT",
+        "NOT_SIGNIFICANT",
+        "NO_OUTCOME_VARIANCE",
+        "NO_POSITIVE_INCREMENT",
+        "NO_REPRESENTATION_FEATURE_VARIANCE",
+        "RANK_DEFICIENT_DESIGN",
+        "WRONG_DIRECTION"
+      ]
+    },
+    "sha256": "b3cb085dd55b426779ccc092448fefc50f5b91fcfcd0c00bc7eae05bb17f542a"
+  },
+  "validator_source_sha256": "146c436bb2e73be05962966abfba30346a4a4799ab078f5da36fff7dec8760f4"
+}
