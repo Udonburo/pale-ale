@@ -1,8 +1,14 @@
-# Archival Release Capsules
+# Zenodo Release Index
 
-This directory is the indexed home for new DOI-bound release capsules tracked
-on the repository's default branch. Each capsule is self-contained and keeps
-its own manifest, checksums, licensing, and provenance records.
+This directory is the repository's canonical index for DOI-bound release
+capsules tracked on `main`. Each capsule is self-contained and keeps its own
+report, manifest, checksums, licensing, and provenance records.
+
+From the repository root, open [`zenodo/`](./) and then the release slug shown
+below. The two most recent technical reports are available directly at
+[`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.txt)
+and
+[`sensitivity-without-reproducibility/`](sensitivity-without-reproducibility/README.txt).
 
 ## Releases
 
@@ -12,8 +18,9 @@ its own manifest, checksums, licensing, and provenance records.
 | Local Mapping Without Iterative Closure | [10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852) | [`local-mapping-without-iterative-closure-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0) | [`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.txt) |
 | Sensitivity Without Reproducibility | [10.5281/zenodo.22180751](https://doi.org/10.5281/zenodo.22180751) | [`sensitivity-without-reproducibility-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/sensitivity-without-reproducibility-v1.0.0) | [`sensitivity-without-reproducibility/`](sensitivity-without-reproducibility/README.txt) |
 
-New capsules should use `zenodo/<release-slug>/` rather than adding another
-top-level `zenodo-release-*` directory.
+New capsules use `zenodo/<release-slug>/` rather than adding another top-level
+`zenodo-release-*` directory. The table above is the primary navigation
+surface for those packages.
 
 Capsule contents are tracked byte-for-byte from their published release tags.
 Internal status fields may record the pre-publication freeze stage; the DOI and

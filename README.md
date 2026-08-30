@@ -8,6 +8,7 @@ consistency, and learned-system artifacts.**
 [![Gate12B DOI](https://img.shields.io/badge/Gate12B-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.20080003)
 [![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21355572)
 [![Graph-XOR DOI](https://img.shields.io/badge/Graph--XOR-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21992852)
+[![Sensitivity DOI](https://img.shields.io/badge/Sensitivity-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.22180751)
 
 [![Amber](https://img.shields.io/badge/Amber-live-D99716?style=flat-square)](https://amber-oversight.vercel.app/)
 [![CI](https://img.shields.io/github/actions/workflow/status/Udonburo/pale-ale/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Udonburo/pale-ale/actions/workflows/ci.yml)
@@ -15,6 +16,7 @@ consistency, and learned-system artifacts.**
 
 [Research focus](#research-focus) |
 [Citable releases](#citable-releases) |
+[Zenodo release index](zenodo/README.md) |
 [Explore Amber](#amber-interactive-companion) |
 [Reproduce Gate12A](docs/reproduce_gate12a.md)
 
@@ -33,7 +35,7 @@ checkpoint was reached.
 
 | Research evidence | Interactive companion |
 | --- | --- |
-| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR capability boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
+| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR / representation-instrument boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases) or [browse the release archive](zenodo/README.md). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
 
 ## Research Focus
 
@@ -67,6 +69,15 @@ project reached that checkpoint. See
 
 Use the DOI associated with the specific evidence surface you are discussing.
 The releases are related, but they are not interchangeable.
+
+The repository mirror for current DOI-bound packages is indexed at
+[`zenodo/`](zenodo/README.md). In particular, the two latest packages are
+tracked on `main` at
+[`zenodo/local-mapping-without-iterative-closure/`](zenodo/local-mapping-without-iterative-closure/README.txt)
+and
+[`zenodo/sensitivity-without-reproducibility/`](zenodo/sensitivity-without-reproducibility/README.txt).
+Earlier compatibility snapshots retain their historical top-level
+`zenodo-release*` paths; the index explains that split explicitly.
 
 ### Gate12A: Frozen FP32 dense-transformer report
 
@@ -174,6 +185,8 @@ releases.
   [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
 - **Follow the tracked research history:**
   [`workstream/`](workstream/README.md)
+- **Browse DOI-bound reports and reproducibility capsules:**
+  [`zenodo/`](zenodo/README.md)
 - **Browse implementation and public specifications:** [`tools/`](tools/) and
   [`specs/public/`](specs/public/SPEC.public.md)
 - **Explore the interface companion:**
@@ -195,7 +208,8 @@ specs/        Public and retained internal specification surfaces
 src/          Python-facing package source
 tools/        Research runners, validators, and audit utilities
 workstream/   Numbered research memory and checkpoint history
-zenodo*/      Frozen release packages, manifests, and checksums
+zenodo/       Indexed DOI-bound reports and reproducibility capsules
+zenodo-release*/  Frozen historical compatibility snapshots
 ```
 
 Generated local runs are not automatically part of the public evidence
