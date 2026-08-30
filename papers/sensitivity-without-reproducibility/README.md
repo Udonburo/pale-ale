@@ -21,6 +21,8 @@ are therefore release artifacts, not inputs to the scientific analysis.
 - `figure1.tex` - central sensitivity/reproducibility figure
 - `figure2.tex` - exact square and evidential ladder
 - `PRIMARY_SOURCE_CITATION_AUDIT.md` - claim-bounded source audit
+- `release_data/` - source-hash-locked model-free export of all 60 continuous
+  Stage M layer-block records and the stale-receipt provenance closure
 
 ## Build
 
