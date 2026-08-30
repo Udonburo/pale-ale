@@ -1,0 +1,47 @@
+{
+  "record_status": "DOI_RESERVED_PUBLICATION_READY",
+  "resource_type": "publication-technicalnote",
+  "title": "Sensitivity Without Reproducibility: A Measurement Boundary for an Operator-Valued Representation Instrument in Qwen Models",
+  "creators": [
+    {
+      "name": "Kawasaki, Aoi"
+    }
+  ],
+  "publication_date": "2026-08-31",
+  "version": "1.0.0",
+  "language": "eng",
+  "licenses": [
+    "cc-by-4.0",
+    "mpl-2.0"
+  ],
+  "access_right": "open",
+  "publisher": "Zenodo",
+  "keywords": [
+    "mechanistic interpretability",
+    "representation measurement",
+    "visible-state intervention",
+    "operator-valued representation",
+    "split-half reproducibility",
+    "naturality square",
+    "Qwen",
+    "measurement boundary",
+    "negative result"
+  ],
+  "notes": "Technical report; not peer reviewed. The report, figures, metadata, and public result records are CC BY 4.0. Python source in the reproducibility capsule remains MPL-2.0. Model weights are not redistributed.",
+  "related_identifiers": [
+    {
+      "identifier": "https://doi.org/10.5281/zenodo.21992852",
+      "relation": "isRelatedTo",
+      "resource_type": "publication-technicalnote"
+    },
+    {
+      "identifier": "https://github.com/Udonburo/pale-ale",
+      "relation": "isSupplementTo",
+      "resource_type": "software"
+    }
+  ],
+  "repository_url": "https://github.com/Udonburo/pale-ale",
+  "execution_commit_permalink": "https://github.com/Udonburo/pale-ale/commit/407d20fd4f074b9ef4524c82c8136874efaec476",
+  "doi": "10.5281/zenodo.22180751",
+  "description_source": "zenodo-description.md"
+}

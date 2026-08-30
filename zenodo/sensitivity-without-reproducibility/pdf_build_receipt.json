@@ -1,0 +1,46 @@
+{
+  "schema_version": "sensitivity_without_reproducibility_pdf_build_receipt_v1",
+  "built_at_local_date": "2026-08-31",
+  "source_file": "sensitivity-without-reproducibility.tex",
+  "source_sha256": "8a77f289c18650692fcfc46aa33797bd9b3697ca215555aa93ecc03c5b8d429c",
+  "output_file": "sensitivity-without-reproducibility.pdf",
+  "output_sha256": "3411ba49796ce39a77d243d33d367c2a3d1df7eb72536142233c7edc4c698c18",
+  "page_count": 13,
+  "page_size_points": "595.28 x 841.89 (A4)",
+  "engine": {
+    "name": "Tectonic",
+    "version": "0.17.0",
+    "source_date_epoch_utc": "2026-08-31T00:00:00Z"
+  },
+  "render_qa": {
+    "renderer": "Poppler pdftoppm",
+    "render_resolution_dpi": 120,
+    "rendered_page_count": 13,
+    "visual_review": "all pages reviewed after DOI insertion",
+    "checks": [
+      "DOI-bearing title page",
+      "abstract and opening page flow",
+      "primary figure and qualification matrix",
+      "behavioral ladder and exact-square definitions",
+      "operator construction and fresh requalification results",
+      "claim ledger and limitations",
+      "DOI-first Data, Code, and Status section",
+      "references and all appendices"
+    ]
+  },
+  "pdf_checks": {
+    "embedded_font_resources": 37,
+    "nonembedded_font_resources": 0,
+    "link_annotations": 58,
+    "unresolved_references": 0,
+    "doi_placeholder_occurrences": 0,
+    "deterministic_rebuild_sha_match": true
+  },
+  "final_log_status": {
+    "overfull_boxes": 0,
+    "underfull_boxes": 5,
+    "unresolved_references": 0,
+    "unresolved_citations": 0,
+    "note": "The five underfull-box warnings are unchanged layout-quality warnings; visual inspection found no clipping, overlap, malformed text, or isolated line."
+  }
+}
