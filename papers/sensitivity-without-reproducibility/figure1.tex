@@ -1,0 +1,107 @@
+\begin{figure}[H]
+\centering
+\caption*{\textbf{Figure 1. Sensitivity is not reproducibility.}}
+\vspace{-2mm}
+
+\textbf{A. Conditional qualification path}\par\smallskip
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+  node distance=9mm,
+  box/.style={draw=Rule, rounded corners=1.5pt, minimum width=33mm, minimum height=12mm, align=center, fill=white, text=Ink},
+  good/.style={box, draw=PassBlue, fill=PassPale},
+  stop/.style={box, draw=Slate, fill=FailPale},
+  hold/.style={box, draw=Warn, fill=UnopenedPale},
+  arrow/.style={-{Latex[length=2.2mm]}, semithick, draw=Slate}
+]
+\node[good] (a2) {Visible-state use\\\textbf{PASS} on 3.5/3.6-27B};
+\node[good, right=of a2] (b) {Bounded operator\\\textbf{PASS} on 3.6-27B};
+\node[stop, right=of b] (m) {Fresh Stage M\\\textbf{5/20 qualified}};
+\node[hold, right=of m] (e) {Stage E\\\textbf{UNOPENED}};
+\draw[arrow] (a2)--(b);
+\draw[arrow] (b)--(m);
+\draw[arrow] (m)--(e);
+\end{tikzpicture}}
+
+\vspace{3mm}
+\begin{minipage}[t]{0.58\textwidth}
+\textbf{B. Frozen block--layer reproducibility matrix}\par\smallskip
+\centering
+\fontsize{7.4}{8.5}\selectfont
+\begin{tabular}{@{}l r c c c c@{}}
+\toprule
+Block & $d$ & L21 & L43 & L62 & Joint \\
+\midrule
+B01 & 2 & \PassCell & \FailCell & \FailCell & \FailCell \\
+B02 & 2 & \PassCell & \FailCell & \FailCell & \FailCell \\
+B03 & 2 & \FailCell & \PassCell & \FailCell & \FailCell \\
+B04 & 2 & \PassCell & \PassCell & \FailCell & \FailCell \\
+B05 & 2 & \PassCell & \FailCell & \FailCell & \FailCell \\
+\addlinespace[1.5pt]
+B06 & 4 & \PassCell & \PassCell & \PassCell & \PassCell \\
+B07 & 4 & \FailCell & \PassCell & \FailCell & \FailCell \\
+B08 & 4 & \FailCell & \PassCell & \FailCell & \FailCell \\
+B09 & 4 & \PassCell & \PassCell & \PassCell & \PassCell \\
+B10 & 4 & \FailCell & \PassCell & \PassCell & \FailCell \\
+\addlinespace[1.5pt]
+B11 & 6 & \FailCell & \PassCell & \FailCell & \FailCell \\
+B12 & 6 & \FailCell & \FailCell & \PassCell & \FailCell \\
+B13 & 6 & \PassCell & \PassCell & \PassCell & \PassCell \\
+B14 & 6 & \PassCell & \PassCell & \PassCell & \PassCell \\
+B15 & 6 & \PassCell & \FailCell & \FailCell & \FailCell \\
+\addlinespace[1.5pt]
+B16 & 8 & \PassCell & \PassCell & \FailCell & \FailCell \\
+B17 & 8 & \FailCell & \PassCell & \PassCell & \FailCell \\
+B18 & 8 & \FailCell & \PassCell & \PassCell & \FailCell \\
+B19 & 8 & \PassCell & \PassCell & \PassCell & \PassCell \\
+B20 & 8 & \FailCell & \PassCell & \FailCell & \FailCell \\
+\midrule
+Pass count & & 11/20 & 15/20 & 9/20 & \textbf{5/20} \\
+\bottomrule
+\end{tabular}
+
+\vspace{1mm}
+{\scriptsize\textcolor{PassBlue}{$\checkmark$} pass; \textcolor{Slate}{$\times$} fail. Rows remain in frozen depth-major order.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.39\textwidth}
+\textbf{C. Sensitivity versus re-estimation}\par\smallskip
+\centering
+\resizebox{0.98\linewidth}{!}{%
+\begin{tikzpicture}[x=4.55cm,y=0.72cm]
+  \def\barh{0.34}
+  \node[anchor=west,font=\scriptsize\bfseries,text=Ink] at (0,5.35) {Positive-control sensitivity};
+  \draw[fill=PassBlue!82,draw=none] (0,4.65) rectangle (0.983,4.65+\barh);
+  \node[anchor=east,font=\scriptsize] at (-0.025,4.82) {Broken square};
+  \node[anchor=west,font=\scriptsize] at (0.99,4.82) {59/60 layer-blocks};
+
+  \node[anchor=west,font=\scriptsize\bfseries,text=Ink] at (0,3.85) {Split-half reproducibility};
+  \draw[fill=PassBlue!58,draw=none] (0,3.15) rectangle (0.55,3.15+\barh);
+  \draw[fill=PassBlue!58,draw=none] (0,2.35) rectangle (0.75,2.35+\barh);
+  \draw[fill=PassBlue!58,draw=none] (0,1.55) rectangle (0.45,1.55+\barh);
+  \draw[fill=Slate!65,draw=none] (0,0.75) rectangle (0.25,0.75+\barh);
+  \draw[Rule] (0,0.68) -- (0,5.08);
+  \foreach \x in {0.25,0.5,0.75,1.0}{\draw[Rule!65] (\x,0.68)--(\x,5.08);}
+  \node[anchor=east,font=\scriptsize] at (-0.025,3.32) {Layer 21};
+  \node[anchor=east,font=\scriptsize] at (-0.025,2.52) {Layer 43};
+  \node[anchor=east,font=\scriptsize] at (-0.025,1.72) {Layer 62};
+  \node[anchor=east,font=\scriptsize] at (-0.025,0.92) {Joint};
+  \node[anchor=west,font=\scriptsize] at (0.56,3.32) {11/20};
+  \node[anchor=west,font=\scriptsize] at (0.76,2.52) {15/20};
+  \node[anchor=west,font=\scriptsize] at (0.46,1.72) {9/20};
+  \node[anchor=west,font=\scriptsize] at (0.26,0.92) {5/20};
+  \draw[Warn,densely dashed,thick] (0.8,0.66)--(0.8,1.16);
+  \node[anchor=north,font=\fontsize{6.2}{6.8}\selectfont\bfseries,text=Warn,align=center] at (0.8,0.58) {joint gate\\16/20};
+\end{tikzpicture}}
+
+\vspace{3mm}
+\textbf{D. Outcome stage}\par\smallskip
+\fcolorbox{Warn}{UnopenedPale}{%
+\parbox{0.88\linewidth}{\centering\small
+\textbf{Stage E was not opened.}\\[2pt]
+Behavior forwards: \textbf{0}\\
+$Y_b$: not collected\\
+LOBO/permutation test: not run\\
+Coupled hypothesis: \textbf{untested}}}
+\end{minipage}
+
+\caption{\label{fig:main}\textbf{Sensitivity without reproducibility.} (A) The staged design qualified visible-state use and a bounded operator instrument before opening a prospectively frozen 20-block map requalification. (B) Exact block--layer split-half outcomes; public labels B01--B20 preserve the frozen depth-major order, with exact artifact identifiers reported in Appendix~\ref{app:trackc}. A joint pass required all three frozen layers and no post-hoc block or layer selection. (C) Positive-control sensitivity and split-half re-estimation are visually separated because their denominators differ: 59/60 is a layer-block control count, while 5/20 is the block-level conjunction used for Stage M admission. The dashed marker shows the required joint total; an additional four-per-depth rule also failed. (D) Because the map did not qualify, Stage E remained unopened and the representation--function hypothesis was not tested.}
+\end{figure}
