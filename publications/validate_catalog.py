@@ -96,12 +96,43 @@ def main() -> int:
         if not tag or release.get("url") != expected_url:
             errors.append(f"{slug}: malformed GitHub Release target")
 
+    other_records = data.get("other_public_records", [])
+    for item in other_records:
+        slug = item.get("slug", "")
+        if not SLUG.fullmatch(slug):
+            errors.append(f"invalid other-record slug: {slug!r}")
+        if slug in seen_slugs:
+            errors.append(f"duplicate slug: {slug}")
+        seen_slugs.add(slug)
+
+        expected_landing = f"publications/{slug}/README.md"
+        if item.get("landing_path") != expected_landing:
+            errors.append(f"{slug}: landing_path must be {expected_landing}")
+        for value in filter(None, (item.get("landing_path"), item.get("source_path"))):
+            if not (ROOT / value).exists():
+                errors.append(f"{slug}: missing repository path {value}")
+
+        doi = item.get("doi")
+        if doi:
+            if not DOI.fullmatch(doi):
+                errors.append(f"invalid DOI: {doi!r}")
+            if doi in seen_dois:
+                errors.append(f"duplicate DOI: {doi}")
+            seen_dois.add(doi)
+
+        release = item.get("targets", {}).get("github_release", {})
+        tag = release.get("tag", "")
+        expected_url = f"https://github.com/Udonburo/pale-ale/releases/tag/{tag}"
+        if not tag or release.get("url") != expected_url:
+            errors.append(f"{slug}: malformed GitHub Release target")
+
     if errors:
         for error in errors:
             print(f"ERROR: {error}")
         return 1
     print(
-        f"PASS: {len(seen_slugs)} publication records and "
+        f"PASS: {len(data.get('publications', []))} papers/notes, "
+        f"{len(other_records)} other public records, and "
         f"{checksum_count} package checksums validated"
     )
     return 0

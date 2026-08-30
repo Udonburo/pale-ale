@@ -28,7 +28,11 @@ not silently rewritten. Manuscript development may continue under `papers/`,
 while the corresponding publication landing page records the exact source and
 release bindings.
 
-## Published works
+Non-paper public records use the same landing-page layer. When a historical
+deposit contains untracked run artifacts, its landing page links to the
+archive and assembly materials instead of inventing an incomplete local copy.
+
+## Papers and notes
 
 | Publication | Date | DOI | GitHub Release | Repository landing |
 | --- | --- | --- | --- | --- |
@@ -39,9 +43,21 @@ release bindings.
 | *Local Mapping Without Iterative Closure* | 2026-08-18 | [10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852) | [`local-mapping-without-iterative-closure-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0) | [`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.md) |
 | *Sensitivity Without Reproducibility* | 2026-08-31 | [10.5281/zenodo.22180751](https://doi.org/10.5281/zenodo.22180751) | [`sensitivity-without-reproducibility-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/sensitivity-without-reproducibility-v1.0.0) | [`sensitivity-without-reproducibility/`](sensitivity-without-reproducibility/README.md) |
 
-Machine-readable metadata and historical path mappings are recorded in
+These six entries are all standalone paper or technical-note PDFs currently
+tracked in the repository.
+
+## Other public records
+
+These releases are intentionally not counted as papers.
+
+| Record | Type | Public target | Repository landing |
+| --- | --- | --- | --- |
+| Gate12A First Replication Checkpoint | Dataset / empirical checkpoint | [Zenodo 10.5281/zenodo.19340221](https://doi.org/10.5281/zenodo.19340221) · [`gate12a-first-replication-checkpoint-2026-03-31`](https://github.com/Udonburo/pale-ale/releases/tag/gate12a-first-replication-checkpoint-2026-03-31) | [`gate12a-first-replication-checkpoint/`](gate12a-first-replication-checkpoint/README.md) |
+| Gate2 Telemetry E2E v1.0.1 | Software release | [`v1.0.1`](https://github.com/Udonburo/pale-ale/releases/tag/v1.0.1) | [`gate2-telemetry-v1-0-1/`](gate2-telemetry-v1-0-1/README.md) |
+
+Machine-readable metadata, record types, and historical path mappings are recorded in
 [`catalog.json`](catalog.json). Run `python publications/validate_catalog.py`
-after adding or relocating a publication target.
+after adding or relocating a public target.
 
 ## 2026 layout migration
 

@@ -124,5 +124,40 @@
       },
       "historical_repository_paths": ["zenodo/sensitivity-without-reproducibility"]
     }
+  ],
+  "other_public_records": [
+    {
+      "slug": "gate12a-first-replication-checkpoint",
+      "title": "Gate12A First Replication Checkpoint: Non-Monotone Closure Tension",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-03-31",
+      "resource_type": "dataset_checkpoint",
+      "doi": "10.5281/zenodo.19340221",
+      "landing_path": "publications/gate12a-first-replication-checkpoint/README.md",
+      "source_path": "docs/release/gate12a_first_replication_checkpoint",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/19340221"
+        },
+        "github_release": {
+          "tag": "gate12a-first-replication-checkpoint-2026-03-31",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/gate12a-first-replication-checkpoint-2026-03-31"
+        }
+      }
+    },
+    {
+      "slug": "gate2-telemetry-v1-0-1",
+      "title": "Gate2 Telemetry E2E (SSOT v4.1.0-ssot.3)",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-02-28",
+      "resource_type": "software_release",
+      "landing_path": "publications/gate2-telemetry-v1-0-1/README.md",
+      "targets": {
+        "github_release": {
+          "tag": "v1.0.1",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/v1.0.1"
+        }
+      }
+    }
   ]
 }

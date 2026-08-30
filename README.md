@@ -151,7 +151,7 @@ sufficient repair. No real held-out surface was opened. Final status:
 [balanced-prototype negative report](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md)
 
 The earlier replication checkpoint remains available as a
-[historical release surface](https://doi.org/10.5281/zenodo.19340221).
+[historical release surface](publications/gate12a-first-replication-checkpoint/README.md).
 Repository-level citation metadata is in [`CITATION.cff`](CITATION.cff).
 
 ## Amber: Interactive Companion
