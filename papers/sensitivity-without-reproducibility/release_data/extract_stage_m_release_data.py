@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export compact public Stage M records from the frozen sealed result.
+"""Export compact public records from the frozen Stage M result.
 
 This is a model-forward-free projection. It neither recomputes the scientific
 operators nor opens Stage E. The source hash and every reported aggregate are
@@ -222,7 +222,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if sha256_file(args.source) != SOURCE_SHA256:
-        raise ValueError("sealed map source SHA-256 mismatch")
+        raise ValueError("Stage M source SHA-256 mismatch")
     source = load_json(args.source)
     records, checks = build_records(source)
     args.output_dir.mkdir(parents=True, exist_ok=True)
