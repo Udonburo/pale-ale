@@ -1,0 +1,1468 @@
+{
+  "existing_b_fixed_grid_downsampling": {
+    "full_support_primary_feature": 0.00018199685461385876,
+    "grid": [
+      {
+        "absolute_log_error_to_full_feature": {
+          "max": 3.2674409524458254,
+          "min": 0.02812177324854249,
+          "p50": 1.6302748982572655,
+          "p90": 2.954354208891957
+        },
+        "all_layer_gate_pass_count": 2,
+        "all_layer_gate_pass_rate": 0.08333333333333333,
+        "block_feature_half_log_ratio": {
+          "max": 4.520849837882679,
+          "min": 0.04300954384939759,
+          "p50": 1.328775293975442,
+          "p90": 3.312058181916635
+        },
+        "layer_half_feature_log_ratio_diagnostic": {
+          "max": 7.497619544144952,
+          "min": 0.2177805439583299,
+          "p50": 2.293817921875905,
+          "p90": 4.858367974204186
+        },
+        "maximum_condition": {
+          "max": 114.28876016262873,
+          "min": 1.4337987490901183,
+          "p50": 3.616291310784989,
+          "p90": 29.628625972064107
+        },
+        "per_layer_gate_pass_rate": {
+          "21": 0.5833333333333334,
+          "43": 0.3333333333333333,
+          "62": 0.5833333333333334
+        },
+        "primary_feature": {
+          "max": 0.004776342460835534,
+          "min": 0.00012749015534454337,
+          "p50": 0.00093131308609682,
+          "p90": 0.0035034292716472947
+        },
+        "replicate_count": 24,
+        "samples_per_node_per_half": 8,
+        "split_half_spectral_floor": {
+          "max": 0.4475798615942942,
+          "min": 0.020621103923717826,
+          "p50": 0.16179163392502866,
+          "p90": 0.3265977645496205
+        }
+      },
+      {
+        "absolute_log_error_to_full_feature": {
+          "max": 3.3197191390572125,
+          "min": 0.022990903172835392,
+          "p50": 1.4666342213619803,
+          "p90": 2.433364438592614
+        },
+        "all_layer_gate_pass_count": 4,
+        "all_layer_gate_pass_rate": 0.16666666666666666,
+        "block_feature_half_log_ratio": {
+          "max": 2.7490409551496686,
+          "min": 0.09606472118626674,
+          "p50": 0.9458674708640677,
+          "p90": 1.7064783230341956
+        },
+        "layer_half_feature_log_ratio_diagnostic": {
+          "max": 8.834481443766867,
+          "min": 0.007656747225175387,
+          "p50": 1.6206059225124156,
+          "p90": 3.6651108996283273
+        },
+        "maximum_condition": {
+          "max": 4690.793515110411,
+          "min": 2.2329063846312724,
+          "p50": 7.828686837770719,
+          "p90": 41.024949738924576
+        },
+        "per_layer_gate_pass_rate": {
+          "21": 0.3333333333333333,
+          "43": 0.75,
+          "62": 0.7916666666666666
+        },
+        "primary_feature": {
+          "max": 0.005032683116527055,
+          "min": 0.0001778603161360598,
+          "p50": 0.0007891278751389971,
+          "p90": 0.0020982108054603886
+        },
+        "replicate_count": 24,
+        "samples_per_node_per_half": 12,
+        "split_half_spectral_floor": {
+          "max": 0.34940863444756937,
+          "min": 0.012721509643375208,
+          "p50": 0.13894163168530496,
+          "p90": 0.2857956075690526
+        }
+      },
+      {
+        "absolute_log_error_to_full_feature": {
+          "max": 3.045004826173358,
+          "min": 0.15249547951488157,
+          "p50": 1.1964570518512954,
+          "p90": 2.2097003196012244
+        },
+        "all_layer_gate_pass_count": 3,
+        "all_layer_gate_pass_rate": 0.125,
+        "block_feature_half_log_ratio": {
+          "max": 4.399751053407183,
+          "min": 0.15186986579863035,
+          "p50": 1.595549860175172,
+          "p90": 2.945860498419347
+        },
+        "layer_half_feature_log_ratio_diagnostic": {
+          "max": 6.03956662361462,
+          "min": 0.0015422611993987647,
+          "p50": 1.582967051967699,
+          "p90": 3.2760972744776944
+        },
+        "maximum_condition": {
+          "max": 52309.88954152988,
+          "min": 2.107988995659215,
+          "p50": 6.3555891371715205,
+          "p90": 39.4229051020269
+        },
+        "per_layer_gate_pass_rate": {
+          "21": 0.2916666666666667,
+          "43": 0.7916666666666666,
+          "62": 0.9583333333333334
+        },
+        "primary_feature": {
+          "max": 0.003823778048434312,
+          "min": 0.00021197850628857246,
+          "p50": 0.0006021980598809114,
+          "p90": 0.0016586518832180496
+        },
+        "replicate_count": 24,
+        "samples_per_node_per_half": 16,
+        "split_half_spectral_floor": {
+          "max": 0.34794647600524864,
+          "min": 0.03074095229998065,
+          "p50": 0.11527560444619275,
+          "p90": 0.2491556463661165
+        }
+      },
+      {
+        "absolute_log_error_to_full_feature": {
+          "max": 0,
+          "min": 0,
+          "p50": 0,
+          "p90": 0
+        },
+        "all_layer_gate_pass_count": 1,
+        "all_layer_gate_pass_rate": 1,
+        "block_feature_half_log_ratio": {
+          "max": 0.2037886392275792,
+          "min": 0.2037886392275792,
+          "p50": 0.2037886392275792,
+          "p90": 0.2037886392275792
+        },
+        "layer_half_feature_log_ratio_diagnostic": {
+          "max": 1.4355311414134937,
+          "min": 0.6579495470024924,
+          "p50": 0.8330877106672854,
+          "p90": 1.3150424552642521
+        },
+        "maximum_condition": {
+          "max": 10.183245180456218,
+          "min": 3.2147941936349462,
+          "p50": 7.444307684902596,
+          "p90": 9.635457681345494
+        },
+        "per_layer_gate_pass_rate": {
+          "21": 1,
+          "43": 1,
+          "62": 1
+        },
+        "primary_feature": {
+          "max": 0.00018199685461385876,
+          "min": 0.00018199685461385876,
+          "p50": 0.00018199685461385876,
+          "p90": 0.00018199685461385876
+        },
+        "replicate_count": 1,
+        "samples_per_node_per_half": 24,
+        "split_half_spectral_floor": {
+          "max": 0.10336954259110225,
+          "min": 0.05979640908591919,
+          "p50": 0.07134699189529327,
+          "p90": 0.09696503245194045
+        }
+      }
+    ],
+    "grid_samples_per_node_per_half": [
+      8,
+      12,
+      16,
+      24
+    ],
+    "layers": [
+      21,
+      43,
+      62
+    ],
+    "model_calls": 0,
+    "model_repository": "Qwen/Qwen3.6-27B",
+    "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+    "qualification_thresholds": {
+      "all_three_frozen_layers_required": true,
+      "broken_sensitivity_absolute_margin": 0.05,
+      "broken_sensitivity_multiplier": 2,
+      "edge_condition_ceiling": 1000000,
+      "frame_rank": 4,
+      "half_feature_log_ratio_ceiling": 1.3862943611198906,
+      "split_half_spectral_floor_ceiling": 0.2
+    },
+    "replicates_requested_below_full_support": 24,
+    "schema_version": "gate13_track_c_review2_b_downsampling_v1",
+    "source_kind": "EXISTING_QWEN3_6_27B_FRESH_B_ACTIVATIONS_ONLY",
+    "source_path": "workstream/local/gate13_causal_return_outputs/checkpoint_panel/retrieved/qwen3_6_27b/executions/b786d648-8ea6-564b-a1cd-0f797c614a00/fresh_square_operator",
+    "subsample_schedule_sha256": "78569ffac2a3cc7826482cf3e3f51e77a4a71413ac34baab843fadfd17ff44f3",
+    "subsample_seed": 13602026,
+    "track_c_outcome_read": false
+  },
+  "future_modal_budget": {
+    "allocation_created": false,
+    "cost_basis": "HISTORICAL_QWEN3_6_27B_FRESH_B_PROVIDER_COST_WITH_25PCT_CONTINGENCY",
+    "hard_ceiling_usd": 65
+  },
+  "generated_date": "2026-08-23",
+  "gpu_allocated": false,
+  "modal_called": false,
+  "model_calls": 0,
+  "model_free_sensitivity": {
+    "effect_grid_latent_partial_correlation": [
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9
+    ],
+    "frontier": [
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 15.187595751666665,
+        "total_scientific_forwards": 2816
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 23.387406311666666,
+        "total_scientific_forwards": 4352
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 31.587216871666666,
+        "total_scientific_forwards": 5888
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 39.787027431666665,
+        "total_scientific_forwards": 7424
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 18.604183484999997,
+        "total_scientific_forwards": 3456
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 26.803994044999996,
+        "total_scientific_forwards": 4992
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 35.003804605,
+        "total_scientific_forwards": 6528
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 43.203615164999995,
+        "total_scientific_forwards": 8064
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 22.020771218333334,
+        "total_scientific_forwards": 4096
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 30.220581778333333,
+        "total_scientific_forwards": 5632
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 38.420392338333336,
+        "total_scientific_forwards": 7168
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 46.620202898333325,
+        "total_scientific_forwards": 8704
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 28.853946685,
+        "total_scientific_forwards": 5376
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 37.053757245,
+        "total_scientific_forwards": 6912
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 45.25356780499999,
+        "total_scientific_forwards": 8448
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 16,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.17642015516853943,
+        "planning_upper_usd": 53.45337836499999,
+        "total_scientific_forwards": 9984
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": null,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 18.94584225833333,
+        "total_scientific_forwards": 3520
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 29.195605458333333,
+        "total_scientific_forwards": 5440
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 39.44536865833334,
+        "total_scientific_forwards": 7360
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 49.695131858333326,
+        "total_scientific_forwards": 9280
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 23.216576925000002,
+        "total_scientific_forwards": 4320
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 33.466340125,
+        "total_scientific_forwards": 6240
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 43.71610332499999,
+        "total_scientific_forwards": 8160
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 53.96586652499999,
+        "total_scientific_forwards": 10080
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 27.487311591666664,
+        "total_scientific_forwards": 5120
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 37.737074791666664,
+        "total_scientific_forwards": 7040
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 47.98683799166666,
+        "total_scientific_forwards": 8960
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 58.236601191666665,
+        "total_scientific_forwards": 10880
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 36.028780925,
+        "total_scientific_forwards": 6720
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 46.278544124999996,
+        "total_scientific_forwards": 8640
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 20,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 56.52830732499999,
+        "total_scientific_forwards": 10560
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 20,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.12954509941243159,
+        "planning_upper_usd": 66.77807052499999,
+        "total_scientific_forwards": 12480
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 22.704088764999998,
+        "total_scientific_forwards": 4224
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 35.003804605,
+        "total_scientific_forwards": 6528
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 47.30352044499999,
+        "total_scientific_forwards": 8832
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 59.603236284999994,
+        "total_scientific_forwards": 11136
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.9,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 27.828970365,
+        "total_scientific_forwards": 5184
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 40.128686205,
+        "total_scientific_forwards": 7488
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 52.42840204499999,
+        "total_scientific_forwards": 9792
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 64.72811788499999,
+        "total_scientific_forwards": 12096
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 32.953851965,
+        "total_scientific_forwards": 6144
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 45.25356780499999,
+        "total_scientific_forwards": 8448
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 57.55328364499999,
+        "total_scientific_forwards": 10752
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 24,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 69.85299948499998,
+        "total_scientific_forwards": 13056
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 43.203615164999995,
+        "total_scientific_forwards": 8064
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 24,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 55.50333100499999,
+        "total_scientific_forwards": 10368
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 24,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 67.80304684499998,
+        "total_scientific_forwards": 12672
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 24,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.10467564851226434,
+        "planning_upper_usd": 80.102762685,
+        "total_scientific_forwards": 14976
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 26.462335271666664,
+        "total_scientific_forwards": 4928
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 40.81200375166666,
+        "total_scientific_forwards": 7616
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 55.16167223166666,
+        "total_scientific_forwards": 10304
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 69.51134071166666,
+        "total_scientific_forwards": 12992
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 32.441363804999995,
+        "total_scientific_forwards": 6048
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 46.791032284999986,
+        "total_scientific_forwards": 8736
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 61.14070076499999,
+        "total_scientific_forwards": 11424
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 75.490369245,
+        "total_scientific_forwards": 14112
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 38.420392338333336,
+        "total_scientific_forwards": 7168
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 52.77006081833332,
+        "total_scientific_forwards": 9856
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 67.11972929833333,
+        "total_scientific_forwards": 12544
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 81.46939777833332,
+        "total_scientific_forwards": 15232
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 50.378449405,
+        "total_scientific_forwards": 9408
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 28,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 64.72811788499999,
+        "total_scientific_forwards": 12096
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 79.077786365,
+        "total_scientific_forwards": 14784
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 28,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.08944002524343418,
+        "planning_upper_usd": 93.42745484499999,
+        "total_scientific_forwards": 17472
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 30.220581778333333,
+        "total_scientific_forwards": 5632
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 46.620202898333325,
+        "total_scientific_forwards": 8704
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 63.019824018333324,
+        "total_scientific_forwards": 11776
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 8,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 79.41944513833333,
+        "total_scientific_forwards": 14848
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 37.053757245,
+        "total_scientific_forwards": 6912
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 53.45337836499999,
+        "total_scientific_forwards": 9984
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 69.85299948499998,
+        "total_scientific_forwards": 13056
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 12,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 86.25262060499999,
+        "total_scientific_forwards": 16128
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 43.88693271166666,
+        "total_scientific_forwards": 8192
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 60.28655383166666,
+        "total_scientific_forwards": 11264
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 76.68617495166666,
+        "total_scientific_forwards": 14336
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": false,
+        "cloud_samples_per_node_per_half": 16,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 93.08579607166665,
+        "total_scientific_forwards": 17408
+      },
+      {
+        "behavior_episodes_per_block": 8,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.25,
+        "block_count": 32,
+        "budget_eligible": true,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.7,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 57.55328364499999,
+        "total_scientific_forwards": 10752
+      },
+      {
+        "behavior_episodes_per_block": 16,
+        "behavior_precision_eligible": false,
+        "behavior_rms_relative_se_reference": 0.17677669529663687,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 73.95290476499999,
+        "total_scientific_forwards": 13824
+      },
+      {
+        "behavior_episodes_per_block": 24,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.14433756729740646,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 90.35252588499999,
+        "total_scientific_forwards": 16896
+      },
+      {
+        "behavior_episodes_per_block": 32,
+        "behavior_precision_eligible": true,
+        "behavior_rms_relative_se_reference": 0.125,
+        "block_count": 32,
+        "budget_eligible": false,
+        "cloud_empirical_validity_eligible": true,
+        "cloud_samples_per_node_per_half": 24,
+        "minimum_grid_latent_partial_correlation_at_80pct_power": 0.6,
+        "null_95pct_lobo_statistic": 0.06697630800506331,
+        "planning_upper_usd": 106.75214700499998,
+        "total_scientific_forwards": 19968
+      }
+    ],
+    "interpretation": "DESIGN_SENSITIVITY_ONLY; NOT AN EFFECT-SIZE FORECAST AND NOT POWER CALIBRATED_FROM_A_TRACK_C_OUTCOME",
+    "minimum_qualified_design_power_curve": [
+      {
+        "estimated_power": 0.075,
+        "latent_partial_correlation": 0.2
+      },
+      {
+        "estimated_power": 0.128,
+        "latent_partial_correlation": 0.3
+      },
+      {
+        "estimated_power": 0.186,
+        "latent_partial_correlation": 0.4
+      },
+      {
+        "estimated_power": 0.309,
+        "latent_partial_correlation": 0.5
+      },
+      {
+        "estimated_power": 0.431,
+        "latent_partial_correlation": 0.6
+      },
+      {
+        "estimated_power": 0.598,
+        "latent_partial_correlation": 0.7
+      },
+      {
+        "estimated_power": 0.814,
+        "latent_partial_correlation": 0.8
+      },
+      {
+        "estimated_power": 0.962,
+        "latent_partial_correlation": 0.9
+      }
+    ],
+    "one_sided_alpha": 0.05,
+    "planning_assumptions": {
+      "behavior_noise_scaling": "sqrt(24/behavior_episodes)",
+      "depth_balance": "EQUAL_COUNTS_PROSPECTIVELY_ASSIGNED",
+      "depth_levels": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "interpretation": "MODEL_FREE_DESIGN_SENSITIVITY_NOT_AN_EFFECT_FORECAST",
+      "representation_noise_scaling": "sqrt(24/cloud_size)",
+      "standardized_behavior_noise_sd_at_e24": 0.5,
+      "standardized_representation_noise_sd_at_n24": 0.35
+    },
+    "primary_statistic": "1-SSE_full_LOBO/SSE_nuisance_LOBO",
+    "selected_power_curve": [
+      {
+        "estimated_power": 0.077,
+        "latent_partial_correlation": 0.2
+      },
+      {
+        "estimated_power": 0.139,
+        "latent_partial_correlation": 0.3
+      },
+      {
+        "estimated_power": 0.259,
+        "latent_partial_correlation": 0.4
+      },
+      {
+        "estimated_power": 0.398,
+        "latent_partial_correlation": 0.5
+      },
+      {
+        "estimated_power": 0.56,
+        "latent_partial_correlation": 0.6
+      },
+      {
+        "estimated_power": 0.778,
+        "latent_partial_correlation": 0.7
+      },
+      {
+        "estimated_power": 0.925,
+        "latent_partial_correlation": 0.8
+      },
+      {
+        "estimated_power": 0.991,
+        "latent_partial_correlation": 0.9
+      }
+    ],
+    "simulation_count_per_cell_and_effect": 1000,
+    "simulation_seed": 13602028,
+    "target_power": 0.8
+  },
+  "proposed_design": {
+    "behavior_episodes_per_block": 24,
+    "block_count": 20,
+    "cloud_samples_per_node_per_half": 24,
+    "cost_forecast": {
+      "behavior_forwards": 5760,
+      "contingency_multiplier": 1.25,
+      "depth_counts": {
+        "2": 5,
+        "4": 5,
+        "6": 5,
+        "8": 5
+      },
+      "depth_schedule": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        4,
+        4,
+        4,
+        4,
+        4,
+        6,
+        6,
+        6,
+        6,
+        6,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "empirical_linear_forecast_usd": 45.22264585999999,
+      "empirical_qwen3_6_fresh_b_cost_per_forward_usd": 0.004270734666666666,
+      "fixed_acquisition_and_preflight_reference_usd": 0.12368778,
+      "gpu_rate_basis_only_not_allocation": "HISTORICAL_QWEN3_6_27B_A100_80GB_FRESH_B",
+      "map_activation_forwards": 4800,
+      "planning_upper_usd": 56.52830732499999,
+      "total_scientific_forwards": 10560
+    },
+    "failed_blocks_replaced_or_added": false,
+    "map_forwards_per_block": 240,
+    "map_halves_per_block": 2,
+    "map_nodes_per_half": 5,
+    "minimum_grid_latent_partial_correlation_at_80pct_power": 0.8,
+    "minimum_qualified_blocks": 16,
+    "minimum_qualified_blocks_per_rollout_depth": 4,
+    "minimum_qualified_grid_latent_partial_correlation_at_80pct_power": 0.8,
+    "rollout_depth_counts": {
+      "2": 5,
+      "4": 5,
+      "6": 5,
+      "8": 5
+    },
+    "rollout_depth_levels": [
+      2,
+      4,
+      6,
+      8
+    ],
+    "selected": true
+  },
+  "schema_version": "gate13_track_c_review2_sensitivity_and_cost_v1",
+  "scope": "REVIEW2_ESTIMAND_DESIGN_ONLY",
+  "selection_rule": {
+    "behavior_rule": "REQUIRE_REFERENCE_RMS_RELATIVE_SE_AT_MOST_0.15",
+    "budget_rule": "PLANNING_UPPER_MUST_NOT_EXCEED_65_USD",
+    "cloud_rule": "REQUIRE_EMPIRICALLY_QUALIFIED_FULL_SUPPORT_N24",
+    "outcome_adaptive_changes": "FORBIDDEN",
+    "ranking_rule": "MINIMIZE_GRID_MDE_THEN_MAXIMIZE_BLOCK_COUNT_THEN_MINIMIZE_COST"
+  },
+  "sensitivity_limits": [
+    "Only the n=24 historical full-support grid point has one complete all-layer pass; n=8/12/16 fail rates are diagnostic, not block-level qualification-probability estimates.",
+    "The selected 20/24/24 design reaches 80% simulated sensitivity only at a latent partial correlation of 0.80 on the frozen grid.",
+    "The minimum-qualified 16/24/24 analysis has still weaker grid sensitivity; small or moderate effects are not reliably detectable.",
+    "Noise parameters are declared planning assumptions, not estimates from a Track C coupling outcome.",
+    "Cost extrapolation uses historical fresh-B average cost per forward; future provider/runtime variance is represented only by 25% contingency."
+  ],
+  "source_provenance": {
+    "artifact_manifest_payload_sha256": "4be617978a27718d6c76a1bee5a3a23b5b1a358aff5f062490740d2842f0caa1",
+    "artifact_manifest_sha256": "e0c07028f8d0bad5beb74a19d12e374e461f031bc1fde4ba65ac6593a4f17fec",
+    "qualification_result_sha256": "3edb6ce5bedb7c9ec2df93a319b25c8253010460fb14375949ae2869f7bae464",
+    "response_or_logit_files_read": false,
+    "source_kind": "EXISTING_QWEN3_6_27B_FRESH_B_ACTIVATIONS_ONLY",
+    "source_path": "workstream/local/gate13_causal_return_outputs/checkpoint_panel/retrieved/qwen3_6_27b/executions/b786d648-8ea6-564b-a1cd-0f797c614a00/fresh_square_operator",
+    "terminal_state_sha256": "bfc7bdf083ee1f49ab3efb87fda98966cdcc5f1a08c50612d02ec5fdf441e34b"
+  },
+  "terminal_recommendation": "REVIEW2_READY_FOR_HUMAN_AUTHORIZATION",
+  "track_c_outcome_read": false
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": "gate13_review1_binding_v1",
+  "base_git_commit": "9e50de1a1a57f7a16cbf97eacadb207d135fa50a",
+  "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
+  "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
+  "review1_statuses": {
+    "review_1_decision": "PASS_WITH_SCOPED_DUAL_AUTHORIZATION",
+    "track_a_model_free_preflight": "PASS",
+    "b1_synthetic_qualification": "PASS",
+    "b0_general_cycle_component": "UNRESOLVED_BLOCKED",
+    "b2a_explicit_triangle_pilot": "DOES_NOT_DEPEND_ON_GENERAL_CYCLE_AUTHORITY",
+    "track_a_phase_2": "CONDITIONALLY_AUTHORIZED_AFTER_LOCK",
+    "b2a_phase_2": "CONDITIONALLY_AUTHORIZED_AFTER_LOCK",
+    "a3": "CLOSED",
+    "track_c": "CLOSED",
+    "activation_extraction": "CLOSED",
+    "hidden_state_intervention": "CLOSED",
+    "alignment_search": "CLOSED",
+    "amber_integration": "CLOSED"
+  },
+  "review1_test_count": 83,
+  "review1_test_breakdown": {
+    "new_tests": 20,
+    "existing_compatibility_tests": 63,
+    "skipped": 0,
+    "expected_failures": 0
+  },
+  "review1_test_command": [
+    "python -m compileall -q tools/gate13_causal_return",
+    "python -m unittest discover -s tools/gate13_causal_return -p 'test_*.py' -v",
+    "python -m unittest tools.test_inspect_gate12c_associator_feasibility tools.test_run_gate12a_discrete_connection_audit tools.test_run_gate12c_compressed_overlap_associator -v"
+  ],
+  "review1_files_instrumented": [
+    "tools/gate13_causal_return/README.md",
+    "tools/gate13_causal_return/__init__.py",
+    "tools/gate13_causal_return/track_a/__init__.py",
+    "tools/gate13_causal_return/track_a/compile_register_cases.py",
+    "tools/gate13_causal_return/track_a/dry_run_register_runner.py",
+    "tools/gate13_causal_return/track_a/oracle.py",
+    "tools/gate13_causal_return/track_a/parse_register_output.py",
+    "tools/gate13_causal_return/track_a/render_register_cases.py",
+    "tools/gate13_causal_return/track_a/tests/__init__.py",
+    "tools/gate13_causal_return/track_a/tests/test_track_a.py",
+    "tools/gate13_causal_return/track_a/validate_register_cases.py",
+    "tools/gate13_causal_return/track_b/__init__.py",
+    "tools/gate13_causal_return/track_b/operator_core.py",
+    "tools/gate13_causal_return/track_b/split_half_floor.py",
+    "tools/gate13_causal_return/track_b/synthetic_operator_cases.py",
+    "tools/gate13_causal_return/track_b/tests/__init__.py",
+    "tools/gate13_causal_return/track_b/tests/test_topology_census.py",
+    "tools/gate13_causal_return/track_b/tests/test_track_b.py",
+    "tools/gate13_causal_return/track_b/topology_census.py"
+  ],
+  "general_cycle_status": "UNRESOLVED_BLOCKED",
+  "formal_gate13_status": "CLOSED"
+}

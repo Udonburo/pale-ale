@@ -1,0 +1,68 @@
+{
+  "case_count": 4,
+  "cases": [
+    {
+      "case_id": "a0-l12-y0-early-r0-S",
+      "condition": "S",
+      "constrained_max_new_tokens_policy": "exact canonical syntax content token count plus one terminal EOS",
+      "contributes_to_a0_a1_a2_metrics": false,
+      "grammar_id": "register-0-1-2-3-4-5-6-7-8-9-10-11-12",
+      "legacy_free_generation_max_new_tokens": 84,
+      "ordinal": 1,
+      "prompt_sha256": "3eadff30ee28a1c3ac08e7ea8817b25393aa581de9069a7d1c2af1b8c2b8df7a",
+      "reused_as_a0_checkpoint": false,
+      "source_case_sha256": "bfe5a9e922bd0d1bb589ba20dc4907a38cfd19b418d73c706120ac3911ef1b19",
+      "source_stage": "A0",
+      "stage": "M1_DEVELOPMENT_PREFLIGHT"
+    },
+    {
+      "case_id": "a0-l12-y0-early-r0-O",
+      "condition": "O",
+      "constrained_max_new_tokens_policy": "exact canonical syntax content token count plus one terminal EOS",
+      "contributes_to_a0_a1_a2_metrics": false,
+      "grammar_id": "register-2-3-4-5-6-7-8-9-10-11-12",
+      "legacy_free_generation_max_new_tokens": 77,
+      "ordinal": 2,
+      "prompt_sha256": "14c492644559b2d0bb5922913e53828b73330dc1d5b10004829c99f69ccc4ef7",
+      "reused_as_a0_checkpoint": false,
+      "source_case_sha256": "cfd688a32d8edf3578a32de878dbece2a435f0e9fc23aac314fc0a7841209e74",
+      "source_stage": "A0",
+      "stage": "M1_DEVELOPMENT_PREFLIGHT"
+    },
+    {
+      "case_id": "a0-l12-y0-early-r0-E",
+      "condition": "E",
+      "constrained_max_new_tokens_policy": "exact canonical syntax content token count plus one terminal EOS",
+      "contributes_to_a0_a1_a2_metrics": false,
+      "grammar_id": "register-2-3-4-5-6-7-8-9-10-11-12",
+      "legacy_free_generation_max_new_tokens": 77,
+      "ordinal": 3,
+      "prompt_sha256": "dff09909c09ed61a0eca0861d3dcbb307ad8df8ba21449033a0311be1c763e50",
+      "reused_as_a0_checkpoint": false,
+      "source_case_sha256": "5f7485c4c9a146fd94a220610f4468d1a58b9f80e1f4865dbea2c3c65f4258a6",
+      "source_stage": "A0",
+      "stage": "M1_DEVELOPMENT_PREFLIGHT"
+    },
+    {
+      "case_id": "a0-l12-y0-early-r0-N",
+      "condition": "N",
+      "constrained_max_new_tokens_policy": "exact canonical syntax content token count plus one terminal EOS",
+      "contributes_to_a0_a1_a2_metrics": false,
+      "grammar_id": "register-2-3-4-5-6-7-8-9-10-11-12",
+      "legacy_free_generation_max_new_tokens": 77,
+      "ordinal": 4,
+      "prompt_sha256": "cb1f7fea626f3b912ef2df07f904f847f25a2c18c6d14ddd04cec997649cfa80",
+      "reused_as_a0_checkpoint": false,
+      "source_case_sha256": "35fa8c35813438234ac0b8fa7347ebb205249ed7d2dfd4bdb729d7e43e49062b",
+      "source_stage": "A0",
+      "stage": "M1_DEVELOPMENT_PREFLIGHT"
+    }
+  ],
+  "channel_manifest_sha256": "038723ffeaf2716b4f2eccd80860285c5f70011a09fb6bfe2560ec738032f8f2",
+  "development_case_level_forward_count": 4,
+  "manifest_sha256": "4562479d54ea81feb420637f45b1f81f59a98e9c967b8dad570138229b176870",
+  "reuse_as_a0_checkpoint_count": 0,
+  "schema_version": "gate13_track_a_constrained_m1_manifest_v1",
+  "scientific_metric_contribution_count": 0,
+  "selection_rule": "same frozen S/O/E/N maximum-length surfaces used for prior preflight; development-only outputs are isolated from every scientific metric"
+}

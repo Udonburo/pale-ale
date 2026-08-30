@@ -1,0 +1,64 @@
+{
+  "schema_version": "gate13_b2b_fresh_substrate_reservation_v1",
+  "status": "RESERVED_NOT_AUTHORIZED",
+  "prepared_at": "2026-08-19T23:11:57.8462778+09:00",
+  "authority_bindings": {
+    "planning_base_commit": "5245ff00fd06730f71e2239ef0f30aee3e79d0e1",
+    "review1_snapshot_commit": "2eaea5d7a94885151a8b3c170a43e4051820948e",
+    "phase2_code_commit": "259884d5dc146877bb95428c987697a17a6fbd22",
+    "handoff_sha256": "7981c6339d6b7d4e1a07fc2b1e5c092bed119d96e0dfa8c998599adad3f35bcd",
+    "review1_report_sha256": "0401ce462cb8bbf03cf0013c68c2ccec9dcf73d4db64b212af02f45014c0ad20",
+    "phase2_b2a_lock_sha256": "58317d5a608a6b6717e189c142cfafce47fdb42d63ace734f5e32e50ef27d714",
+    "phase2_final_state_sha256": "e4b173273fe056d412a813f5d918084dae0de06ee83c6c89411bb7e7bc717e63",
+    "b2a_result_sha256": "da8a611b94f6c0104e0d66af4961e43b061235b9d633f6d5a5f78ba2ad2cb14c"
+  },
+  "historical_b2a": {
+    "campaign": "B2A_HISTORICAL_12RUN",
+    "status": "TERMINATED_SUBSTRATE_INADEQUATE",
+    "reason": "independent sample-half source unavailable in 12/12 runs",
+    "source_run_count": 12,
+    "source_sufficient_run_count": 0,
+    "reopen": false,
+    "operator_outcome_row_read_count": 0
+  },
+  "track_b_scientific_question": {
+    "status": "OPEN",
+    "historical_substrate_termination_is_scientific_refutation": false
+  },
+  "fresh_b2b_substrate": {
+    "status": "RESERVED_NOT_AUTHORIZED",
+    "primary_reestimation_design": "independent nuisance halves and independent sample halves",
+    "independent_half_requirement_may_be_replaced_by_bootstrap": false,
+    "independent_half_requirement_may_be_replaced_by_synthetic_noise": false,
+    "bootstrap_role": "SECONDARY_CONTROL_FOR_PRIOR_ART_COMPARABILITY_ONLY",
+    "required_packet_retention": {
+      "P_p": "RAW_REQUIRED",
+      "P_q": "RAW_REQUIRED",
+      "S_p": "REQUIRED",
+      "S_q": "REQUIRED",
+      "H_path": "REQUIRED",
+      "H_edge": "REQUIRED"
+    },
+    "novelty_exclusion": "generic stable holonomy is not itself a novelty claim",
+    "primary_instrument_question": "reproducible operator information beyond the legacy scalar",
+    "long_term_scientific_question": "held-out functional prediction beyond scalar/confidence/conditioning baselines"
+  },
+  "cross_track_firewall": {
+    "track_a_effect_size_may_select_b_metrics": false,
+    "track_a_failure_location_may_select_b_metrics": false,
+    "track_a_prompt_differences_may_select_b_metrics": false
+  },
+  "resource_gate": {
+    "current_branch_a2_pass_may_gate_fresh_b2b_resources": true,
+    "a2_fail_interpretation": "END_CURRENT_CAUSAL_REGISTER_COUPLING",
+    "a2_fail_refutes_track_b_in_general": false
+  },
+  "authorization": {
+    "activation_extraction": false,
+    "b2b_execution": false,
+    "track_c": false,
+    "a3": false,
+    "formal_gate13": false
+  },
+  "implementation_status": "NOT_IMPLEMENTED"
+}

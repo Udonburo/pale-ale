@@ -1,0 +1,177 @@
+{
+  "schema_version": "gate13_track_a_constrained_modal_execution_authorization_v1",
+  "execution_authorized": true,
+  "operational_scope": "TRACK_A_CONSTRAINED_CHANNEL_ONLY",
+  "implementation_commit": "9f1aa5cfd00d3b273c2e85be071712172b80c989",
+  "bound_file_hashes": {
+    "analysis/gate13_causal_return/phase2/TRACK_A_CONSTRAINED_CHANNEL_DECISION.md": "636b194088c52bfd2547f885b24c0ab504d2c07c1c9f88ddc604aba6565ccbd2",
+    "analysis/gate13_causal_return/phase2/phase2_a_constrained_channel_lock.json": "2787e1c270405d2dae5cedd5d431500d87a41669175b4ec925c6f49215f0e7dd",
+    "analysis/gate13_causal_return/phase2/track_a_constrained_channel_manifest.json": "d51460e337d10067ae763d0af2b88ab02464978a8ed7126ed6659204092b947f",
+    "tools/gate13_causal_return/modal/m1_constrained_preflight_manifest.json": "e4a7a544c7ee9caec6d1eced59be005c09acaba9d11db39c37fe3d279b958990",
+    "tools/gate13_causal_return/modal/modal_track_a_constrained.py": "8677f64dcf719589c5e6c50da9684504f69d8f839f9879a97dc0ca352b53e74c",
+    "tools/gate13_causal_return/modal/validate_constrained_channel.py": "274c1563ba85106068ac501257a482de3b19d5290c2da7dc6bf795bef9503414",
+    "tools/gate13_causal_return/modal/validate_constrained_modal_execution_authority.py": "b9fd9383036a9ebd9fdee062c9ccf2e4371049356f7bd325323c2dae03dce2d6",
+    "tools/gate13_causal_return/track_a/compile_constrained_channel.py": "87419f8ba2e26f16f457adfa85a3f1c1ef7e87a8b3627dff63cb28dd6d0aded9",
+    "tools/gate13_causal_return/track_a/constrained_channel.py": "b82373e471197945d351daaff46b64492a87c18e50740429e146a9dac2b684e2",
+    "tools/gate13_causal_return/track_a/constrained_runner.py": "14e1fd901c7f30d081634bd20b7784fe8e215e2b4bba10cdb2bf7bfac6090cc3",
+    "tools/gate13_causal_return/track_a/validate_constrained_channel_lock.py": "409263cc6fe00b44762c79ee203a0556219127b0e89b7a7ae5981d53cdf80a4c"
+  },
+  "constrained_channel_lock_sha256": "2787e1c270405d2dae5cedd5d431500d87a41669175b4ec925c6f49215f0e7dd",
+  "exact_validation": {
+    "status": "PASS",
+    "local_receipt_path": "workstream/local/gate13_causal_return_outputs/phase2/modal_track_a_constrained/preflight/exact_validation.json",
+    "receipt_sha256": "46e1715c4bf32f3e2199d72fa06ef2424df80dc02885fb67e5c7d5ba8affd11f",
+    "exact_packages": {
+      "python": "3.11.2",
+      "tokenizers": "0.22.2",
+      "torch": "2.7.1+cu126",
+      "transformers": "5.15.0"
+    },
+    "exhaustive_assignment_count": 22022,
+    "legacy_free_generation_shortfall_case_count": 66,
+    "scientific_weights_loaded": false,
+    "scientific_case_output_generated": false,
+    "scientific_forward_count": 0
+  },
+  "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+  "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+  "modal_image_object_id": "im-qGY9YJtXkRZdnUMLuIUrhl",
+  "modal_image_definition": {
+    "base_image": "python:3.11.2-slim-bullseye@sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+    "base_image_linux_amd64_digest": "sha256:9ad4ffc502779e5508f7ac1eccab4a22786b80bd53d721d735f6de0840b245a1",
+    "base_image_manifest_digest": "sha256:2f749ef90f54fd4b3c77cde78eec23ab5b8199d9ac84e4ced6ae523ef223ef7b",
+    "copied_roots": [
+      "tools/gate13_causal_return",
+      "analysis/gate13_causal_return/phase2"
+    ],
+    "entrypoint_alias": {
+      "destination": "/opt/gate13/modal_track_a_constrained.py",
+      "source": "tools/gate13_causal_return/modal/modal_track_a_constrained.py"
+    },
+    "excluded_from_image": [
+      "**/__pycache__/**",
+      "**/*.pyc",
+      "phase2_a_modal_execution_authorization.json",
+      "phase2_a_modal_execution_authorization_v2.json",
+      "phase2_a_constrained_modal_execution_authorization.json"
+    ],
+    "output_channel": "CANONICAL_TOKEN_FINITE_STATE_PREFIX_CONSTRAINT",
+    "pip": "26.2.1",
+    "python": "3.11.2",
+    "pytorch_extra_index_url": "https://download.pytorch.org/whl/cu126",
+    "requirements": [
+      "accelerate==1.14.0",
+      "annotated-doc==0.0.5",
+      "anyio==4.14.2",
+      "certifi==2026.7.22",
+      "click==8.4.2",
+      "colorama==0.4.6",
+      "filelock==3.32.3",
+      "fsspec==2026.7.0",
+      "h11==0.16.0",
+      "hf-xet==1.6.0",
+      "httpcore==1.0.9",
+      "httpx==0.28.1",
+      "huggingface-hub==1.27.0",
+      "idna==3.19",
+      "jinja2==3.1.6",
+      "markdown-it-py==4.2.0",
+      "markupsafe==3.0.3",
+      "mdurl==0.1.2",
+      "mpmath==1.3.0",
+      "networkx==3.6.1",
+      "numpy==2.4.6",
+      "nvidia-cublas-cu12==12.6.4.1",
+      "nvidia-cuda-cupti-cu12==12.6.80",
+      "nvidia-cuda-nvrtc-cu12==12.6.77",
+      "nvidia-cuda-runtime-cu12==12.6.77",
+      "nvidia-cudnn-cu12==9.5.1.17",
+      "nvidia-cufft-cu12==11.3.0.4",
+      "nvidia-cufile-cu12==1.11.1.6",
+      "nvidia-curand-cu12==10.3.7.77",
+      "nvidia-cusolver-cu12==11.7.1.2",
+      "nvidia-cusparse-cu12==12.5.4.2",
+      "nvidia-cusparselt-cu12==0.6.3",
+      "nvidia-nccl-cu12==2.26.2",
+      "nvidia-nvjitlink-cu12==12.6.85",
+      "nvidia-nvtx-cu12==12.6.77",
+      "packaging==26.3",
+      "psutil==7.2.2",
+      "pygments==2.21.0",
+      "pyyaml==6.0.3",
+      "regex==2026.7.19",
+      "rich==15.0.0",
+      "safetensors==0.8.0",
+      "setuptools==80.9.0",
+      "shellingham==1.5.4",
+      "sympy==1.14.0",
+      "tokenizers==0.22.2",
+      "torch==2.7.1+cu126",
+      "tqdm==4.70.0",
+      "transformers==5.15.0",
+      "triton==3.3.1",
+      "typer==0.27.1",
+      "typing-extensions==4.16.0",
+      "wheel==0.46.3"
+    ],
+    "schema_version": "gate13_track_a_constrained_modal_image_definition_v1"
+  },
+  "modal_image_definition_sha256": "2224f67bddad2344149dda356a90194efdb666ed1643d0c650328229acef8b70",
+  "gpu_type": "NVIDIA L40S",
+  "execution_identity": "e941e509-ab69-4965-85a2-f48a622d89b7",
+  "model_volume": {
+    "name": "gate13-track-a-qwen3-8b-b968826-model",
+    "object_id": "vo-qcBxnmomu5avCRoacF7eKW",
+    "identity": {
+      "file_count": 15,
+      "total_bytes": 16397461266,
+      "model_directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+      "config_sha256": "f7c4eadfbbf522470667b797a3c89be2524832d2d599797248dc304fff447c30",
+      "tokenizer_config_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+      "tokenizer_json_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "weight_index_sha256": "f9fdbcb91c23971c13ec5d5f2573d2349e8f61f2f049371ec699281748fdb1bc"
+    }
+  },
+  "result_volume": {
+    "name": "gate13-track-a-constrained-v1-results",
+    "object_id": "vo-YkuedSYpGUC474NEXuWDyv",
+    "initial_inventory_count": 0,
+    "dedicated_execution_identity": "e941e509-ab69-4965-85a2-f48a622d89b7"
+  },
+  "forward_accounting": {
+    "cumulative_ceiling": 600,
+    "prior_consumed_count": 5,
+    "maximum_additional_count": 595
+  },
+  "spend_accounting": {
+    "cumulative_ceiling_usd": 25.0,
+    "prior_usage_reservation_usd": 0.12,
+    "maximum_new_usage_usd": 24.88
+  },
+  "gpu_wall_accounting": {
+    "cumulative_ceiling_seconds": 36000.0,
+    "prior_reservation_seconds": 143.93,
+    "maximum_new_seconds": 35856.07
+  },
+  "m1_case_ids": [
+    "a0-l12-y0-early-r0-S",
+    "a0-l12-y0-early-r0-O",
+    "a0-l12-y0-early-r0-E",
+    "a0-l12-y0-early-r0-N"
+  ],
+  "m1_metric_contribution_count": 0,
+  "modal_automatic_retries": 0,
+  "maximum_active_gpu_containers": 1,
+  "prior_executions": "IMMUTABLE_AND_NOT_REOPENED",
+  "closed_surfaces": {
+    "B2A_HISTORICAL_12RUN": "TERMINATED_SUBSTRATE_INADEQUATE",
+    "TRACK_B_SCIENTIFIC_QUESTION": "OPEN",
+    "B2B_FRESH_SUBSTRATE": "RESERVED_NOT_AUTHORIZED",
+    "B2B_EXECUTION": "NOT_AUTHORIZED",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "ACTIVATION_EXTRACTION": "CLOSED",
+    "PUBLIC_README_OR_GATE_MAP_EDITS": "FORBIDDEN"
+  }
+}

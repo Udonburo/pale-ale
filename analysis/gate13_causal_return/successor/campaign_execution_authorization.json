@@ -1,0 +1,102 @@
+{
+  "schema_version": "gate13_stepwise_successor_campaign_execution_authorization_v1",
+  "execution_authorized": true,
+  "one_time_execution": true,
+  "execution_identity": "a241bc88-2176-4fa3-9da7-9ddaa2cd85ba",
+  "campaign_binding_id": "94c7f7f7-6e51-46d3-8aa2-6a66a23dfdbd",
+  "starting_commit": "ab047352ff03cb0ce409664470cb633a9ea35ccc",
+  "prior_immutable_execution": {
+    "execution_identity": "e941e509-ab69-4965-85a2-f48a622d89b7",
+    "terminal_state": "A0_FAIL",
+    "cumulative_forward_count": 261,
+    "results_overwrite": "FORBIDDEN"
+  },
+  "qualification_commit": "be28350f5877c6a0e4e76ea3370e91cef343d736",
+  "implementation_commit": "b5a7e80b12aede789ad7733385698f37a99a8f96",
+  "selected_variant": "natural_rule_v1",
+  "track_a_lock": "stepwise_track_a_qualification_lock.json",
+  "track_a_lock_sha256": "7baa89d83c9f5b8ca5c8eb49d4ecc849aa127f6b7e056da665998d0bb465d6b0",
+  "track_b_lock": "fresh_operator_qualification_lock.json",
+  "track_b_lock_sha256": "f684788571150683eeca57295d53537bc728d7d80e3e229e05d9094010a1530b",
+  "track_a_ledger_sha256": "f5e436496b3f607b6e0e51fb9856e04fa5b0beafc6011fb44a5dd0d84a1c898f",
+  "track_b_collection_ledger_sha256": "839da5097d14144188840ccb56c8d08d22fd8a97a418f2106f804755d0a4720e",
+  "modal_image": {
+    "object_id": "im-XlRNvZiFrhGfyDRsn7LPQd",
+    "definition_sha256": "1d99725ca7796aa8bdc6444b9ac4c757e2042bb6ce44f93eed0c147f5441e385",
+    "exact_cpu_validation_sha256": "a9759d0dbf7dbfe9ec62f3064d8af78bef7f25496ec63b200d1b2d52baac89dd5",
+    "exact_cpu_validation_status": "PASS",
+    "scientific_forward_count": 0
+  },
+  "model_volume": {
+    "name": "gate13-track-a-qwen3-8b-b968826-model",
+    "object_id": "vo-qcBxnmomu5avCRoacF7eKW",
+    "directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+    "file_count": 15,
+    "total_bytes": 16397461266,
+    "download_authorized": false
+  },
+  "result_volume": {
+    "name": "gate13-stepwise-successor-qualification",
+    "object_id": "vo-scvEnaVBJrLmtyGJFF79p7",
+    "fresh_for_execution_identity": true,
+    "prior_result_volume_write": "FORBIDDEN"
+  },
+  "model_runtime": {
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "gpu": "NVIDIA L40S",
+    "driver": "580.95.05",
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "local_files_only": true,
+    "offline": true
+  },
+  "development_accounting": {
+    "forward_count": 62,
+    "estimated_modal_usage_usd": 0.11670221996389338,
+    "execution_identities": [
+      "0554a71b-b0d9-4780-b30d-abb599183bbb",
+      "0841193e-2ec7-4f54-b56f-ba20a09e5e42"
+    ]
+  },
+  "limits": {
+    "maximum_new_campaign_forwards": 650,
+    "development_forwards_consumed": 62,
+    "maximum_track_a_qualification_forwards": 232,
+    "maximum_track_b_collection_forwards": 240,
+    "maximum_fully_opened_campaign_forwards": 534,
+    "remaining_unallocated_forward_reserve": 116,
+    "maximum_incremental_modal_spend_usd": 12.0,
+    "automatic_retries": 0,
+    "maximum_active_gpu_containers": 1,
+    "qualification_gpu_timeout_seconds": 10800
+  },
+  "conditional_execution": [
+    "M0 runtime and model Volume identity mismatch -> T4 at forward 0",
+    "STREAM-A0 FAIL -> T1; STREAM-A1/A2/Track B unopened",
+    "STREAM-A0 PASS -> STREAM-A1",
+    "STREAM-A1 FAIL -> T1; STREAM-A2/Track B unopened",
+    "STREAM-A1 PASS -> STREAM-A2",
+    "STREAM-A2 FAIL -> T1; Track B unopened",
+    "STREAM-A2 PASS -> fresh Track B activation collection and qualification",
+    "Track B FAIL -> T2",
+    "Track B PASS -> T3",
+    "mandatory stop at T1/T2/T3/T4"
+  ],
+  "closed_surfaces": {
+    "old_constrained_candidate_rescue_or_rerun": "FORBIDDEN",
+    "A3": "CLOSED",
+    "TRACK_C": "CLOSED",
+    "FORMAL_GATE13": "CLOSED",
+    "activation_extraction_outside_conditionally_authorized_fresh_Track_B": "CLOSED",
+    "general_cycle_space": "UNCHANGED_UNOPENED",
+    "public_docs": "UNCHANGED",
+    "push": "FORBIDDEN"
+  }
+}

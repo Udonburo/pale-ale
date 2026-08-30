@@ -1,0 +1,67 @@
+{
+  "schema_version": "gate13_track_c_terminal_closeout_binding_v1",
+  "generated_date": "2026-08-27",
+  "status": "IMMUTABLE_TERMINAL_CLOSEOUT",
+  "terminal_state": "MAP_COMPLETE_NOT_QUALIFIED",
+  "closed_route": "TRACK_C_REVIEW2_1_BLOCKWISE_OPERATOR_ROUTE",
+  "stage_m": "COMPLETE_NOT_QUALIFIED",
+  "stage_e": "UNOPENED_MAP_NOT_QUALIFIED",
+  "coupled_r_to_y_hypothesis": "UNTESTED",
+  "broader_track_c_scientific_question": "UNRESOLVED_NO_ACTIVE_PROTOCOL",
+  "a3": "CLOSED",
+  "formal_gate13": "CLOSED",
+  "execution": {
+    "execution_id": "bf41b049-f04b-442e-b0bd-05c8adbd4944",
+    "source_commit": "ea4558f0fcfd8944499407747615ec5bf41c1542",
+    "review2_1_parent_commit": "f5eeaef8bc8965287794c00dc39e18a817717486",
+    "model": "Qwen/Qwen3.6-27B",
+    "model_revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+    "model_directory_identity_sha256": "70abf71fc4b9c8b25c061043023e3d04528585c4d554ad7538ada2145c2c9e4a",
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "scientific_stage_m_forwards": 4800,
+    "stage_e_forwards": 0,
+    "qualified_blocks": 5,
+    "planned_blocks": 20,
+    "qualified_by_depth": {
+      "2": 0,
+      "4": 2,
+      "6": 2,
+      "8": 1
+    },
+    "broken_square_sensitive_layer_blocks": 59,
+    "total_layer_blocks": 60,
+    "split_half_reproducibility": {
+      "layer_21": "11/20",
+      "layer_43": "15/20",
+      "layer_62": "9/20",
+      "joint_all_layers": "5/20"
+    },
+    "provider_displayed_incremental_usage_usd": 6.56,
+    "runner_estimated_usage_usd": 6.506292567843368
+  },
+  "tracked_artifacts": {
+    "analysis/gate13_causal_return/track_c_execution/TRACK_C_TERMINAL_CLOSEOUT.md": "fcee0f04dfe35ea19fc4e5247909b9e56cccdf6fa6a41ad213842e1e5452e27e",
+    "analysis/gate13_causal_return/track_c_execution/track_c_campaign_plan.json": "993303645df5e6c4fca174bf8665d78b1386de29fcd40052a43100f39dc50920",
+    "analysis/gate13_causal_return/track_c_execution/track_c_campaign_manifest.json": "8020d3d108087b3cde37a1e18f2df071b8b4d2e7fcc0a4580336a1b7aa27af18",
+    "analysis/gate13_causal_return/track_c_execution/track_c_execution_ledger.json": "9666f3438caeb1f1ad13fe3871ffceaad4e2cc71c7b702c46a860ef124b59996",
+    "analysis/gate13_causal_return/track_c_execution/track_c_execution_authorization.json": "c507e3f2e94b4f2b9a6b589b2b55f7da2e7f7b124faef631d3e44c718d719830"
+  },
+  "local_scientific_artifacts": {
+    "stage_m_terminal.json": "028e0ea6b410942c9509535fad18b486a298bd03604403205273a3686df78023",
+    "sealed_map_private_result.json": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
+    "artifact_inventory_bf41b049-f04b-442e-b0bd-05c8adbd4944.json": "611ef9e5075c2698e93a42d2ab4d9e7ff3c2b719864d931ea1e01b18934513ae",
+    "billing_summary_bf41b049-f04b-442e-b0bd-05c8adbd4944.json": "3174fed1e411ffa06e09143b3ab229ba3f0ba7f46da64a418ca7599f80a1fb39"
+  },
+  "no_reopen": {
+    "threshold_relaxation": "FORBIDDEN",
+    "post_hoc_layer_selection": "FORBIDDEN",
+    "depth_exclusion": "FORBIDDEN",
+    "block_replacement": "FORBIDDEN",
+    "stage_e_on_five_blocks": "FORBIDDEN",
+    "sample_count_increase_within_protocol": "FORBIDDEN",
+    "rank_or_operator_summary_change_within_protocol": "FORBIDDEN",
+    "additional_model_or_checkpoint_rescue": "FORBIDDEN"
+  },
+  "future_branch_condition": "GENUINELY_DIFFERENT_MEASUREMENT_PRINCIPLE_WITH_INDEPENDENT_MODEL_FREE_QUALIFICATION_ONLY",
+  "successor_opened": false
+}

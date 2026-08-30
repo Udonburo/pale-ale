@@ -1,0 +1,148 @@
+{
+  "schema_version": "gate13_track_a_transformers515_compatibility_correction_v1",
+  "recorded_at": "2026-08-19T20:11:50.5552267Z",
+  "exact_regression_completed_at": "2026-08-19T20:22:20.0790915Z",
+  "SCIENTIFIC_RESULT": "NONE",
+  "CORRECTION_CLASS": "INTERFACE_COMPATIBILITY_ONLY",
+  "prior_execution": {
+    "execution_identity": "aca4b3c1-de70-4d75-a715-16d351f3f6da",
+    "terminal_status": "SCIENTIFIC_RUNNER_BLOCKER",
+    "model_forward_count": 1,
+    "model_response_count": 0,
+    "a0": "UNOPENED",
+    "a1": "UNOPENED",
+    "a2": "UNOPENED",
+    "blocker_artifact_sha256": "99e818622ff92f3955ff5cd1654551c80502accdd4644059ba5ae408880a0b0f",
+    "adapter_commit": "88caf2c4706ad0e93c0baca108a9c5963430020d",
+    "authorization_commit": "0928fd4278570f40d106a50fe0785997afdf98bb",
+    "authorization_sha256": "e4aca50fccc54a8acf29aee77b90f8bb0a4bdff9c59fa2bff97040b1e01f6e9a",
+    "immutable_preservation_required": true
+  },
+  "scientific_runner": {
+    "path": "tools/gate13_causal_return/track_a/phase2_runner.py",
+    "old_sha256": "2c1401ac0077aafe3d4e14a8636c2c24ef6d8ecc8f52d6abe8ee072d5961d9f8",
+    "new_sha256": "a41dfbdba970afdbf91fc3d7bfd1d13b1acfd2d875e10b69218019fcac08e9c4",
+    "old_line_range": "161-177",
+    "new_line_range": "161-184",
+    "exact_changed_lines": {
+      "removed_generate_call": [
+        "output = model.generate(",
+        "    inputs,",
+        "    do_sample=False,",
+        "    max_new_tokens=max_tokens,",
+        "    pad_token_id=tokenizer.eos_token_id,",
+        ")"
+      ],
+      "added_generate_call": [
+        "model_inputs = dict(encoded)",
+        "generation_kwargs = {do_sample: False, max_new_tokens: max_tokens, pad_token_id: tokenizer.eos_token_id}",
+        "collisions = set(model_inputs).intersection(generation_kwargs)",
+        "if collisions: raise TrackARuntimeError(...) before generate",
+        "output = model.generate(**model_inputs, **generation_kwargs)"
+      ],
+      "continuation_index_change": "inputs.shape[-1] -> model_inputs['input_ids'].shape[-1]"
+    }
+  },
+  "reason_for_correction": "Transformers 5.15.0 GenerationMixin requires BatchEncoding tensors as keyword-expanded model inputs; passing BatchEncoding positionally reaches inputs_tensor.shape and raises AttributeError before any model response exists.",
+  "unchanged_scientific_surfaces": [
+    "A0/A1/A2 case inventories and case IDs",
+    "prompt text and chat-template arguments",
+    "tokenizer call and exact tokenizer revision",
+    "oracle and parser",
+    "metrics and thresholds",
+    "conditional stopping rule",
+    "generation strategy and generation kwargs",
+    "model class, model revision, dtype, and quantization",
+    "runtime binding",
+    "scientific ledger"
+  ],
+  "frozen_authority_hashes": {
+    "phase2_a_lock_sha256": "9c4b94b5199c3d355e8707798ba9bc1797aa2d690762b226f57bec63742215fa",
+    "m1_preflight_manifest_sha256": "03920024a4b173cbd08426c23b38ab0fb97a8a14334a1898e1eeeff65cf15c8c",
+    "a0_extension_manifest_sha256": "7f99a653b4a96c4d6fbbf2a61d640c9a3971c45344b52b6bbeaf81b829ebe7f4",
+    "a1_manifest_sha256": "eae8f1abd328c2df27aa1fb80a9b1f0d98683546149964f4d6825da29a93b400",
+    "a2_manifest_sha256": "70a011e9e7629e5ad5dc3adff31c5304bc8791396220c04b96f1827a1dd440b5"
+  },
+  "regression_tests": {
+    "unit_spy_keyword_expansion": "PASS_LOCAL",
+    "tensor_identity": "PASS_LOCAL",
+    "model_input_generation_kwarg_collision": "PASS_LOCAL_FAIL_CLOSED",
+    "prompt_template_decode_contract": "PASS_LOCAL",
+    "exact_package_tiny_qwen3_generation_mixin": "PASS_EXACT_CPU_MODAL",
+    "first_m1_forward_zero_preparation": "PASS_FORWARD_ZERO_WITH_AUTHORITY_GAPS_REPORTED"
+  },
+  "exact_regression_result": {
+    "modal_image_object_id": "im-jkU0btCJf30BpDpH8jhceq",
+    "image_role": "PREAUTHORIZATION_CPU_REGRESSION_IMAGE",
+    "local_receipt_path": "workstream/local/gate13_causal_return_outputs/phase2/modal_track_a_transformers515_v2/preflight/exact_regression.json",
+    "local_receipt_sha256": "e99c3864831a079ba5beef42b7a36a43e93f8bb48dd92a0de35a4ccb98e6e263",
+    "exact_packages": {
+      "python": "3.11.2",
+      "torch": "2.7.1+cu126",
+      "transformers": "5.15.0",
+      "tokenizers": "0.22.2"
+    },
+    "tiny_qwen3": {
+      "model": "RANDOMLY_INITIALIZED_TINY_LOCAL_QWEN3",
+      "generate_interface": "model.generate(**batch_encoding, max_new_tokens=1)",
+      "output_shape": [
+        1,
+        4
+      ],
+      "input_tensors_unchanged": true,
+      "scientific_weights_loaded": false,
+      "scientific_case_output_generated": false,
+      "scientific_forward_count": 0,
+      "status": "PASS"
+    },
+    "first_m1_forward_zero": {
+      "case_id": "a0-l12-y0-early-r0-S",
+      "raw_prompt_sha256": "3eadff30ee28a1c3ac08e7ea8817b25393aa581de9069a7d1c2af1b8c2b8df7a",
+      "raw_prompt_comparison": "MATCH_FROZEN_M1_MANIFEST",
+      "rendered_prompt_sha256": "f44090ad5ecb0a8f99380aef285bf3d573aacd351f3e6374534a3a41a57477e0",
+      "input_ids_sha256": "cb1980990e91f8bbe71037b67b390718f98a4ee60c84b99cc8f9c7aadc5f1064",
+      "attention_mask_sha256": "feb75c4d5648e76e10adc86194238b6eaeaaa52036a3f79799a677cd6353447e",
+      "generation_kwargs_sha256": "24f7000ea348e9202091e5429d81b6a20f8da588452ffb64220944ebe32b8bc3",
+      "input_shape": [
+        1,
+        103
+      ],
+      "input_dtype": "torch.int64",
+      "preparation_device": "cpu",
+      "generate_invoked": false,
+      "scientific_weights_loaded": false,
+      "scientific_forward_count": 0,
+      "status": "PASS_FORWARD_ZERO"
+    },
+    "model_volume_verification": {
+      "name": "gate13-track-a-qwen3-8b-b968826-model",
+      "object_id": "vo-qcBxnmomu5avCRoacF7eKW",
+      "file_count": 15,
+      "total_bytes": 16397461266,
+      "model_directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+      "status": "PASS_REHASHED_NO_DOWNLOAD"
+    }
+  },
+  "first_m1_comparison_authority": {
+    "case_id": "a0-l12-y0-early-r0-S",
+    "raw_prompt_sha256": {
+      "expected": "3eadff30ee28a1c3ac08e7ea8817b25393aa581de9069a7d1c2af1b8c2b8df7a",
+      "source": "m1_preflight_manifest.json"
+    },
+    "rendered_prompt_sha256": "AUTHORITY_GAP_NO_PRIOR_OR_FROZEN_HASH",
+    "input_ids_sha256": "AUTHORITY_GAP_NO_PRIOR_OR_FROZEN_HASH",
+    "attention_mask_sha256": "AUTHORITY_GAP_NO_PRIOR_OR_FROZEN_HASH",
+    "generation_kwargs_sha256": "AUTHORITY_GAP_NO_PRIOR_OR_FROZEN_HASH",
+    "no_match_will_be_claimed_without_authority": true
+  },
+  "forward_accounting": {
+    "frozen_program_ceiling": 600,
+    "cumulative_prior_forward_count": 1,
+    "remaining_forward_ceiling": 599
+  },
+  "authorization_scope": {
+    "one_time_correction_only": true,
+    "automatic_second_repair": false,
+    "fresh_execution_requires_new_authorization": true
+  }
+}

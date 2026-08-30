@@ -1,0 +1,161 @@
+{
+  "schema_version": "gate13_stepwise_fresh_operator_qualification_lock_v1",
+  "authority_status": "FROZEN_CONDITIONALLY_AUTHORIZED_AFTER_STREAM_A2_PASS",
+  "campaign_binding_id": "94c7f7f7-6e51-46d3-8aa2-6a66a23dfdbd",
+  "counterpart_lock": "stepwise_track_a_qualification_lock.json",
+  "activation_collection_gate": "STREAM-A2_PASS_ONLY",
+  "track_c": "UNOPENED",
+  "scientific_question": "On fresh independent halves, is the operator packet independently re-estimable and sensitive to the broken-square control above its split-half floor?",
+  "forbidden_primary_claim": "generic nonzero representation holonomy",
+  "collection_surface": {
+    "same_stepwise_substrate_variant": "natural_rule_v1",
+    "external_nodes": [
+      "phase0_state0",
+      "phase0_state1",
+      "phase1_state0",
+      "phase1_state1"
+    ],
+    "positive_control_node": "phase1_state1_broken",
+    "node_condition_definition": "phase-indexed visible state under a correct demonstration context; broken node corrupts one transition demonstration only",
+    "per_forward_input": [
+      "current visible state",
+      "next input action",
+      "frozen demonstration context",
+      "phase label"
+    ],
+    "full_history": "EXCLUDED",
+    "readout": "raw next-token forced-choice logits with frozen hidden-state tap",
+    "forward_count": 240,
+    "collection_ledger_sha256": "839da5097d14144188840ccb56c8d08d22fd8a97a418f2106f804755d0a4720e"
+  },
+  "independent_halves": {
+    "primary": true,
+    "half_1_seed_range": [810000, 810999],
+    "half_2_seed_range": [910000, 910999],
+    "samples_per_node_per_half": 24,
+    "half_1_codebook_bank_sha256": "d0f5fe9777ee6002ad0138044e3f91e9768e4f50e17395e49e9191ab4148f9f4",
+    "half_2_codebook_bank_sha256": "c444dbb3b6ca2e89b5ac0e0a538144097c487ee9164ec37909dad41f0e6c9b7b",
+    "disjoint_opaque_codebooks": true,
+    "disjoint_templates": true,
+    "disjoint_demonstration_instances": true,
+    "disjoint_episode_seeds": true,
+    "bootstrap": "SECONDARY_ONLY_NOT_A_SUBSTITUTE"
+  },
+  "observation_surface": {
+    "layer_set": [12, 24, 35],
+    "token_position": "LAST_PROMPT_TOKEN_BEFORE_FORCED_CHOICE",
+    "activation_representation": "BF16_RESIDUAL_STREAM_CAST_FLOAT32_FOR_STORAGE_FLOAT64_FOR_ESTIMATION",
+    "frame_estimator": "CENTERED_SVD_WITH_DETERMINISTIC_COLUMN_SIGN",
+    "frame_rank": 4,
+    "frame_relative_singular_tolerance": 1e-06,
+    "half_2_alignment": "NODE_WISE_RIGHT_ORTHOGONAL_PROCRUSTES_TO_HALF_1",
+    "edge_estimator": "PAIRED_RIDGE_LINEAR_MAP_IN_NODE_LOCAL_COORDINATES",
+    "edge_ridge_relative": 0.001,
+    "edge_rank_tolerance": 1e-08,
+    "edge_condition_ceiling": 1000000.0,
+    "minimum_node_support_per_half": 24,
+    "best_layer_selection_after_outcome": "FORBIDDEN",
+    "all_fixed_layers_reported": true
+  },
+  "registries": {
+    "exact_square": {
+      "path_p": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state1"
+      ],
+      "path_q": [
+        "phase0_state0",
+        "phase1_state0",
+        "phase1_state1"
+      ],
+      "external_relation": "J_(t+1) tau = tau J_t"
+    },
+    "broken_square_positive_control": {
+      "path_p": [
+        "phase0_state0",
+        "phase0_state1",
+        "phase1_state1"
+      ],
+      "path_q": [
+        "phase0_state0",
+        "phase1_state0",
+        "phase1_state1_broken"
+      ],
+      "corruption": "one frozen transition demonstration output is inverted without changing row count or output choice set"
+    }
+  },
+  "operator_packet": {
+    "raw_required": [
+      "P_p",
+      "P_q",
+      "Delta_pq",
+      "singular_values_p",
+      "singular_values_q"
+    ],
+    "positive_semidefinite_required": [
+      "S_p",
+      "S_q"
+    ],
+    "qualified_only": [
+      "H_path",
+      "H_edge"
+    ],
+    "whole_path_and_edge_wise_distinguished": true,
+    "rank_deficient_completion": "FORBIDDEN"
+  },
+  "qualification": {
+    "split_half_primary": "max normalized L2 disagreement of P_p/P_q singular spectra",
+    "split_half_singular_floor_max": 0.2,
+    "broken_sensitivity_rule": "minimum broken-square normalized Delta across halves exceeds max(2*split_half_floor, split_half_floor+0.05, maximum exact-square normalized Delta+0.05)",
+    "minimum_qualified_layer_count": 2,
+    "fixed_layer_count": 3,
+    "required_controls": [
+      "split-half self re-estimation",
+      "exact external square",
+      "broken-square positive control",
+      "rank-deficient rejection",
+      "gauge covariance",
+      "whole-path versus edge-wise distinction"
+    ],
+    "Track_B_PASS": "at least two of three fixed layers qualify on support, split-half reproducibility, and broken-square sensitivity",
+    "Track_B_FAIL": "fewer than two fixed layers qualify"
+  },
+  "runtime_binding": {
+    "model_repository": "Qwen/Qwen3-8B",
+    "model_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "tokenizer_revision": "b968826d9c46dd6066d109eabc6255188de91218",
+    "model_directory_identity_sha256": "935acddbddad11307d52408e0e0125d4fe328ed2ab9e3af2d4bc18299f5ece14",
+    "gpu": "NVIDIA L40S",
+    "python": "3.11.2",
+    "torch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "transformers": "5.15.0",
+    "tokenizers": "0.22.2",
+    "dtype": "bfloat16",
+    "quantization": false,
+    "offline": true
+  },
+  "budget": {
+    "maximum_track_b_forwards": 240,
+    "campaign_forward_ceiling": 650,
+    "development_forwards_consumed": 62,
+    "maximum_track_a_forwards_before_b": 232,
+    "maximum_campaign_forwards_if_fully_opened": 534,
+    "campaign_incremental_modal_spend_ceiling_usd": 12.0,
+    "automatic_retries": 0,
+    "maximum_active_gpu_containers": 1
+  },
+  "terminal_states": {
+    "PASS": "T3_TRACK_A_AND_TRACK_B_QUALIFIED_READY_FOR_TRACK_C_DESIGN",
+    "FAIL": "T2_TRACK_A_STEPWISE_PASS_TRACK_B_FAIL"
+  },
+  "closed_surfaces": {
+    "TRACK_C_execution": "FORBIDDEN",
+    "TRACK_C_design": "OUT_OF_CAMPAIGN",
+    "A3": "CLOSED",
+    "hidden_intervention": "CLOSED",
+    "general_cycle_space": "UNCHANGED_UNOPENED",
+    "public_docs": "UNCHANGED"
+  }
+}

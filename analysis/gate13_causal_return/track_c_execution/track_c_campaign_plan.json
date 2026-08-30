@@ -1,0 +1,35 @@
+{
+  "a3": "CLOSED",
+  "absolute_campaign_ceiling_usd": 65.0,
+  "automatic_retries": 0,
+  "behavior_path_semantics": {
+    "endpoint": "PHASE_1_IDENTITY_ACTION_FORCED_CHOICE_PROBE",
+    "full_history_excluded": true,
+    "path_p": "SELF_FED_J_ACTIONS_IN_PHASE_0_THEN_EXTERNAL_TAU_TO_PHASE_1",
+    "path_q": "EXTERNAL_TAU_TO_PHASE_1_THEN_SAME_SELF_FED_J_ACTIONS",
+    "tau_changes_visible_phase_only": true
+  },
+  "campaign_schema": "gate13_track_c_frozen_campaign_v1",
+  "external_algebra": "BINARY_XOR_WITH_PHASE_NATURALITY_SQUARE",
+  "formal_gate13": "CLOSED",
+  "instrument": "natural_rule_v1",
+  "maximum_active_gpu_containers": 1,
+  "model": {
+    "repository": "Qwen/Qwen3.6-27B",
+    "revision": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9"
+  },
+  "review2_1_accepted_by_human": true,
+  "schema_version": "gate13_track_c_campaign_plan_v1",
+  "scientific_authority": "analysis/gate13_causal_return/review2_1",
+  "stages": {
+    "E": {
+      "maximum_forwards": 5760,
+      "paid_forecast_usd": 24.59943168
+    },
+    "M": {
+      "forwards": 4800,
+      "paid_forecast_usd": 20.62321418
+    }
+  },
+  "track_c_authorized_under_frozen_conditional_protocol": true
+}

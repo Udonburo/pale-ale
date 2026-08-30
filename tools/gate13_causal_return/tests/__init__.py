@@ -1,0 +1,1 @@
+"""Dual-lock validator tests."""
