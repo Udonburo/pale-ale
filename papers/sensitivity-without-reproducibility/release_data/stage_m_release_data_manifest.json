@@ -1,13 +1,13 @@
 {
   "execution_id": "bf41b049-f04b-442e-b0bd-05c8adbd4944",
   "files": {
-    "stage_m_layer_block_records.csv": "b7bc8ba60786cf597ed6a457da816fab1c56e2c54b0f82b67cc486bd741c5a3a",
-    "stage_m_layer_block_records.json": "a060b86e6f788bb379215beeec9b30c0671abcce708d3f00af7fcf1b30e1a94a"
+    "stage_m_layer_block_records.csv": "304466966b464ef8ef1c52eadfb87e2bcc1ed0ebd2824203a10a1ff5a07d76d2",
+    "stage_m_layer_block_records.json": "c90e7ffe3b5de5793b017625f32a401e10d97f2256e091435605c7debb7f492e"
   },
   "known_stale_receipt": {
     "declared_pre_operator_sha256": "93d837b5e51562d6d3876f30bb1330cff54002f8a368245443846e0999197274",
     "final_actual_sha256": "53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804",
-    "object": "qwen3_6_27b Track A root artifact_manifest.json::execution_claim.json",
+    "object": "Qwen3.6-27B behavioral execution root receipt for execution_claim.json",
     "reason": "later fresh-operator terminal stage appended FRESH_SQUARE_OPERATOR_TERMINAL",
     "remote_redownload_sha256": "53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804",
     "scientific_payload_affected": false
@@ -16,7 +16,7 @@
   "retrieval_inventory_sha256": "611ef9e5075c2698e93a42d2ab4d9e7ff3c2b719864d931ea1e01b18934513ae",
   "schema_version": "sensitivity_without_reproducibility_release_data_manifest_v1",
   "source_execution_commit": "ea4558f0fcfd8944499407747615ec5bf41c1542",
-  "source_sealed_map_sha256": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
+  "source_stage_m_result_sha256": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
   "stage_e_state": "UNOPENED_MAP_NOT_QUALIFIED",
   "tracked_closeout_commit": "407d20fd4f074b9ef4524c82c8136874efaec476",
   "verified_aggregates": {

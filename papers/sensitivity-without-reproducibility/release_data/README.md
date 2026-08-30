@@ -17,7 +17,7 @@ reported qualification boundary:
 - map-derived competence, with the primary amplitude present only for blocks
   that passed the frozen all-three-layer gate.
 
-The source is the immutable sealed map result with SHA-256
+The source is the immutable Stage M result with SHA-256
 `8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772`.
 The extractor refuses any other source and verifies the paper's 20-block,
 60-layer-block, 59/60 sensitivity, 35/60 reproducibility, and 5/20 joint-pass
@@ -36,6 +36,6 @@ representation--function association, and no post-hoc rescue analysis.
 
 ## Regeneration
 
-Run the extractor with the frozen sealed-map JSON and this directory as the two
+Run the extractor with the frozen Stage M source JSON and this directory as the two
 arguments. It uses only the Python standard library and performs no model or
 network operation.

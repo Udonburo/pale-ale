@@ -194,7 +194,7 @@ For Qwen3.5-27B and Qwen3.6-27B, the correct-demonstration condition achieved 16
 
 \subsection{A2: visible overwrite propagation}
 
-The A2 intervention changed the visible current register while preserving the next action and remaining protocol. Each transition call received the current visible register, the next action, and the frozen protocol context, but not the preceding action history. In self-fed continuation, the previous forced-choice state prediction became the next current register. After an overwrite, the edited register was therefore the only task-relevant carrier of prior state available to the next transition; the model could not reconstruct that state from an earlier action sequence included in the prompt. In both Qwen3.5-27B and Qwen3.6-27B, the immediate successor was correct in 8/8 cases, all 32/32 downstream states followed the externally implied continuation, and the final state flipped in 8/8 cases; a marker-only control preserved the matched unedited continuation in 40/40 cases. This supports selective use of the written register under the frozen intervention family, not a hidden register, unique mediation, or an internal realization of Equation~\eqref{eq:naturality}. Controlled edits to explicit intermediate structures motivate the same separation between apparent consistency and causal use~\cite{somov2026}.
+The A2 intervention overwrote the visible current register while preserving the next action and protocol. Each call received the current register, the next action, and the frozen context, but no preceding action history. In self-fed continuation, the previous forced-choice state became the next register; after an overwrite, the edited value was therefore the only task-relevant carrier of prior state. In both Qwen3.5-27B and Qwen3.6-27B, the immediate successor was correct in 8/8 cases, all 32/32 downstream states followed the externally implied continuation, and the final state flipped in 8/8 cases; a marker-only control preserved the matched unedited continuation in 40/40 cases. This supports selective use of the written register under the frozen intervention family---the distinction emphasized by controlled-edit work~\cite{somov2026}---but not a hidden register, unique mediation, or an internal realization of Equation~\eqref{eq:naturality}.
 
 \section{A Paired-Map Operator Instrument Qualified on One Bounded Substrate}
 \label{sec:operator}
@@ -203,7 +203,7 @@ The A2 intervention changed the visible current register while preserving the ne
 
 The frozen operator priority was Qwen3.8-27B, Qwen3.6-27B, Qwen3.5-27B, then Qwen3-14B, evaluated only after the checkpoint panel had closed. Qwen3.8-27B failed A0, making Qwen3.6-27B the highest-priority A2-passing checkpoint. The bounded operator study used tuple indices 21, 43, and 62; 24 activation samples per node per independently generated, disjoint half; four nodes from the exact square plus one matched broken-control node; centered rank-4 frames; node-wise orthogonal Procrustes alignment; and frozen paired ridge coordinate maps. Activations were collected at the last prompt position immediately before the forced-choice answer token. The run used 240 unique scientific forwards.
 
-Extraction requested \code{output\_hidden\_states=True} and indexed the Transformers \code{hidden\_states} tuple directly. Under the frozen Transformers 5.15.1 output-capture convention, tuple index 0 is the embedding output and tuple index $k>0$ is the post-block residual output after zero-based decoder block $k-1$; indices 21, 43, and 62 therefore denote the outputs after blocks 20, 42, and 61, before the final model norm. For each tensor the extracted row was \code{hidden\_states[k][0,-1,:]}. The BF16 model tensor was cast to PyTorch float32, saved as NumPy float32, and converted to NumPy float64 before centering, ridge fitting, singular-value decomposition, and operator analysis.
+Extraction requested \code{output_hidden_states=True} and indexed the Transformers \code{hidden_states} tuple directly. Under the frozen Transformers 5.15.1 output-capture convention, tuple index 0 is the embedding output and tuple index $k>0$ is the post-block residual output after zero-based decoder block $k-1$; indices 21, 43, and 62 therefore denote the outputs after blocks 20, 42, and 61, before the final model norm. For each tensor the extracted row was \code{hidden_states[k][0,-1,:]}. The BF16 model tensor was cast to PyTorch float32, saved as NumPy float32, and converted to NumPy float64 before centering, ridge fitting, singular-value decomposition, and operator analysis.
 
 Neither rank nor layer was selected from an operator outcome. Rank four was inherited unchanged from the pre-outcome operator-development lock; no empirical rank sweep was used for the bounded run or Stage M. The three layer positions were inherited as normalized depths $1/3$, $2/3$, and $35/36$, then converted by deterministic half-up rounding and clamping to the interior of the checkpoint. For a 64-layer checkpoint this rule yields $[21,43,62]$. All three positions were reported, and no best layer was selected after observation.
 
@@ -359,7 +359,7 @@ The coupled representation--function hypothesis remains untested. This is narrow
 
 \section*{Data, Code, and Status}
 
-Scientific code, frozen protocol files, and the terminal closeout are available from the public repository at \url{https://github.com/Udonburo/pale-ale}, with the execution record fixed at commit \hash{407d20fd4f074b9ef4524c82c8136874efaec476}. The Zenodo release accompanying this report contains a model-forward-free reproducibility capsule, exact model and runtime identities, the 20-block and 60 layer-block qualification records, deterministic Figure~\ref{fig:main} and Table~\ref{tab:gate-decomposition} inputs, licenses, and top-level \code{SHA256SUMS}. The continuous Stage M fields are exposed in \code{stage\_m\_layer\_block\_records.csv} and a matching JSON record, both derived by a source-hash-locked model-free exporter. Its archival DOI is inserted in the release build after reservation. No additional model execution or activation extraction was performed during manuscript assembly, and no inferential outcome analysis was opened.
+Scientific code, frozen protocol files, and the terminal closeout are available from the public repository at \url{https://github.com/Udonburo/pale-ale}, with the execution record fixed at commit \hash{407d20fd4f074b9ef4524c82c8136874efaec476}. The Zenodo release accompanying this report contains a model-forward-free reproducibility capsule, exact model and runtime identities, the 20-block and 60 layer-block qualification records, deterministic Figure~\ref{fig:main} and Table~\ref{tab:gate-decomposition} inputs, licenses, and top-level \code{SHA256SUMS}. The continuous Stage M fields are exposed in \code{stage_m_layer_block_records.csv} and a matching JSON record, both derived by a source-hash-locked model-free exporter. Its archival DOI is inserted in the release build after reservation. No additional model execution or activation extraction was performed during manuscript assembly, and no inferential outcome analysis was opened.
 
 \small
 \begin{thebibliography}{99}
@@ -454,7 +454,7 @@ D. Freedman and D. Lane.
 
 \subsection{Checkpoint identities}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Exact checkpoint revisions. The 8B row is a preserved baseline bound from the preceding campaign rather than a new execution in this panel.}
 \label{tab:revisions}
@@ -499,7 +499,7 @@ Every A0/A2 transition prompt excluded the preceding input and state history. It
 
 The opaque state/action codebook and answer tokens were verified as single tokens at the exact score position for every checkpoint. In A1, the corrupted-transition control replaced every demonstrated target by its complementary state label while preserving the template, input/action rows, row order, row count, output balance, and token count. The label-shuffled control applied the fixed zero-based output-position order $[2,0,3,1]$, preserving the same surface-token multiset and counts while breaking row-to-target associations. For the binary XOR truth table these two constructions render the same complementary output sequence, so they are named strata but not independent control families. The format-matched control preserved the template, codebook, input/action rows, row count, output balance, and token count, but assigned a seed-shuffled balanced output sequence, with a deterministic rotation if it reproduced the correct sequence. The Qwen3.5 and Qwen3.6 controls used identical construction and case counts; token identifiers were recorded per tokenizer revision.
 
-The bounded Qwen3-8B development campaign compared two 31-call instruments before the qualification ledger was opened. The initial eligibility rule admitted \texttt{compact\_\allowbreak table\_\allowbreak v1}. The stricter confirmatory-aligned selection rule admitted \texttt{natural\_\allowbreak rule\_\allowbreak v1}, which was frozen. No prompt development or checkpoint-specific adaptation was performed on Qwen3-14B or any 27B checkpoint.
+The bounded Qwen3-8B development campaign compared compact-table and natural-language-rule instruments in two 31-call runs before the qualification ledger was opened. The initial eligibility rule admitted the compact-table version; the stricter confirmatory-aligned rule admitted the natural-language version, which was frozen. No prompt development or checkpoint-specific adaptation was performed on Qwen3-14B or any 27B checkpoint.
 
 \section{Operator Construction and Qualification}
 \label{app:operator}
@@ -564,7 +564,7 @@ Here \code{PACKETS_QUALIFIED} required node support, rank-4 frames, qualified pa
  \ \land\ \mathrm{FINITE\_CROSSFIT}_{b\ell}\right).
  \label{eq:block-pass}
 \end{equation}
-For a given $(b,\ell)$, \code{FINITE\_CROSSFIT} required both training-half return-action energies to be present and finite. Each term used a qualified training-half exact packet and rank-4 orthonormal source frame, projected the opposite-half source activations into that frame, and required a positive held-out covariance trace above the frozen floor $10^{-12}\max\{1,\operatorname{mean}(Z^2)\}$. The numerator $\operatorname{tr}(\Delta\Sigma\Delta^{\mathsf T})$ had to be finite and at least $-10^{-10}$; a negative value within that numerical tolerance was clamped to zero. Thus each block required six finite terms---two halves at each of three layers---with no missing packet.
+For a given $(b,\ell)$, \code{FINITE_CROSSFIT} required both training-half return-action energies to be present and finite. Each term used a qualified training-half exact packet and rank-4 orthonormal source frame, projected the opposite-half source activations into that frame, and required a positive held-out covariance trace above the frozen floor $10^{-12}\max\{1,\operatorname{mean}(Z^2)\}$. The numerator $\operatorname{tr}(\Delta\Sigma\Delta^{\mathsf T})$ had to be finite and at least $-10^{-10}$; a negative value within that numerical tolerance was clamped to zero. Thus each block required six finite terms---two halves at each of three layers---with no missing packet.
 The change was prospective rather than a response to the bounded result. The initial two-of-three conjunction was an instrument-readiness gate. Before Stage M, the downstream representation amplitude was fixed as an equal-weight aggregate over layers 21, 43, and 62; a missing layer would therefore change the estimand. Each fresh block consequently had to supply a valid measurement at all three layers.
 
 Thus an exact response need not lie below $f$: $f$ measures cross-half singular-spectrum disagreement, while $d_h^{\mathrm{exact}}$ measures within-half path discrepancy and enters $\theta$ explicitly. This distinction explains, for example, the layer-21 bounded PASS despite $0.06053$ being slightly larger than $0.05980$.
@@ -622,7 +622,7 @@ Behavior ledger & not used in Stage M & disjoint from both map halves & disjoint
 
 \subsection{Frozen Stage M ledger}
 
-The 20 block identifiers were fixed as \code{tc-b00-d2} through \code{tc-b19-d8} in depth-major order, five per depth. Public labels B01--B20 in Figure~\ref{fig:main} map one-to-one to those exact identifiers in order (B01 $=$ \code{tc-b00-d2}, \ldots, B20 $=$ \code{tc-b19-d8}); the figure does not sort blocks by outcome. Each block used 240 map forwards, for 4,800 total. Accepted case identifiers were unique. The result artifacts contained all 4,800 activation hashes and complete case-ID coverage.
+The 20 public block identifiers B01--B20 follow the frozen depth-major source order, five per depth. The release exporter fixes that one-to-one ordering, and Figure~\ref{fig:main} does not sort blocks by outcome. Each block used 240 map forwards, for 4,800 total. Accepted case identifiers were unique. The result artifacts contained all 4,800 activation hashes and complete case-ID coverage.
 
 \begin{table}[H]
 \centering
@@ -650,6 +650,7 @@ $R_b$ variance, design rank, leverage, permutation support & campaign & not reac
 
 The one broken-sensitivity failure occurred among the 25 nonreproducible layer-blocks, so split-half reproducibility was the limiting layer-level gate: every reproducible layer-block passed the complete layer rule. At the block level, the all-three-layer conjunction then reduced eligibility to 5/20.
 
+\newpage
 \subsection{Planned representation and functional estimands}
 
 The downstream analysis was designed but never executed. For block $b$, layer $\ell\in\{21,43,62\}$, and training half $h$, let $\Delta_{b\ell h}$ be the training-half return action and let $\Sigma_{b\ell h}$ be the opposite-half source covariance expressed in that same training-half source frame. The single planned representation amplitude was
@@ -682,7 +683,7 @@ The fresh Stage M execution identifier was \code{bf41b049-f04b-442e-b0bd-05c8adb
 
 The earlier bounded operator execution experienced one provider preemption after 46 records. Exact resume skipped those accepted identifiers and executed the remaining 194; all 240 accepted identifiers were unique. Non-scientific development incidents are retained in the campaign audit log rather than reproduced in this paper.
 
-One historical root manifest for the Qwen3.6-27B Track A execution retained the pre-operator SHA-256 \hash{93d837b5e51562d6d3876f30bb1330cff54002f8a368245443846e0999197274} for \code{execution\_claim.json}. The later operator terminal appended its terminal-stage label to that shared claim, whose retrieved and independently re-downloaded final SHA-256 is \hash{53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804}. The historical manifest remains immutable; the superseding release provenance records both hashes. The divergence changes no response, activation, metric, or scientific state.
+One historical root manifest for the Qwen3.6-27B behavioral execution retained the pre-operator SHA-256 \hash{93d837b5e51562d6d3876f30bb1330cff54002f8a368245443846e0999197274} for \code{execution_claim.json}. The later operator terminal appended its terminal-stage label to that shared claim, whose retrieved and independently re-downloaded final SHA-256 is \hash{53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804}. The historical manifest remains immutable; the superseding release provenance records both hashes. The divergence changes no response, activation, metric, or scientific state.
 
 \begin{table}[ht]
 \centering
