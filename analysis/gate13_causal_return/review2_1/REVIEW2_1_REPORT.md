@@ -2,7 +2,7 @@
 
 ## A. Repository and authority verification
 
-- Worktree: `C:\Users\aoika\Documents\GitHub\pale-ale-gate13-review1`
+- Worktree: clean repository worktree (local absolute path omitted)
 - Branch: `codex/gate13-track-c-review2-1`
 - Historical Review 2 HEAD: `4818d0cd313f09e9ae6304bae7c647424dcfcb9f`
 - Pre-edit status: clean
