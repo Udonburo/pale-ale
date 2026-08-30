@@ -18,11 +18,13 @@ That is the release surface a reader should be able to cite, download, and inspe
 
 Today, the ingredients already present in the repo are mainly:
 
-- [`../zenodo/README.md`](../zenodo/README.md): the release-capsule index and directory policy for new archival packages
-- [`../zenodo/gate12c1-parenthesization-defects/README.txt`](../zenodo/gate12c1-parenthesization-defects/README.txt): the Gate12C-1 paper and reproducibility capsule
-- [`../zenodo-release/README.txt`](../zenodo-release/README.txt): the April 2026 Gate12A frozen technical report release bundle
-- [`../zenodo-release-transport-first-defect-telemetry/README.txt`](../zenodo-release-transport-first-defect-telemetry/README.txt): the separate mathematical telemetry-note release bundle
-- [`../zenodo-release-gate12b-observer-relative-closure-signatures/README.txt`](../zenodo-release-gate12b-observer-relative-closure-signatures/README.txt): the Gate12B bounded technical report release package
+- [`../publications/README.md`](../publications/README.md): the platform-neutral publication catalog and directory policy
+- [`../publications/structural-replay-fp32/`](../publications/structural-replay-fp32/README.md): the April 2026 Gate12A frozen technical report
+- [`../publications/transport-first-defect-telemetry/`](../publications/transport-first-defect-telemetry/README.md): the separate mathematical telemetry note
+- [`../publications/observer-relative-closure-signatures/`](../publications/observer-relative-closure-signatures/README.md): the Gate12B bounded technical report
+- [`../publications/compression-interleaved-parenthesization-defects/`](../publications/compression-interleaved-parenthesization-defects/README.md): the Gate12C-1 paper and reproducibility capsule
+- [`../publications/local-mapping-without-iterative-closure/`](../publications/local-mapping-without-iterative-closure/README.md): the graph-XOR capability-boundary report
+- [`../publications/sensitivity-without-reproducibility/`](../publications/sensitivity-without-reproducibility/README.md): the operator-instrument measurement-boundary report
 - [`../docs/reproduce_gate12a.md`](../docs/reproduce_gate12a.md): the short release/reproducibility guide
 - [`../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md`](../workstream/213_GATE12A_SINGLE_GPU_FP32_DENSE_TRANSFORMER_TECHNICAL_REPORT_DRAFT.md)
 - [`../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md`](../workstream/214_GATE12A_FROZEN_PROTOCOL_EXCLUSION_AND_NON_TRANSFORMER_SIDECAR_MEMO.md)
@@ -32,17 +34,20 @@ Local `runs/` directories are generated working outputs and are not the tracked
 public evidence surface. Public release navigation should point to the DOI-bound
 release bundles, selected manifests, checksums, and commit bindings first.
 
-## Archive Directory Policy
+## Publication Directory Policy
 
-New DOI-bound capsules live under `zenodo/<release-slug>/`. Existing top-level
-`zenodo-release*` directories remain at their historical paths because tracked
-documentation, release checks, and external links already depend on those
-locations. They are compatibility-preserving frozen snapshots, not a template
-for new directory names.
+Every public work has one landing directory under
+`publications/<publication-slug>/`. Platform-specific upload bundles live one
+level below it, for example `zenodo/`, `arxiv/`, or `osf/`. Adding a platform
+extends the existing publication directory instead of creating a new
+top-level naming convention.
 
-Published Git tags remain immutable. Tracking a byte-identical Gate12C-1 copy
-under `zenodo/` on `main` does not alter the capsule path preserved by its
-release tag or the files archived by Zenodo.
+The six packages published before this policy were consolidated into that
+layout without changing their contents. Published Git tags and Zenodo records
+remain immutable and continue to preserve the files and historical paths from
+their release commits. Historical authority files may therefore mention an
+older repository path; do not rewrite those frozen records merely to follow a
+later layout migration.
 
 ## How GitHub And Zenodo Should Line Up
 

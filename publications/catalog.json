@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/Udonburo/pale-ale",
+  "publications": [
+    {
+      "slug": "structural-replay-fp32",
+      "title": "Structural Replay in Dense Transformers Under a Frozen FP32 Regime: Evidence from Closed 3B/4B Models and Boundary Results",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-04-09",
+      "resource_type": "technical_report",
+      "doi": "10.5281/zenodo.19483162",
+      "landing_path": "publications/structural-replay-fp32/README.md",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/19483162",
+          "package_path": "publications/structural-replay-fp32/zenodo"
+        },
+        "github_release": {
+          "tag": "paper-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/paper-v1.0.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo-release"]
+    },
+    {
+      "slug": "transport-first-defect-telemetry",
+      "title": "Transport-First Defect Telemetry on Replay Artifact Graphs: A Minimal Gauge-Covariant Formulation of Closure Inconsistency",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-04-14",
+      "resource_type": "technical_note",
+      "doi": "10.5281/zenodo.19569052",
+      "landing_path": "publications/transport-first-defect-telemetry/README.md",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/19569052",
+          "package_path": "publications/transport-first-defect-telemetry/zenodo"
+        },
+        "github_release": {
+          "tag": "transport-first-defect-telemetry-v0.1.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/transport-first-defect-telemetry-v0.1.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo-release-transport-first-defect-telemetry"]
+    },
+    {
+      "slug": "observer-relative-closure-signatures",
+      "title": "Observer-Relative Closure Signatures on Replay Artifact Graphs: A Bounded Source-Facing Audit of Existing LLM Artifacts",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-05-08",
+      "resource_type": "technical_report",
+      "doi": "10.5281/zenodo.20080003",
+      "landing_path": "publications/observer-relative-closure-signatures/README.md",
+      "source_path": "papers/gate12b-observer-relative-closure",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/20080003",
+          "package_path": "publications/observer-relative-closure-signatures/zenodo"
+        },
+        "github_release": {
+          "tag": "gate12b-observer-relative-closure-signatures-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/gate12b-observer-relative-closure-signatures-v1.0.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo-release-gate12b-observer-relative-closure-signatures"]
+    },
+    {
+      "slug": "compression-interleaved-parenthesization-defects",
+      "title": "Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs: A Predeclared Null Test",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-07-14",
+      "resource_type": "technical_report",
+      "doi": "10.5281/zenodo.21355572",
+      "landing_path": "publications/compression-interleaved-parenthesization-defects/README.md",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/21355572",
+          "package_path": "publications/compression-interleaved-parenthesization-defects/zenodo"
+        },
+        "github_release": {
+          "tag": "gate12c1-parenthesization-defects-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/gate12c1-parenthesization-defects-v1.0.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo/gate12c1-parenthesization-defects"]
+    },
+    {
+      "slug": "local-mapping-without-iterative-closure",
+      "title": "Local Mapping Without Iterative Closure: Zero-Shot and Input-Output-Only In-Context Graph-XOR Capability Boundaries in Qwen3",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-08-18",
+      "resource_type": "technical_note",
+      "doi": "10.5281/zenodo.21992852",
+      "landing_path": "publications/local-mapping-without-iterative-closure/README.md",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/21992852",
+          "package_path": "publications/local-mapping-without-iterative-closure/zenodo"
+        },
+        "github_release": {
+          "tag": "local-mapping-without-iterative-closure-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo/local-mapping-without-iterative-closure"]
+    },
+    {
+      "slug": "sensitivity-without-reproducibility",
+      "title": "Sensitivity Without Reproducibility: A Measurement Boundary for an Operator-Valued Representation Instrument in Qwen Models",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-08-31",
+      "resource_type": "technical_note",
+      "doi": "10.5281/zenodo.22180751",
+      "landing_path": "publications/sensitivity-without-reproducibility/README.md",
+      "source_path": "papers/sensitivity-without-reproducibility",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/22180751",
+          "package_path": "publications/sensitivity-without-reproducibility/zenodo"
+        },
+        "github_release": {
+          "tag": "sensitivity-without-reproducibility-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/sensitivity-without-reproducibility-v1.0.0"
+        }
+      },
+      "historical_repository_paths": ["zenodo/sensitivity-without-reproducibility"]
+    }
+  ]
+}

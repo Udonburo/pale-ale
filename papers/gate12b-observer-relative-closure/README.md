@@ -52,9 +52,10 @@ Public deposit:
 
 - DOI: https://doi.org/10.5281/zenodo.20080003
 - release package:
-  `zenodo-release-gate12b-observer-relative-closure-signatures/`
+  `publications/observer-relative-closure-signatures/zenodo/`
 - generated `runs/` artifacts are not included in the public deposit
 
-The `zenodo-release-*` directories are frozen historical release snapshots with
-their own checksum sets. Editing this manuscript source directory does not
-refresh a Zenodo package, update packaged files, or update `CHECKSUMS-SHA256.txt`.
+The publication target directory is a frozen historical release snapshot with
+its own checksum set. Editing this manuscript source directory does not
+refresh the Zenodo package, update packaged files, or update
+`CHECKSUMS-SHA256.txt`.

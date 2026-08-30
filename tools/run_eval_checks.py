@@ -368,7 +368,7 @@ REQUIRED_CPU_FILES = (
     "docs/gate12a_evidence_atlas.md",
     "docs/reproduce_gate12a.md",
     "workstream/README.md",
-    "zenodo-release/CHECKSUMS-SHA256.txt",
+    "publications/structural-replay-fp32/zenodo/CHECKSUMS-SHA256.txt",
     "tools/run_eval_checks.py",
     "tools/test_run_eval_checks.py",
     "tools/package_eval_factory_receipt.py",
@@ -2774,7 +2774,7 @@ def render_summarize_existing(repo_root: Path) -> str:
         "docs/gate12a_evidence_atlas.md",
         "docs/reproduce_gate12a.md",
         "workstream/README.md",
-        "zenodo-release/CHECKSUMS-SHA256.txt",
+        "publications/structural-replay-fp32/zenodo/CHECKSUMS-SHA256.txt",
     )
 
     lines = [

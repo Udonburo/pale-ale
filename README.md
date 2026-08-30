@@ -16,7 +16,7 @@ consistency, and learned-system artifacts.**
 
 [Research focus](#research-focus) |
 [Citable releases](#citable-releases) |
-[Zenodo release index](zenodo/README.md) |
+[Publications](publications/README.md) |
 [Explore Amber](#amber-interactive-companion) |
 [Reproduce Gate12A](docs/reproduce_gate12a.md)
 
@@ -35,7 +35,7 @@ checkpoint was reached.
 
 | Research evidence | Interactive companion |
 | --- | --- |
-| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR / representation-instrument boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases) or [browse the release archive](zenodo/README.md). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
+| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR / representation-instrument boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases) or [browse the publication catalog](publications/README.md). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
 
 ## Research Focus
 
@@ -70,14 +70,11 @@ project reached that checkpoint. See
 Use the DOI associated with the specific evidence surface you are discussing.
 The releases are related, but they are not interchangeable.
 
-The repository mirror for current DOI-bound packages is indexed at
-[`zenodo/`](zenodo/README.md). In particular, the two latest packages are
-tracked on `main` at
-[`zenodo/local-mapping-without-iterative-closure/`](zenodo/local-mapping-without-iterative-closure/README.txt)
-and
-[`zenodo/sensitivity-without-reproducibility/`](zenodo/sensitivity-without-reproducibility/README.txt).
-Earlier compatibility snapshots retain their historical top-level
-`zenodo-release*` paths; the index explains that split explicitly.
+All six publication packages follow one repository convention:
+`publications/<publication-slug>/<platform>/`. The platform-neutral
+[`publications/`](publications/README.md) catalog binds each DOI, GitHub
+Release, manuscript source, and platform-specific upload package. Historical
+release tags preserve the older paths that were current when they were made.
 
 ### Gate12A: Frozen FP32 dense-transformer report
 
@@ -85,7 +82,8 @@ Structural replay evidence and boundary results under one declared FP32
 dense-transformer regime.
 
 [Report DOI](https://doi.org/10.5281/zenodo.19483162) |
-[release bundle](zenodo-release/README.txt) |
+[publication](publications/structural-replay-fp32/README.md) |
+[Zenodo bundle](publications/structural-replay-fp32/zenodo/README.txt) |
 [reproduction guide](docs/reproduce_gate12a.md) |
 [evidence atlas](docs/gate12a_evidence_atlas.md)
 
@@ -95,7 +93,8 @@ A mathematical formulation of transport-first closure-defect telemetry. This
 note is related to Gate12A but is not a revision of its empirical report.
 
 [Note DOI](https://doi.org/10.5281/zenodo.19569052) |
-[release bundle](zenodo-release-transport-first-defect-telemetry/README.txt)
+[publication](publications/transport-first-defect-telemetry/README.md) |
+[Zenodo bundle](publications/transport-first-defect-telemetry/zenodo/README.txt)
 
 ### Gate12B: Observer-relative closure signatures
 
@@ -103,7 +102,8 @@ A bounded source-facing audit over existing replay artifacts, with a compact
 manifest-level evidence package.
 
 [Report DOI](https://doi.org/10.5281/zenodo.20080003) |
-[release bundle](zenodo-release-gate12b-observer-relative-closure-signatures/README.txt)
+[publication](publications/observer-relative-closure-signatures/README.md) |
+[Zenodo bundle](publications/observer-relative-closure-signatures/zenodo/README.txt)
 
 ### Gate12C-1: Compression-interleaved parenthesization defects
 
@@ -111,7 +111,8 @@ A predeclared null test and reproducibility capsule across 24
 replay-artifact-graph endpoints.
 
 [Report DOI](https://doi.org/10.5281/zenodo.21355572) |
-[release bundle](zenodo/gate12c1-parenthesization-defects/README.txt)
+[publication](publications/compression-interleaved-parenthesization-defects/README.md) |
+[Zenodo bundle](publications/compression-interleaved-parenthesization-defects/zenodo/README.txt)
 
 ### Local mapping without iterative closure
 
@@ -122,7 +123,8 @@ correct-demonstration P3 cell met the predeclared score-signal criterion on
 the frozen ordered length-8 parity ledgers at up to 64 demonstrations.
 
 [Report DOI](https://doi.org/10.5281/zenodo.21992852) |
-[release bundle](zenodo/local-mapping-without-iterative-closure/README.txt)
+[publication](publications/local-mapping-without-iterative-closure/README.md) |
+[Zenodo bundle](publications/local-mapping-without-iterative-closure/zenodo/README.txt)
 
 ### Sensitivity without reproducibility
 
@@ -133,7 +135,8 @@ remained sensitive in 59/60 layer-blocks but met its frozen all-layer fresh
 qualification in only 5/20 blocks, so the functional stage remained unopened.
 
 [Report DOI](https://doi.org/10.5281/zenodo.22180751) |
-[release bundle](zenodo/sensitivity-without-reproducibility/README.txt)
+[publication](publications/sensitivity-without-reproducibility/README.md) |
+[Zenodo bundle](publications/sensitivity-without-reproducibility/zenodo/README.txt)
 
 ### Gate12C-2: closed synthetic development track
 
@@ -185,8 +188,8 @@ releases.
   [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
 - **Follow the tracked research history:**
   [`workstream/`](workstream/README.md)
-- **Browse DOI-bound reports and reproducibility capsules:**
-  [`zenodo/`](zenodo/README.md)
+- **Browse publications across Zenodo, GitHub Releases, and future targets:**
+  [`publications/`](publications/README.md)
 - **Browse implementation and public specifications:** [`tools/`](tools/) and
   [`specs/public/`](specs/public/SPEC.public.md)
 - **Explore the interface companion:**
@@ -204,12 +207,11 @@ ABOUT/        Human-readable orientation and release guidance
 apps/         Bounded interactive prototypes and supporting applications
 crates/       Rust implementation and infrastructure
 docs/         Reproduction guides, evidence maps, and operator notes
+publications/ Platform-neutral publication records and target packages
 specs/        Public and retained internal specification surfaces
 src/          Python-facing package source
 tools/        Research runners, validators, and audit utilities
 workstream/   Numbered research memory and checkpoint history
-zenodo/       Indexed DOI-bound reports and reproducibility capsules
-zenodo-release*/  Frozen historical compatibility snapshots
 ```
 
 Generated local runs are not automatically part of the public evidence
