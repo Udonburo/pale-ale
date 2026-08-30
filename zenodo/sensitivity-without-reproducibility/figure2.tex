@@ -1,0 +1,44 @@
+\begin{figure}[ht]
+\centering
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{A. Exact external register square}\par\smallskip
+\centering
+\resizebox{0.94\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=18mm and 24mm,
+  state/.style={draw=Rule,rounded corners=1.5pt,minimum width=25mm,minimum height=10mm,fill=white,align=center},
+  arr/.style={-{Latex[length=2.1mm]},semithick,draw=Slate}
+]
+\node[state] (A) {$A=(t,r)$};
+\node[state,right=of A] (B) {$B=(t,r\oplus1)$};
+\node[state,below=of A] (C) {$C=(t+1,r\oplus x)$};
+\node[state,right=of C] (D) {$D=(t+1,r\oplus x\oplus1)$};
+\draw[arr] (A)--node[above,font=\small]{$J_t$}(B);
+\draw[arr] (A)--node[left,font=\small]{$\tau_{t,x}$}(C);
+\draw[arr] (B)--node[right,font=\small]{$\tau_{t,x}$}(D);
+\draw[arr] (C)--node[below,font=\small]{$J_{t+1}$}(D);
+\node[font=\small,text=Ink,align=center] at ($(A)!0.5!(D)$) {$J_{t+1}\tau=\tau J_t$};
+\end{tikzpicture}}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\textwidth}
+\textbf{B. Evidential ladder and terminal boundary}\par\smallskip
+\centering
+\begin{tikzpicture}[
+  node distance=5.5mm,
+  stagebox/.style={draw=Rule,rounded corners=1.2pt,minimum width=52mm,minimum height=7.5mm,fill=white,align=center,font=\small},
+  good/.style={stagebox,draw=PassBlue,fill=PassPale},
+  stop/.style={stagebox,draw=Slate,fill=FailPale},
+  hold/.style={stagebox,draw=Warn,fill=UnopenedPale},
+  arr/.style={-{Latex[length=1.8mm]},draw=Slate}
+]
+\node[good] (a0) {A0: explicit transition following};
+\node[good,below=of a0] (a1) {A1: demonstration-conditioned behavior};
+\node[good,below=of a1] (a2) {A2: visible-state intervention use};
+\node[good,below=of a2] (b) {B: bounded representation-return instrument};
+\node[stop,below=of b] (m) {Fresh map requalification: 5/20};
+\node[hold,below=of m] (c) {C: representation--function coupling untested};
+\draw[arr] (a0)--(a1); \draw[arr] (a1)--(a2); \draw[arr] (a2)--(b); \draw[arr] (b)--(m); \draw[arr] (m)--(c);
+\end{tikzpicture}
+\end{minipage}
+\caption{\label{fig:square}\textbf{Exact task algebra and conditional claim ladder.} The external paths commute exactly, but this does not imply exact commutation of an internal representation. The ladder separates intervention-backed visible-state use from observational representation geometry. The terminal boundary occurred at fresh map requalification, before any representation--function coupling analysis.}
+\end{figure}

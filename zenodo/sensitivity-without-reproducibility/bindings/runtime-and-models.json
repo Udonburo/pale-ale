@@ -1,0 +1,45 @@
+{
+  "schema_version": "sensitivity_without_reproducibility_runtime_and_models_v1",
+  "model_revisions": {
+    "Qwen/Qwen3-8B": "b968826d9c46dd6066d109eabc6255188de91218",
+    "Qwen/Qwen3-14B": "40c069824f4251a91eefaf281ebe4c544efd3e18",
+    "Qwen/Qwen3.5-27B": "fc05daec18b0a78c049392ed2e771dde82bdf654",
+    "Qwen/Qwen3.6-27B": "6a9e13bd6fc8f0983b9b99948120bc37f49c13e9",
+    "Qwen/Qwen3.8-27B": "1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0"
+  },
+  "runtime": {
+    "python": "3.11.2",
+    "pytorch": "2.7.1+cu126",
+    "cuda": "12.6",
+    "tokenizers": "0.22.2",
+    "dtype": "BF16",
+    "quantization": "none",
+    "sampling": "none",
+    "generated_chain_of_thought": "none",
+    "qwen3_8b_transformers": "5.15.0",
+    "qwen3_14b_transformers": "5.15.0",
+    "qwen27b_transformers": "5.15.1",
+    "qwen27b_transformers_commit": "550d7b3834670483a4df436541272c055dc364bf"
+  },
+  "hardware": {
+    "qwen3_8b": "NVIDIA L40S",
+    "qwen3_14b": "NVIDIA L40S",
+    "qwen27b_panel_and_operator": "NVIDIA A100-80GB"
+  },
+  "fresh_stage_m": {
+    "checkpoint": "Qwen/Qwen3.6-27B",
+    "execution_id": "bf41b049-f04b-442e-b0bd-05c8adbd4944",
+    "layers": [21, 43, 62],
+    "frame_rank": 4,
+    "blocks": 20,
+    "layer_blocks": 60,
+    "model_forwards": 4800,
+    "stage_e_model_forwards": 0,
+    "stage_m_result_sha256": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
+    "retrieval_inventory_sha256": "611ef9e5075c2698e93a42d2ab4d9e7ff3c2b719864d931ea1e01b18934513ae"
+  },
+  "repository_bindings": {
+    "execution_record_commit": "407d20fd4f074b9ef4524c82c8136874efaec476",
+    "source_execution_commit": "ea4558f0fcfd8944499407747615ec5bf41c1542"
+  }
+}

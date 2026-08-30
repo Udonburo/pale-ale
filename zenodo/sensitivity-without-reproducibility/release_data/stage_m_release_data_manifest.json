@@ -1,0 +1,44 @@
+{
+  "execution_id": "bf41b049-f04b-442e-b0bd-05c8adbd4944",
+  "files": {
+    "stage_m_layer_block_records.csv": "304466966b464ef8ef1c52eadfb87e2bcc1ed0ebd2824203a10a1ff5a07d76d2",
+    "stage_m_layer_block_records.json": "c90e7ffe3b5de5793b017625f32a401e10d97f2256e091435605c7debb7f492e"
+  },
+  "known_stale_receipt": {
+    "declared_pre_operator_sha256": "93d837b5e51562d6d3876f30bb1330cff54002f8a368245443846e0999197274",
+    "final_actual_sha256": "53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804",
+    "object": "Qwen3.6-27B behavioral execution root receipt for execution_claim.json",
+    "reason": "the later operator run appended its terminal stage to the shared claim",
+    "remote_redownload_sha256": "53d6c77b74bc73ca2a7abfc2b88cb6158316095dbbe3497ee712c999187ed804",
+    "scientific_payload_affected": false
+  },
+  "primary_analysis_state": "unexecuted",
+  "retrieval_inventory_sha256": "611ef9e5075c2698e93a42d2ab4d9e7ff3c2b719864d931ea1e01b18934513ae",
+  "schema_version": "sensitivity_without_reproducibility_release_data_manifest_v1",
+  "source_execution_commit": "ea4558f0fcfd8944499407747615ec5bf41c1542",
+  "source_stage_m_result_sha256": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
+  "stage_e_reason": "Stage M did not meet the frozen admission rule",
+  "stage_e_state": "unopened",
+  "tracked_closeout_commit": "407d20fd4f074b9ef4524c82c8136874efaec476",
+  "verified_aggregates": {
+    "block_count": 20,
+    "broken_sensitive_layer_blocks": 59,
+    "finite_crossfit_layer_blocks": 60,
+    "joint_block_pass_by_depth": {
+      "2": 0,
+      "4": 2,
+      "6": 2,
+      "8": 1
+    },
+    "joint_block_pass_count": 5,
+    "layer_pass_counts": {
+      "21": 11,
+      "43": 15,
+      "62": 9
+    },
+    "packet_qualified_layer_blocks": 60,
+    "record_count": 60,
+    "reproducible_layer_blocks": 35,
+    "stage_m_forwards": 4800
+  }
+}

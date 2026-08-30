@@ -1,0 +1,55 @@
+{
+  "schema_version": "sensitivity_without_reproducibility_release_v1",
+  "status": "doi_reserved_publication_ready",
+  "title": "Sensitivity Without Reproducibility: A Measurement Boundary for an Operator-Valued Representation Instrument in Qwen Models",
+  "author": "Aoi Kawasaki",
+  "package_date": "2026-08-31",
+  "repository": "https://github.com/Udonburo/pale-ale",
+  "execution_commit_permalink": "https://github.com/Udonburo/pale-ale/commit/407d20fd4f074b9ef4524c82c8136874efaec476",
+  "doi": "10.5281/zenodo.22180751",
+  "version": "1.0.0",
+  "resource_type": "publication-technicalnote",
+  "review_status": "not_peer_reviewed",
+  "license_map": {
+    "non_code_publication_materials": {
+      "spdx_id": "CC-BY-4.0",
+      "applies_to": "report, TeX/figure sources, README, metadata, citation audit, public result records, manifests, and build receipts",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "source_code": {
+      "spdx_id": "MPL-2.0",
+      "applies_to": "Python exporter inside reproducibility-capsule.zip",
+      "url": "https://www.mozilla.org/MPL/2.0/"
+    }
+  },
+  "publication_boundary": "The version-specific Zenodo DOI is the primary archival reference. GitHub remains the development and browsing surface, and the scientific execution record is fixed by the full commit permalink.",
+  "reported_result": {
+    "visible_state_use_qwen3_5_27b": "qualified",
+    "visible_state_use_qwen3_6_27b": "qualified",
+    "bounded_operator_instrument_qwen3_6_27b": "qualified_on_one_substrate",
+    "fresh_stage_m_block_count": 20,
+    "fresh_stage_m_layer_block_count": 60,
+    "broken_sensitive_layer_blocks": 59,
+    "reproducible_layer_blocks": 35,
+    "joint_qualified_blocks": 5,
+    "required_joint_qualified_blocks": 16,
+    "joint_qualified_blocks_by_depth": {
+      "2": 0,
+      "4": 2,
+      "6": 2,
+      "8": 1
+    },
+    "stage_e_opened": false,
+    "representation_function_association_estimated": false
+  },
+  "bindings": {
+    "execution_record_commit": "407d20fd4f074b9ef4524c82c8136874efaec476",
+    "source_execution_commit": "ea4558f0fcfd8944499407747615ec5bf41c1542",
+    "stage_m_result_sha256": "8c56c308856d486b77356a42fe54ef0bea8f91e486dc5dd3820c3a60db5be772",
+    "retrieval_inventory_sha256": "611ef9e5075c2698e93a42d2ab4d9e7ff3c2b719864d931ea1e01b18934513ae",
+    "report_source_sha256": "8a77f289c18650692fcfc46aa33797bd9b3697ca215555aa93ecc03c5b8d429c",
+    "report_pdf_sha256": "3411ba49796ce39a77d243d33d367c2a3d1df7eb72536142233c7edc4c698c18",
+    "reproducibility_capsule_sha256": "726991dc5eca97a3cc2801f24ef5a91ef02bcc12adbbc35c7e49f1268b5e2b74"
+  },
+  "scope_note": "The record closes only the frozen rank-4, three-layer, paired ridge coordinate-map route described in the report. It does not test hidden intervention, internal exact naturality, a neural causal-transition operator, or representation--function coupling."
+}

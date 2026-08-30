@@ -113,6 +113,17 @@ the frozen ordered length-8 parity ledgers at up to 64 demonstrations.
 [Report DOI](https://doi.org/10.5281/zenodo.21992852) |
 [release bundle](zenodo/local-mapping-without-iterative-closure/README.txt)
 
+### Sensitivity without reproducibility
+
+A staged measurement-boundary study separating visible-state use,
+positive-control sensitivity, fresh cross-presentation re-estimation, and a
+conditional representation--function analysis. The bounded operator route
+remained sensitive in 59/60 layer-blocks but met its frozen all-layer fresh
+qualification in only 5/20 blocks, so the functional stage remained unopened.
+
+[Report DOI](https://doi.org/10.5281/zenodo.22180751) |
+[release bundle](zenodo/sensitivity-without-reproducibility/README.txt)
+
 ### Gate12C-2: closed synthetic development track
 
 The graph-constrained N1 candidate failed its predeclared quantitative
