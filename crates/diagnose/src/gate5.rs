@@ -611,7 +611,7 @@ pub fn run_gate5_and_write<P: AsRef<Path>>(
             .cmp(&right.sample_id)
             .then(left.step.cmp(&right.step))
     });
-    sample_rows.sort_by(|left, right| left.sample_id.cmp(&right.sample_id));
+    sample_rows.sort_by_key(|row| row.sample_id);
 
     let summary = Gate5RunSummary {
         n_samples_total: sample_rows.len(),
@@ -699,7 +699,7 @@ pub fn run_gate5_diagnostics_and_write<P: AsRef<Path>>(
 fn validate_samples(
     mut samples: Vec<Gate4SampleInputV1>,
 ) -> Result<Vec<ValidatedSample>, Gate5OrchestratorError> {
-    samples.sort_by(|left, right| left.sample_id.cmp(&right.sample_id));
+    samples.sort_by_key(|sample| sample.sample_id);
     let mut out = Vec::with_capacity(samples.len());
     let mut previous_sample_id: Option<u64> = None;
     for sample in samples {
@@ -742,7 +742,7 @@ fn validate_samples(
         )?;
 
         let mut token_steps = sample.token_steps;
-        token_steps.sort_by(|left, right| left.step.cmp(&right.step));
+        token_steps.sort_by_key(|token_step| token_step.step);
         let mut previous_step: Option<usize> = None;
         let mut validated_steps = Vec::with_capacity(token_steps.len());
         for step in token_steps {

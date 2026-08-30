@@ -13,8 +13,9 @@ The Gate12A frozen technical report DOI is:
 
 - `10.5281/zenodo.19483162`
 
-The local release bundle is [`../zenodo-release/`](../zenodo-release/). Its
-release-side files are:
+The local release bundle is
+[`../publications/structural-replay-fp32/zenodo/`](../publications/structural-replay-fp32/zenodo/).
+Its release-side files are:
 
 - `paper.pdf`
 - `paper-source.zip`
@@ -38,19 +39,20 @@ The checksum layer verifies the release bundle files. It does not, by itself,
 re-run the empirical pipeline.
 
 On Windows PowerShell, compute the file hashes and compare them with
-[`../zenodo-release/CHECKSUMS-SHA256.txt`](../zenodo-release/CHECKSUMS-SHA256.txt):
+[`../publications/structural-replay-fp32/zenodo/CHECKSUMS-SHA256.txt`](../publications/structural-replay-fp32/zenodo/CHECKSUMS-SHA256.txt):
 
 ```powershell
-Get-FileHash zenodo-release\paper.pdf -Algorithm SHA256
-Get-FileHash zenodo-release\paper-source.zip -Algorithm SHA256
-Get-FileHash zenodo-release\selected-manifests.zip -Algorithm SHA256
-Get-FileHash zenodo-release\README.txt -Algorithm SHA256
-Get-FileHash zenodo-release\github-release-body.md -Algorithm SHA256
-Get-FileHash zenodo-release\zenodo-description.md -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\paper.pdf -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\paper-source.zip -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\selected-manifests.zip -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\README.txt -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\github-release-body.md -Algorithm SHA256
+Get-FileHash publications\structural-replay-fp32\zenodo\zenodo-description.md -Algorithm SHA256
 ```
 
-Then inspect [`../zenodo-release/README.txt`](../zenodo-release/README.txt) for
-the frozen commit bindings:
+Then inspect
+[`../publications/structural-replay-fp32/zenodo/README.txt`](../publications/structural-replay-fp32/zenodo/README.txt)
+for the frozen commit bindings:
 
 - downstream Gate12A replay summaries and structural quartet verdicts:
   `084eb7878d8cb016243950e1cf4b4bd7379daaba`
