@@ -1,82 +1,81 @@
-name: Release to PyPI (disabled)
+# Dormant release recipe. GitHub Actions ignores this filename.
+# Before reactivation, move it back to release.yml, remove the constant-false
+# guards, restore the intended tag trigger, and grant id-token: write.
+name: Release draft (manual, disabled)
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write  # Required for Trusted Publishing
 
 jobs:
   build:
     name: Build wheels on ${{ matrix.os }}
-    if: false # temporarily disabled while transitioning from PyPI/whl to Rust-only releases
+    if: false
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.11.2'
+          maturin-version: "1.11.2"
           target: ${{ matrix.os == 'macos-latest' && 'universal2-apple-darwin' || '' }}
           args: --release --out dist
-          sccache: 'true'
+          sccache: "true"
           manylinux: auto
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: dist
 
   sdist:
     name: Build source distribution
-    if: false # temporarily disabled while transitioning from PyPI/whl to Rust-only releases
+    if: false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.11.2'
+          maturin-version: "1.11.2"
           command: sdist
           args: --out dist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: dist
 
   publish:
     name: Publish to PyPI
-    if: false # temporarily disabled while transitioning from PyPI/whl to Rust-only releases
+    if: false
     needs: [build, sdist]
     runs-on: ubuntu-latest
     environment: pypi
 
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
