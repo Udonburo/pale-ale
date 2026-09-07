@@ -287,7 +287,8 @@ reported numbers; they are **not a complete public reproduction package**.
 The sealed run databases, full query records, protocols, and training-source
 dependencies remain outside this report package. Their release or DOI deposit
 is deferred. The acquisition result is closed independently of that publication
-decision and of the remaining CRD-02 off-site preservation work.
+decision. Private independent preservation has been verified separately;
+its scope and limitations are described in the accompanying notes.
 
 The underlying postmortem checked 484 saved training chunks, parameter-to-metric
 agreement (maximum absolute difference $5.552\times10^{-17}$), the BREAK

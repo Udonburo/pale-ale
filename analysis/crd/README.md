@@ -64,9 +64,13 @@ Hashes identify evidence, but do not substitute for access to it.
 CRD-01's 2026-09-04 result review accepted constructed estimator/intervention
 calibration and limited seed-coverage inference. Its private independent copy
 was verified on 2026-09-05. CRD-02's completed result and saved-data postmortem
-were accepted in the 2026-09-07 scientific close. The retained close note still
-assigns CRD-02 off-site preservation as a separate task. This report makes no
-claim of a new cloud verification or completed CRD-02 backup.
+were accepted in the 2026-09-07 scientific close. Its private independent copy
+was also verified on 2026-09-07: authenticated cloud readback, decompression,
+and hash comparison of every archived member byte stream. The copy retains
+the official evidence and repair history; regenerable bulk storage-test
+fixtures are excluded, with their source and original result summaries kept.
+This is private byte-level preservation, not public data availability or a
+claim that the historical Windows-specific execution environment is portable.
 
 The completed CRD-02 run spans an original database and two continuation
 layers. Its prior invalid/stopping records and value-preserving repair history
