@@ -204,7 +204,8 @@ class WeeklyTargetSetSummaryTest(unittest.TestCase):
                 "eval_factory_l4_weekly_llama3_2_3b_vm_fixture_bad",
                 "2026-04-23T01:00:00Z",
             )
-            (bad_bundle / "required_receipt_artifacts.sha256").unlink()
+            manifest = runner.read_json(bad_bundle / runner.RECEIPT_MANIFEST_FILENAME)
+            (bad_bundle / manifest["required_artifacts"][0]["bundled_path"]).unlink()
 
             summary = summary_helper.summarize_weekly_target_set(repo)
             text = summary_helper.render_text_summary(summary)

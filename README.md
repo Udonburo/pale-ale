@@ -26,10 +26,8 @@ Its public checkpoints currently use LLM artifacts as the main empirical
 sandbox, while keeping the broader research program distinct from any single
 model family, demo, or score.
 
-The repository is both an evidence surface and a tracked research memory. It
-keeps frozen reports, implementation snapshots, manifests, checksums,
-exclusions, negative results, and the workstream that explains how each public
-checkpoint was reached.
+The repository keeps reproducible studies, negative results, published reports,
+and the research history behind them. Published packages retain their provenance.
 
 > **The research is the evidence surface. Amber is a bounded interface companion.**
 
@@ -55,8 +53,8 @@ Three commitments organize the work:
 1. **Keep the observation surface explicit.** Results are interpreted only
    inside the precision, model, replay, and artifact boundaries that produced
    them.
-2. **Keep evidence inspectable.** Protocols, provenance, manifests, hashes,
-   boundary cases, and failures stay attached to the result.
+2. **Keep evidence inspectable.** Preserve the protocol, inputs, results,
+   boundary cases, and failures needed to understand and reproduce a finding.
 3. **Keep claims checkpointed.** Exploratory directions do not silently become
    established findings or rewrite earlier releases.
 
@@ -138,6 +136,11 @@ qualification in only 5/20 blocks, so the functional stage remained unopened.
 [publication](publications/sensitivity-without-reproducibility/README.md) |
 [Zenodo bundle](publications/sensitivity-without-reproducibility/zenodo/README.txt)
 
+## Technical Reports and Closed Studies
+
+These repository reports record bounded results and limitations. They are not
+additional DOI releases or entries in the six-paper publication catalog.
+
 ### Gate12C-2: closed synthetic development track
 
 The graph-constrained N1 candidate failed its predeclared quantitative
@@ -149,6 +152,18 @@ sufficient repair. No real held-out surface was opened. Final status:
 [frozen minimal implementation](tools/gate12c2_minimal/README.md) |
 [statistical adequacy audit](analysis/gate12c2_v2_statistical_adequacy/README.md) |
 [balanced-prototype negative report](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md)
+
+### CRD: controlled calibration and a negative acquisition test
+
+CRD-01 calibrated a path-order estimator and interventions in an explicitly
+constructed two-state learned system. CRD-02 completed its fixed 242-seed
+acquisition study, with no primary seed meeting local action acquisition.
+The report separates that negative result from successful numerical recovery,
+long-horizon attenuation, and unresolved learning mechanisms. Both studies are
+scientifically closed; no spontaneous-emergence or opaque-model claim is made.
+
+[Technical report](analysis/crd/TECHNICAL_REPORT.md) |
+[aggregate data and verification scope](analysis/crd/README.md)
 
 The earlier replication checkpoint remains available as a
 [historical release surface](publications/gate12a-first-replication-checkpoint/README.md).
@@ -198,6 +213,10 @@ releases.
 This is a research-first repository, not one monolithic application. Commands
 and artifacts are checkpoint-specific; start from the relevant runbook or
 release README.
+
+For development, start with the relevant implementation and its runbook.
+Historical freeze, authorization, and handoff notes describe past work. They
+do not require new approval documents for routine fixes or local cleanup.
 
 <details>
 <summary><strong>Repository map</strong></summary>

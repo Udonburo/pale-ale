@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import csv
+import io
+import shutil
 import sys
 import tarfile
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 
@@ -204,7 +207,7 @@ def write_weekly_fixture_run(repo: Path) -> Path:
 
 
 class PackageEvalFactoryReceiptTest(unittest.TestCase):
-    def test_successful_packaging_writes_manifest_checksums_and_tarball(self) -> None:
+    def test_default_export_contains_only_selected_files_and_one_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             run_dir = write_fixture_run(repo)
@@ -217,23 +220,21 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
             validation = runner.validate_operator_receipt_manifest(repo, result.manifest_path)
 
             self.assertTrue(result.manifest_path.exists())
-            self.assertTrue(result.required_checksums_path.exists())
-            self.assertTrue(result.bundle_checksums_path.exists())
-            self.assertIsNotNone(result.tarball_path)
-            self.assertTrue(result.tarball_path.exists())
+            self.assertIsNone(result.tarball_path)
             self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
-            with tarfile.open(result.tarball_path, "r:gz") as archive:
-                names = archive.getnames()
+            files = [path for path in result.receipt_root.rglob("*") if path.is_file()]
+            self.assertEqual(len(files), 5)
+            self.assertFalse(any(path.suffix == ".sha256" for path in files))
+            self.assertFalse(packager.parse_args(["--run-dir", str(run_dir)]).tarball)
 
-        self.assertIn("eval_factory_l4_smoke_vm_fixture/eval_factory_l4_smoke_status.json", names)
-
-    def test_successful_weekly_packaging_writes_manifest_checksums_and_tarball(self) -> None:
+    def test_full_run_archive_is_opt_in_and_verified_from_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             run_dir = write_weekly_fixture_run(repo)
             result = packager.package_receipt(
                 run_dir,
                 repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME,
+                create_tarball=True,
                 created_at="2026-04-22T00:00:00Z",
                 repo_root=repo,
             )
@@ -241,22 +242,23 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
             manifest = runner.read_json(result.manifest_path)
 
             self.assertTrue(result.manifest_path.exists())
-            self.assertTrue(result.required_checksums_path.exists())
-            self.assertTrue(result.bundle_checksums_path.exists())
             self.assertIsNotNone(result.tarball_path)
             self.assertTrue(result.tarball_path.exists())
             self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID)
             with tarfile.open(result.tarball_path, "r:gz") as archive:
                 names = archive.getnames()
+            self.assertFalse(list(result.receipt_root.rglob("*.sha256")))
+            original = result.tarball_path.read_bytes()
+            result.tarball_path.write_bytes(bytes([original[0] ^ 1]) + original[1:])
+            corrupted = runner.validate_operator_receipt_manifest(repo, result.manifest_path)
+            self.assertTrue(any("tarball checksum mismatch" in error for error in corrupted.errors))
 
         self.assertEqual(manifest["schema_id"], runner.OPERATOR_RECEIPT_L4_WEEKLY_SCHEMA_ID)
         self.assertEqual(manifest["source_class"], runner.SOURCE_OPERATOR_WEEKLY_RECEIPT)
         self.assertEqual(manifest["tier"], runner.Tier.L4_WEEKLY.value)
         self.assertEqual(manifest["target"], "qwen2_5_3b")
         self.assertEqual(manifest["fixed_target_set"]["model_id"], "Qwen/Qwen2.5-3B-Instruct")
-        self.assertTrue(manifest["not_a_checkpoint"])
-        self.assertTrue(manifest["not_a_memo_claim"])
-        self.assertIn("pending_local_read", manifest["runs_first_pass_status_note"])
+        self.assertEqual(manifest["machine_side_structural_family_summary"][0]["runs_first_pass_status"], "pending_local_read")
         self.assertIn("eval_factory_l4_weekly_qwen2_5_3b_vm_fixture/eval_factory_l4_weekly_status.json", names)
 
     def test_missing_required_artifact_fails_clearly(self) -> None:
@@ -333,7 +335,7 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
 
         self.assertIn("malformed status artifact", str(raised.exception))
 
-    def test_manifest_stays_operational_and_non_claiming(self) -> None:
+    def test_export_preserves_execution_and_measurement_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             run_dir = write_fixture_run(repo)
@@ -348,13 +350,10 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
 
         self.assertEqual(manifest["schema_id"], runner.OPERATOR_RECEIPT_SCHEMA_ID)
         self.assertEqual(manifest["source_class"], runner.SOURCE_OPERATOR_RECEIPT)
-        self.assertTrue(manifest["not_a_checkpoint"])
-        self.assertTrue(manifest["not_a_memo_claim"])
-        self.assertTrue(manifest["no_new_model_execution_in_packaging"])
         self.assertEqual(manifest["posture_classification"], runner.POSTURE_REMOTE_CUDA_READY)
         self.assertEqual(manifest["execute_result"], "pass")
         self.assertEqual(manifest["family_count"], 3)
-        self.assertIn("pending_local_read", manifest["runs_first_pass_status_note"])
+        self.assertEqual(manifest["machine_side_structural_family_summary"][0]["runs_first_pass_status"], "pending_local_read")
         self.assertFalse(manifest["tarball"]["present"])
 
     def test_inspect_only_does_not_write_bundle_outputs(self) -> None:
@@ -387,19 +386,71 @@ class PackageEvalFactoryReceiptTest(unittest.TestCase):
             )
 
             text = runner.render_summarize_existing(repo)
-            checks = runner.build_cpu_nightly_checks(repo)
             manifest_exists = result.manifest_path.exists()
 
         self.assertTrue(manifest_exists)
         self.assertIn("operator/eval-factory l4-weekly receipt bundle surfaces:", text)
         self.assertIn("source_class=operator/eval-factory l4-weekly receipt bundle", text)
         self.assertIn("target=qwen2_5_3b", text)
-        self.assertTrue(
-            any(
-                check.level == runner.LEVEL_PASS and runner.SOURCE_OPERATOR_WEEKLY_RECEIPT in check.label
-                for check in checks
-            )
-        )
+
+    def test_export_file_corruption_is_detected_without_sidecars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            result = packager.package_receipt(write_fixture_run(repo), repo / "exports", repo_root=repo)
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(packager.main(["--verify-export", str(result.manifest_path)]), 0)
+            copied_log = result.receipt_root / "required_artifacts/eval_factory_l4_smoke_execute.log"
+            original = copied_log.read_bytes()
+            copied_log.write_bytes(b"X" + original[1:])
+            validation = runner.validate_operator_receipt_manifest(repo, result.manifest_path)
+            self.assertEqual(validation.status, runner.ARTIFACT_STATUS_MALFORMED)
+            self.assertTrue(any("checksum mismatch" in error for error in validation.errors))
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(packager.main(["--verify-export", str(result.manifest_path)]), 1)
+
+    def test_legacy_sidecars_remain_readable_and_checked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            result = packager.package_receipt(write_fixture_run(repo), repo / "exports", repo_root=repo)
+            manifest = runner.read_json(result.manifest_path)
+            entries = manifest["required_artifacts"]
+            # Historical manifests used repository-relative paths.
+            for entry in entries:
+                entry["bundled_path"] = (result.receipt_root / entry["bundled_path"]).relative_to(repo).as_posix()
+            sums = result.receipt_root / "required_receipt_artifacts.sha256"
+            sums.write_text("".join(f"{entry['sha256']}  {entry['bundled_path']}\n" for entry in entries), encoding="utf-8")
+            bundle_sums = result.receipt_root / "receipt_bundle_files.sha256"
+            bundle_sums.write_text(f"{runner.sha256_file(sums)}  {sums.relative_to(repo).as_posix()}\n", encoding="utf-8")
+            manifest["checksums"] = {
+                "required_artifacts_sha256": sums.relative_to(repo).as_posix(),
+                "bundle_files_sha256": bundle_sums.relative_to(repo).as_posix(),
+            }
+            packager.write_json(result.manifest_path, manifest)
+            self.assertEqual(runner.validate_operator_receipt_manifest(repo, result.manifest_path).status, runner.ARTIFACT_STATUS_VALID)
+            sums.write_text("corrupted\n", encoding="utf-8")
+            self.assertEqual(runner.validate_operator_receipt_manifest(repo, result.manifest_path).status, runner.ARTIFACT_STATUS_MALFORMED)
+
+    def test_export_cannot_recurse_into_its_source_or_overwrite_a_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            run_dir = write_fixture_run(repo)
+            with self.assertRaises(packager.ReceiptPackagingError):
+                packager.package_receipt(run_dir, run_dir / "exports", create_tarball=True, repo_root=repo)
+            result = packager.package_receipt(run_dir, repo / "exports", created_at="2026-04-21T00:00:00Z", repo_root=repo)
+            before = result.manifest_path.read_bytes()
+            with self.assertRaises(packager.ReceiptPackagingError):
+                packager.package_receipt(run_dir, repo / "exports", created_at="2026-04-21T00:00:00Z", repo_root=repo)
+            self.assertEqual(result.manifest_path.read_bytes(), before)
+
+    def test_export_can_be_read_after_transfer_without_the_source_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir) / "sender"
+            result = packager.package_receipt(write_fixture_run(repo), repo / "exports", create_tarball=True, repo_root=repo)
+            receiver = Path(tmpdir) / "receiver"
+            copied = receiver / "renamed-export"
+            shutil.copytree(result.receipt_root, copied)
+            validation = runner.validate_operator_receipt_manifest(receiver, copied / result.manifest_path.name)
+            self.assertEqual(validation.status, runner.ARTIFACT_STATUS_VALID, validation.errors)
 
 
 if __name__ == "__main__":

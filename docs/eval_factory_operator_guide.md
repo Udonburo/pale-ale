@@ -1,9 +1,9 @@
 # Eval Factory Operator Guide
 
 This guide is for operating `tools/run_eval_checks.py` from the repository
-root. It documents the standing eval-factory tiers and the status-source
-discipline around them. It does not add execution, widen Gate12A, or promote
-local `runs/` material into tracked public evidence.
+root. Use the relevant tier and read the resulting status and measurements.
+Normal local operation needs no receipt bundle, freeze note, or approval
+document.
 
 ## Status Sources
 
@@ -27,6 +27,13 @@ evidence source.
 | `summarize-existing` | Read-only rollup. | Reports memo-facing surfaces, tracked memo model surfaces, and runs-derived materialized cross-model summaries from existing local files. | Does not generate new runs or turn `runs/` status into public memo status. |
 | `l4-smoke` | Narrow execution lane for the 0.5B boundary set. | Prints a dry-run by default; with `--execute` and an explicit `--out-dir`, runs the fixed 0.5B lane. | Does not expand beyond the fixed 0.5B family set, and does not promote a new checkpoint. |
 | `l4-weekly` | Bounded mainline standing lane. | Prints the standing plan by default; when bounded execution support is present, preflights or executes one current 3B/4B target at a time. | Does not include 7B FP32, sidecar candidates, quantized candidates, protocol-expanding candidates, a new checkpoint, memo promotion, or Gate12B promotion. |
+
+`cpu-nightly` skips optional export bundles and archived/local study copies;
+missing or damaged transfer packaging does not block development checks.
+`summarize-existing` reads export metadata without rehashing the copied files.
+For sharing, the [export helper](l4_smoke_receipt_assimilation.md) writes one
+manifest containing hashes of the selected files. A full tarball is opt-in;
+`--verify-export <manifest>` checks a specific copy when needed.
 
 The L4 tiers describe operational lanes. They are not claim surfaces by
 themselves. Treat their output as planning or local status text unless a

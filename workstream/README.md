@@ -1,67 +1,37 @@
 # Workstream
 
-This directory holds the numbered tracked workstream memory for the repo.
+This directory is the numbered research history. For current development,
+start with the relevant implementation and study protocol. For
+published findings, use the [publication catalog](../publications/README.md).
+Local studies are under ignored `local/`; use its `README.md` when present.
 
-If you are new to the repo, do not start here blind. Start with:
+| Files | Historical subject |
+| --- | --- |
+| 06–77 | Gate6–Gate10 experiments and summaries |
+| 78–195 | Closed Gate11 operator-admissibility work |
+| 196–216 | Gate12A replay, replication, and report |
+| 217–230, 239 | Gate12B observer-relative analysis and manuscript |
+| 231–238 | Gate12C feasibility and Gate12C-1 experiment |
 
-- [`../README.md`](../README.md): root landing page
-- [`../ABOUT/README.md`](../ABOUT/README.md): orientation hub
-- [`../ABOUT/WORKSTREAM_AND_GATES.md`](../ABOUT/WORKSTREAM_AND_GATES.md): what Gate and Workstream mean in this repo
+The numbers preserve historical reading order. Read the notes relevant to the
+question at hand; the full sequence is not a prerequisite for new work.
+Old “not authorized,” “freeze,” “fresh review,” and “next required state” text
+records the circumstances of those tasks, not present-day working instructions.
 
-Then come back here for the full tracked index.
+The 58 Gate11 audit generators and their tests have been removed from `tools/`.
+They recursively inspected prior operational status rather than providing an
+active experiment. Their source remains recoverable from Git history, and
+the numbered notes retain the historical findings. Do not regenerate that chain
+as a prerequisite for current research.
 
-- `06` through `239` are the tracked Gate6-Gate12 line, kept in numeric order
-- the numbering is part of the reading order and should be preserved
-- mainline entry points are `25`, `26`, `62`, `63`, `76`, and `77`
-- the current Gate11 constitution draft is `78`
-- the latest tracked Gate11 handoff is `194`
-- the latest tracked Gate11 slice is `193`
-- the Gate11 membrane freeze note is `195`
-- the tracked Gate12 constitution is `196`
-- the tracked Gate12A implementation contract is `197`
-- the tracked Gate12A first runner spec is `198`
-- the tracked Gate12A first empirical memo is `199`
-- the tracked Gate12A transcript_v1 family replication memo is `200`
-- the tracked Gate12A briefing_v1 family empirical memo is `201`
-- the tracked Gate12A cross-family comparison memo is `202`, which remains the current published checkpoint boundary
-- the tracked Gate12A archive_v1 post-checkpoint first-pass break-candidate memo is `203`
-- the tracked Gate12A SmolLM2-360M transcript_v1 post-checkpoint fallback baseline memo is `204`
-- the tracked Gate12A Llama-3.2-1B-Instruct transcript_v1 post-checkpoint replication memo is `205`
-- the tracked Gate12A Llama-3.2-1B-Instruct fixed family-set post-checkpoint replication memo is `206`
-- the tracked Gate12A Qwen2.5-1.5B-Instruct transcript_v1 imported GPU post-checkpoint replication memo is `207`
-- the tracked Gate12A Qwen2.5-3B-Instruct transcript_v1 imported GPU post-checkpoint replication memo is `208`
-- the tracked Gate12A Mistral-7B-Instruct-v0.3 transcript_v1 imported GPU post-checkpoint replication memo is `209`
-- the tracked Gate12A Qwen2.5-3B-Instruct fixed family-set post-checkpoint replication memo is `210`
-- the tracked Gate12A Llama-3.2-3B-Instruct fixed family-set post-checkpoint replication memo is `211`
-- the tracked Gate12A Qwen3-4B fixed family-set post-checkpoint replication memo is `212`
-- the tracked Gate12A single-GPU FP32 dense-transformer technical report draft is `213`
-- the tracked Gate12A frozen-protocol exclusion and non-transformer sidecar memo is `214`
-- the tracked Gate12A Qwen2.5-0.5B fixed family-set lower-bound post-checkpoint replication memo is `215`
-- the tracked Gate12A bounded weekly target-set operator closeout memo is `216`
-- the tracked Gate12B observer-relative coarse-grained closure opening memo is `217`
-- the tracked Gate12B first observer-relative coarse-grained closure smoke memo is `218`
-- the tracked Gate12B Qwen2.5-0.5B three-family observer-relative comparison memo is `219`
-- the tracked Gate12B dense-transformer family-effect expansion memo is `220`
-- the tracked Gate12B archive strict-support sensitivity memo is `221`
-- the tracked Gate12B archive observer-scope expansion sensitivity memo is `222`
-- the tracked Gate12B motif observer specificity check is `223`
-- the tracked Gate12B archive candidate source inspection queue memo is `224`
-- the tracked Gate12B archive source-facing annotation memo is `225`
-- the tracked Gate12B non-archive source-facing annotation sensitivity memo is `226`
-- the tracked Gate12B observer-relative closure closeout memo is `227`
-- the tracked Gate12B paper outline and claim-boundary memo is `228`
-- the tracked Gate12B paper evidence package manifest is `229`
-- the tracked Gate12B manuscript source plan is `230`
-- the tracked Gate12C associator feasibility and equal-rank alpha contract is `231`
-- the tracked Gate12C first real-artifact feasibility census plan is `232`
-- the tracked Gate12C first real-artifact feasibility census memo is `233`
-- the tracked Gate12C equal-rank alpha implementation contract is `234`
-- the tracked Gate12C-1 first empirical execution plan is `235`
-- the tracked Gate12C-1 first empirical result memo is `236`
-- the tracked Gate12C-1 result closeout and next boundary memo is `237`
-- the tracked Gate12C-1 negative-control and public positioning plan is `238`
-- the tracked Gate12B manuscript production readiness plan is `239`
-- no later tracked Gate11 slice is currently authorized beyond the BF closeout and membrane freeze
+For the retired tools, use the complete
+[pre-retirement checkout](https://github.com/Udonburo/pale-ale/tree/f16bcdd/tools),
+including its original dependencies, rather than copying an isolated generator
+into the current tree.
 
-Local-only notes are kept separately under `workstream/local/`.
-Those files are ignored by git and blocked by the repo-local pre-push hook if they ever become tracked by mistake.
+Later completed studies are summarized separately in the
+[CRD technical report](../analysis/crd/TECHNICAL_REPORT.md); they do not extend
+the Gate11 operational chain.
+
+`*.local.md` and `workstream/local/` are ignored by Git and protected by the
+repo-local pre-push hook against accidental publication.

@@ -1,219 +1,48 @@
-# L4-smoke Receipt Assimilation
+# Inspect or export an L4 result
 
-This guide explains how to assimilate a successful VM `l4-smoke --execute`
-receipt into an operator status note. It is not a workstream memo update, a
-checkpoint declaration, a release note, or a Gate12B signal.
+A normal local run is complete when its status and result files have been
+written. Read those files directly. Packaging, an operator note, and checksum
+sidecars are not required steps.
 
-Use this only after the run has a concrete output directory on the VM.
-Generated `runs/` material and receipt bundles remain local operator evidence
-unless a separate tracked memo or release process records them.
+| File | What to read |
+| --- | --- |
+| `eval_factory_l4_smoke_status.json` | Command, return code, embedded preflight, family results, and errors |
+| `eval_factory_l4_smoke_preflight.json` | Interpreter, CUDA/GPU availability, and setup errors when troubleshooting |
+| `eval_factory_l4_smoke_execute.log` | Captured stdout/stderr when needed to diagnose the run |
+| `gate12a_cross_model_replay_qwen_qwen2_5_0_5b/cross_model_family_summary.csv` | Measured family rows and structural flags |
 
-## Source Class
+Report the output path and observed result. A setup or persistence error is an
+operational failure; fix it and retry the affected operation within the study's
+scientific conditions. Structural pass does not fill in an unmeasured phenotype:
+keep `pending_local_read` when that is what the data says.
 
-Name the source class before writing the status note:
+## Optional export
 
-```text
-source class: eval-factory execute/status artifact
-```
-
-The supporting files have different boundaries:
-
-| File | Source class | Use | Boundary |
-| --- | --- | --- | --- |
-| `eval_factory_l4_smoke_preflight.json` | Eval-factory preflight artifact | Confirms interpreter, CUDA, GPU, and posture classification. | Not evidence that replay ran. |
-| `eval_factory_l4_smoke_status.json` | Eval-factory execute/status artifact | Records one `l4-smoke --execute` attempt, embedded preflight, dispatch summary, family rows, and notes. | Not a tracked memo, checkpoint, release surface, or Gate12B signal. |
-| `eval_factory_l4_smoke_execute.log` | Operator stdout/stderr capture | Helps reconstruct command flow and runner sections. | JSON artifacts remain the contract source for fields. |
-| `cross_model_family_summary.csv` | Runs-derived materialized status | Shows local rows produced under the run output directory. | Does not override tracked memo status or widen the public claim surface. |
-
-## Read Order
-
-Read the receipt in this order:
-
-1. `eval_factory_l4_smoke_preflight.json`
-2. `eval_factory_l4_smoke_status.json`
-3. `eval_factory_l4_smoke_execute.log`
-4. `gate12a_cross_model_replay_qwen_qwen2_5_0_5b/cross_model_family_summary.csv`
-
-Do not start from the CSV. The CSV is useful only after the preflight and
-status artifacts establish the lane, target set, command, and execution result.
-
-## Canonical Packaging Path
-
-After a successful VM `l4-smoke --execute`, package the successful run
-directory with the committed helper:
+When another person or machine needs a copy, export the selected files:
 
 ```bash
-python tools/package_eval_factory_receipt.py --run-dir runs/eval_factory_l4_smoke_vm_20260421T162735Z
+python3 tools/package_eval_factory_receipt.py --run-dir "$OUT_DIR"
 ```
 
-The helper packages the run as an operator receipt bundle. By default it writes
-under `runs/receipt_bundles/` and produces:
+The helper copies the four files above and writes one
+`operator_receipt_manifest.json` containing their hashes and run metadata under
+`runs/receipt_bundles/`. It also supports the weekly lane and its corresponding
+filenames. Capture the execution log during the run if an export will be needed;
+see the [runbook](l4_smoke_runbook.md).
 
-- `operator_receipt_manifest.json`
-- `required_receipt_artifacts.sha256`
-- `receipt_bundle_files.sha256`
-- a `.tar.gz` copy of the source run directory and its `.sha256` file
+Use `--tarball` only when the recipient needs the entire run directory. Its
+hash goes in the same manifest. Use `--inspect-only` to check an export without
+writing it. No checksum-of-checksum files or follow-up receipts are generated.
+Existing exports that declare legacy checksum sidecars remain readable.
 
-Treat the resulting bundle as `operator/eval-factory receipt bundle`
-packaging. It is not a tracked memo, not a release surface, not a checkpoint,
-and not a Gate12B signal. Packaging validates and copies existing artifacts; it
-does not launch model execution or add a phenotype readout.
+`cpu-nightly` does not require or verify transfer bundles. `summarize-existing`
+reads their metadata without rehashing their contents and labels it
+`metadata-valid`. To verify a received copy, select that export explicitly:
 
-## What To Inspect
-
-### 1. Preflight JSON
-
-Inspect these fields first:
-
-- `schema_id`
-- `schema_version`
-- `tier`
-- `mode`
-- `fixed_target_set`
-- `sys_executable`
-- `torch_importable`
-- `torch_cuda_available`
-- `gpu_count`
-- `gpu_names`
-- `nvidia_smi_available`
-- `posture_classification`
-- `preflight_ok`
-- `errors`
-- `remediation_hints`
-- `result`
-
-For a successful VM receipt, the posture fields should support
-`posture_classification: remote_cuda_ready`, `preflight_ok: true`, and
-`result: pass`. If they do not, stop and treat the receipt as a preflight or
-posture failure.
-
-### 2. Status JSON
-
-Then inspect:
-
-- `schema_id`
-- `schema_version`
-- `tier`
-- `mode`
-- `fixed_target_set`
-- `model_id`
-- `families`
-- `entrypoint`
-- `command`
-- `out_dir`
-- `returncode`
-- `preflight`
-- `downstream_dispatch_summary`
-- `family_results`
-- `notes`
-- `result`
-
-For a successful fixed-lane receipt, the status artifact should show
-`mode: execute`, `returncode: 0`, `downstream_dispatch_summary.result: pass`,
-the expected family count, and a `family_results` row for each fixed family.
-
-### 3. Execute Log
-
-Use the log to check what the operator saw:
-
-- command line
-- `out-dir`
-- selected entrypoints
-- environment diagnostics
-- posture classification
-- preflight result
-- per-family dispatch/result summary
-- final pass/fail summary
-
-Do not quote log-only prose as a stronger status than the JSON artifacts
-support.
-
-### 4. Cross-model Summary CSV
-
-Use the CSV as local materialized status under the run output directory. Inspect
-only fields that are actually present in the generated file. Typical checks are:
-
-- family rows present for `transcript_v1`, `briefing_v1`, and `archive_v1`
-- structural replay flags reported by the summary
-- score columns or comparison columns needed for operator troubleshooting
-- first-pass status columns, when present
-
-The CSV is not tracked memo status. It should not be cited as public evidence
-unless a separate tracked process promotes that evidence.
-
-## Assimilated Status Shape
-
-A narrow closeout note should look like this:
-
-```text
-source class: eval-factory execute/status artifact
-lane: l4-smoke
-result: pass
-posture: remote_cuda_ready
-fixed target: Qwen/Qwen2.5-0.5B
-families: transcript_v1 / briefing_v1 / archive_v1
-structural replay receipt: status artifact reports pass for the fixed family set
-phenotype readout: pending_local_read
-interpretation boundary: operator receipt only; not tracked memo status, not a new checkpoint, not Gate12B
+```bash
+python3 tools/package_eval_factory_receipt.py --verify-export path/to/operator_receipt_manifest.json
 ```
 
-Keep the wording about structure and phenotype separate. The receipt can say
-that the fixed-lane execution reported structural pass status. It cannot turn
-`pending_local_read` into a phenotype conclusion.
-
-## Phenotype Boundary
-
-Preserve `runs_first_pass_status: pending_local_read` when that is what the
-status artifact reports.
-
-This means the VM receipt did not add a fresh phenotype readout. Do not infer a
-packet-local first-pass phenotype result from structural pass status, from the
-CSV alone, or from the fact that the VM execution succeeded.
-
-If phenotype reading is performed later, record it as a separate operator step
-with its own source class and do not backfill it into this receipt.
-
-## Troubleshooting Note
-
-A prior failed attempt caused by missing Python packages, such as
-`transformers`, is a dependency/setup failure. Treat it only as troubleshooting
-context.
-
-Do not assimilate a dependency failure as:
-
-- a Gate12A structural failure
-- a model-family result
-- a checkpoint boundary
-- a Gate12B signal
-- a reason to widen or narrow the public memo surface
-
-If a later retry succeeds after dependency installation, summarize the failed
-attempt separately and keep the successful receipt tied to its own output
-directory.
-
-## Do Not Over-read This
-
-- Successful VM `l4-smoke --execute` receipt != new checkpoint.
-- Execute/status artifact != tracked memo.
-- `runs_first_pass_status: pending_local_read` != phenotype readout.
-- Cross-summary CSV != public release evidence by itself.
-- Dependency setup failure != research result.
-- This receipt does not imply Gate12B.
-
-## Closeout Checklist
-
-Before writing the final operator note, confirm:
-
-- the output directory is concrete and preserved as needed
-- the successful run directory has been packaged with
-  `tools/package_eval_factory_receipt.py` when a durable receipt bundle is
-  needed
-- preflight JSON is present and valid enough to read
-- status JSON is present and valid enough to read
-- execute log is present when stdout/stderr capture is part of the retained
-  bundle
-- `operator_receipt_manifest.json` and checksum files are recorded as operator
-  receipt packaging, not tracked memo status
-- cross-model summary path is recorded only as local materialized status
-- the summary names `eval-factory execute/status artifact` as the source class
-- phenotype remains `pending_local_read` unless a separate readout step exists
+This checks the copied files against the manifest and exits nonzero on damage.
+Published studies retain their result provenance; an export does not change a
+published claim.

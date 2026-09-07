@@ -201,8 +201,6 @@ SOURCE_OPERATOR_RECEIPT = "operator/eval-factory receipt bundle"
 SOURCE_OPERATOR_WEEKLY_RECEIPT = "operator/eval-factory l4-weekly receipt bundle"
 RECEIPT_BUNDLES_DIRNAME = "receipt_bundles"
 RECEIPT_MANIFEST_FILENAME = "operator_receipt_manifest.json"
-RECEIPT_REQUIRED_ARTIFACT_CHECKSUMS_FILENAME = "required_receipt_artifacts.sha256"
-RECEIPT_BUNDLE_CHECKSUMS_FILENAME = "receipt_bundle_files.sha256"
 ARTIFACT_STATUS_VALID = "valid"
 ARTIFACT_STATUS_MALFORMED = "malformed"
 ARTIFACT_STATUS_MISSING = "missing"
@@ -213,7 +211,9 @@ ARTIFACT_DISCOVERY_EXCLUDED_DIRS = {
     ".ruff_cache",
     ".venv",
     "__pycache__",
+    "archive",
     "node_modules",
+    RECEIPT_BUNDLES_DIRNAME,
     "target",
     "venv",
 }
@@ -670,8 +670,13 @@ def discover_files_by_name(repo_root: Path, filename: str) -> tuple[Path, ...]:
     if not repo_root.exists():
         return ()
     matches: list[Path] = []
+    historical_roots = {repo_root / "workstream" / "local", repo_root / "publications"}
     for current_root, dirnames, filenames in os.walk(repo_root):
-        dirnames[:] = [name for name in dirnames if name not in ARTIFACT_DISCOVERY_EXCLUDED_DIRS]
+        dirnames[:] = [
+            name for name in dirnames
+            if name not in ARTIFACT_DISCOVERY_EXCLUDED_DIRS
+            and Path(current_root) / name not in historical_roots
+        ]
         if filename in filenames:
             matches.append(Path(current_root) / filename)
     return tuple(sorted(matches, key=lambda path: repo_relative(repo_root, path)))
@@ -1284,21 +1289,21 @@ def validate_receipt_manifest_payload(payload: Any, prefix: str = "") -> tuple[s
         field = f"{prefix}.families" if prefix else "families"
         errors.append(f"field {field} expected {list(FAMILY_SET)!r}, got {families!r}")
     require_str(payload, "downstream_summary_path", errors, prefix)
-    require_str(payload, "runs_first_pass_status_note", errors, prefix)
-    require_literal(payload, "not_a_checkpoint", True, errors, prefix)
-    require_literal(payload, "not_a_memo_claim", True, errors, prefix)
-    require_literal(payload, "no_new_model_execution_in_packaging", True, errors, prefix)
-    checksums = require_mapping(payload, "checksums", errors, prefix)
-    if checksums is not None:
+    # New exports store hashes in the manifest. Read old sidecars only when
+    # explicitly declared by a historical bundle.
+    if "checksums" in payload:
+        checksums = require_mapping(payload, "checksums", errors, prefix)
         checksum_prefix = f"{prefix}.checksums" if prefix else "checksums"
-        require_str(checksums, "required_artifacts_sha256", errors, checksum_prefix)
-        require_str(checksums, "bundle_files_sha256", errors, checksum_prefix)
+        if checksums is not None:
+            require_str(checksums, "required_artifacts_sha256", errors, checksum_prefix)
+            require_str(checksums, "bundle_files_sha256", errors, checksum_prefix)
     tarball = require_mapping(payload, "tarball", errors, prefix)
     if tarball is not None:
         tarball_prefix = f"{prefix}.tarball" if prefix else "tarball"
         present = require_bool(tarball, "present", errors, tarball_prefix)
         require_str(tarball, "path", errors, tarball_prefix, allow_empty=present is False)
-        require_str(tarball, "sha256_path", errors, tarball_prefix, allow_empty=present is False)
+        if "sha256_path" in tarball:
+            require_str(tarball, "sha256_path", errors, tarball_prefix, allow_empty=present is False)
         require_str(tarball, "sha256", errors, tarball_prefix, allow_empty=present is False)
         require_optional_int(tarball, "size_bytes", errors, tarball_prefix)
     validate_receipt_required_artifacts(payload, errors, prefix)
@@ -1309,10 +1314,10 @@ def manifest_path_to_file(repo_root: Path, manifest_path: Path, value: str) -> P
     path = Path(value)
     if path.is_absolute():
         return path
-    candidate = repo_root / path
+    candidate = manifest_path.parent / path
     if candidate.exists():
         return candidate
-    return manifest_path.parent / path
+    return repo_root / path
 
 
 def parse_sha256sum_file(path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
@@ -1473,7 +1478,7 @@ def discover_and_validate_eval_factory_weekly_artifacts(repo_root: Path) -> tupl
     return preflight_results, status_results
 
 
-def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFactoryReceiptValidation:
+def validate_operator_receipt_manifest(repo_root: Path, path: Path, *, verify_files: bool = True) -> EvalFactoryReceiptValidation:
     relative_path = repo_relative(repo_root, path)
     if not path.exists():
         return EvalFactoryReceiptValidation(
@@ -1517,10 +1522,12 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
     posture = str(payload.get("posture_classification", "")) if isinstance(payload, dict) else ""
     family_count = payload.get("family_count") if isinstance(payload, dict) else None
     family_count_value = family_count if type(family_count) is int else None
-    tarball_present = False
-    checksum_present = False
+    tarball_info = payload.get("tarball") if isinstance(payload, dict) else None
+    checksum_info = payload.get("checksums") if isinstance(payload, dict) else None
+    tarball_present = isinstance(tarball_info, dict) and tarball_info.get("present") is True
+    checksum_present = isinstance(checksum_info, dict) and bool(checksum_info)
 
-    if isinstance(payload, dict):
+    if isinstance(payload, dict) and verify_files:
         artifacts = payload.get("required_artifacts")
         if isinstance(artifacts, list):
             for index, artifact in enumerate(artifacts):
@@ -1564,6 +1571,13 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
                     tarball_path = manifest_path_to_file(repo_root, path, tarball_path_value)
                     if not tarball_path.exists():
                         errors.append(f"tarball missing: {tarball_path_value}")
+                    else:
+                        expected_size = tarball.get("size_bytes")
+                        expected_digest = tarball.get("sha256")
+                        if type(expected_size) is int and tarball_path.stat().st_size != expected_size:
+                            errors.append(f"tarball size mismatch: {tarball_path_value}")
+                        if isinstance(expected_digest, str) and sha256_file(tarball_path) != expected_digest:
+                            errors.append(f"tarball checksum mismatch: {tarball_path_value}")
                 if isinstance(tarball_checksum_value, str) and tarball_checksum_value:
                     tarball_checksum_path = manifest_path_to_file(repo_root, path, tarball_checksum_value)
                     if not tarball_checksum_path.exists():
@@ -1574,7 +1588,7 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
     return EvalFactoryReceiptValidation(
         source_class=source_class,
         path=relative_path,
-        status=ARTIFACT_STATUS_VALID if not errors else ARTIFACT_STATUS_MALFORMED,
+        status=ARTIFACT_STATUS_MALFORMED if errors else (ARTIFACT_STATUS_VALID if verify_files else "metadata-valid"),
         schema_id=schema_id,
         tier=tier,
         target=target or "n/a",
@@ -1587,9 +1601,9 @@ def validate_operator_receipt_manifest(repo_root: Path, path: Path) -> EvalFacto
     )
 
 
-def discover_and_validate_operator_receipts(repo_root: Path) -> tuple[EvalFactoryReceiptValidation, ...]:
+def discover_and_validate_operator_receipts(repo_root: Path, *, verify_files: bool = True) -> tuple[EvalFactoryReceiptValidation, ...]:
     return tuple(
-        validate_operator_receipt_manifest(repo_root, path)
+        validate_operator_receipt_manifest(repo_root, path, verify_files=verify_files)
         for path in discover_operator_receipt_manifests(repo_root)
     )
 
@@ -1626,7 +1640,7 @@ def receipt_check_detail(result: EvalFactoryReceiptValidation) -> str:
                 f"posture={result.posture_classification}",
                 f"family_count={result.family_count}",
                 f"tarball={'present' if result.tarball_present else 'absent'}",
-                f"checksums={'present' if result.checksum_present else 'absent'}",
+                f"hashes={'manifest+sidecars' if result.checksum_present else 'manifest'}",
             ]
         )
     return f"path={result.path}; errors=" + " | ".join(result.errors)
@@ -1668,23 +1682,6 @@ def append_eval_factory_weekly_artifact_checks(checks: list[CheckResult], repo_r
             checks.append(CheckResult(level, f"{SOURCE_EVAL_FACTORY_WEEKLY_STATUS} {result.path}", artifact_check_detail(result)))
 
 
-def append_operator_receipt_checks(checks: list[CheckResult], repo_root: Path) -> None:
-    receipt_results = discover_and_validate_operator_receipts(repo_root)
-    smoke_results = tuple(result for result in receipt_results if result.source_class != SOURCE_OPERATOR_WEEKLY_RECEIPT)
-    weekly_results = tuple(result for result in receipt_results if result.source_class == SOURCE_OPERATOR_WEEKLY_RECEIPT)
-    if not smoke_results:
-        checks.append(CheckResult(LEVEL_WARN, SOURCE_OPERATOR_RECEIPT, f"optional missing: runs/{RECEIPT_BUNDLES_DIRNAME}/{RECEIPT_MANIFEST_FILENAME}"))
-    for result in smoke_results:
-        level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
-        checks.append(CheckResult(level, f"{result.source_class} {result.path}", receipt_check_detail(result)))
-
-    if not weekly_results:
-        checks.append(CheckResult(LEVEL_WARN, SOURCE_OPERATOR_WEEKLY_RECEIPT, f"optional missing: runs/{RECEIPT_BUNDLES_DIRNAME}/{RECEIPT_MANIFEST_FILENAME}"))
-    for result in weekly_results:
-        level = LEVEL_PASS if result.status == ARTIFACT_STATUS_VALID else LEVEL_FAIL
-        checks.append(CheckResult(level, f"{result.source_class} {result.path}", receipt_check_detail(result)))
-
-
 def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
     checks: list[CheckResult] = []
 
@@ -1718,7 +1715,8 @@ def build_cpu_nightly_checks(repo_root: Path) -> list[CheckResult]:
 
     append_eval_factory_artifact_checks(checks, repo_root)
     append_eval_factory_weekly_artifact_checks(checks, repo_root)
-    append_operator_receipt_checks(checks, repo_root)
+    # Optional transfer bundles are checked when explicitly inspected, not on
+    # every CPU development check.
 
     summary_dirs = discover_summary_dirs(repo_root)
     if not (repo_root / "runs").exists():
@@ -2765,7 +2763,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     summaries = [parse_cross_model_summary(repo_root, path) for path in summary_dirs]
     preflight_artifacts, status_artifacts = discover_and_validate_eval_factory_artifacts(repo_root)
     weekly_preflight_artifacts, weekly_status_artifacts = discover_and_validate_eval_factory_weekly_artifacts(repo_root)
-    receipt_bundles = discover_and_validate_operator_receipts(repo_root)
+    receipt_bundles = discover_and_validate_operator_receipts(repo_root, verify_files=False)
     smoke_receipt_bundles = tuple(receipt for receipt in receipt_bundles if receipt.source_class != SOURCE_OPERATOR_WEEKLY_RECEIPT)
     weekly_receipt_bundles = tuple(receipt for receipt in receipt_bundles if receipt.source_class == SOURCE_OPERATOR_WEEKLY_RECEIPT)
     discovered_summary_names = {summary.run_id for summary in summaries}
@@ -2927,7 +2925,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     )
     if smoke_receipt_bundles:
         for receipt in smoke_receipt_bundles:
-            if receipt.status == ARTIFACT_STATUS_VALID:
+            if not receipt.errors:
                 lines.append(
                     "  - "
                     f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
@@ -2935,7 +2933,7 @@ def render_summarize_existing(repo_root: Path) -> str:
                     f"result={receipt.result}; posture={receipt.posture_classification}; "
                     f"family_count={receipt.family_count}; "
                     f"tarball={'present' if receipt.tarball_present else 'absent'}; "
-                    f"checksums={'present' if receipt.checksum_present else 'absent'}"
+                    f"hashes={'manifest+sidecars' if receipt.checksum_present else 'manifest'}"
                 )
             else:
                 lines.append(
@@ -2954,7 +2952,7 @@ def render_summarize_existing(repo_root: Path) -> str:
     )
     if weekly_receipt_bundles:
         for receipt in weekly_receipt_bundles:
-            if receipt.status == ARTIFACT_STATUS_VALID:
+            if not receipt.errors:
                 lines.append(
                     "  - "
                     f"source_class={receipt.source_class}; path={receipt.path}; artifact_status={receipt.status}; "
@@ -2962,7 +2960,7 @@ def render_summarize_existing(repo_root: Path) -> str:
                     f"result={receipt.result}; posture={receipt.posture_classification}; "
                     f"family_count={receipt.family_count}; "
                     f"tarball={'present' if receipt.tarball_present else 'absent'}; "
-                    f"checksums={'present' if receipt.checksum_present else 'absent'}"
+                    f"hashes={'manifest+sidecars' if receipt.checksum_present else 'manifest'}"
                 )
             else:
                 lines.append(

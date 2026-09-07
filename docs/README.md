@@ -2,6 +2,10 @@
 
 This directory is for non-sequential reference material.
 
+For current development, start with the relevant implementation and runbook. Historical
+freeze, authorization, and closeout language records past tasks; it does not
+create new approval steps for ordinary local work.
+
 Use it for:
 
 - design drafts
