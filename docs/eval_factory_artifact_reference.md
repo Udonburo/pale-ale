@@ -6,7 +6,7 @@ revise the Gate12A memo line, or make `runs/` tracked public evidence.
 
 For exact schema ids, required field groups, and JSON examples, see
 [`eval_factory_json_contracts.md`](eval_factory_json_contracts.md).
-For successful VM receipt closeout, see
+For direct result inspection and optional export, see
 [`l4_smoke_receipt_assimilation.md`](l4_smoke_receipt_assimilation.md).
 
 ## Source Classes
@@ -22,13 +22,10 @@ For successful VM receipt closeout, see
 
 ## Reading Order
 
-1. Start with the source class. Decide whether the line is tracked memo status,
-   runs-derived materialized status, a preflight receipt, or an execute/status
-   artifact.
-2. Check the interpretation boundary for that source class before writing any
-   summary.
-3. Use exact fields from the artifact or memo. Do not convert receipt fields
-   into research claims.
+Read the current run's status and measured rows. Use preflight and logs when
+troubleshooting, and published reports when discussing published findings.
+The table describes what each file contains; it does not require a sequence
+of administrative documents before inspecting or repairing a run.
 
 ## L4-smoke Artifact Paths
 

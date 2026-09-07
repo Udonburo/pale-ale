@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Package a successful eval-factory run as an operator receipt.
+"""Export an eval-factory result when a copy is needed for sharing.
 
-This helper is operational only. It validates existing eval-factory artifacts,
-copies a compact receipt surface, and optionally packs the full run directory.
-It does not run models, change Gate12A math, or create checkpoint claims.
+The export contains four selected files and one manifest with their hashes.
+A full run tarball is opt-in. Normal local runs need no packaging step.
 """
 
 from __future__ import annotations
@@ -49,10 +48,7 @@ class ReceiptBundleResult:
     run_dir: Path
     receipt_root: Path
     manifest_path: Path
-    required_checksums_path: Path
-    bundle_checksums_path: Path
     tarball_path: Path | None
-    tarball_checksum_path: Path | None
     inspect_only: bool
     tier: str
     target: str
@@ -103,16 +99,21 @@ SMOKE_REQUIRED_RECEIPT_ARTIFACTS = build_required_artifacts(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Package a successful eval-factory l4-smoke or l4-weekly run as a durable operator receipt."
+        description="Export a successful eval-factory run as selected files and one manifest."
     )
-    parser.add_argument("--run-dir", required=True, help="Successful eval-factory run directory.")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--run-dir", help="Successful eval-factory run directory to export.")
+    source.add_argument("--verify-export", help="Verify the files in one existing export manifest.")
     parser.add_argument(
         "--out-root",
         default=f"runs/{runner.RECEIPT_BUNDLES_DIRNAME}",
         help="Receipt bundle root. Defaults to runs/receipt_bundles.",
     )
     parser.add_argument("--inspect-only", action="store_true", help="Validate and print the plan without writing files.")
-    parser.add_argument("--no-tarball", action="store_true", help="Skip full run tar.gz creation.")
+    archive = parser.add_mutually_exclusive_group()
+    archive.add_argument("--tarball", action="store_true", help="Also include a full run tar.gz for transfer.")
+    archive.add_argument("--no-tarball", dest="tarball", action="store_false", help=argparse.SUPPRESS)
+    parser.set_defaults(tarball=False)
     return parser
 
 
@@ -136,12 +137,6 @@ def repo_relative(path: Path, repo_root: Path = runner.REPO_ROOT) -> str:
 def write_json(path: Path, payload: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(dict(payload), ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
-
-
-def write_sha256sum(path: Path, entries: Sequence[tuple[str, Path]], repo_root: Path = runner.REPO_ROOT) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"{digest}  {repo_relative(target, repo_root)}" for digest, target in entries]
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def detect_receipt_tier(run_dir: Path) -> str:
@@ -287,10 +282,7 @@ def build_receipt_manifest(
     status: Mapping[str, Any],
     rows: Sequence[Mapping[str, str]],
     required_entries: Sequence[dict[str, Any]],
-    required_checksums_path: Path,
-    bundle_checksums_path: Path,
     tarball_path: Path | None,
-    tarball_checksum_path: Path | None,
     created_at: str,
     repo_root: Path = runner.REPO_ROOT,
 ) -> dict[str, Any]:
@@ -302,7 +294,6 @@ def build_receipt_manifest(
         "source_class": profile.source_class,
         "created_at": created_at,
         "source_run_path": repo_relative(run_dir, repo_root),
-        "source_run_absolute_path": str(run_dir.resolve()),
         "bundle_path": repo_relative(receipt_root, repo_root),
         "tier": profile.tier,
         "mode": "execute",
@@ -315,21 +306,9 @@ def build_receipt_manifest(
         "family_count": len(rows),
         "families": [row.get("rendering_family", "") for row in rows],
         "downstream_summary_path": repo_relative(required_artifact_paths(run_dir, profile)["cross_model_family_summary"], repo_root),
-        "runs_first_pass_status_note": (
-            "runs_first_pass_status is pending_local_read for this receipt; "
-            "no phenotype interpretation is added here."
-        ),
-        "not_a_checkpoint": True,
-        "not_a_memo_claim": True,
-        "no_new_model_execution_in_packaging": True,
-        "checksums": {
-            "required_artifacts_sha256": repo_relative(required_checksums_path, repo_root),
-            "bundle_files_sha256": repo_relative(bundle_checksums_path, repo_root),
-        },
         "tarball": {
             "present": tarball_path is not None,
-            "path": repo_relative(tarball_path, repo_root) if tarball_path is not None else "",
-            "sha256_path": repo_relative(tarball_checksum_path, repo_root) if tarball_checksum_path is not None else "",
+            "path": tarball_path.name if tarball_path is not None else "",
             "sha256": tarball_digest,
             "size_bytes": tarball_size,
         },
@@ -342,7 +321,7 @@ def package_receipt(
     run_dir: Path,
     out_root: Path,
     *,
-    create_tarball: bool = True,
+    create_tarball: bool = False,
     inspect_only: bool = False,
     created_at: str | None = None,
     repo_root: Path = runner.REPO_ROOT,
@@ -352,21 +331,20 @@ def package_receipt(
     created_at = created_at or utc_created_at()
     profile, preflight, status, rows = validate_source_run(run_dir)
     receipt_root = out_root / f"{run_dir.name}_receipt_{timestamp_slug(created_at)}"
-    required_checksums_path = receipt_root / runner.RECEIPT_REQUIRED_ARTIFACT_CHECKSUMS_FILENAME
-    bundle_checksums_path = receipt_root / runner.RECEIPT_BUNDLE_CHECKSUMS_FILENAME
     manifest_path = receipt_root / runner.RECEIPT_MANIFEST_FILENAME
     tarball_path = receipt_root / f"{run_dir.name}.tar.gz" if create_tarball else None
-    tarball_checksum_path = receipt_root / f"{run_dir.name}.tar.gz.sha256" if create_tarball else None
+
+    if receipt_root == run_dir or run_dir in receipt_root.parents:
+        raise ReceiptPackagingError("export directory must be outside the source run directory")
+    if receipt_root.exists():
+        raise ReceiptPackagingError(f"export directory already exists: {receipt_root}")
 
     if inspect_only:
         return ReceiptBundleResult(
             run_dir=run_dir,
             receipt_root=receipt_root,
             manifest_path=manifest_path,
-            required_checksums_path=required_checksums_path,
-            bundle_checksums_path=bundle_checksums_path,
             tarball_path=tarball_path,
-            tarball_checksum_path=tarball_checksum_path,
             inspect_only=True,
             tier=profile.tier,
             target=profile.target,
@@ -375,9 +353,8 @@ def package_receipt(
             result=str(status.get("result")),
         )
 
-    receipt_root.mkdir(parents=True, exist_ok=True)
+    receipt_root.mkdir(parents=True, exist_ok=False)
     required_entries: list[dict[str, Any]] = []
-    required_checksum_entries: list[tuple[str, Path]] = []
     for spec in profile.required_artifacts:
         source = run_dir / spec.source_relative_path
         bundled = receipt_root / spec.bundled_relative_path
@@ -388,20 +365,16 @@ def package_receipt(
             {
                 "role": spec.role,
                 "source_path": repo_relative(source, repo_root),
-                "bundled_path": repo_relative(bundled, repo_root),
+                "bundled_path": spec.bundled_relative_path,
                 "size_bytes": bundled.stat().st_size,
                 "sha256": digest,
             }
         )
-        required_checksum_entries.append((digest, bundled))
-    write_sha256sum(required_checksums_path, required_checksum_entries, repo_root)
 
     if create_tarball:
         assert tarball_path is not None
         with tarfile.open(tarball_path, "w:gz") as archive:
             archive.add(run_dir, arcname=run_dir.name)
-        assert tarball_checksum_path is not None
-        write_sha256sum(tarball_checksum_path, [(runner.sha256_file(tarball_path), tarball_path)], repo_root)
 
     manifest = build_receipt_manifest(
         profile,
@@ -411,36 +384,17 @@ def package_receipt(
         status,
         rows,
         required_entries,
-        required_checksums_path,
-        bundle_checksums_path,
         tarball_path,
-        tarball_checksum_path,
         created_at,
         repo_root,
     )
     write_json(manifest_path, manifest)
 
-    bundle_entries = [(runner.sha256_file(manifest_path), manifest_path), (runner.sha256_file(required_checksums_path), required_checksums_path)]
-    bundle_entries.extend(required_checksum_entries)
-    if create_tarball:
-        assert tarball_path is not None
-        assert tarball_checksum_path is not None
-        bundle_entries.append((runner.sha256_file(tarball_path), tarball_path))
-        bundle_entries.append((runner.sha256_file(tarball_checksum_path), tarball_checksum_path))
-    write_sha256sum(bundle_checksums_path, bundle_entries, repo_root)
-
-    validation = runner.validate_operator_receipt_manifest(repo_root, manifest_path)
-    if validation.status != runner.ARTIFACT_STATUS_VALID:
-        raise ReceiptPackagingError("packaged receipt failed validation: " + " | ".join(validation.errors))
-
     return ReceiptBundleResult(
         run_dir=run_dir,
         receipt_root=receipt_root,
         manifest_path=manifest_path,
-        required_checksums_path=required_checksums_path,
-        bundle_checksums_path=bundle_checksums_path,
         tarball_path=tarball_path,
-        tarball_checksum_path=tarball_checksum_path,
         inspect_only=False,
         tier=profile.tier,
         target=profile.target,
@@ -453,38 +407,36 @@ def package_receipt(
 def render_result(result: ReceiptBundleResult) -> str:
     mode = "inspect-only" if result.inspect_only else "package"
     lines = [
-        "eval-factory receipt packager:",
+        "eval-factory export:",
         f"  mode: {mode}",
         f"  tier: {result.tier}",
         f"  target: {result.target}",
         f"  source_class: {result.source_class}",
         f"  source run: {repo_relative(result.run_dir)}",
-        f"  receipt root: {repo_relative(result.receipt_root)}",
+        f"  export directory: {repo_relative(result.receipt_root)}",
         f"  result: {result.result}",
         f"  family_count: {result.family_count}",
         "artifacts:",
         f"  manifest: {repo_relative(result.manifest_path)}",
-        f"  required checksums: {repo_relative(result.required_checksums_path)}",
-        f"  bundle checksums: {repo_relative(result.bundle_checksums_path)}",
     ]
     if result.tarball_path is not None:
         lines.append(f"  tarball: {repo_relative(result.tarball_path)}")
-        lines.append(f"  tarball checksum: {repo_relative(result.tarball_checksum_path or result.tarball_path.with_suffix(result.tarball_path.suffix + '.sha256'))}")
     else:
         lines.append("  tarball: skipped")
-    lines.append("notes:")
-    lines.append("  - operator receipt only; not a checkpoint or memo claim")
-    lines.append("  - no model execution is launched by this helper")
     return "\n".join(lines)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.verify_export:
+        validation = runner.validate_operator_receipt_manifest(runner.REPO_ROOT, Path(args.verify_export).resolve())
+        print(runner.receipt_check_detail(validation))
+        return 0 if validation.status == runner.ARTIFACT_STATUS_VALID else 1
     try:
         result = package_receipt(
             Path(args.run_dir),
             Path(args.out_root),
-            create_tarball=not args.no_tarball,
+            create_tarball=args.tarball,
             inspect_only=args.inspect_only,
         )
     except ReceiptPackagingError as exc:

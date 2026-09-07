@@ -12,6 +12,7 @@ import types
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -904,18 +905,19 @@ class RunEvalChecksTest(unittest.TestCase):
             repo = Path(tmpdir)
             manifest_path = write_receipt_fixture(repo)
 
-            text = runner.render_summarize_existing(repo)
+            with patch.object(runner, "sha256_file", side_effect=AssertionError("Status summaries must not hash exports")):
+                text = runner.render_summarize_existing(repo)
             manifest_exists = manifest_path.exists()
 
         self.assertTrue(manifest_exists)
         self.assertIn("operator/eval-factory receipt bundle surfaces:", text)
         self.assertIn("source_class=operator/eval-factory receipt bundle", text)
-        self.assertIn("artifact_status=valid", text)
+        self.assertIn("artifact_status=metadata-valid", text)
         self.assertIn("result=pass", text)
         self.assertIn("posture=remote_cuda_ready", text)
         self.assertIn("family_count=3", text)
         self.assertIn("tarball=absent", text)
-        self.assertIn("checksums=present", text)
+        self.assertIn("hashes=manifest", text)
 
     def test_cpu_nightly_reports_missing_required_files_as_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -949,12 +951,7 @@ class RunEvalChecksTest(unittest.TestCase):
                 for check in checks
             )
         )
-        self.assertTrue(
-            any(
-                check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_OPERATOR_RECEIPT
-                for check in checks
-            )
-        )
+        self.assertFalse(any(check.label == runner.SOURCE_OPERATOR_RECEIPT for check in checks))
         self.assertTrue(
             any(
                 check.level == runner.LEVEL_WARN and check.label == runner.SOURCE_EVAL_FACTORY_WEEKLY_PREFLIGHT
@@ -1058,7 +1055,7 @@ class RunEvalChecksTest(unittest.TestCase):
             )
         )
 
-    def test_cpu_nightly_validates_operator_receipt_bundles(self) -> None:
+    def test_cpu_nightly_does_not_hash_optional_exports(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             for relative_path in runner.REQUIRED_CPU_FILES:
@@ -1071,17 +1068,13 @@ class RunEvalChecksTest(unittest.TestCase):
                 path.write_text("placeholder\n", encoding="utf-8")
             write_receipt_fixture(repo)
 
-            checks = runner.build_cpu_nightly_checks(repo)
+            with patch.object(runner, "sha256_file", side_effect=AssertionError("CPU checks must not rehash exports")):
+                checks = runner.build_cpu_nightly_checks(repo)
 
-        self.assertTrue(
-            any(
-                check.level == runner.LEVEL_PASS and runner.SOURCE_OPERATOR_RECEIPT in check.label
-                for check in checks
-            )
-        )
+        self.assertFalse(any(runner.SOURCE_OPERATOR_RECEIPT in check.label for check in checks))
         self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
 
-    def test_cpu_nightly_fails_on_malformed_receipt_bundle(self) -> None:
+    def test_cpu_nightly_ignores_malformed_exports_and_local_archive_copies(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = Path(tmpdir)
             for relative_path in runner.REQUIRED_CPU_FILES:
@@ -1095,15 +1088,15 @@ class RunEvalChecksTest(unittest.TestCase):
             manifest = repo / "runs" / runner.RECEIPT_BUNDLES_DIRNAME / "bad" / runner.RECEIPT_MANIFEST_FILENAME
             manifest.parent.mkdir(parents=True)
             runner.write_status_artifact(manifest, {"schema_id": "wrong"})
+            for folder in (manifest.parent, repo / "workstream/local/old_run", repo / "archive/old_run", repo / "publications/old_run"):
+                folder.mkdir(parents=True, exist_ok=True)
+                runner.write_status_artifact(folder / runner.L4_SMOKE_STATUS_FILENAME, {"schema_id": "wrong"})
 
             checks = runner.build_cpu_nightly_checks(repo)
+            explicit_check = runner.validate_operator_receipt_manifest(repo, manifest)
 
-        self.assertTrue(
-            any(
-                check.level == runner.LEVEL_FAIL and runner.SOURCE_OPERATOR_RECEIPT in check.label
-                for check in checks
-            )
-        )
+        self.assertFalse(any(check.level == runner.LEVEL_FAIL for check in checks))
+        self.assertEqual(explicit_check.status, runner.ARTIFACT_STATUS_MALFORMED)
 
     def test_cpu_nightly_accepts_minimal_required_surface_with_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
