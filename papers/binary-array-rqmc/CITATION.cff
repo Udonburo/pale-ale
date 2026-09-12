@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "Please cite the version-specific preprint when using this package."
+type: article
+title: "Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution"
+authors:
+  - family-names: Kawasaki
+    given-names: Aoi
+version: 1.0.0
+date-released: '2026-09-13'
+doi: 10.5281/zenodo.22728405
+url: https://doi.org/10.5281/zenodo.22728405
+license: CC-BY-4.0

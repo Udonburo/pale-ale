@@ -1,0 +1,205 @@
+{
+  "description": "Export provenance, not a release or new experiment seal. Source paths are relative to the source repository; they are not runtime dependencies.",
+  "source_files": [
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/engine.py",
+      "sha256": "f1ffafba3587fa4058a6b9428d981d1aad3cd2ef21eed0e635865a69db16fb97",
+      "destination": "reference.py",
+      "retained_definitions": [
+        "Condition",
+        "noise_draw",
+        "array_run"
+      ]
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/projection.py",
+      "sha256": "2fc78370ef45b18aa4f1dd6059becda85336337674cd884cabd217533c05bcb4",
+      "destination": "projection.py",
+      "retained_definitions": [
+        "log2_size",
+        "_fill_signs",
+        "signs_from_parameters",
+        "BinaryProjection",
+        "scipy_signs",
+        "fit_parameters",
+        "array_kernel"
+      ]
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/ordered.py",
+      "sha256": "99d13f1ee4ab0b9738c8e17df05442e5ce13313866b72ec860ee2a140fbec325",
+      "destination": "ordered.py",
+      "retained_definitions": [
+        "_repair_ties",
+        "_before",
+        "advance_order",
+        "validate_condition",
+        "array_kernel"
+      ]
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law0_distant.json",
+      "sha256": "0959808ed22c1e5a24ab511ac65bbd9948435e2e4ab9d287094997089cd71c2f"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law0_recent.json",
+      "sha256": "462dbe422115fbd4769df0d7a844eb5ca7d89582d30f013ad20c46c496837e6f"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law1_distant.json",
+      "sha256": "eaef224f45aec53ac629d754ea2628bb49c1c6e56656a47622680a75f5ed7fd6"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law1_recent.json",
+      "sha256": "6aa5bd0cca6ffa15b08bc16e52d4c030122e0a8b7e164c558c5cf2930718efcd"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law2_distant.json",
+      "sha256": "ab251d8b3ccde75935409a5728c55312654a18546d31991553acd563169f5ea0"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law2_recent.json",
+      "sha256": "e27ae9e0f71d2eba2f78651789307675047e99b01fc44a5356d1c3df5d45ef29"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law3_distant.json",
+      "sha256": "b3562bac6567b7e1c3cd1001bae86832fb757397809e251638f2c67cd6a58290"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law3_recent.json",
+      "sha256": "9b58035ce6b8a971d2bf5590d655987a644cc231f1f2bb0b77298b86a7baa6fa"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law4_distant.json",
+      "sha256": "7add26b347de4af70c12c7ab9838ff1fe49271c133d53d7e0d044f237bd5c181"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law4_recent.json",
+      "sha256": "0c518cab919ef74fdd204fd539ec398557c796545322c8143e1ae4a8cc2e8c1a"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law5_distant.json",
+      "sha256": "9656c8743052ed5ca851c61dd8ccbcc08c511eca4dc63e8aada4bc04612fdf9b"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law5_recent.json",
+      "sha256": "63906d900c0c6b4c8329440b27b0a3c296c11e61c3d5e7d4671b900a6ee2e5ca"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law6_distant.json",
+      "sha256": "08c9f3487bef4bb6ef66607cab8016fc450496e46280c80bfcfefb7b3e144ca2"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law6_recent.json",
+      "sha256": "2b14fb266836414e3864a80d29e635c77dab5eb6271e918a23802cb26864e553"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law7_distant.json",
+      "sha256": "2c34a7f5a5e480bd5762a3fe9b29f9fa01c0ca168c6a6d85b4ca28968528056d"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/timing/law7_recent.json",
+      "sha256": "4176000352900b84df1807cc388d7df564abdf6ecc21bcf43decb190df8ea3a0"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law0_distant.json",
+      "sha256": "5eaa9f187d75f41bd2fcb7ac864f41e7d36fdd09e8b5ddba377b2f799fa248e6"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law0_recent.json",
+      "sha256": "5adf03b09622885ec84f5662944118f9227e8cb6588e7c10564dbb5b49c59ebc"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law1_distant.json",
+      "sha256": "32c33f4a2cb9a4fad21dfa7d4dd00423c8d003638c21bf9ecb3c36a526a87763"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law1_recent.json",
+      "sha256": "758e916b604f53910f8a89e7a2a6da58b81505e6a59f87fef4ef7b736941738f"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law2_distant.json",
+      "sha256": "b94332449accbfe7734d9f72e7726f86c7de1f2aedae5ccbb6d66dee69736883"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law2_recent.json",
+      "sha256": "f963fe18f4f15cc6cd3faeb86c067ab5b40015d59b6480eccdc7539f05365f53"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law3_distant.json",
+      "sha256": "0ed4eed1caca7f9ac118d40b0edaaa39918c0831664df31733f9923251797a08"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law3_recent.json",
+      "sha256": "5f8e19d9f5489881e26968d9299a7bdb43537e3a529bbcb48e3534f1a0cc2a2e"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law4_distant.json",
+      "sha256": "3301ad097d69cd58ca8bfae2ac1d09e5db40e47f102c964e31f8f3fb5c888ab5"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law4_recent.json",
+      "sha256": "306233030edb74cc9705ba5a35d8107faae428a5fbe447e524c155c5074085f9"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law5_distant.json",
+      "sha256": "460d0b83115eca544abf2ba926e475d0e9489bbaf8f7d79b17c14d5714f480c5"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law5_recent.json",
+      "sha256": "0df09e0a1a4fe180b413328921c1d60bac23c1e55fa9a5de7a01d9b1cb6df769"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law6_distant.json",
+      "sha256": "2f1c8cc4be7accc777bee34e74dad041c56b3ba7b62622d9fdaa59ae04374e32"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law6_recent.json",
+      "sha256": "74b25b60d7804600742aeaf56c2a6fc77a749c5692be24b21f7d5b4d76ea0450"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law7_distant.json",
+      "sha256": "f57d0c8a2f67eff79f2c572ea069a5aa4c7f551c9ab74402e1218c08b8d76370"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/timing/law7_recent.json",
+      "sha256": "15aee8ff9cd4a17bf52601bc8def4235574b86b058f0ce6cb8fdff22ad4799c4"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/analysis.json",
+      "sha256": "b91d0cb9afd7d4a2d8b29da2d1e83caaf5abff36c0a49e2add9b02dced7b6ba9"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_ordering/analysis.json",
+      "sha256": "83f1cab9ba8025079c1ce9625e6710928a41d359146508a6283c50135322a5b7"
+    },
+    {
+      "path": "workstream/local/stochastic_execution_rewriting/binary_array_projection/config.json",
+      "sha256": "f5c1de970c2b5dc9d3db4a4096d9949969c740196e93dadd888febb48161c4e3"
+    }
+  ],
+  "field_mappings": {
+    "profiles": "N=4096 entries in each source timing/*.json profiles list; condition names changed from law0..7 to case_01..08; method identifiers translated.",
+    "projection_timing": "projection/analysis.json rows: condition,n,method,wall,cpu for ARRAY and BINARY; saved means, not individual paired rounds.",
+    "projection_summary": "projection/analysis.json groups with payoff=all; interval endpoints are retained, not recomputed from aggregate means.",
+    "ordering_timing": "ordering/analysis.json per_condition for BINARY and MERGE.",
+    "ordering_summary": "ordering/analysis.json cost_groups.",
+    "targets": "ordering/analysis.json targets with labels containing expanded_grid; costs and validation statistics retained.",
+    "startup": "ordering/analysis.json startup.",
+    "crossovers": "ordering/analysis.json target_comparisons.",
+    "cases": "projection/config.json conditions; only display names changed.",
+    "methods": {
+      "ARRAY": "LIBRARY",
+      "BINARY": "DIRECT",
+      "MERGE": "MAINTAINED",
+      "STATIC_CRN": "CRN",
+      "STATIC_ANTI": "ANTITHETIC"
+    }
+  },
+  "limitations": [
+    "Bootstrap raw replicates and full timing-round history are not bundled.",
+    "This export supports arithmetic and figure regeneration, not a claim that all original experiments can be independently replayed from it.",
+    "Only core array kernels are extracted; historical baseline/calibration orchestration is not included.",
+    "Local integer-seed consistency tests are engineering checks, not new scientific validation samples."
+  ]
+}

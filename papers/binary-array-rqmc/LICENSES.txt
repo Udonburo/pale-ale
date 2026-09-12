@@ -1,0 +1,20 @@
+Licensing summary
+=================
+
+Copyright (C) 2026 Aoi Kawasaki, except where prior notices specify otherwise.
+
+The manuscript PDF and Markdown source, PNG/SVG figures, documentation,
+saved result data (JSON), provenance descriptions, citation metadata,
+Zenodo description, and release inventories are licensed under Creative
+Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Python source, tests, build/packaging scripts, and the Typst layout template
+remain under the Mozilla Public License 2.0 (MPL-2.0). The full MPL-2.0 text
+is included as repro/LICENSE in the capsule:
+https://www.mozilla.org/MPL/2.0/
+
+These are per-file scopes, not a choice of either license for every file.
+The Zenodo record's primary CC BY 4.0 label describes the publication materials;
+it does not relicense the code. Dependencies retain their original licenses.
+No third-party runtime libraries or model weights are redistributed.

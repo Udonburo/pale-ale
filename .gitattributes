@@ -1,0 +1,12 @@
+# Preserve all DOI-bound deposits byte-for-byte, including on clones whose
+# local core.autocrlf setting enables conversion. Do not normalize old releases.
+/publications/*/zenodo/** -text
+/publications/binary-array-rqmc/zenodo/** -whitespace
+/publications/binary-array-rqmc/zenodo/*.pdf binary
+/publications/binary-array-rqmc/zenodo/*.zip binary
+# The initial browsable companion also matches its archived source snapshot.
+/papers/binary-array-rqmc/** -text whitespace=cr-at-eol
+# Markdown hard breaks and generated SVG whitespace are part of the snapshot.
+/papers/binary-array-rqmc/**/*.md whitespace=cr-at-eol,-blank-at-eol
+/papers/binary-array-rqmc/*.md whitespace=cr-at-eol,-blank-at-eol
+/papers/binary-array-rqmc/figures/*.svg whitespace=cr-at-eol,-blank-at-eol

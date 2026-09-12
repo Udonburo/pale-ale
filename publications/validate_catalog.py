@@ -93,7 +93,9 @@ def main() -> int:
         release = item.get("targets", {}).get("github_release", {})
         tag = release.get("tag", "")
         expected_url = f"https://github.com/Udonburo/pale-ale/releases/tag/{tag}"
-        if not tag or release.get("url") != expected_url:
+        if "github_release" in item.get("targets", {}) and (
+            not tag or release.get("url") != expected_url
+        ):
             errors.append(f"{slug}: malformed GitHub Release target")
 
     other_records = data.get("other_public_records", [])
@@ -123,7 +125,9 @@ def main() -> int:
         release = item.get("targets", {}).get("github_release", {})
         tag = release.get("tag", "")
         expected_url = f"https://github.com/Udonburo/pale-ale/releases/tag/{tag}"
-        if not tag or release.get("url") != expected_url:
+        if "github_release" in item.get("targets", {}) and (
+            not tag or release.get("url") != expected_url
+        ):
             errors.append(f"{slug}: malformed GitHub Release target")
 
     if errors:
