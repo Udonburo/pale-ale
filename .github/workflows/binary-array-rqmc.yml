@@ -33,9 +33,16 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          # The companion does not depend on historical workstream files, some
+          # of whose names exceed Windows' default checkout path limit.
+          sparse-checkout: |
+            papers
+            publications
+            docs/release
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
