@@ -1,0 +1,276 @@
+{
+  "conditions": [
+    {
+      "name": "case_01_recent",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 2.65,
+      "payoff": "call",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0.021,
+      "strike": 0.45,
+      "wire_seed": 88700,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_01_distant",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 2.65,
+      "payoff": "call",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0.021,
+      "strike": 0.45,
+      "wire_seed": 88701,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_02_recent",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 2.65,
+      "payoff": "even",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 88800,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_02_distant",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 2.65,
+      "payoff": "even",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 88801,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_03_recent",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 5.1,
+      "payoff": "call",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0.021,
+      "strike": 0.45,
+      "wire_seed": 88900,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_03_distant",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 5.1,
+      "payoff": "call",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0.021,
+      "strike": 0.45,
+      "wire_seed": 88901,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_04_recent",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 5.1,
+      "payoff": "even",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89000,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_04_distant",
+      "horizon": 36,
+      "rho": 0.897,
+      "barrier": 5.1,
+      "payoff": "even",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89001,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_05_recent",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 2.65,
+      "payoff": "call",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0.037,
+      "strike": 0.65,
+      "wire_seed": 89100,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_05_distant",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 2.65,
+      "payoff": "call",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0.037,
+      "strike": 0.65,
+      "wire_seed": 89101,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_06_recent",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 2.65,
+      "payoff": "even",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89200,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_06_distant",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 2.65,
+      "payoff": "even",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89201,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_07_recent",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 5.1,
+      "payoff": "call",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0.037,
+      "strike": 0.65,
+      "wire_seed": 89300,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_07_distant",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 5.1,
+      "payoff": "call",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0.037,
+      "strike": 0.65,
+      "wire_seed": 89301,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_08_recent",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 5.1,
+      "payoff": "even",
+      "degree": 2,
+      "location": "recent",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89400,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    },
+    {
+      "name": "case_08_distant",
+      "horizon": 60,
+      "rho": 0.963,
+      "barrier": 5.1,
+      "payoff": "even",
+      "degree": 5,
+      "location": "distant",
+      "drift": 0,
+      "strike": 0,
+      "wire_seed": 89401,
+      "scales": [
+        0.82,
+        1.03,
+        1.19
+      ]
+    }
+  ]
+}

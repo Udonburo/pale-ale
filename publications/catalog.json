@@ -123,6 +123,23 @@
         }
       },
       "historical_repository_paths": ["zenodo/sensitivity-without-reproducibility"]
+    },
+    {
+      "slug": "binary-array-rqmc",
+      "title": "Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-09-13",
+      "resource_type": "preprint",
+      "doi": "10.5281/zenodo.22728405",
+      "landing_path": "publications/binary-array-rqmc/README.md",
+      "source_path": "papers/binary-array-rqmc",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/22728405",
+          "package_path": "publications/binary-array-rqmc/zenodo"
+        }
+      },
+      "historical_repository_paths": []
     }
   ],
   "other_public_records": [

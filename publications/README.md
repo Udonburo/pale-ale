@@ -42,9 +42,13 @@ archive and assembly materials instead of inventing an incomplete local copy.
 | *Compression-Interleaved Parenthesization Defects in LLM Replay Artifact Graphs* | 2026-07-14 | [10.5281/zenodo.21355572](https://doi.org/10.5281/zenodo.21355572) | [`gate12c1-parenthesization-defects-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/gate12c1-parenthesization-defects-v1.0.0) | [`compression-interleaved-parenthesization-defects/`](compression-interleaved-parenthesization-defects/README.md) |
 | *Local Mapping Without Iterative Closure* | 2026-08-18 | [10.5281/zenodo.21992852](https://doi.org/10.5281/zenodo.21992852) | [`local-mapping-without-iterative-closure-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0) | [`local-mapping-without-iterative-closure/`](local-mapping-without-iterative-closure/README.md) |
 | *Sensitivity Without Reproducibility* | 2026-08-31 | [10.5281/zenodo.22180751](https://doi.org/10.5281/zenodo.22180751) | [`sensitivity-without-reproducibility-v1.0.0`](https://github.com/Udonburo/pale-ale/releases/tag/sensitivity-without-reproducibility-v1.0.0) | [`sensitivity-without-reproducibility/`](sensitivity-without-reproducibility/README.md) |
+| *Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution* | 2026-09-13 | [10.5281/zenodo.22728405](https://doi.org/10.5281/zenodo.22728405) | Not yet created | [`binary-array-rqmc/`](binary-array-rqmc/README.md) |
 
-These six entries are all standalone paper or technical-note PDFs currently
+These seven entries are all standalone paper or technical-note PDFs currently
 tracked in the repository.
+
+Only existing publication targets are listed. A Zenodo publication need not
+already have a GitHub Release or an arXiv submission to enter this catalog.
 
 ## Other public records
 

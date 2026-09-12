@@ -30,3 +30,6 @@ jobs:
 
       - name: Validate catalog and frozen package checksums
         run: python publications/validate_catalog.py
+
+      - name: Test optional platform targets and checksum rejection
+        run: python -m unittest discover -s publications -p test_validate_catalog.py -v

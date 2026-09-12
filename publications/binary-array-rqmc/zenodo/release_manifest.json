@@ -1,0 +1,174 @@
+{
+  "title": "Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution",
+  "doi": "10.5281/zenodo.22728405",
+  "version": "1.0.0",
+  "manuscript_date": "2026-09-13",
+  "review_status": "not_peer_reviewed",
+  "publication_license": "CC-BY-4.0",
+  "code_license": "MPL-2.0",
+  "package_containing_git_commit": null,
+  "reproduction_scope": "Exact-law/ordering tests and saved-data figure/table regeneration; not all raw experiments.",
+  "omissions": [
+    "Full raw calibration/validation observations",
+    "Bootstrap samples",
+    "Full timing-round history",
+    "Historical baseline/calibration orchestration"
+  ],
+  "capsule_members": 37,
+  "files": {
+    "LICENSES.txt": {
+      "bytes": 962,
+      "sha256": "3176d171bde11dc4812a3181eb494bb5c8b5074c56a530388399c9bc27371588"
+    },
+    "README.txt": {
+      "bytes": 1862,
+      "sha256": "faed614f21e1f2f39970d5cf02096000cc32fc81414bf45ecf5e8b4f504a3c9f"
+    },
+    "REPOSITORY.md": {
+      "bytes": 903,
+      "sha256": "0bc32ae970fb4f8673542a8c07995ac09eb4d2c9b65ae72d62cd27744b33eb35"
+    },
+    "binary-array-rqmc.pdf": {
+      "bytes": 498626,
+      "sha256": "6616bef66bf1ad481c44d0bfeabd5797916eaa56b4a129a6338d2cc791734dd2"
+    },
+    "reproducibility-capsule.zip": {
+      "bytes": 688538,
+      "sha256": "c74077b4114c0fccb0ea426676677191b13374fc899d95aa098c1e9d6e758ec8"
+    },
+    "zenodo-description.md": {
+      "bytes": 3033,
+      "sha256": "b1de4faefc9fc80ab25b2aeb389ed73d38e9396ccde98dae69ac64f07fe89ef7"
+    },
+    "zenodo-metadata.json": {
+      "bytes": 1022,
+      "sha256": "4ad66fd846bd122f584139b2eb5b605ea71a294217544fb41a26cea0f6dc8c57"
+    }
+  },
+  "capsule_source_files": {
+    ".gitignore": {
+      "bytes": 15,
+      "sha256": "e88b66e547f565378d321ecdb44bc6547ecc685878f2091fcf31bb17a9db238f"
+    },
+    "CITATION.cff": {
+      "bytes": 399,
+      "sha256": "cf28f0fae82a3619ce5fcb1bfc1dbde71212dc6addaa32c7c279983d75fe6a20"
+    },
+    "LICENSES.txt": {
+      "bytes": 962,
+      "sha256": "3176d171bde11dc4812a3181eb494bb5c8b5074c56a530388399c9bc27371588"
+    },
+    "README.md": {
+      "bytes": 4159,
+      "sha256": "abaf77f6ec4655e97b4ec79540bf3bf3cce7709a356811cc575370d76b7a4356"
+    },
+    "build_pdf.py": {
+      "bytes": 8603,
+      "sha256": "55a27d5602969ee41acdc24a8683654ac9b46066e32d3151fe78e2b17cf3bb16"
+    },
+    "build_publication.py": {
+      "bytes": 6305,
+      "sha256": "dceaff29944d5079d39d30979b8d945bd048e9b51fb43051cf52fecf685345d2"
+    },
+    "figures/component-costs.png": {
+      "bytes": 96376,
+      "sha256": "f4a47bb6e22cd7f9730a488a9cf71552abfa22d4f123b4060bd65298f32e5589"
+    },
+    "figures/component-costs.svg": {
+      "bytes": 19671,
+      "sha256": "362302650390ca80a9c14e8706c0986eb5d7ae072e0a1e282daf8cc7fc11b7ca"
+    },
+    "figures/reuse-costs.png": {
+      "bytes": 164667,
+      "sha256": "749ba27ea69b3cf57ecf82c14f65754956f9587331781df9b6638cc1c0ce60af"
+    },
+    "figures/reuse-costs.svg": {
+      "bytes": 57181,
+      "sha256": "78f7b95b137167a3d17b31886a4b40a5863965029a2b3819dbae866b6e70b5a7"
+    },
+    "main.md": {
+      "bytes": 53558,
+      "sha256": "a99199e0e6a7595f4eed4b11889d785011e7474da6b43745383a30ae3e33eae0"
+    },
+    "output/pdf/binary-array-rqmc.pdf": {
+      "bytes": 498626,
+      "sha256": "6616bef66bf1ad481c44d0bfeabd5797916eaa56b4a129a6338d2cc791734dd2"
+    },
+    "pdf-requirements.txt": {
+      "bytes": 36,
+      "sha256": "53cc61a4c76290ffe5c0463071841a0f87abfc6b8ede6251a3a7b079f3ae9878"
+    },
+    "pdf-style.typ": {
+      "bytes": 2102,
+      "sha256": "e584951bf02393f075a26eccef1c6c57552f137a25afad1d40b7b50f72f5a701"
+    },
+    "repro/.gitignore": {
+      "bytes": 144,
+      "sha256": "c8a6a712b3071c1dbffa690f8592477f8b66028f7c5ee2d1c235105a3c5c12fe"
+    },
+    "repro/LICENSE": {
+      "bytes": 15567,
+      "sha256": "fe8b85c11a0799b09bc3f48ede77489a133e91d9fbbc4fc052df09020b543ff9"
+    },
+    "repro/README.md": {
+      "bytes": 7671,
+      "sha256": "fcef5e6bef0c60d4afb1a04313440901480e69eeaa6b3af05f5de0ea03fbe790"
+    },
+    "repro/TABLES.md": {
+      "bytes": 2230,
+      "sha256": "0702277550c99f3e66fbaf738d0746e7539d0cf348449ec96a309f2ee3e10f05"
+    },
+    "repro/data/cases.json": {
+      "bytes": 5049,
+      "sha256": "9355f5f2627e6e96f1e2d1e237a75c41dc1946366b097f7a56a250ed8082fbaf"
+    },
+    "repro/data/provenance.json": {
+      "bytes": 10201,
+      "sha256": "1559073c3fcc4475176b811007f95c64d3c4f17a8e49259ec9fed333b3457b1a"
+    },
+    "repro/data/saved_results.json": {
+      "bytes": 197250,
+      "sha256": "5c60121d2a0b03fce10362a1f42382b91cc6d815d726c24084d70e45420574e3"
+    },
+    "repro/ordered.py": {
+      "bytes": 7134,
+      "sha256": "dd9686aaa4d2f04ebf025c1fcaf59092ba1e4a9fdce678e308f59f7bb2678b57"
+    },
+    "repro/projection.py": {
+      "bytes": 6293,
+      "sha256": "d214f55fa0b86ff5824df963d648604fa6544078549f59d56dc14de11df4ebdb"
+    },
+    "repro/reference.py": {
+      "bytes": 2532,
+      "sha256": "900add6cd8ba6bd2db837078a7d0f4e1b8b2dc0bdaa2567c67c07141d5a55785"
+    },
+    "repro/render_results.py": {
+      "bytes": 11321,
+      "sha256": "a7b69632d0f074eb13104f893d69976bbd4ee8bfa25d93b6ce576ba9bcadbf15"
+    },
+    "repro/requirements.txt": {
+      "bytes": 61,
+      "sha256": "3ab5df20a6653ea2bb4b2a2faa6017908e25a74b53d8f6a38c551e82eaa26000"
+    },
+    "repro/run_smoke.py": {
+      "bytes": 2982,
+      "sha256": "ef3e68f1d6e904f0ca8b96af8686902a6ae3af7964d453dcb3629282baf3df89"
+    },
+    "repro/test_ordered.py": {
+      "bytes": 6786,
+      "sha256": "69c3dd27b95909419a098410c75503aad7c842013643078453dd0d4fadef1511"
+    },
+    "repro/test_projection.py": {
+      "bytes": 8611,
+      "sha256": "246f8093f41488b6347ecd9602c399a5d2baa971ca40d7368c4fa5d301119b0f"
+    },
+    "repro/test_projection_structure.py": {
+      "bytes": 3651,
+      "sha256": "4d0ab016206ed1e46268bbb0e4c57b0e318b53f06cd24eaf2e57743a10444751"
+    },
+    "repro/test_saved_results.py": {
+      "bytes": 1691,
+      "sha256": "cfa9603fcadbb1873f3772afb49de5f7928d375cd9e5b89c63ca1dcf59bc3bdf"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "resource_type": "publication-preprint",
+  "title": "Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution",
+  "creators": [
+    {
+      "name": "Kawasaki, Aoi",
+      "family_name": "Kawasaki",
+      "given_name": "Aoi"
+    }
+  ],
+  "publication_date": "2026-09-13",
+  "version": "1.0.0",
+  "language": "eng",
+  "license": "cc-by-4.0",
+  "access_right": "open",
+  "doi": "10.5281/zenodo.22728405",
+  "keywords": [
+    "Array-RQMC",
+    "randomized quasi-Monte Carlo",
+    "Sobol sequences",
+    "linear matrix scrambling",
+    "Markov chains",
+    "joint distribution",
+    "binary innovations",
+    "order maintenance",
+    "reproducible research"
+  ],
+  "description_source": "zenodo-description.md",
+  "notes": "Preprint; not peer reviewed. Publication materials and saved data: CC BY 4.0. Code: MPL-2.0; see LICENSES.txt. Compact reproduction capsule, not all raw experiments.",
+  "repository_url": "https://github.com/Udonburo/pale-ale",
+  "package_containing_git_commit": null
+}

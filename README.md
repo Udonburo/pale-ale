@@ -9,6 +9,7 @@ consistency, and learned-system artifacts.**
 [![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21355572)
 [![Graph-XOR DOI](https://img.shields.io/badge/Graph--XOR-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21992852)
 [![Sensitivity DOI](https://img.shields.io/badge/Sensitivity-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.22180751)
+[![Array-RQMC DOI](https://img.shields.io/badge/Array--RQMC-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.22728405)
 
 [![Amber](https://img.shields.io/badge/Amber-live-D99716?style=flat-square)](https://amber-oversight.vercel.app/)
 [![CI](https://img.shields.io/github/actions/workflow/status/Udonburo/pale-ale/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Udonburo/pale-ale/actions/workflows/ci.yml)
@@ -22,9 +23,10 @@ consistency, and learned-system artifacts.**
 
 `pale-ale` develops structural ways to study local observation, replay,
 transport, closure, and boundary behavior under declared evidence surfaces.
-Its public checkpoints currently use LLM artifacts as the main empirical
-sandbox, while keeping the broader research program distinct from any single
-model family, demo, or score.
+Its public studies use LLM artifacts and stochastic simulation as empirical
+sandboxes, while keeping the broader research program distinct from any single
+model family, demo, or score. The Array-RQMC preprint studies exact execution
+specialization; it is not an additional claim about LLM internals.
 
 The repository keeps reproducible studies, negative results, published reports,
 and the research history behind them. Published packages retain their provenance.
@@ -68,11 +70,26 @@ project reached that checkpoint. See
 Use the DOI associated with the specific evidence surface you are discussing.
 The releases are related, but they are not interchangeable.
 
-All six publication packages follow one repository convention:
+Publication packages follow one repository convention:
 `publications/<publication-slug>/<platform>/`. The platform-neutral
 [`publications/`](publications/README.md) catalog binds each DOI, GitHub
 Release, manuscript source, and platform-specific upload package. Historical
 release tags preserve the older paths that were current when they were made.
+
+### Exact binary projections for Array-RQMC
+
+An exact characterization of the rank-ordered binary joint law consumed from
+a specified scrambled Sobol net, followed by direct generation and
+pathwise-preserving state-order maintenance. In eight fixed benchmark cases,
+order maintenance reduced warm execution time by 37.2% at 512 paths and 67.5%
+at 4,096 paths relative to direct generation with full state sorting.
+Accuracy-target costs remain workload- and reuse-dependent. Preprint; not peer
+reviewed.
+
+[Preprint DOI](https://doi.org/10.5281/zenodo.22728405) |
+[publication and PDF](publications/binary-array-rqmc/README.md) |
+[code and 19 reproduction tests](papers/binary-array-rqmc/repro/README.md) |
+[archived capsule](publications/binary-array-rqmc/zenodo/README.txt)
 
 ### Gate12A: Frozen FP32 dense-transformer report
 
@@ -139,7 +156,7 @@ qualification in only 5/20 blocks, so the functional stage remained unopened.
 ## Technical Reports and Closed Studies
 
 These repository reports record bounded results and limitations. They are not
-additional DOI releases or entries in the six-paper publication catalog.
+additional DOI releases or entries in the publication catalog.
 
 ### Gate12C-2: closed synthetic development track
 
@@ -227,6 +244,7 @@ apps/         Bounded interactive prototypes and supporting applications
 crates/       Rust implementation and infrastructure
 docs/         Reproduction guides, evidence maps, and operator notes
 publications/ Platform-neutral publication records and target packages
+papers/       Manuscript sources and paper-specific computational companions
 specs/        Public and retained internal specification surfaces
 src/          Python-facing package source
 tools/        Research runners, validators, and audit utilities
