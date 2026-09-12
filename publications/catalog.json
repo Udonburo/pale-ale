@@ -137,6 +137,10 @@
         "zenodo": {
           "url": "https://zenodo.org/records/22728405",
           "package_path": "publications/binary-array-rqmc/zenodo"
+        },
+        "github_release": {
+          "tag": "binary-array-rqmc-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0"
         }
       },
       "historical_repository_paths": []

@@ -1,284 +1,117 @@
 # pale-ale
 
-**A public research repository for structural approaches to local observation,
-consistency, and learned-system artifacts.**
+**Reproducible studies of learned systems and stochastic computation.**
 
-[![Gate12A DOI](https://img.shields.io/badge/Gate12A-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.19483162)
-[![Telemetry DOI](https://img.shields.io/badge/Telemetry-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.19569052)
-[![Gate12B DOI](https://img.shields.io/badge/Gate12B-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.20080003)
-[![Gate12C-1 DOI](https://img.shields.io/badge/Gate12C--1-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21355572)
-[![Graph-XOR DOI](https://img.shields.io/badge/Graph--XOR-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.21992852)
-[![Sensitivity DOI](https://img.shields.io/badge/Sensitivity-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.22180751)
-[![Array-RQMC DOI](https://img.shields.io/badge/Array--RQMC-DOI-0969DA?style=flat-square)](https://doi.org/10.5281/zenodo.22728405)
+Mathematical results, bounded experiments, and executable companions: from
+structural observation and replay in language models to exact, lower-cost
+simulation. Each study states its own assumptions, evidence, and limits.
+Negative results remain part of the record.
 
-[![Amber](https://img.shields.io/badge/Amber-live-D99716?style=flat-square)](https://amber-oversight.vercel.app/)
-[![CI](https://img.shields.io/github/actions/workflow/status/Udonburo/pale-ale/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Udonburo/pale-ale/actions/workflows/ci.yml)
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-blue.svg?style=flat-square)](LICENSE)
+[Publications](publications/README.md) ·
+[Reproduce a result](#reproduce-a-result) ·
+[Technical reports](#technical-reports) ·
+[Amber](#amber)
 
-[Research focus](#research-focus) |
-[Citable releases](#citable-releases) |
-[Publications](publications/README.md) |
-[Explore Amber](#amber-interactive-companion) |
-[Reproduce Gate12A](docs/reproduce_gate12a.md)
+## Latest preprint
 
-`pale-ale` develops structural ways to study local observation, replay,
-transport, closure, and boundary behavior under declared evidence surfaces.
-Its public studies use LLM artifacts and stochastic simulation as empirical
-sandboxes, while keeping the broader research program distinct from any single
-model family, demo, or score. The Array-RQMC preprint studies exact execution
-specialization; it is not an additional claim about LLM internals.
+### Exact Binary Projections for Array-RQMC
 
-The repository keeps reproducible studies, negative results, published reports,
-and the research history behind them. Published packages retain their provenance.
+*Joint Laws and Pathwise-Preserving Execution* — Aoi Kawasaki, September 2026.
 
-> **The research is the evidence surface. Amber is a bounded interface companion.**
+Which parts of a randomized point set does a simulator actually need?
+This paper characterizes the joint binary law consumed from a specified
+scrambled Sobol construction, generates it directly, and maintains state order
+without changing finite-seed paths. An equal-covariance counterexample shows
+why preserving covariance alone is insufficient.
 
-| Research evidence | Interactive companion |
+In eight fixed benchmark cases, order maintenance reduces warm execution time
+by **37.2% at 512 paths** and **67.5% at 4,096 paths**, relative to direct
+generation with full state sorting. Total cost advantages depend on workload
+and reuse. Preprint; not peer reviewed.
+
+[Read the PDF](publications/binary-array-rqmc/zenodo/binary-array-rqmc.pdf) ·
+[DOI](https://doi.org/10.5281/zenodo.22728405) ·
+[Code and reproduction](papers/binary-array-rqmc/repro/README.md) ·
+[Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
+
+## Earlier papers and notes
+
+| Study | Focus |
 | --- | --- |
-| **Gate12A / Gate12B / Gate12C-1 / Graph-XOR / representation-instrument boundary.** Frozen protocols, citable releases, and reproducible evidence. [Read the checkpoints](#citable-releases) or [browse the publication catalog](publications/README.md). | **Amber.** A local-first way to explore evidence-linked human review. [Open Amber](https://amber-oversight.vercel.app/). |
+| [Sensitivity without reproducibility](publications/sensitivity-without-reproducibility/README.md) | Positive-control sensitivity versus fresh re-estimation of a representation instrument. |
+| [Local mapping without iterative closure](publications/local-mapping-without-iterative-closure/README.md) | Input-output demonstrations and bounded Graph-XOR capability in Qwen3. |
+| [Compression-interleaved parenthesization defects](publications/compression-interleaved-parenthesization-defects/README.md) | A predeclared null test across 24 replay-artifact-graph endpoints. |
+| [Observer-relative closure signatures](publications/observer-relative-closure-signatures/README.md) | A bounded audit of existing language-model replay artifacts. |
+| [Transport-first defect telemetry](publications/transport-first-defect-telemetry/README.md) | A mathematical formulation of transport and closure inconsistency. |
+| [Structural replay under FP32](publications/structural-replay-fp32/README.md) | Dense-transformer replay evidence under a fixed precision and execution regime. |
 
-## Research Focus
+The [publication catalog](publications/README.md) collects dates, DOIs, release
+downloads, and source locations. Cite the specific study, not the repository
+as a single empirical claim. See [citation metadata](CITATION.cff).
 
-The current research asks which relations between local artifacts remain
-consistent under a frozen observation and replay surface, and where those
-relations fail to close cleanly.
+## Technical reports
 
-```text
-local observations
-    -> declared transport
-    -> closure and boundary evidence
-    -> frozen checkpoint
+These closed studies are repository reports, separate from the DOI publications.
+
+- **[CRD: controlled calibration and a negative acquisition test](analysis/crd/TECHNICAL_REPORT.md).**
+  Calibration succeeded in a constructed system; no primary seed met local
+  action acquisition in the fixed 242-seed successor study.
+  [Aggregate data and verification](analysis/crd/README.md).
+- **[Gate12C-2: synthetic development negative](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md).**
+  The candidate failed its quantitative stability criterion and the bounded
+  repair was insufficient. No real held-out evaluation was opened.
+  [Closure record and retained implementation](docs/reference/gate12c2_control_plane_sunset.md).
+
+## Reproduce a result
+
+There is no single experiment behind this repository. Start with the companion
+for the result you want to check.
+
+- **Array-RQMC:** [19 tests, three kernels, and saved-data regeneration](papers/binary-array-rqmc/repro/README.md).
+  The [archived capsule](publications/binary-array-rqmc/zenodo/reproducibility-capsule.zip)
+  is self-contained; it does not include every original raw experiment.
+- **FP32 structural replay:** [reproduction guide](docs/reproduce_gate12a.md)
+  and [evidence atlas](docs/gate12a_evidence_atlas.md).
+- **Other publications:** use the study's [publication page](publications/README.md)
+  for its exact package, dependencies, and verification scope.
+
+To check the catalog and tracked publication checksums from the repository root:
+
+```sh
+python publications/validate_catalog.py
 ```
 
-Three commitments organize the work:
+Published deposits retain their original bytes. Working code and documentation
+may evolve; versioned releases and their checksums identify the archived result.
 
-1. **Keep the observation surface explicit.** Results are interpreted only
-   inside the precision, model, replay, and artifact boundaries that produced
-   them.
-2. **Keep evidence inspectable.** Preserve the protocol, inputs, results,
-   boundary cases, and failures needed to understand and reproduce a finding.
-3. **Keep claims checkpointed.** Exploratory directions do not silently become
-   established findings or rewrite earlier releases.
+## Amber
 
-A **Gate** records what has been established, what remains open, and what is
-still denied. A **Workstream** is the numbered research memory showing how the
-project reached that checkpoint. See
-[Workstreams and Gates](ABOUT/WORKSTREAM_AND_GATES.md) for the full convention.
+[**Open Amber**](https://amber-oversight.vercel.app/) — a browser-based companion
+for reviewing evidence-linked agent traces. Imported traces are processed
+locally; reviewers, not the application, make the disposition.
 
-## Citable Releases
+Amber is a technical prototype, not benchmark evidence or an automated judge
+of correctness or safety.
 
-Use the DOI associated with the specific evidence surface you are discussing.
-The releases are related, but they are not interchangeable.
+## Navigate the repository
 
-Publication packages follow one repository convention:
-`publications/<publication-slug>/<platform>/`. The platform-neutral
-[`publications/`](publications/README.md) catalog binds each DOI, GitHub
-Release, manuscript source, and platform-specific upload package. Historical
-release tags preserve the older paths that were current when they were made.
-
-### Exact binary projections for Array-RQMC
-
-An exact characterization of the rank-ordered binary joint law consumed from
-a specified scrambled Sobol net, followed by direct generation and
-pathwise-preserving state-order maintenance. In eight fixed benchmark cases,
-order maintenance reduced warm execution time by 37.2% at 512 paths and 67.5%
-at 4,096 paths relative to direct generation with full state sorting.
-Accuracy-target costs remain workload- and reuse-dependent. Preprint; not peer
-reviewed.
-
-[Preprint DOI](https://doi.org/10.5281/zenodo.22728405) |
-[publication and PDF](publications/binary-array-rqmc/README.md) |
-[code and 19 reproduction tests](papers/binary-array-rqmc/repro/README.md) |
-[archived capsule](publications/binary-array-rqmc/zenodo/README.txt)
-
-### Gate12A: Frozen FP32 dense-transformer report
-
-Structural replay evidence and boundary results under one declared FP32
-dense-transformer regime.
-
-[Report DOI](https://doi.org/10.5281/zenodo.19483162) |
-[publication](publications/structural-replay-fp32/README.md) |
-[Zenodo bundle](publications/structural-replay-fp32/zenodo/README.txt) |
-[reproduction guide](docs/reproduce_gate12a.md) |
-[evidence atlas](docs/gate12a_evidence_atlas.md)
-
-### Transport-first defect telemetry
-
-A mathematical formulation of transport-first closure-defect telemetry. This
-note is related to Gate12A but is not a revision of its empirical report.
-
-[Note DOI](https://doi.org/10.5281/zenodo.19569052) |
-[publication](publications/transport-first-defect-telemetry/README.md) |
-[Zenodo bundle](publications/transport-first-defect-telemetry/zenodo/README.txt)
-
-### Gate12B: Observer-relative closure signatures
-
-A bounded source-facing audit over existing replay artifacts, with a compact
-manifest-level evidence package.
-
-[Report DOI](https://doi.org/10.5281/zenodo.20080003) |
-[publication](publications/observer-relative-closure-signatures/README.md) |
-[Zenodo bundle](publications/observer-relative-closure-signatures/zenodo/README.txt)
-
-### Gate12C-1: Compression-interleaved parenthesization defects
-
-A predeclared null test and reproducibility capsule across 24
-replay-artifact-graph endpoints.
-
-[Report DOI](https://doi.org/10.5281/zenodo.21355572) |
-[publication](publications/compression-interleaved-parenthesization-defects/README.md) |
-[Zenodo bundle](publications/compression-interleaved-parenthesization-defects/zenodo/README.txt)
-
-### Local mapping without iterative closure
-
-A prospectively frozen capability-boundary study across Qwen3 models from
-0.6B to 8B. Correct input-output demonstrations met the joint formation rule
-on a two-input mapping surface in Qwen3-4B and Qwen3-8B, while no
-correct-demonstration P3 cell met the predeclared score-signal criterion on
-the frozen ordered length-8 parity ledgers at up to 64 demonstrations.
-
-[Report DOI](https://doi.org/10.5281/zenodo.21992852) |
-[publication](publications/local-mapping-without-iterative-closure/README.md) |
-[Zenodo bundle](publications/local-mapping-without-iterative-closure/zenodo/README.txt)
-
-### Sensitivity without reproducibility
-
-A staged measurement-boundary study separating visible-state use,
-positive-control sensitivity, fresh cross-presentation re-estimation, and a
-conditional representation--function analysis. The bounded operator route
-remained sensitive in 59/60 layer-blocks but met its frozen all-layer fresh
-qualification in only 5/20 blocks, so the functional stage remained unopened.
-
-[Report DOI](https://doi.org/10.5281/zenodo.22180751) |
-[publication](publications/sensitivity-without-reproducibility/README.md) |
-[Zenodo bundle](publications/sensitivity-without-reproducibility/zenodo/README.txt)
-
-## Technical Reports and Closed Studies
-
-These repository reports record bounded results and limitations. They are not
-additional DOI releases or entries in the publication catalog.
-
-### Gate12C-2: closed synthetic development track
-
-The graph-constrained N1 candidate failed its predeclared quantitative
-stability gate, and a bounded balanced-donor prototype did not provide a
-sufficient repair. No real held-out surface was opened. Final status:
-`LOCKED_FAIL / CLOSED / REAL_NOT_AUTHORIZED`.
-
-[sunset boundary](docs/reference/gate12c2_control_plane_sunset.md) |
-[frozen minimal implementation](tools/gate12c2_minimal/README.md) |
-[statistical adequacy audit](analysis/gate12c2_v2_statistical_adequacy/README.md) |
-[balanced-prototype negative report](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md)
-
-### CRD: controlled calibration and a negative acquisition test
-
-CRD-01 calibrated a path-order estimator and interventions in an explicitly
-constructed two-state learned system. CRD-02 completed its fixed 242-seed
-acquisition study, with no primary seed meeting local action acquisition.
-The report separates that negative result from successful numerical recovery,
-long-horizon attenuation, and unresolved learning mechanisms. Both studies are
-scientifically closed; no spontaneous-emergence or opaque-model claim is made.
-
-[Technical report](analysis/crd/TECHNICAL_REPORT.md) |
-[aggregate data and verification scope](analysis/crd/README.md)
-
-The earlier replication checkpoint remains available as a
-[historical release surface](publications/gate12a-first-replication-checkpoint/README.md).
-Repository-level citation metadata is in [`CITATION.cff`](CITATION.cff).
-
-## Amber: Interactive Companion
-
-**[Amber](https://amber-oversight.vercel.app/)** is an interactive companion to
-the research program, not its primary evidence surface. It translates part of
-the structural-review motivation into a local-first workbench for typed agent
-traces and bundled synthetic cases.
-
-- imported traces are processed locally in the browser
-- review targets retain the declared relation and comparison evidence
-- human reviewers make the disposition; Amber does not issue verdicts
-- there are no uploads, analytics, or model calls
-
-| Amber overview | Evidence review |
+| Location | Contents |
 | --- | --- |
-| [![Amber landing page showing its evidence-divergence review path](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/) | [![Amber Studio showing an evidence-linked review queue for a bundled synthetic trace](docs/assets/amber-studio.png)](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
-| **Start with the evidence path.** The landing page shows how a source constraint, changed artifact, and downstream output stay connected. | **Inspect the evidence.** Studio keeps declared relations, source constraints, and human disposition visible together. |
+| [publications/](publications/README.md) | Publication records and exact archive packages. |
+| [papers/](papers/) | Manuscript sources and paper-specific computational companions. |
+| [analysis/](analysis/) · [docs/](docs/) | Technical reports, verification notes, and reproduction guides. |
+| [tools/](tools/) · [src/](src/) · [crates/](crates/) | Research utilities and Python/Rust implementations. |
+| [apps/](apps/) | Interactive prototypes. |
+| [workstream/](workstream/README.md) · [ABOUT/](ABOUT/README.md) | Research history and project orientation. |
 
-**[Open Amber](https://amber-oversight.vercel.app/)**
+Historical Gate names identify study checkpoints; their conventions are
+explained in [Workstreams and Gates](ABOUT/WORKSTREAM_AND_GATES.md).
+Claims remain study-specific: the work does not establish a universal model
+quality or safety score, or a complete mechanistic account of language models.
 
-Amber is a technical prototype, not an empirically validated triage system,
-benchmark result, or substitute for the frozen Gate12A, Gate12B, or Gate12C-1
-releases.
+## License
 
-## Start Here
-
-- **Understand the research program:** [`ABOUT/`](ABOUT/README.md)
-- **Read the principal frozen report:**
-  [Gate12A DOI](https://doi.org/10.5281/zenodo.19483162)
-- **Verify or reproduce Gate12A:**
-  [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md)
-- **Inspect the evidence surface:**
-  [`docs/gate12a_evidence_atlas.md`](docs/gate12a_evidence_atlas.md)
-- **Follow the tracked research history:**
-  [`workstream/`](workstream/README.md)
-- **Browse publications across Zenodo, GitHub Releases, and future targets:**
-  [`publications/`](publications/README.md)
-- **Browse implementation and public specifications:** [`tools/`](tools/) and
-  [`specs/public/`](specs/public/SPEC.public.md)
-- **Explore the interface companion:**
-  [Amber](https://amber-oversight.vercel.app/)
-
-This is a research-first repository, not one monolithic application. Commands
-and artifacts are checkpoint-specific; start from the relevant runbook or
-release README.
-
-For development, start with the relevant implementation and its runbook.
-Historical freeze, authorization, and handoff notes describe past work. They
-do not require new approval documents for routine fixes or local cleanup.
-
-<details>
-<summary><strong>Repository map</strong></summary>
-
-```text
-ABOUT/        Human-readable orientation and release guidance
-apps/         Bounded interactive prototypes and supporting applications
-crates/       Rust implementation and infrastructure
-docs/         Reproduction guides, evidence maps, and operator notes
-publications/ Platform-neutral publication records and target packages
-papers/       Manuscript sources and paper-specific computational companions
-specs/        Public and retained internal specification surfaces
-src/          Python-facing package source
-tools/        Research runners, validators, and audit utilities
-workstream/   Numbered research memory and checkpoint history
-```
-
-Generated local runs are not automatically part of the public evidence
-surface. A result becomes citable only through its declared Gate, frozen
-release, and associated provenance.
-
-</details>
-
-## Claim Boundaries
-
-`pale-ale` does **not** currently claim:
-
-- a universal detector for hallucination, deception, correctness, or safety
-- a model-quality score or an automated replacement for human judgment
-- a completed mechanistic account of LLM behavior
-- architectural universality across learned systems
-- that Amber or another interactive prototype is benchmark evidence
-- that exploratory work retroactively changes a frozen release
-
-Public claims attach to named checkpoints, not to the repository as a whole.
-Negative results, exclusions, and unopened evaluation surfaces remain part of
-the record.
-
-## Reproducibility and License
-
-A frozen release keeps the paper or note, source snapshot, manifests, SHA-256
-checksums, artifact availability, and regeneration boundary distinct. Start
-with [`docs/reproduce_gate12a.md`](docs/reproduce_gate12a.md) before attempting
-a Gate12A replay.
-
-Software in this repository is available under the
-[Mozilla Public License 2.0](LICENSE). Papers, release records, datasets, and
-third-party artifacts may carry their own accompanying terms.
+Repository software is [MPL-2.0](LICENSE). Publication materials, data, and
+third-party artifacts follow their accompanying terms. The Array-RQMC release
+uses **CC BY 4.0 for publication materials and saved data, and MPL-2.0 for code**;
+see its [per-file license scope](publications/binary-array-rqmc/zenodo/LICENSES.txt).

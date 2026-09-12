@@ -6,7 +6,8 @@ Author: Aoi Kawasaki. Preprint; not peer reviewed.
 
 Published on Zenodo on **13 September 2026**, version **1.0.0**:
 [10.5281/zenodo.22728405](https://doi.org/10.5281/zenodo.22728405).
-No GitHub Release has been created yet.
+The [GitHub Release](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
+mirrors the same nine deposit files and identifies the repository snapshot.
 
 - [Read the published PDF](zenodo/binary-array-rqmc.pdf)
 - [Download the reproducibility capsule](zenodo/reproducibility-capsule.zip)
@@ -51,6 +52,11 @@ manuscript results. See the companion README before interpreting them.
 the SHA-256 inventory and ZIP identify the archived version. The manuscript
 sources and computational companion are also browsable under `papers/`.
 Later development does not replace the DOI-bound sources inside the capsule.
+
+Tag `binary-array-rqmc-v1.0.0` identifies the initial repository release.
+Use the attached `reproducibility-capsule.zip` for the self-contained paper
+companion. GitHub's automatically generated source archives contain the whole
+repository and are not the capsule.
 
 The deposit was assembled before its source was committed to GitHub. Statements
 inside it that no package-containing Git commit is asserted describe that
