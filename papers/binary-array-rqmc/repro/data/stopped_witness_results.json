@@ -1,0 +1,33 @@
+{
+  "projected": {
+    "mean": "40354351/16777216",
+    "variance": "150156208090179/562949953421312",
+    "variance_decimal": 0.2667310072193967,
+    "state_counts": [
+      1,
+      1,
+      1,
+      8,
+      64,
+      512
+    ],
+    "payoff_values": 316,
+    "suffixes": 512
+  },
+  "independent_rank_pairs": {
+    "mean": "40354351/16777216",
+    "variance": "150252523990083/562949953421312",
+    "variance_decimal": 0.26690209862693415,
+    "state_counts": [
+      1,
+      1,
+      1,
+      16,
+      256,
+      3968
+    ],
+    "payoff_values": 1931,
+    "suffixes": 4096
+  },
+  "variance_difference": "45927/268435456"
+}
