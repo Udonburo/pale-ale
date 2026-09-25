@@ -67,10 +67,10 @@ for the distinction between saved-result reproduction and new smoke timings.
 
 Keep this source tree in Git and use ordinary commits or release tags for its
 history. After committing the desired source revision, a source-only companion
-can be generated from this directory with:
+can be generated from the repository root with:
 
 ```text
-git archive --format=zip --prefix=binary-array-rqmc-arxiv/ --output=output/arxiv-source.zip HEAD:papers/binary-array-rqmc/arxiv
+git archive --format=zip --prefix=binary-array-rqmc-arxiv/ --output=papers/binary-array-rqmc/arxiv/output/arxiv-source.zip HEAD:papers/binary-array-rqmc/arxiv
 ```
 
 The generated ZIP and submission PDF stay under ignored `output/`. They can be
