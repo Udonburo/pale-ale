@@ -51,7 +51,7 @@ jobs:
       - name: Install pinned scientific dependencies
         run: python -m pip install -r papers/binary-array-rqmc/repro/requirements.txt
 
-      - name: Test the browsable source companion
+      - name: Test the Zenodo v1.0.0 source companion
         run: python -m unittest discover -s papers/binary-array-rqmc/repro -v
 
       - name: Check archived publication checksums
@@ -62,3 +62,9 @@ jobs:
 
       - name: Test the published capsule without private workspace data
         run: python -m unittest discover -s "$RUNNER_TEMP/binary-array-rqmc-capsule/binary-array-rqmc/repro" -v
+
+      - name: Install the arXiv edition's scientific dependencies
+        run: python -m pip install -r papers/binary-array-rqmc/arxiv/repro/requirements.txt
+
+      - name: Test the independent arXiv source companion
+        run: python -m unittest discover -s papers/binary-array-rqmc/arxiv/repro -v

@@ -13,6 +13,7 @@ mirrors the same nine deposit files and identifies the repository snapshot.
 - [Download the reproducibility capsule](zenodo/reproducibility-capsule.zip)
 - [Deposit files and scope](zenodo/README.txt)
 - [Working manuscript and build instructions](../../papers/binary-array-rqmc/README.md)
+- [Independent arXiv submission manuscript](../../papers/binary-array-rqmc/arxiv/README.md) (25 September 2026; not yet submitted)
 - [Code, 19 tests, and saved-data regeneration](../../papers/binary-array-rqmc/repro/README.md)
 - [Citation metadata](../../papers/binary-array-rqmc/CITATION.cff)
 
@@ -63,16 +64,17 @@ inside it that no package-containing Git commit is asserted describe that
 archival boundary; they are retained, not retroactively rewritten. Its reserved-
 DOI wording likewise describes preparation. The DOI above is now public.
 
-For development builds, select a separate destination rather than overwrite
-the published package:
+The original source paths under `papers/binary-array-rqmc/` retain the Zenodo
+edition. For an exact historical package rebuild, run its publication builder
+from the extracted v1.0.0 capsule. The independently editable arXiv edition is
+under `papers/binary-array-rqmc/arxiv/`, with its own manuscript, figures,
+reproduction code, and PDF build. Each edition writes generated files beneath
+its own ignored `output/`; arXiv development does not replace this deposit.
 
-```sh
-python papers/binary-array-rqmc/build_publication.py --output-dir output/binary-array-rqmc-build
-```
-
-Install the PDF dependencies from `papers/binary-array-rqmc/pdf-requirements.txt`
-first. This build command does not run new scientific experiments or publish.
-The separate review ZIP is historical review material, not the published capsule.
+Future arXiv source revisions use Git history rather than another dated source
+directory. PDFs and source ZIPs belong to that edition's GitHub Release assets.
+Add the actual arXiv identifier here after submission. The separate original
+review ZIP remains historical material.
 
 Publication materials and saved data are **CC BY 4.0**; code is **MPL-2.0**.
 These are per-file scopes, not alternative licenses for every file. See
