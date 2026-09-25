@@ -34,6 +34,10 @@ and reuse. Preprint; not peer reviewed.
 [Code and reproduction](papers/binary-array-rqmc/repro/README.md) ·
 [Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
 
+The [arXiv submission manuscript](papers/binary-array-rqmc/arxiv/README.md)
+is maintained independently from the published Zenodo v1.0.0 sources.
+It includes the later stopped-chain example and original timing reanalysis.
+
 ## Earlier papers and notes
 
 | Study | Focus |

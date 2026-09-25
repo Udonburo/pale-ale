@@ -1,4 +1,4 @@
-"""Regenerate two manuscript figures and Tables 1-4 from saved inputs only."""
+"""Regenerate two manuscript figures and Tables 2-3 and C1-C2 from saved inputs only."""
 from pathlib import Path
 from collections import Counter
 import json
@@ -7,7 +7,7 @@ import statistics
 
 ROOT = Path(__file__).resolve().parent
 LABELS = {"LIBRARY": "Library array", "DIRECT": "Direct binary array",
-          "MAINTAINED": "Order-maintained array", "CRN": "CRN", "ANTITHETIC": "Antithetic"}
+          "MAINTAINED": "Order-maintained array", "CRN": "CRN", "ANTITHETIC": "Antithetic tapes"}
 METHODS = ("DIRECT", "MAINTAINED", "CRN", "ANTITHETIC")
 COLORS = {"DIRECT": "#386CB0", "MAINTAINED": "#087F5B", "CRN": "#D07417", "ANTITHETIC": "#9461A2"}
 
@@ -72,19 +72,19 @@ def validate_data(data):
 def write_tables(data):
     lines = ["# Tables regenerated from saved numerical inputs", "",
              "No new observations. Interval endpoints are retained from the original analyses;",
-             "aggregate saved means do not suffice to rerun their paired-round bootstraps.", "",
-             "## Table 1 — direct binary generation", "",
+             "Use reanalyze_timing.py to recompute Table 3 from its original paired rows.", "",
+             "## Table 2 — direct binary generation", "",
              "| N | Library ms | Direct ms | Reduction % | Ratio interval |",
              "|---:|---:|---:|---:|---|"]
     for r in data["projection_summary"]:
         old, new = r["LIBRARY"]["wall"], r["DIRECT"]["wall"]
         lines.append(f'| {r["n"]:,} | {1000*old:.2f} | {1000*new:.2f} | {100*(1-new/old):.1f} | [{r["wall_ratio_lo"]:.4f}, {r["wall_ratio_hi"]:.4f}] |')
-    lines += ["", "## Table 2 — order maintenance", "",
+    lines += ["", "## Table 3 — order maintenance", "",
               "| N | Wall ratio | Ratio interval | Reduction % | CPU ratio |",
               "|---:|---:|---|---:|---:|"]
     for r in data["ordering_summary"]:
         lines.append(f'| {r["n"]:,} | {r["wall_ratio"]:.4f} | [{r["wall_ratio_lo"]:.4f}, {r["wall_ratio_hi"]:.4f}] | {100*(1-r["wall_ratio"]):.1f} | {r["cpu_ratio"]:.4f} |')
-    lines += ["", "## Table 3 — selected sampling configurations", "",
+    lines += ["", "## Table C1 — selected sampling configurations", "",
               "| Payoff | Method | N × k | Estimated MSE | 95% upper | Warm ms |",
               "|---|---|---:|---:|---:|---:|"]
     for condition, payoff in (("case_07_distant", "One-sided"), ("case_08_distant", "Quadratic")):
@@ -92,7 +92,7 @@ def write_tables(data):
         for m in METHODS:
             r = rows[m]
             lines.append(f'| {payoff} | {LABELS[m]} | {r["n"]} × {r["k"]} | {r["risk"]:.5g} | {r["risk_hi"]:.5g} | {1000*r["wall"]:.2f} |')
-    lines += ["", "## Table 4 — acquisition-inclusive accounting", "",
+    lines += ["", "## Table C2 — acquisition-inclusive accounting", "",
               "| Payoff | Method | First evaluation s | At R=1000, ms/evaluation |",
               "|---|---|---:|---:|"]
     for condition, payoff in (("case_07_distant", "One-sided"), ("case_08_distant", "Quadratic")):
@@ -186,7 +186,7 @@ def main():
     validate_data(data)
     write_tables(data)
     figures(data)
-    print("Saved-input checks passed; regenerated Tables 1-4 and two figures. No simulation was run.")
+    print("Saved-input checks passed; regenerated Tables 2-3 and C1-C2 and two figures. No simulation was run.")
 
 
 if __name__ == "__main__":

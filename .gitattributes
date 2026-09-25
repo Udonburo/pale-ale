@@ -9,4 +9,4 @@
 # Markdown hard breaks and generated SVG whitespace are part of the snapshot.
 /papers/binary-array-rqmc/**/*.md whitespace=cr-at-eol,-blank-at-eol
 /papers/binary-array-rqmc/*.md whitespace=cr-at-eol,-blank-at-eol
-/papers/binary-array-rqmc/figures/*.svg whitespace=cr-at-eol,-blank-at-eol
+/papers/binary-array-rqmc/**/figures/*.svg whitespace=cr-at-eol,-blank-at-eol
