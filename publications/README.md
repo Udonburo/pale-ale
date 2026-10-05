@@ -8,6 +8,7 @@ scope. A DOI identifies an archived version; it is not a peer-review claim.
 
 | Date | Publication | Archive | GitHub Release |
 | --- | --- | --- | --- |
+| 2026-10-06 | [Exact State-Ranked Array-RQMC: Representations and Shared Work](exact-state-ranked-array-rqmc/README.md) | [DOI](https://doi.org/10.5281/zenodo.23166655) | [v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0) |
 | 2026-09-13 | [Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution](binary-array-rqmc/README.md) | [DOI](https://doi.org/10.5281/zenodo.22728405) | [v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0) |
 | 2026-08-31 | [Sensitivity Without Reproducibility](sensitivity-without-reproducibility/README.md) | [DOI](https://doi.org/10.5281/zenodo.22180751) | [v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/sensitivity-without-reproducibility-v1.0.0) |
 | 2026-08-18 | [Local Mapping Without Iterative Closure](local-mapping-without-iterative-closure/README.md) | [DOI](https://doi.org/10.5281/zenodo.21992852) | [v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/local-mapping-without-iterative-closure-v1.0.0) |

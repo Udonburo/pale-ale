@@ -1,0 +1,26 @@
+{
+  "outputs": [
+    [
+      13,
+      4,
+      0,
+      9
+    ],
+    [
+      9,
+      5,
+      15,
+      3
+    ]
+  ],
+  "thresholds_checked": 34,
+  "support_costs": [
+    4,
+    2
+  ],
+  "example_queries": {
+    "F(10)": 3,
+    "F(9)": 2
+  },
+  "status": "PASS"
+}

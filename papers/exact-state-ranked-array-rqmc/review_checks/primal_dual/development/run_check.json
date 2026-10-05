@@ -1,0 +1,18 @@
+{
+  "comparisons_this_run": 144,
+  "histogram_steps_this_run": 21600,
+  "status": "PASS",
+  "source": {
+    "benchmark.py": "39cdc7aa3b470d6edb4a69e17040c4a947c8c0a1f267fa9d026872cedda4cdf2",
+    "check.py": "ae5ee653fcdbf2095a4af823c6718abedb6d8d44b5318df43880fb4d85222b11",
+    "executors.py": "78aad8b0c4e98217399ea38e57fbc79fb458f52a3a247f6ef84e33b7425ae8aa",
+    "legacy/counter_reference.py": "dff1c8f50e6c62a7bc550c3ea512b80a74a5383200696ba7b374e6b669d64523",
+    "legacy/kernel.py": "0d63613bf377bd69240f4bcd632efb1bb6a8d98caae4d3245273f1c8786b12c0",
+    "legacy/model.py": "d41ae848c67c321676ae060db5edc5c604eb75b83377fc9de999b691894eccdc",
+    "legacy/reuse_study/benchmark.py": "9c297173d87f42b3583a0de48f0faa71399183bce76fe62d8238b089b5ab621e",
+    "legacy/reuse_study/check.py": "d806d2e3d0fbef08c580cb97e9ec4338f123ea2b6469ba47476aaf90a0395153",
+    "legacy/reuse_study/reuse_kernel.py": "66e3cbfe85995796c168288dd4796537c947e21153e1cd8905c5fc032c4c7ea2",
+    "legacy/reuse_study/study_run.py": "a7980196847068561c34953981b0d98f08186280cfb554bb3ce133fc014cb55d",
+    "legacy/run.py": "8fa6c840748c2a78e996ee56b2a9493835de2847b4aceb1c92d4153a473de9f3"
+  }
+}

@@ -1,0 +1,20 @@
+--- confirmation/source/executors.py
++++ executors.py
+@@ -175,6 +175,8 @@
+ 
+ @njit(cache=True)
+ def tandem_tables(width, horizon):
++    if width < 4:
++        raise ValueError('tandem benchmark requires word width >= 4')
+     # One extra level; no state arriving at this guard is used within horizon.
+     level = horizon+1
+     D = (level+1)*(level+2)//2
+@@ -197,7 +199,7 @@
+     if spec['model'] == 'repair':
+         cuts, dest, _ = original_model.model(spec['K'], spec['w'])
+         weights = np.column_stack((np.arange(spec['K']+1, dtype=np.int64),
+-                                   (np.arange(spec['K']+1) >= (spec['K']+1)//2).astype(np.int64)))
++                                   (np.arange(spec['K']+1) >= (spec['K']+2)//2).astype(np.int64)))
+         return cuts, dest, weights
+     if spec['model'] == 'tandem':
+         return tandem_tables(spec['w'], spec['horizon'])

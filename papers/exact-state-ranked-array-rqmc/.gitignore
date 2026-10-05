@@ -1,0 +1,13 @@
+# Preserve original source/data bytes in the public companion.
+!**/data/
+!**/data/**
+!**/*.jsonl
+__pycache__/
+*.pyc
+*.nbi
+*.nbc
+.pdf-tools/
+tmp/
+output/*
+!output/pdf/
+!output/pdf/*.pdf

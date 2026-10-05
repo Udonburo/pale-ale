@@ -1,0 +1,66 @@
+{
+  "status": "PASS",
+  "shifts_per_batch": 1024,
+  "batches": [
+    {
+      "Q": 1,
+      "enumerated_mean": 1.998046875,
+      "psi": 1.998046875,
+      "coarse": 2
+    },
+    {
+      "Q": 2,
+      "enumerated_mean": 2.99609375,
+      "psi": 2.99609375,
+      "coarse": 3
+    },
+    {
+      "Q": 4,
+      "enumerated_mean": 3.9921875,
+      "psi": 3.9921875,
+      "coarse": 4
+    },
+    {
+      "Q": 8,
+      "enumerated_mean": 4.984375,
+      "psi": 4.984375,
+      "coarse": 5
+    },
+    {
+      "Q": 16,
+      "enumerated_mean": 5.96875,
+      "psi": 5.96875,
+      "coarse": 6
+    },
+    {
+      "Q": 32,
+      "enumerated_mean": 6.9375,
+      "psi": 6.9375,
+      "coarse": 7
+    },
+    {
+      "Q": 64,
+      "enumerated_mean": 7.875,
+      "psi": 7.875,
+      "coarse": 8
+    },
+    {
+      "Q": 128,
+      "enumerated_mean": 8.75,
+      "psi": 8.75,
+      "coarse": 9
+    },
+    {
+      "Q": 256,
+      "enumerated_mean": 9.5,
+      "psi": 9.5,
+      "coarse": 10
+    },
+    {
+      "Q": 512,
+      "enumerated_mean": 10.0,
+      "psi": 10.0,
+      "coarse": 10
+    }
+  ]
+}

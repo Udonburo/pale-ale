@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "saved_generators": 8,
+  "full_sorts": 192,
+  "sorted_point_comparisons": 12240,
+  "scipy_unscrambled_points": 1530,
+  "sampled_saved_generator_points": 2064,
+  "nonzero_sorting_shifts": true,
+  "binary_and_gray_index_orders": true
+}

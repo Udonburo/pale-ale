@@ -1,0 +1,24 @@
+Licensing scope for the public Array-RQMC companion
+==================================================
+
+Copyright (C) 2026 Aoi Kawasaki, except where prior notices specify otherwise.
+
+Author-created manuscript Markdown and PDFs, figures, documentation, citation
+metadata, provenance and saved simulation results (JSON, JSONL, CSV and NPZ)
+are licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+Python source, tests, build/packaging scripts, and the Typst layout template
+are governed by the repository's Mozilla Public License 2.0 (MPL-2.0).
+The full license is supplied in LICENSE-MPL-2.0.txt:
+https://www.mozilla.org/MPL/2.0/
+
+These scopes also apply to the selected author-created files inside
+archive/retained-dense-inputs.zip. They are per-file scopes, not a choice of
+either license for every file. In particular, the paper's CC BY 4.0 label
+does not relicense the software.
+
+Dependencies and third-party material retain their original terms.
+See THIRD_PARTY.md for the direction-number source and dependency attribution.
+No third-party runtime library, compiler executable, font bundle, paper or
+model weight is included in this release.

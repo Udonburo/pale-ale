@@ -1,0 +1,106 @@
+{
+  "status": "PASS",
+  "date": "2026-10-06",
+  "paper_doi": "10.5281/zenodo.23166655",
+  "paper_version": "20261005-estimator",
+  "companion_tag": "exact-state-ranked-array-rqmc-v1.0.0",
+  "archive": "array-rqmc-repro-20261006.zip",
+  "archive_sha256": "3cdc3d6032458aad60fcfa3613dc53bb7adf8a404f698ba01e289f39f7dde142",
+  "archive_bytes": 16852969,
+  "manifest_files": 254,
+  "zip_entries": 255,
+  "unchanged_review_files": 241,
+  "unchanged_dense_files": 142,
+  "original_timing_observations": 4080,
+  "environment": {
+    "system": "Windows",
+    "python": "3.11.2"
+  },
+  "command": "python reproduce_review.py --quick --require-identical",
+  "fresh_extraction": true,
+  "stages_completed": [
+    "conditional_workload",
+    "current_analysis",
+    "legacy_error_analysis",
+    "main_pdf",
+    "mechanism_figures",
+    "model_domains",
+    "point_sorting_bridge",
+    "primal_counter",
+    "saved_source_replay",
+    "scalar_checks",
+    "supplement_pdf",
+    "worked_example"
+  ],
+  "saved_source_replay": {
+    "status": "PASS",
+    "quick": true,
+    "method_trajectories": 12,
+    "method_steps": 1800,
+    "source_identity_verified": true,
+    "matrices_verified": 8
+  },
+  "current_wrapper_regression": {
+    "status": "PASS",
+    "repair_capacities_checked": 15,
+    "even_capacity_fixture_methods": 6,
+    "rejected_entries": 24,
+    "published_model_tables_unchanged": 17,
+    "current_wrapper_method_trajectories": 102,
+    "current_wrapper_method_steps": 13800,
+    "paired_seeds_per_cell": 1,
+    "measured_source_hashes_verified": 11,
+    "timing_observations_added": 0
+  },
+  "pdf_sha256": {
+    "implicit-array-rqmc.pdf": "90945243a7ead48438ea71404564446f0938f4184fc1b88c941b246259a2fc64",
+    "retained-studies.pdf": "43d9086664af4f0d7190a4737774ade27a2d78727872fc682dd5b80554d7f180"
+  },
+  "reproduction_result": {
+    "status": "PASS",
+    "quick": true,
+    "pdf_rebuilt": true,
+    "pdf_bytes_match_saved": {
+      "implicit-array-rqmc": true,
+      "retained-studies": true
+    },
+    "legacy_archive_sha256": "6aa69ba693b46e6758cccd7ce4e25eed64d68c1174e9256182b7c487bd6abedc",
+    "performance_timings_repeated": false,
+    "mechanism_figures_checked": true
+  },
+  "png_comparisons": {
+    "figures/errors.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    },
+    "figures/four_rank_mechanism.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    },
+    "figures/primal_dual_pairs.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    },
+    "figures/reuse_shared_work_bound.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    },
+    "figures/structural_work_examples.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    },
+    "figures/workload_demand.png": {
+      "pixels_match": true,
+      "bytes_match": true
+    }
+  },
+  "distribution_scan": {
+    "text_files_checked_recursively": 227,
+    "credential_patterns_found": 0,
+    "personal_absolute_paths_found": 0,
+    "private_chat_links_found": 0,
+    "author_email_already_in_published_paper": true,
+    "licenses": "Author publication/data: CC BY 4.0; source/template: MPL-2.0; third-party rights retained."
+  },
+  "scope": "This run used quick measured-source replay and the complete current-wrapper regression. The earlier full 816-trajectory audit is not claimed as repeated here. No performance measurements were repeated. Published PDF bytes and original scientific observations were preserved."
+}

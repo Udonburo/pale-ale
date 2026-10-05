@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "Cite the paper DOI and identify this companion tag when using its implementation or saved observations."
+title: "Exact State-Ranked Array-RQMC: Representations and Shared Work — reproduction companion"
+type: software
+authors:
+  - family-names: "Kawasaki"
+    given-names: "Aoi"
+version: "1.0.0"
+date-released: "2026-10-06"
+repository-code: "https://github.com/Udonburo/pale-ale"
+url: "https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0"
+license: "MPL-2.0"
+preferred-citation:
+  type: article
+  title: "Exact State-Ranked Array-RQMC: Representations and Shared Work"
+  authors:
+    - family-names: "Kawasaki"
+      given-names: "Aoi"
+  year: 2026
+  date-released: "2026-10-06"
+  doi: "10.5281/zenodo.23166655"
+  url: "https://doi.org/10.5281/zenodo.23166655"
+  notes: "Author preprint, version 20261005-estimator; not peer reviewed."

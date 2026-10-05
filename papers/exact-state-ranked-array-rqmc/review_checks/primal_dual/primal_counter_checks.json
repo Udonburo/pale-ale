@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "algorithm": "Algorithm 3 / Proposition 3",
+  "exhaustive_word_widths": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "exhaustive_echelon_bases": 308,
+  "non_reduced_bases": 218,
+  "exhaustive_queries": 151464,
+  "wider_cases": 64,
+  "wider_queries": 8200,
+  "largest_rank_width": 62,
+  "largest_word_width": 62,
+  "comparisons": [
+    "explicit distinct-output enumeration",
+    "saved compiled coset_below",
+    "literal Algorithm 3"
+  ],
+  "performance_timings_repeated": false
+}

@@ -14,7 +14,27 @@ Negative results remain part of the record.
 
 ## Latest preprint
 
-### Exact Binary Projections for Array-RQMC
+### Exact State-Ranked Array-RQMC
+
+*Representations and Shared Work* — Aoi Kawasaki, October 2026.
+
+How can a repeatedly reranked population be executed without visiting every
+particle? Primal image-basis and dual constraint counters preserve the same
+realized histogram path and supported readouts. The paper analyzes shared
+transformation demand through query-prefix diversity and compares six exact
+executors on common repair and tandem inputs.
+
+Direct basis is favored over the other non-enumerating methods by the median
+within-seed timing ratios in all 17 measured cells. Retaining dual coefficients
+improves on matched reconstruction, while query and aggregation costs remain.
+The comparison includes eight seeds per cell on one non-isolated host.
+Preprint; not peer reviewed.
+
+[Paper and supplement](https://doi.org/10.5281/zenodo.23166655) ·
+[Code and reproduction](papers/exact-state-ranked-array-rqmc/README.md) ·
+[Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0)
+
+### Earlier Array-RQMC preprint: Exact Binary Projections
 
 *Joint Laws and Pathwise-Preserving Execution* — Aoi Kawasaki, September 2026.
 
@@ -71,7 +91,8 @@ These closed studies are repository reports, separate from the DOI publications.
 There is no single experiment behind this repository. Start with the companion
 for the result you want to check.
 
-- **Array-RQMC:** [19 tests, three kernels, and saved-data regeneration](papers/binary-array-rqmc/repro/README.md).
+- **Exact State-Ranked Array-RQMC:** [six executors, saved trajectories, original timings and PDF reproduction](papers/exact-state-ranked-array-rqmc/README.md).
+- **Earlier binary-projection study:** [19 tests, three kernels, and saved-data regeneration](papers/binary-array-rqmc/repro/README.md).
   The [archived capsule](publications/binary-array-rqmc/zenodo/reproducibility-capsule.zip)
   is self-contained; it does not include every original raw experiment.
 - **FP32 structural replay:** [reproduction guide](docs/reproduce_gate12a.md)
@@ -118,4 +139,5 @@ quality or safety score, or a complete mechanistic account of language models.
 Repository software is [MPL-2.0](LICENSE). Publication materials, data, and
 third-party artifacts follow their accompanying terms. The Array-RQMC release
 uses **CC BY 4.0 for publication materials and saved data, and MPL-2.0 for code**;
-see its [per-file license scope](publications/binary-array-rqmc/zenodo/LICENSES.txt).
+see the [current companion's per-file scope](papers/exact-state-ranked-array-rqmc/LICENSES.txt)
+and the [earlier release's scope](publications/binary-array-rqmc/zenodo/LICENSES.txt).
