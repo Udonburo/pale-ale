@@ -7,7 +7,8 @@ message: >-
   10.5281/zenodo.21355572 for the Gate12C-1 companion paper,
   10.5281/zenodo.21992852 for Local Mapping Without Iterative Closure,
   10.5281/zenodo.22180751 for Sensitivity Without Reproducibility,
-  10.5281/zenodo.22728405 for Exact Binary Projections for Array-RQMC, and
+  10.5281/zenodo.22728405 for Exact Binary Projections for Array-RQMC,
+  10.5281/zenodo.23166655 for Exact State-Ranked Array-RQMC, and
   10.5281/zenodo.19340221 only for the earlier replication checkpoint / prior
   release surface.
 title: "pale-ale"
@@ -31,6 +32,15 @@ abstract: >-
   10.5281/zenodo.19340221 is an earlier replication checkpoint / prior release
   surface.
 references:
+  - type: article
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+    title: "Exact State-Ranked Array-RQMC: Representations and Shared Work"
+    year: 2026
+    date-released: "2026-10-06"
+    doi: "10.5281/zenodo.23166655"
+    url: "https://doi.org/10.5281/zenodo.23166655"
   - type: report
     authors:
       - family-names: "Kawasaki"

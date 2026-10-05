@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "philox_upstream_known_answers": 3,
+  "exhaustive_tapes": 8192,
+  "exhaustive_queries": 516096,
+  "additional_tapes": 160,
+  "additional_queries": 197410,
+  "method_trajectories": 72,
+  "histogram_steps": 1440,
+  "checks": [
+    "scalar GF2 oracle",
+    "suffix images",
+    "echelon pivots",
+    "full affine offsets",
+    "dual reuse and rebuild",
+    "all six dynamic executors",
+    "tandem atoms",
+    "transition rewards"
+  ]
+}

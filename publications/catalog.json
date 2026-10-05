@@ -3,6 +3,26 @@
   "repository": "https://github.com/Udonburo/pale-ale",
   "publications": [
     {
+      "slug": "exact-state-ranked-array-rqmc",
+      "title": "Exact State-Ranked Array-RQMC: Representations and Shared Work",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-10-06",
+      "resource_type": "preprint",
+      "doi": "10.5281/zenodo.23166655",
+      "landing_path": "publications/exact-state-ranked-array-rqmc/README.md",
+      "source_path": "papers/exact-state-ranked-array-rqmc",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/23166655",
+          "package_path": "publications/exact-state-ranked-array-rqmc/zenodo"
+        },
+        "github_release": {
+          "tag": "exact-state-ranked-array-rqmc-v1.0.0",
+          "url": "https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0"
+        }
+      }
+    },
+    {
       "slug": "structural-replay-fp32",
       "title": "Structural Replay in Dense Transformers Under a Frozen FP32 Regime: Evidence from Closed 3B/4B Models and Boundary Results",
       "author": "Aoi Kawasaki",

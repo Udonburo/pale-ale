@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "repair_capacities_checked": 15,
+  "even_capacity_fixture_methods": 6,
+  "rejected_entries": 24,
+  "published_model_tables_unchanged": 17,
+  "current_wrapper_method_trajectories": 102,
+  "current_wrapper_method_steps": 13800,
+  "paired_seeds_per_cell": 1,
+  "measured_source_hashes_verified": 11,
+  "timing_observations_added": 0
+}

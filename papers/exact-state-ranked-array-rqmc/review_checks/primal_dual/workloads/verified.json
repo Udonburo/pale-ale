@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "fixed_workloads": 5,
+  "widths": 89,
+  "shift_realizations": 20480,
+  "incoming_workloads_reconstructed": true,
+  "integer_observations_exact": true,
+  "rational_expectations_exact": true,
+  "legacy_float_accumulation_exact": true,
+  "legacy_summary_unchanged": true,
+  "correctly_rounded_display_fields_different_from_legacy": 54,
+  "latency_measurements_repeated": false
+}

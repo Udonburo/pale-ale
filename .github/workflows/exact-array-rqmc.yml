@@ -1,0 +1,38 @@
+name: Exact Array-RQMC companion
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "papers/exact-state-ranked-array-rqmc/**"
+      - ".github/workflows/exact-array-rqmc.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "papers/exact-state-ranked-array-rqmc/**"
+      - ".github/workflows/exact-array-rqmc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: papers/exact-state-ranked-array-rqmc
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Verify released source and data identities
+        run: python verify_public.py
+      - name: Install pinned scientific dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check scalar and compiled primal counters
+        run: |
+          python review_checks/primal_dual/confirmation/source/check.py
+          python review_checks/primal_dual/check_primal_counter.py

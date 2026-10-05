@@ -10,3 +10,7 @@
 /papers/binary-array-rqmc/**/*.md whitespace=cr-at-eol,-blank-at-eol
 /papers/binary-array-rqmc/*.md whitespace=cr-at-eol,-blank-at-eol
 /papers/binary-array-rqmc/**/figures/*.svg whitespace=cr-at-eol,-blank-at-eol
+# Preserve the exact published PDFs and present them as binary artifacts.
+/publications/exact-state-ranked-array-rqmc/zenodo/** -whitespace
+/publications/exact-state-ranked-array-rqmc/zenodo/*.pdf binary
+/papers/exact-state-ranked-array-rqmc/output/pdf/*.pdf binary
