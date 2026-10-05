@@ -28,7 +28,9 @@ abstract: >-
   bounded audit, 10.5281/zenodo.21355572 is the Gate12C-1 companion paper,
   10.5281/zenodo.21992852 and 10.5281/zenodo.22180751 are the subsequent
   capability- and measurement-boundary studies, 10.5281/zenodo.22728405 is the
-  Array-RQMC exact execution-specialization preprint, and
+  earlier Array-RQMC binary-projection preprint, and
+  10.5281/zenodo.23166655 is Exact State-Ranked Array-RQMC: Representations
+  and Shared Work, with its six-executor reproduction companion.
   10.5281/zenodo.19340221 is an earlier replication checkpoint / prior release
   surface.
 references:

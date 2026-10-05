@@ -32,6 +32,7 @@ Preprint; not peer reviewed.
 
 [Paper and supplement](https://doi.org/10.5281/zenodo.23166655) ·
 [Code and reproduction](papers/exact-state-ranked-array-rqmc/README.md) ·
+[Reproduction ZIP](https://github.com/Udonburo/pale-ale/releases/download/exact-state-ranked-array-rqmc-v1.0.0/array-rqmc-repro-20261006.zip) ·
 [Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0)
 
 ### Earlier Array-RQMC preprint: Exact Binary Projections
@@ -53,10 +54,6 @@ and reuse. Preprint; not peer reviewed.
 [DOI](https://doi.org/10.5281/zenodo.22728405) ·
 [Code and reproduction](papers/binary-array-rqmc/repro/README.md) ·
 [Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
-
-The [arXiv submission manuscript](papers/binary-array-rqmc/arxiv/README.md)
-is maintained independently from the published Zenodo v1.0.0 sources.
-It includes the later stopped-chain example and original timing reanalysis.
 
 ## Earlier papers and notes
 
