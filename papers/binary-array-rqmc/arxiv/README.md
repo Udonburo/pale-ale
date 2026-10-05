@@ -1,10 +1,12 @@
-# Array-RQMC: arXiv submission manuscript
+# Array-RQMC: retained September 2026 manuscript
 
 **Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution**  
 Aoi Kawasaki - Preprint, 25 September 2026
 
-This is the independent manuscript prepared for the initial arXiv submission.
-No arXiv identifier or peer-review outcome is asserted. The earlier
+This historical revision was prepared for arXiv and remains at its original
+source path. Current journal preparation uses
+[Exact State-Ranked Array-RQMC: Representations and Shared Work](../../exact-state-ranked-array-rqmc/README.md),
+with its public paper DOI and fixed reproduction companion. The earlier
 [Zenodo v1.0.0](https://doi.org/10.5281/zenodo.22728405) remains a separate,
 published edition with its own sources and archived files.
 
@@ -30,7 +32,7 @@ The manuscript cites this publicly retrievable
 Its location at an earlier Git revision remains valid. This directory retains
 its own copy of those reproduction sources for independent builds.
 
-## Build the submission PDF
+## Build this historical PDF
 
 Use Python 3.11 or later in a separate environment. From this directory:
 
@@ -46,9 +48,8 @@ PDF tool installation, pass `--tools-dir PATH`.
 
 The 14-page PDF contains the complete manuscript and both figures. The title
 page's date is a manuscript date, not a Zenodo version or an arXiv version label.
-The build follows Markdown -> Pandoc -> Typst -> PDF. See the
-[arXiv PDF submission guidance](https://info.arxiv.org/help/submit_pdf.html)
-for the upload format; the reproduction ZIP is a separate companion.
+The build follows Markdown -> Pandoc -> Typst -> PDF; the reproduction ZIP
+is a separate companion.
 
 ## Check this edition
 
@@ -63,24 +64,21 @@ and the timing reanalysis. The renderer regenerates saved-input tables and
 figures; it does not run a new performance experiment. See the companion README
 for the distinction between saved-result reproduction and new smoke timings.
 
-## GitHub distribution
+## Recover a historical source snapshot
 
-Keep this source tree in Git and use ordinary commits or release tags for its
-history. After committing the desired source revision, a source-only companion
-can be generated from the repository root with:
+This source tree and its earlier revisions remain available in Git. A source-only
+snapshot can be generated from the repository root with:
 
 ```text
 git archive --format=zip --prefix=binary-array-rqmc-arxiv/ --output=papers/binary-array-rqmc/arxiv/output/arxiv-source.zip HEAD:papers/binary-array-rqmc/arxiv
 ```
 
-The generated ZIP and submission PDF stay under ignored `output/`. They can be
-attached to the GitHub Release for the arXiv edition. The earlier Zenodo deposit
-and its builders are independent. No new Zenodo record or version is required
-by this source layout.
+The generated ZIP and PDF stay under ignored `output/`. The earlier Zenodo
+deposit and its builders are independent. Use the current state-ranked paper's
+fixed release for the current reproduction package.
 
 The parent `CITATION.cff` describes Zenodo v1.0.0. It is intentionally not copied
 into this edition as though that DOI identified the revised manuscript.
-Record the actual arXiv identifier in the publication index after submission.
 
 ## Licenses
 

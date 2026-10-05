@@ -4,6 +4,10 @@
 
 Author: Aoi Kawasaki. Preprint; not peer reviewed.
 
+For the current Array-RQMC paper and reproduction companion, see
+[Exact State-Ranked Array-RQMC: Representations and Shared Work](../exact-state-ranked-array-rqmc/README.md).
+This page describes the earlier binary-projection study and its archived release.
+
 Published on Zenodo on **13 September 2026**, version **1.0.0**:
 [10.5281/zenodo.22728405](https://doi.org/10.5281/zenodo.22728405).
 The [GitHub Release](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
@@ -12,8 +16,8 @@ mirrors the same nine deposit files and identifies the repository snapshot.
 - [Read the published PDF](zenodo/binary-array-rqmc.pdf)
 - [Download the reproducibility capsule](zenodo/reproducibility-capsule.zip)
 - [Deposit files and scope](zenodo/README.txt)
-- [Working manuscript and build instructions](../../papers/binary-array-rqmc/README.md)
-- [Independent arXiv submission manuscript](../../papers/binary-array-rqmc/arxiv/README.md) (25 September 2026; not yet submitted)
+- [Historical manuscript editions and build instructions](../../papers/binary-array-rqmc/README.md)
+- [Retained revision of 25 September 2026](../../papers/binary-array-rqmc/arxiv/README.md)
 - [Code, 19 tests, and saved-data regeneration](../../papers/binary-array-rqmc/repro/README.md)
 - [Citation metadata](../../papers/binary-array-rqmc/CITATION.cff)
 
@@ -66,18 +70,13 @@ DOI wording likewise describes preparation. The DOI above is now public.
 
 The original source paths under `papers/binary-array-rqmc/` retain the Zenodo
 edition. For an exact historical package rebuild, run its publication builder
-from the extracted v1.0.0 capsule. The independently editable arXiv edition is
-under `papers/binary-array-rqmc/arxiv/`, with its own manuscript, figures,
-reproduction code, and PDF build. Each edition writes generated files beneath
-its own ignored `output/`; arXiv development does not replace this deposit.
-
-Future arXiv source revisions use Git history rather than another dated source
-directory. PDFs and source ZIPs belong to that edition's GitHub Release assets.
-Add the actual arXiv identifier here after submission. The separate original
-review ZIP remains historical material.
+from the extracted v1.0.0 capsule. The 25 September revision remains under
+`papers/binary-array-rqmc/arxiv/`, its original preparation path, with its own
+manuscript, figures, reproduction code and PDF build. Each edition writes
+generated files beneath its own ignored `output/`. These historical sources
+and the separate original review ZIP preserve the earlier work; current
+journal preparation uses the state-ranked paper linked above.
 
 Publication materials and saved data are **CC BY 4.0**; code is **MPL-2.0**.
 These are per-file scopes, not alternative licenses for every file. See
 [LICENSES.txt](zenodo/LICENSES.txt).
-
-No arXiv submission or peer-review outcome is asserted.
