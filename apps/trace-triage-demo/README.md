@@ -1,5 +1,11 @@
 # pale-ale Trace Triage Demo
 
+This directory retains the earlier static Trace Triage demo. The current
+[Amber workspace](https://amber-oversight.vercel.app/) is developed separately;
+use its [Studio sample](https://amber-oversight.vercel.app/studio?sample=legal-hold)
+to explore the current interface. The instructions and screenshots below
+describe this retained demo.
+
 Static first-contact demo for pale-ale Trace Triage.
 
 It is designed for a busy evaluation, red-team, agent-monitoring, AI safety, or

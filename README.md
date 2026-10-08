@@ -6,15 +6,20 @@
 
 **Exact stochastic simulation. Reproducible studies of learned systems.**
 
-Research by **Aoi Kawasaki** on how computational representations determine
-what we can preserve, measure, and execute efficiently. Each study connects a
-specific mathematical question to code, observations, and a reproducible result.
+Research and software by **Aoi Kawasaki** on how computational representations
+determine what we can preserve, measure, and execute efficiently. This repository
+connects papers, computational companions, and interactive work.
 
 [Latest paper](#exact-state-ranked-array-rqmc) ·
 [Reproduce a result](#reproduce-a-result) ·
 [Publications](publications/README.md) ·
 [Technical reports](#technical-reports) ·
 [Amber](#amber)
+
+| Selected work | Explore |
+| --- | --- |
+| **Exact State-Ranked Array-RQMC** — execute the same ranked population through algebraic counts; compare the representations and their costs. | [Read the paper](publications/exact-state-ranked-array-rqmc/zenodo/implicit-array-rqmc.pdf) · [Reproduce](#reproduce-a-result) |
+| **Amber** — follow the evidence behind an agent's answer, inspect what changed, and record a human decision. | [Open Amber](https://amber-oversight.vercel.app/) · [Try Studio](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
 
 ## Exact State-Ranked Array-RQMC
 
@@ -109,6 +114,33 @@ was faster in these workloads.
 [Study design and six methods](papers/exact-state-ranked-array-rqmc/review_checks/primal_dual/README.md) ·
 [Publication record and citation](publications/exact-state-ranked-array-rqmc/README.md)
 
+## Amber
+
+### Follow the evidence behind an agent's answer
+
+[**Open Amber**](https://amber-oversight.vercel.app/) ·
+[Try the Studio sample](https://amber-oversight.vercel.app/studio?sample=legal-hold)
+
+Amber is a browser-based workspace for reviewing structured agent traces.
+Compare a declared source constraint with an output, follow the evidence path,
+and open the original context. A review queue connects each question to the
+evidence you can inspect; the decision stays with the reviewer.
+
+Trace, report, and saved-review files are processed in the browser. Review
+decisions can be exported separately from the original report. The public app
+includes bundled examples to explore the workflow before opening your own file.
+
+[![Amber's current landing page: Go beyond the answer, with an interactive source-and-answer comparison.](docs/assets/amber-home-current.jpg)](https://amber-oversight.vercel.app/)
+
+<details>
+<summary>Inside Studio: the review queue, evidence comparison, and decision channel</summary>
+
+[![Amber Studio showing a bundled legal-hold example, the review queue, pinned source constraint, final answer, and human decision channel.](docs/assets/amber-studio-current.jpg)](https://amber-oversight.vercel.app/studio?sample=legal-hold)
+
+</details>
+
+*Screenshots of the public app, 8 October 2026. The examples are illustrative.*
+
 ## Reproduce a result
 
 ### Start with the Array-RQMC companion
@@ -189,15 +221,6 @@ Closed repository studies retain their negative results and verification paths.
   repair was insufficient. The real held-out evaluation remained unopened.
   [Closure record and retained implementation](docs/reference/gate12c2_control_plane_sunset.md).
 
-## Amber
-
-[**Open Amber**](https://amber-oversight.vercel.app/) — a browser-based prototype
-for reviewing evidence-linked agent traces. Imported traces are processed
-locally; human reviewers make the disposition. Its prototype status and
-intended use are described in the [app README](apps/trace-triage-demo/README.md).
-
-[![Amber's evidence-review interface: trace context, source constraints, linked outputs, and a human review decision.](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/)
-
 ## Navigate the repository
 
 | Location | Start here for |
@@ -206,7 +229,7 @@ intended use are described in the [app README](apps/trace-triage-demo/README.md)
 | [papers/](papers/) | Manuscript sources and paper-specific computational companions. |
 | [analysis/](analysis/) · [docs/](docs/) | Technical reports, verification notes, and reproduction guides. |
 | [tools/](tools/) · [src/](src/) · [crates/](crates/) | Research utilities and Python/Rust implementations. |
-| [apps/](apps/) | Interactive prototypes. |
+| [apps/](apps/) | Retained prototypes, including the earlier static Trace Triage demo. The current Amber app is linked above. |
 | [ABOUT/](ABOUT/README.md) · [workstream/](workstream/README.md) | Project orientation and numbered research history. |
 
 ## License
