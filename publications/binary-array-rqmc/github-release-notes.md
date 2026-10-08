@@ -65,4 +65,4 @@ SHA-256:
 c74077b4114c0fccb0ea426676677191b13374fc899d95aa098c1e9d6e758ec8  reproducibility-capsule.zip
 ```
 
-No arXiv submission or peer-review outcome is asserted.
+This release is an author preprint, not a peer-reviewed publication.

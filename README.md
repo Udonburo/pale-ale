@@ -1,140 +1,217 @@
-# pale-ale
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/header-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/header-light.svg">
+  <img src="docs/assets/readme/header-light.svg" alt="pale-ale — Structure. Computation. Evidence. Independent research by Aoi Kawasaki." width="100%">
+</picture>
 
-**Reproducible studies of learned systems and stochastic computation.**
+**Exact stochastic simulation. Reproducible studies of learned systems.**
 
-Mathematical results, bounded experiments, and executable companions: from
-structural observation and replay in language models to exact, lower-cost
-simulation. Each study states its own assumptions, evidence, and limits.
-Negative results remain part of the record.
+Research by **Aoi Kawasaki** on how computational representations determine
+what we can preserve, measure, and execute efficiently. Each study connects a
+specific mathematical question to code, observations, and a reproducible result.
 
-[Publications](publications/README.md) ·
+[Latest paper](#exact-state-ranked-array-rqmc) ·
 [Reproduce a result](#reproduce-a-result) ·
+[Publications](publications/README.md) ·
 [Technical reports](#technical-reports) ·
 [Amber](#amber)
 
-## Latest preprint
+## Exact State-Ranked Array-RQMC
 
-### Exact State-Ranked Array-RQMC
+### Execute a reranked population without visiting every particle
 
-*Representations and Shared Work* — Aoi Kawasaki, October 2026.
+*Exact State-Ranked Array-RQMC: Representations and Shared Work* — October 2026.
+**Submitted to Monte Carlo Methods and Applications (MCMA).**
+The public version is an author preprint, not yet peer reviewed.
 
-How can a repeatedly reranked population be executed without visiting every
-particle? Primal image-basis and dual constraint counters preserve the same
-realized histogram path and supported readouts. The paper analyzes shared
-transformation demand through query-prefix diversity and compares six exact
-executors on common repair and tandem inputs.
-
-Direct basis is favored over the other non-enumerating methods by the median
-within-seed timing ratios in all 17 measured cells. Retaining dual coefficients
-improves on matched reconstruction, while query and aggregation costs remain.
-The comparison includes eight seeds per cell on one non-isolated host.
-Preprint; not peer reviewed.
-
-[Paper and supplement](https://doi.org/10.5281/zenodo.23166655) ·
+[**Read the paper · 20 pages**](publications/exact-state-ranked-array-rqmc/zenodo/implicit-array-rqmc.pdf) ·
+[Supplement · 6 pages](publications/exact-state-ranked-array-rqmc/zenodo/retained-studies.pdf) ·
+[DOI](https://doi.org/10.5281/zenodo.23166655) ·
 [Code and reproduction](papers/exact-state-ranked-array-rqmc/README.md) ·
-[Reproduction ZIP](https://github.com/Udonburo/pale-ale/releases/download/exact-state-ranked-array-rqmc-v1.0.0/array-rqmc-repro-20261006.zip) ·
-[Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/exact-state-ranked-array-rqmc-v1.0.0)
+[Download companion v1.0.0](https://github.com/Udonburo/pale-ale/releases/download/exact-state-ranked-array-rqmc-v1.0.0/array-rqmc-repro-20261006.zip)
 
-### Earlier Array-RQMC preprint: Exact Binary Projections
+Array randomized quasi-Monte Carlo (Array-RQMC) repeatedly sorts a population
+of simulated states and assigns inputs by rank. Equal states can receive
+different inputs, so updating one representative and multiplying its count
+does not generally reproduce the population.
 
-*Joint Laws and Pathwise-Preserving Execution* — Aoi Kawasaki, September 2026.
+The paper counts exactly how many rank-assigned inputs send each state to
+each destination, then rebuilds the next rank intervals from those counts.
+When complete states repeat and transitions have short finite-word input
+interval partitions, this closes the update without enumerating every particle.
+**The realized histogram path and supported readouts stay the same.**
 
-Which parts of a randomized point set does a simulator actually need?
-This paper characterizes the joint binary law consumed from a specified
-scrambled Sobol construction, generates it directly, and maintains state order
-without changing finite-seed paths. An equal-covariance counterexample shows
-why preserving covariance alone is insufficient.
+<details>
+<summary>See the exact update in a four-rank example</summary>
 
-In eight fixed benchmark cases, order maintenance reduces warm execution time
-by **37.2% at 512 paths** and **67.5% at 4,096 paths**, relative to direct
-generation with full state sorting. Total cost advantages depend on workload
-and reuse. Preprint; not peer reviewed.
+![A four-rank example: primal image bases and dual constraints both count the same interval flows, which are aggregated into the next histogram and reranked.](papers/exact-state-ranked-array-rqmc/figures/four_rank_mechanism.png)
 
-[Read the PDF](publications/binary-array-rqmc/zenodo/binary-array-rqmc.pdf) ·
-[DOI](https://doi.org/10.5281/zenodo.22728405) ·
-[Code and reproduction](papers/binary-array-rqmc/repro/README.md) ·
-[Release v1.0.0](https://github.com/Udonburo/pale-ale/releases/tag/binary-array-rqmc-v1.0.0)
+*One block, two exact representations. The four inputs in this worked example
+produce interval counts of 2, 1, and 1. Both counters feed the same population
+update; Section 3 of the [paper source](papers/exact-state-ranked-array-rqmc/main.md)
+develops the construction.*
 
-## Earlier papers and notes
+</details>
 
-| Study | Focus |
+### What the paper adds
+
+- **An exact execution method.** Primal image-basis and dual constraint counters
+  connect algebraic counting to dynamic population updates, including reranking.
+- **An account of shared work.** Under conditionally uniform shifts, overlap
+  among query prefixes determines the dual counter's exact expected transformation
+  demand. The analysis connects that demand to the cost of transforming retained
+  coefficients and resolving occupied-state rank boundaries.
+- **A measured implementation choice.** Six compiled executors use the same
+  repair and tandem inputs and return every step's histogram and readout.
+  The comparison separates interval decomposition, coefficient retention,
+  and the benefit of avoiding rank enumeration.
+
+Preserving a realization matters when studying the error distribution of a
+finite-population estimator. A one-chain dynamic program may supply its
+reference mean; exact population execution supplies realizations of the coupled
+estimator around that mean. Section S4 of the
+[supplement](papers/exact-state-ranked-array-rqmc/retained_studies.md)
+shows this distinction.
+
+### What the measurements say
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/crossover-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/crossover-light.svg">
+  <img src="docs/assets/readme/crossover-light.svg" alt="All 17 published stream/direct median timing ratios. Streaming wins at the smallest evaluated populations; at 1,048,576 particles, direct basis is about 41–57 times faster for repair and 10 times for tandem." width="100%">
+</picture>
+
+<details>
+<summary>Exact values at 1,048,576 particles (2²⁰)</summary>
+
+| Model | Simulated updates | Direct-basis trajectory time | Compact stream / direct basis |
+| --- | --- | --- | --- |
+| Machine repair | 100 | 8.63–10.76 ms | 40.6–57.3× |
+| Tandem queue | 200 | 91.48–94.84 ms | 9.75–9.95× |
+
+</details>
+
+The chart uses all 17 saved ratios from [Table 2](papers/exact-state-ranked-array-rqmc/tables/primal_dual_times.md),
+with **eight independent seeds per cell on one non-isolated host**. The expanded
+table shows the largest-population conditions. Times are
+medians of seed medians; speed ratios are calculated within each seed before
+taking their median. Each seed has five technical timing repeats. The workload
+includes every step's histogram and readout.
+
+Across all 17 measured conditions, median within-seed ratios favor direct
+basis over the other non-enumerating executors. Dual coefficient retention
+improves on matched reconstruction by factors of 1.055–1.201. Compact streaming
+wins in the smallest-population conditions. The shared-work analysis explains
+transformation demand; the full comparison establishes which implementation
+was faster in these workloads.
+
+[Seed-level comparisons](papers/exact-state-ranked-array-rqmc/figures/primal_dual_pairs.png) ·
+[Study design and six methods](papers/exact-state-ranked-array-rqmc/review_checks/primal_dual/README.md) ·
+[Publication record and citation](publications/exact-state-ranked-array-rqmc/README.md)
+
+## Reproduce a result
+
+### Start with the Array-RQMC companion
+
+Download the [fixed v1.0.0 ZIP](https://github.com/Udonburo/pale-ale/releases/download/exact-state-ranked-array-rqmc-v1.0.0/array-rqmc-repro-20261006.zip),
+extract it into an empty directory, and run these commands from the extracted
+companion directory using **Python 3.11**:
+
+```sh
+python -m pip install -r requirements.txt
+python verify_public.py
+python reproduce_review.py --quick --skip-pdf
+```
+
+This checks the package, exact counting, model domains, saved trajectories,
+conditional workloads, and regenerated numerical results. It includes
+**102 corrected-wrapper trajectories** and a **12-trajectory sample of the
+measured source**. It does not collect new performance timings.
+
+The companion retains all **4,080 original timing observations**, the source
+that produced them, 136 saved population realizations, fixed input matrices,
+and the manuscript build inputs. The
+[full reproduction guide](papers/exact-state-ranked-array-rqmc/README.md#reproduce)
+covers all 816 measured-source method trajectories and PDF regeneration.
+The [release verification](publications/exact-state-ranked-array-rqmc/verification.json)
+records a separate extraction's successful quick replay and byte-identical
+PDF builds on the specified Windows environment.
+
+### Other studies
+
+| Result | Reproduction entry point |
 | --- | --- |
-| [Sensitivity without reproducibility](publications/sensitivity-without-reproducibility/README.md) | Positive-control sensitivity versus fresh re-estimation of a representation instrument. |
-| [Local mapping without iterative closure](publications/local-mapping-without-iterative-closure/README.md) | Input-output demonstrations and bounded Graph-XOR capability in Qwen3. |
-| [Compression-interleaved parenthesization defects](publications/compression-interleaved-parenthesization-defects/README.md) | A predeclared null test across 24 replay-artifact-graph endpoints. |
-| [Observer-relative closure signatures](publications/observer-relative-closure-signatures/README.md) | A bounded audit of existing language-model replay artifacts. |
-| [Transport-first defect telemetry](publications/transport-first-defect-telemetry/README.md) | A mathematical formulation of transport and closure inconsistency. |
-| [Structural replay under FP32](publications/structural-replay-fp32/README.md) | Dense-transformer replay evidence under a fixed precision and execution regime. |
+| Exact binary projections for Array-RQMC | [19 tests, three kernels, saved-data regeneration](papers/binary-array-rqmc/repro/README.md) |
+| FP32 structural replay | [Reproduction guide](docs/reproduce_gate12a.md) · [Evidence atlas](docs/gate12a_evidence_atlas.md) |
+| Other papers and notes | [Publication catalog](publications/README.md), with each study's archive and dependencies |
 
-The [publication catalog](publications/README.md) collects dates, DOIs, release
-downloads, and source locations. Cite the specific study, not the repository
-as a single empirical claim. See [citation metadata](CITATION.cff).
+Published releases retain their original bytes. Use the release associated
+with the paper when reproducing an archived result; working documentation
+can continue to evolve. The local publication catalog can be checked with
+`python publications/validate_catalog.py`.
+
+## Research across the repository
+
+Two research lines connect the published work: **exact representations for
+stochastic computation**, and **what structural measurements of learned systems
+can establish**. Each paper states and tests its own claim.
+
+<details>
+<summary>Browse all eight papers and notes · April–October 2026</summary>
+
+| Study | Question and result |
+| --- | --- |
+| [Exact State-Ranked Array-RQMC](publications/exact-state-ranked-array-rqmc/README.md) · Oct 2026 | Propagate the same ranked population through primal or dual counts; analyze shared work and compare six executors. |
+| [Exact Binary Projections for Array-RQMC](publications/binary-array-rqmc/README.md) · Sep 2026 | Generate the consumed joint binary law directly and maintain state order while preserving finite-seed paths. |
+| [Sensitivity Without Reproducibility](publications/sensitivity-without-reproducibility/README.md) · Aug 2026 | Separate positive-control sensitivity from reproducibility under fresh estimation of a representation instrument. |
+| [Local Mapping Without Iterative Closure](publications/local-mapping-without-iterative-closure/README.md) · Aug 2026 | Test the boundary between input-output demonstrations and bounded iterative Graph-XOR capability in Qwen3. |
+| [Compression-Interleaved Parenthesization Defects](publications/compression-interleaved-parenthesization-defects/README.md) · Jul 2026 | Report a predeclared null test across 24 replay-artifact-graph endpoints. |
+| [Observer-Relative Closure Signatures](publications/observer-relative-closure-signatures/README.md) · May 2026 | Audit the information available from declared observation surfaces on existing replay artifacts. |
+| [Transport-First Defect Telemetry](publications/transport-first-defect-telemetry/README.md) · Apr 2026 | Formulate transport and closure inconsistency mathematically. |
+| [Structural Replay Under FP32](publications/structural-replay-fp32/README.md) · Apr 2026 | Establish replay evidence under a fixed precision and execution regime. |
+
+</details>
+
+Use the [publication catalog](publications/README.md) for DOIs and archived
+versions. Cite the paper supporting the result you use;
+[citation metadata](CITATION.cff) identifies the individual records.
 
 ## Technical reports
 
-These closed studies are repository reports, separate from the DOI publications.
+Closed repository studies retain their negative results and verification paths.
 
 - **[CRD: controlled calibration and a negative acquisition test](analysis/crd/TECHNICAL_REPORT.md).**
   Calibration succeeded in a constructed system; no primary seed met local
   action acquisition in the fixed 242-seed successor study.
   [Aggregate data and verification](analysis/crd/README.md).
 - **[Gate12C-2: synthetic development negative](analysis/gate12c2_v2_balanced_prototype/TECHNICAL_REPORT.md).**
-  The candidate failed its quantitative stability criterion and the bounded
-  repair was insufficient. No real held-out evaluation was opened.
+  The candidate failed its quantitative stability criterion, and the bounded
+  repair was insufficient. The real held-out evaluation remained unopened.
   [Closure record and retained implementation](docs/reference/gate12c2_control_plane_sunset.md).
-
-## Reproduce a result
-
-There is no single experiment behind this repository. Start with the companion
-for the result you want to check.
-
-- **Exact State-Ranked Array-RQMC:** [six executors, saved trajectories, original timings and PDF reproduction](papers/exact-state-ranked-array-rqmc/README.md).
-- **Earlier binary-projection study:** [19 tests, three kernels, and saved-data regeneration](papers/binary-array-rqmc/repro/README.md).
-  The [archived capsule](publications/binary-array-rqmc/zenodo/reproducibility-capsule.zip)
-  is self-contained; it does not include every original raw experiment.
-- **FP32 structural replay:** [reproduction guide](docs/reproduce_gate12a.md)
-  and [evidence atlas](docs/gate12a_evidence_atlas.md).
-- **Other publications:** use the study's [publication page](publications/README.md)
-  for its exact package, dependencies, and verification scope.
-
-To check the catalog and tracked publication checksums from the repository root:
-
-```sh
-python publications/validate_catalog.py
-```
-
-Published deposits retain their original bytes. Working code and documentation
-may evolve; versioned releases and their checksums identify the archived result.
 
 ## Amber
 
-[**Open Amber**](https://amber-oversight.vercel.app/) — a browser-based companion
+[**Open Amber**](https://amber-oversight.vercel.app/) — a browser-based prototype
 for reviewing evidence-linked agent traces. Imported traces are processed
-locally; reviewers, not the application, make the disposition.
+locally; human reviewers make the disposition. Its prototype status and
+intended use are described in the [app README](apps/trace-triage-demo/README.md).
 
-Amber is a technical prototype, not benchmark evidence or an automated judge
-of correctness or safety.
+[![Amber's evidence-review interface: trace context, source constraints, linked outputs, and a human review decision.](docs/assets/amber-home.png)](https://amber-oversight.vercel.app/)
 
 ## Navigate the repository
 
-| Location | Contents |
+| Location | Start here for |
 | --- | --- |
-| [publications/](publications/README.md) | Publication records and exact archive packages. |
+| [publications/](publications/README.md) | Citable records, distribution links, and exact archive packages. |
 | [papers/](papers/) | Manuscript sources and paper-specific computational companions. |
 | [analysis/](analysis/) · [docs/](docs/) | Technical reports, verification notes, and reproduction guides. |
 | [tools/](tools/) · [src/](src/) · [crates/](crates/) | Research utilities and Python/Rust implementations. |
 | [apps/](apps/) | Interactive prototypes. |
-| [workstream/](workstream/README.md) · [ABOUT/](ABOUT/README.md) | Research history and project orientation. |
-
-Historical Gate names identify study checkpoints; their conventions are
-explained in [Workstreams and Gates](ABOUT/WORKSTREAM_AND_GATES.md).
-Claims remain study-specific: the work does not establish a universal model
-quality or safety score, or a complete mechanistic account of language models.
+| [ABOUT/](ABOUT/README.md) · [workstream/](workstream/README.md) | Project orientation and numbered research history. |
 
 ## License
 
-Repository software is [MPL-2.0](LICENSE). Publication materials, data, and
-third-party artifacts follow their accompanying terms. The Array-RQMC release
-uses **CC BY 4.0 for publication materials and saved data, and MPL-2.0 for code**;
-see the [current companion's per-file scope](papers/exact-state-ranked-array-rqmc/LICENSES.txt)
-and the [earlier release's scope](publications/binary-array-rqmc/zenodo/LICENSES.txt).
+Repository software is [MPL-2.0](LICENSE). The current Array-RQMC companion
+uses **CC BY 4.0 for publication materials and author-created saved data**, and
+**MPL-2.0 for code**. See its [per-file scope](papers/exact-state-ranked-array-rqmc/LICENSES.txt).
+Other publications and third-party artifacts retain their accompanying terms.
