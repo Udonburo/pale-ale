@@ -3,9 +3,9 @@
 [Read the technical report](TECHNICAL_REPORT.md).
 
 This is a repository technical report about two completed controlled studies.
-It has not been deposited on Zenodo or submitted as an arXiv preprint. It is
-not an additional paper entry in the publication catalog. No new experiment
-was run to produce it.
+It is maintained here as a technical report, separate from the papers in the
+publication catalog. The report draws on the completed studies; no new
+experiment was run to produce it.
 
 ## Included material
 

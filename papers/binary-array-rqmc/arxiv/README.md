@@ -3,8 +3,8 @@
 **Exact Binary Projections for Array-RQMC: Joint Laws and Pathwise-Preserving Execution**  
 Aoi Kawasaki - Preprint, 25 September 2026
 
-This historical revision was prepared for arXiv and remains at its original
-source path. Current journal preparation uses
+This historical revision remains at its original source path. The current
+paper is
 [Exact State-Ranked Array-RQMC: Representations and Shared Work](../../exact-state-ranked-array-rqmc/README.md),
 with its public paper DOI and fixed reproduction companion. The earlier
 [Zenodo v1.0.0](https://doi.org/10.5281/zenodo.22728405) remains a separate,
@@ -47,7 +47,7 @@ preserves the manuscript's mathematical nodes and pseudocode. For a separate
 PDF tool installation, pass `--tools-dir PATH`.
 
 The 14-page PDF contains the complete manuscript and both figures. The title
-page's date is a manuscript date, not a Zenodo version or an arXiv version label.
+page's date identifies this manuscript revision.
 The build follows Markdown -> Pandoc -> Typst -> PDF; the reproduction ZIP
 is a separate companion.
 
@@ -66,14 +66,8 @@ for the distinction between saved-result reproduction and new smoke timings.
 
 ## Recover a historical source snapshot
 
-This source tree and its earlier revisions remain available in Git. A source-only
-snapshot can be generated from the repository root with:
-
-```text
-git archive --format=zip --prefix=binary-array-rqmc-arxiv/ --output=papers/binary-array-rqmc/arxiv/output/arxiv-source.zip HEAD:papers/binary-array-rqmc/arxiv
-```
-
-The generated ZIP and PDF stay under ignored `output/`. The earlier Zenodo
+This source tree and its earlier revisions remain available in Git under their
+original paths. Generated PDFs stay under ignored `output/`. The earlier Zenodo
 deposit and its builders are independent. Use the current state-ranked paper's
 fixed release for the current reproduction package.
 

@@ -19,6 +19,7 @@ That is the release surface a reader should be able to cite, download, and inspe
 Today, the ingredients already present in the repo are mainly:
 
 - [`../publications/README.md`](../publications/README.md): the platform-neutral publication catalog and directory policy
+- [`../publications/exact-state-ranked-array-rqmc/`](../publications/exact-state-ranked-array-rqmc/README.md): exact population execution, shared-work analysis, and the current six-executor companion
 - [`../publications/structural-replay-fp32/`](../publications/structural-replay-fp32/README.md): the April 2026 Gate12A frozen technical report
 - [`../publications/transport-first-defect-telemetry/`](../publications/transport-first-defect-telemetry/README.md): the separate mathematical telemetry note
 - [`../publications/observer-relative-closure-signatures/`](../publications/observer-relative-closure-signatures/README.md): the Gate12B bounded technical report
@@ -38,7 +39,7 @@ release bundles, selected manifests, checksums, and commit bindings first.
 
 Every public work has one landing directory under
 `publications/<publication-slug>/`. Platform-specific upload bundles live one
-level below it, for example `zenodo/`, `arxiv/`, or `osf/`. Adding a platform
+level below it, for example `zenodo/` or `osf/`. Adding a platform
 extends the existing publication directory instead of creating a new
 top-level naming convention.
 

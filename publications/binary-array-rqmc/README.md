@@ -17,7 +17,6 @@ mirrors the same nine deposit files and identifies the repository snapshot.
 - [Download the reproducibility capsule](zenodo/reproducibility-capsule.zip)
 - [Deposit files and scope](zenodo/README.txt)
 - [Historical manuscript editions and build instructions](../../papers/binary-array-rqmc/README.md)
-- [Retained revision of 25 September 2026](../../papers/binary-array-rqmc/arxiv/README.md)
 - [Code, 19 tests, and saved-data regeneration](../../papers/binary-array-rqmc/repro/README.md)
 - [Citation metadata](../../papers/binary-array-rqmc/CITATION.cff)
 
@@ -70,12 +69,10 @@ DOI wording likewise describes preparation. The DOI above is now public.
 
 The original source paths under `papers/binary-array-rqmc/` retain the Zenodo
 edition. For an exact historical package rebuild, run its publication builder
-from the extracted v1.0.0 capsule. The 25 September revision remains under
-`papers/binary-array-rqmc/arxiv/`, its original preparation path, with its own
-manuscript, figures, reproduction code and PDF build. Each edition writes
-generated files beneath its own ignored `output/`. These historical sources
-and the separate original review ZIP preserve the earlier work; current
-journal preparation uses the state-ranked paper linked above.
+from the extracted v1.0.0 capsule. The later September revision remains in its
+original source tree and Git history, with its own manuscript, figures,
+reproduction code and PDF build. Generated files stay beneath each edition's
+ignored `output/`. The current state-ranked paper is linked above.
 
 Publication materials and saved data are **CC BY 4.0**; code is **MPL-2.0**.
 These are per-file scopes, not alternative licenses for every file. See
