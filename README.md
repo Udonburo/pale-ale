@@ -6,8 +6,8 @@
 
 **Exact stochastic simulation. Reproducible studies of learned systems.**
 
-Research and software by **Aoi Kawasaki** on how computational representations
-determine what we can preserve, measure, and execute efficiently. This repository
+Research and software exploring how computational representations determine
+what we can preserve, measure, and execute efficiently. This repository
 connects papers, computational companions, and interactive work.
 
 [Latest paper](#exact-state-ranked-array-rqmc) ·
