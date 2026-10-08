@@ -54,7 +54,7 @@ The paper and its evidence determine the scope of each conclusion.
 | [Papers](../papers/) | Manuscript sources and computational companions. |
 | [Analysis](../analysis/) and [docs](../docs/) | Technical reports, checks, and reproduction guides. |
 | [Tools](../tools/), [src](../src/), and [crates](../crates/) | Research implementations and utilities. |
-| [Apps](../apps/) | Interactive prototypes, including Amber. |
+| [Apps](../apps/) | Retained prototypes, including the earlier static Trace Triage demo. The current [Amber workspace](https://amber-oversight.vercel.app/) is developed separately. |
 | [Workstream](../workstream/README.md) | The numbered history of earlier investigations. |
 
 Use the publication-specific entry point to read or reproduce a result.
