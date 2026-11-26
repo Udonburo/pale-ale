@@ -164,6 +164,20 @@
         }
       },
       "historical_repository_paths": []
+    },
+    {
+      "slug": "repeated-quantum-state-generation",
+      "title": "Repeated quantum state generation from finite memory",
+      "author": "Aoi Kawasaki",
+      "publication_date": "2026-11-26",
+      "resource_type": "preprint",
+      "doi": "10.5281/zenodo.24540440",
+      "landing_path": "publications/repeated-quantum-state-generation/README.md",
+      "targets": {
+        "zenodo": {
+          "url": "https://zenodo.org/records/24540440"
+        }
+      }
     }
   ],
   "other_public_records": [
