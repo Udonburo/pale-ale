@@ -4,13 +4,13 @@
   <img src="docs/assets/readme/header-light.svg" alt="pale-ale — Structure. Computation. Evidence. Independent research by Aoi Kawasaki." width="100%">
 </picture>
 
-**Exact stochastic simulation. Reproducible studies of learned systems.**
+**Quantum memory, exact stochastic simulation, and reproducible studies of learned systems.**
 
 Research and software exploring how computational representations determine
 what we can preserve, measure, and execute efficiently. This repository
 connects papers, computational companions, and interactive work.
 
-[Latest paper](#exact-state-ranked-array-rqmc) ·
+[Latest paper](#repeated-quantum-state-generation-from-finite-memory) ·
 [Reproduce a result](#reproduce-a-result) ·
 [Publications](publications/README.md) ·
 [Technical reports](#technical-reports) ·
@@ -18,8 +18,24 @@ connects papers, computational companions, and interactive work.
 
 | Selected work | Explore |
 | --- | --- |
+| **Repeated quantum state generation from finite memory** — how long does a quantum memory's space advantage survive repeated requests? | [Preprint and companion on Zenodo](https://doi.org/10.5281/zenodo.24540440) · [Check the certificates](publications/repeated-quantum-state-generation/README.md#check-the-certificates) |
 | **Exact State-Ranked Array-RQMC** — execute the same ranked population through algebraic counts; compare the representations and their costs. | [Read the paper](publications/exact-state-ranked-array-rqmc/zenodo/implicit-array-rqmc.pdf) · [Reproduce](#reproduce-a-result) |
 | **Amber** — follow the evidence behind an agent's answer, inspect what changed, and record a human decision. | [Open Amber](https://amber-oversight.vercel.app/) · [Try Studio](https://amber-oversight.vercel.app/studio?sample=legal-hold) |
+
+## Repeated quantum state generation from finite memory
+
+Aoi Kawasaki · Author preprint, 26 November 2026 · **Submitted to Physical Review A.**
+
+For a family of $m$ weakly mixed qubits, a device given the classical label can
+answer one named request with logarithmically many qubits. A classical memory
+needs linearly many bits for the same per-request trace-distance error of
+$O(1/m)$. With the label available, the paper determines the optimal memory
+cost over repeated cycles of one request per site. For unknown quantum inputs,
+it also derives a copy-rate threshold for serving a number of requests per
+site proportional to $m$.
+
+[Read the preprint (PDF)](https://zenodo.org/records/24540440/files/repeated-quantum-state-generation-pra-preprint.pdf) ·
+[Publication record and verification guide](publications/repeated-quantum-state-generation/README.md)
 
 ## Exact State-Ranked Array-RQMC
 
@@ -173,6 +189,7 @@ PDF builds on the specified Windows environment.
 
 | Result | Reproduction entry point |
 | --- | --- |
+| Repeated quantum state generation | [Check all 20 rational certificates with Python](publications/repeated-quantum-state-generation/README.md#check-the-certificates) |
 | Exact binary projections for Array-RQMC | [19 tests, three kernels, saved-data regeneration](papers/binary-array-rqmc/repro/README.md) |
 | FP32 structural replay | [Reproduction guide](docs/reproduce_gate12a.md) · [Evidence atlas](docs/gate12a_evidence_atlas.md) |
 | Other papers and notes | [Publication catalog](publications/README.md), with each study's archive and dependencies |
@@ -184,15 +201,12 @@ can continue to evolve. The local publication catalog can be checked with
 
 ## Research across the repository
 
-Two research lines connect the published work: **exact representations for
-stochastic computation**, and **what structural measurements of learned systems
-can establish**. Each paper states and tests its own claim.
-
 <details>
-<summary>Browse all eight papers and notes · April–October 2026</summary>
+<summary>Browse all nine papers and notes · April–November 2026</summary>
 
 | Study | Question and result |
 | --- | --- |
+| [Repeated quantum state generation from finite memory](publications/repeated-quantum-state-generation/README.md) · Nov 2026 | Characterize indefinite service for finite source families and quantify the costs of repeated requests for a weakly mixed qubit family. |
 | [Exact State-Ranked Array-RQMC](publications/exact-state-ranked-array-rqmc/README.md) · Oct 2026 | Propagate the same ranked population through primal or dual counts; analyze shared work and compare six executors. |
 | [Exact Binary Projections for Array-RQMC](publications/binary-array-rqmc/README.md) · Sep 2026 | Generate the consumed joint binary law directly and maintain state order while preserving finite-seed paths. |
 | [Sensitivity Without Reproducibility](publications/sensitivity-without-reproducibility/README.md) · Aug 2026 | Separate positive-control sensitivity from reproducibility under fresh estimation of a representation instrument. |

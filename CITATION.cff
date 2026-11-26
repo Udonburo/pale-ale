@@ -8,7 +8,8 @@ message: >-
   10.5281/zenodo.21992852 for Local Mapping Without Iterative Closure,
   10.5281/zenodo.22180751 for Sensitivity Without Reproducibility,
   10.5281/zenodo.22728405 for Exact Binary Projections for Array-RQMC,
-  10.5281/zenodo.23166655 for Exact State-Ranked Array-RQMC, and
+  10.5281/zenodo.23166655 for Exact State-Ranked Array-RQMC,
+  10.5281/zenodo.24540440 for Repeated quantum state generation from finite memory, and
   10.5281/zenodo.19340221 only for the earlier replication checkpoint / prior
   release surface.
 title: "pale-ale"
@@ -31,9 +32,22 @@ abstract: >-
   earlier Array-RQMC binary-projection preprint, and
   10.5281/zenodo.23166655 is Exact State-Ranked Array-RQMC: Representations
   and Shared Work, with its six-executor reproduction companion.
+  10.5281/zenodo.24540440 is the finite quantum memory preprint and its
+  verification companion.
   10.5281/zenodo.19340221 is an earlier replication checkpoint / prior release
   surface.
 references:
+  - type: article
+    authors:
+      - family-names: "Kawasaki"
+        given-names: "Aoi"
+        orcid: "https://orcid.org/0009-0007-3713-2479"
+    title: "Repeated quantum state generation from finite memory"
+    year: 2026
+    date-released: "2026-11-26"
+    version: "1.0.0"
+    doi: "10.5281/zenodo.24540440"
+    url: "https://doi.org/10.5281/zenodo.24540440"
   - type: article
     authors:
       - family-names: "Kawasaki"
